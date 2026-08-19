@@ -30,9 +30,9 @@
 
 ### 필수 문서 (착수 전 필독!)
 
-1. **[TECH_STACK.md](TECH_STACK.md)** ⭐ — 기술 스택 & 환경 구성
-2. **[API_CONTRACT.md](API_CONTRACT.md)** ⭐ — API 계약 명세 (R1~R4 공통)
-3. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** ⭐ — 통합 가이드 (합칠 때)
+1. **[TECH_STACK.md](docs/setup/TECH_STACK.md)** ⭐ — 기술 스택 & 환경 구성
+2. **[API_CONTRACT.md](docs/api/API_CONTRACT.md)** ⭐ — API 계약 명세 (R1~R4 공통)
+3. **[INTEGRATION_GUIDE.md](docs/setup/INTEGRATION_GUIDE.md)** ⭐ — 통합 가이드 (합칠 때)
 4. **[CLAUDE.md](GBSA_AWS_Readd/CLAUDE.md)** — 개발 규칙 (절대 규칙 10개)
 
 ### 설치 (각자 노트북)
@@ -175,43 +175,6 @@ npm run dev
 # 4. 관통 테스트 (R4 책임)
 # 대시보드 → 브리핑 → 읽기 → 싸비 3탭
 ```
-
----
-
-## 🐛 트러블슈팅
-
-### "Module not found"
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### "Type error" 빌드 실패
-
-```bash
-# src/shared/types.ts 최신 버전 확인
-git pull origin develop
-npm run build
-```
-
-### Bedrock 권한 오류
-
-```bash
-# AWS 콘솔 → Bedrock → Model access
-# Claude Sonnet/Haiku 모델 활성화 확인
-```
-
-**더 많은 트러블슈팅**: [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
-
----
-
-## 📞 긴급 연락
-
-- **Slack**: #ssabi-dev
-- **Git 충돌**: 즉시 팀에 공유
-- **빌드 실패**: PR 리뷰어에게 알림
-
 ---
 
 **Made with ❤️ by Team Ssabi**
