@@ -33,7 +33,7 @@
 1. **[TECH_STACK.md](docs/setup/TECH_STACK.md)** ⭐ — 기술 스택 & 환경 구성
 2. **[API_CONTRACT.md](docs/api/API_CONTRACT.md)** ⭐ — API 계약 명세 (R1~R4 공통)
 3. **[INTEGRATION_GUIDE.md](docs/setup/INTEGRATION_GUIDE.md)** ⭐ — 통합 가이드 (합칠 때)
-4. **[CLAUDE.md](GBSA_AWS_Readd/CLAUDE.md)** — 개발 규칙 (절대 규칙 10개)
+4. **[CLAUDE.md](CLAUDE.md)** — 개발 규칙 (절대 규칙 10개)
 
 ### 설치 (각자 노트북)
 
@@ -93,7 +93,7 @@ R4 → R2 (기준점 스냅샷 필요)
 ### Deploy
 - EC2 (t3.medium) + PM2 + Nginx
 
-**자세한 내용**: [TECH_STACK.md](TECH_STACK.md)
+**자세한 내용**: [TECH_STACK.md](docs/setup/TECH_STACK.md)
 
 ---
 
@@ -121,7 +121,7 @@ R4 → R2 (기준점 스냅샷 필요)
 5. ❌ 남의 파트 파일 수정 (디렉토리 분리 엄수)
 6. ❌ `src/shared/types.ts` 임의 수정 (팀 합의 필수)
 
-**자세한 규칙**: [CLAUDE.md](GBSA_AWS_Readd/CLAUDE.md) 2장
+**자세한 규칙**: [CLAUDE.md](CLAUDE.md) 2장
 
 ---
 
