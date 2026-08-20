@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
+import SsabiToggleButton from '../components/common/SsabiToggleButton';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
 import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
@@ -13,29 +14,6 @@ import { useSSE } from '../hooks/useSSE';
 import { nextSeq } from '../utils/seq';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
 import type { EntryResponse, PageResponse, SsabiTab } from '../types';
-
-/** 사이드바 토글 아이콘 — 우측 영역이 채워진 패널 모양 */
-function SidebarToggleIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden="true">
-      <rect
-        x="1.2"
-        y="2.7"
-        width="13.6"
-        height="10.6"
-        rx="2.4"
-        stroke="currentColor"
-        strokeWidth="1.3"
-      />
-      <path d="M9.8 2.7v10.6" stroke="currentColor" strokeWidth="1.3" />
-      <path
-        d="M9.8 2.7h2.6a2.4 2.4 0 0 1 2.4 2.4v6.2a2.4 2.4 0 0 1-2.4 2.4H9.8V2.7Z"
-        fill="currentColor"
-        fillOpacity="0.35"
-      />
-    </svg>
-  );
-}
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -155,16 +133,10 @@ export default function Reader() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setPanelOpen((open) => !open)}
-          aria-expanded={panelOpen}
-          aria-controls="ssabi-panel"
-          aria-label={panelOpen ? '싸비 닫기' : '싸비 열기'}
-          className="flex size-9 items-center justify-center rounded-lg bg-ink text-surface transition-opacity hover:opacity-80"
-        >
-          <SidebarToggleIcon />
-        </button>
+        {/* 열려 있을 때는 이 버튼이 패널 헤더 우측으로 옮겨 간다 */}
+        {panelOpen ? null : (
+          <SsabiToggleButton open={false} onToggle={() => setPanelOpen(true)} />
+        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -183,6 +155,7 @@ export default function Reader() {
           <aside id="ssabi-panel" className="w-[420px] shrink-0">
             <SsabiPanel
               sessionEpoch={session?.session_epoch ?? 0}
+              onClose={() => setPanelOpen(false)}
               onTabChange={setTab}
               graph={graph}
               graphFailed={graphFailed}
