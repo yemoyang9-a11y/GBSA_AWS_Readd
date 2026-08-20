@@ -26,23 +26,47 @@
 
 ---
 
+## 📁 프로젝트 구조
+
+```
+GBSA_AWS_Readd/
+├── backend/              # Node.js + TypeScript + Express
+│   ├── src/modules/      # 모듈별 서비스 (R1~R4)
+│   ├── tests/            # 테스트
+│   └── migrations/       # DB 마이그레이션
+│
+├── frontend/             # React 18 + TypeScript + Vite
+│   ├── src/pages/        # 페이지 (R4)
+│   ├── src/components/   # 컴포넌트
+│   └── public/           # 정적 파일
+│
+├── docs/                 # 문서
+│   ├── api/              # API 명세
+│   ├── dev-specs/        # 개발 명세 (R1~R4)
+│   └── setup/            # 환경 구성
+│
+├── CLAUDE.md             # 개발 규칙
+└── README.md             # 이 파일
+```
+
+---
+
 ## 🚀 빠른 시작 (팀원용)
 
 ### 필수 문서 (착수 전 필독!)
 
-1. **[TECH_STACK.md](TECH_STACK.md)** ⭐ — 기술 스택 & 환경 구성
-2. **[API_CONTRACT.md](API_CONTRACT.md)** ⭐ — API 계약 명세 (R1~R4 공통)
-3. **[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)** ⭐ — 통합 가이드 (합칠 때)
-4. **[CLAUDE.md](GBSA_AWS_Readd/CLAUDE.md)** — 개발 규칙 (절대 규칙 10개)
+1. **[TECH_STACK.md](docs/setup/TECH_STACK.md)** ⭐ — 기술 스택 & 환경 구성
+2. **[API_CONTRACT.md](docs/api/API_CONTRACT.md)** ⭐ — API 계약 명세 (R1~R4 공통)
+3. **[INTEGRATION_GUIDE.md](docs/setup/INTEGRATION_GUIDE.md)** ⭐ — 통합 가이드 (합칠 때)
+4. **[CLAUDE.md](CLAUDE.md)** — 개발 규칙 (절대 규칙 10개)
 
-### 설치 (각자 노트북)
+### Backend 설정
 
 ```bash
-# 1. 저장소 클론
-git clone https://github.com/your-org/ssabi-backend.git
-cd ssabi-backend
+# 1. Backend 디렉토리 이동
+cd backend
 
-# 2. 의존성 설치 (package.json 기준)
+# 2. 의존성 설치
 npm install
 
 # 3. 환경 변수 설정
@@ -54,6 +78,26 @@ npm run dev
 
 # 5. 헬스 체크
 curl http://localhost:3000/health
+```
+
+### Frontend 설정
+
+```bash
+# 1. Frontend 디렉토리 이동
+cd frontend
+
+# 2. 의존성 설치
+npm install
+
+# 3. 환경 변수 설정
+cp .env.example .env
+# .env 편집 (API URL 설정)
+
+# 4. 개발 서버 실행
+npm run dev
+
+# 5. 브라우저 접속
+# http://localhost:5173
 ```
 
 ---
@@ -89,11 +133,13 @@ R4 → R2 (기준점 스냅샷 필요)
 
 ### Frontend
 - React 18 + TypeScript + Vite
+- Tailwind CSS
+- React Router
 
 ### Deploy
 - EC2 (t3.medium) + PM2 + Nginx
 
-**자세한 내용**: [TECH_STACK.md](TECH_STACK.md)
+**자세한 내용**: [docs/setup/TECH_STACK.md](docs/setup/TECH_STACK.md)
 
 ---
 
@@ -121,39 +167,26 @@ R4 → R2 (기준점 스냅샷 필요)
 5. ❌ 남의 파트 파일 수정 (디렉토리 분리 엄수)
 6. ❌ `src/shared/types.ts` 임의 수정 (팀 합의 필수)
 
-**자세한 규칙**: [CLAUDE.md](GBSA_AWS_Readd/CLAUDE.md) 2장
+**자세한 규칙**: [CLAUDE.md](CLAUDE.md) 2장
 
 ---
 
-## 🛠️ 개발 명령어
-
-```bash
-npm run dev      # 개발 모드 (hot reload)
-npm run build    # TypeScript 빌드
-npm start        # 프로덕션 실행
-npm test         # 테스트
-npm run lint     # 린트 체크
-npm run format   # Prettier 포맷
-```
-
----
-
-## 📁 프로젝트 구조
+## 🛠️ 브랜치 전략
 
 ```
-src/
-├── modules/
-│   ├── content/        # ① R4
-│   ├── reading-state/  # ② R2 (기준점 결정기 ⭐)
-│   ├── ssabi/          # ③ R4
-│   ├── recap/          # ④ R2
-│   ├── chatbot/        # ⑤ R3
-│   └── llm-gateway/    # ⑥ R3 (게이트웨이 ⭐)
-├── shared/
-│   └── types.ts        # 공통 타입 (전원 공유, 수정 시 합의)
-└── api/
-    └── routes.ts       # API 라우트
+main    # 통합 브랜치
+  ↑
+feature/R1-pipeline      # R1 작업
+feature/R2-state-recap   # R2 작업
+feature/R3-ai-gateway    # R3 작업
+feature/R4-frontend      # R4 작업
 ```
+
+### 작업 흐름
+1. `develop`에서 `feature/R{n}-xxx` 브랜치 생성
+2. 작업 단위 (S1, S2...) 하나씩 커밋
+3. CP3 (8/21) 이후 `develop`으로 PR & 머지
+4. CP4 (8/22) 이후 기능 추가 금지, 버그 수정만
 
 ---
 
@@ -164,53 +197,19 @@ src/
 git checkout develop
 git pull
 
-# 2. 클린 빌드
-rm -rf node_modules dist
+# 2. Backend 실행
+cd backend
 npm install
-npm run build
+npm run dev
 
-# 3. 서버 실행
+# 3. Frontend 실행 (별도 터미널)
+cd frontend
+npm install
 npm run dev
 
 # 4. 관통 테스트 (R4 책임)
 # 대시보드 → 브리핑 → 읽기 → 싸비 3탭
 ```
-
----
-
-## 🐛 트러블슈팅
-
-### "Module not found"
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### "Type error" 빌드 실패
-
-```bash
-# src/shared/types.ts 최신 버전 확인
-git pull origin develop
-npm run build
-```
-
-### Bedrock 권한 오류
-
-```bash
-# AWS 콘솔 → Bedrock → Model access
-# Claude Sonnet/Haiku 모델 활성화 확인
-```
-
-**더 많은 트러블슈팅**: [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
-
----
-
-## 📞 긴급 연락
-
-- **Slack**: #ssabi-dev
-- **Git 충돌**: 즉시 팀에 공유
-- **빌드 실패**: PR 리뷰어에게 알림
 
 ---
 

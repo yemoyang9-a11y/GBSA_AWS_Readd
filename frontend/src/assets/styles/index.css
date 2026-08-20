@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 태블릿 PC 우선 반응형 (NFR-USE) */
+html,
+body,
+#root {
+  height: 100%;
+}
