@@ -20,6 +20,7 @@ import {
   buildEventPrompt,
   parseJsonResponse,
 } from './generate';
+import { checkPageBounds } from './validate';
 
 const BOOK_ID = 'takryu';
 
@@ -42,10 +43,10 @@ async function main(): Promise<void> {
   const results: Record<string, unknown> = {};
   const pageRange = { min: chapter.start_page, max: chapter.end_page };
 
-  function checkPageBounds(label: string, reportedPages: number[]): void {
-    const outOfBounds = reportedPages.filter((p) => p < pageRange.min || p > pageRange.max);
-    if (outOfBounds.length > 0) {
-      console.warn(`  [경고] ${label}: 장 범위(${pageRange.min}~${pageRange.max}) 밖 페이지 태깅 발견 →`, outOfBounds);
+  function reportPageBounds(label: string, reportedPages: number[]): void {
+    const result = checkPageBounds(label, reportedPages, pageRange.min, pageRange.max);
+    if (!result.ok) {
+      console.warn(`  [경고] ${label}: 장 범위(${pageRange.min}~${pageRange.max}) 밖 페이지 태깅 발견 →`, result.outOfBounds);
     } else {
       console.log(`  [OK] ${label}: 페이지 태깅 전부 장 범위 안 (${reportedPages.length}건)`);
     }
@@ -68,7 +69,7 @@ async function main(): Promise<void> {
     ...c.aliases.map((a) => a.first_appearance_page),
     ...c.notes.map((n) => n.source_page),
   ]);
-  checkPageBounds('인물/별칭/노트', charPages);
+  reportPageBounds('인물/별칭/노트', charPages);
   results.characters = characterOut;
 
   const knownNames = characterOut.characters.map((c) => c.name);
@@ -78,7 +79,7 @@ async function main(): Promise<void> {
   const relRaw = await call('generate_relationship', buildRelationshipPrompt(chapter, pages, knownNames));
   const relOut = parseJsonResponse<{ relationships: { character_a: string; character_b: string; label: string; established_page: number }[] }>(relRaw);
   console.log(JSON.stringify(relOut, null, 1));
-  checkPageBounds('관계', relOut.relationships.map((r) => r.established_page));
+  reportPageBounds('관계', relOut.relationships.map((r) => r.established_page));
   results.relationships = relOut;
 
   // 4) 배경지식 · 소개 (장 무관, 책 전체 1회)
@@ -93,7 +94,7 @@ async function main(): Promise<void> {
   const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
   const termOut = parseJsonResponse<{ terms: { term: string; definition: string; first_appearance_page: number }[] }>(termRaw);
   console.log(JSON.stringify(termOut, null, 1));
-  checkPageBounds('용어', termOut.terms.map((t) => t.first_appearance_page));
+  reportPageBounds('용어', termOut.terms.map((t) => t.first_appearance_page));
   results.terms = termOut;
 
   // 6) 사건
@@ -101,7 +102,7 @@ async function main(): Promise<void> {
   const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages));
   const eventOut = parseJsonResponse<{ events: { event: string; description: string; occurrence_page: number }[] }>(eventRaw);
   console.log(JSON.stringify(eventOut, null, 1));
-  checkPageBounds('사건', eventOut.events.map((e) => e.occurrence_page));
+  reportPageBounds('사건', eventOut.events.map((e) => e.occurrence_page));
   results.events = eventOut;
 
   const outDir = path.join(__dirname, '../../../data/generated');
