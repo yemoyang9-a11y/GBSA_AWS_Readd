@@ -8,6 +8,7 @@ import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
 import { askChatbot } from '../services/chatbotService';
 import { useSsabiData } from '../hooks/useSsabiData';
+import { useHeartbeat } from '../hooks/useHeartbeat';
 import { useSSE } from '../hooks/useSSE';
 import { nextSeq } from '../utils/seq';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
@@ -61,6 +62,12 @@ export default function Reader() {
     consume: consumeChat,
   } = useSSE();
   const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
+
+  /**
+   * 한 페이지에 오래 머물러도 세션이 끊기지 않게 한다 (A2).
+   * 읽기 화면에만 둔다 — 브리핑은 스쳐 가는 화면이고, 여기가 사용자가 머무는 곳이다.
+   */
+  useHeartbeat({ bookId });
 
   useEffect(() => {
     void fetchBookInfo(bookId).then((info) => {
