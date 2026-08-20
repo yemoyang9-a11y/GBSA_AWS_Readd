@@ -9,8 +9,23 @@
 import express, { Request, Response } from 'express';
 import { checkRateLimit } from '../modules/llm-gateway/rate-limiter';
 import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
+import { pool } from '../config/database';
+import { createReadingStateServices } from '../modules/reading-state/composition';
+import { BookNotReadyError } from '../modules/reading-state/session.service';
 
 const router = express.Router();
+
+// R2 서비스 조립 — Postgres 어댑터를 통해 진도·세션·리캡을 다룬다 (composition.ts)
+const readingState = createReadingStateServices(pool);
+
+function requireDeviceId(req: Request, res: Response): string | null {
+  const deviceId = req.headers['x-device-id'] as string | undefined;
+  if (!deviceId) {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'X-Device-Id header is required' });
+    return null;
+  }
+  return deviceId;
+}
 
 /**
  * Health Check
@@ -127,56 +142,169 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 /**
  * POST /books/:bookId/entry
  *
- * 진입 판정
+ * 진입 판정 — 세션 30분 규칙을 서버가 last_activity_at에서 직접 평가한다(FR-BRF-001 AC).
+ * 미완비 도서는 403 BOOK_NOT_READY로 거절한다(FR-BRW-002 🚦).
  *
- * TODO: R2 구현
+ * @see dev-spec-R2-core.md S3
  */
-router.post('/books/:bookId/entry', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/entry', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    const decision = await readingState.sessionService.decideEntry(deviceId, bookId);
+    res.json({
+      route: decision.route,
+      page: decision.page,
+      is_new_session: decision.is_new_session,
+      session_epoch: decision.session_epoch,
+    });
+  } catch (error) {
+    if (error instanceof BookNotReadyError) {
+      res.status(403).json({ error: 'BOOK_NOT_READY', message: '미완비 도서는 진입할 수 없습니다' });
+      return;
+    }
+    console.error('[API] entry error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * POST /books/:bookId/progress
  *
- * 진도 이벤트
+ * 진도 이벤트 — 더 새로운 seq일 때만 수용한다(FR-PRG-002). 수신 즉시 동기 커밋하고
+ * (NFR-REL-007), 세션 활성 시각을 함께 갱신한다(A2 — 조작 이벤트 4종 중 하나).
  *
- * TODO: R2 구현
+ * @see dev-spec-R2-core.md S2
  */
-router.post('/books/:bookId/progress', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  const { page, seq } = req.body;
+  if (typeof page !== 'number' || typeof seq !== 'number') {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'page, seq는 숫자여야 합니다' });
+    return;
+  }
+
+  try {
+    await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    await readingState.sessionService.touchActivity(deviceId, bookId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] progress error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * POST /books/:bookId/heartbeat
  *
- * 하트비트
+ * 화면 가시 상태의 5분 주기 하트비트. last_activity_at만 갱신하고 진도·기준점에는
+ * 관여하지 않는다(A2).
  *
- * TODO: R2 구현
+ * @see dev-spec-R2-core.md S3
  */
-router.post('/books/:bookId/heartbeat', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/heartbeat', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    await readingState.sessionService.acceptHeartbeat(deviceId, bookId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[API] heartbeat error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * GET /books/:bookId/briefing
  *
- * 브리핑 조회
+ * 브리핑 조회 — 저장 리캡(기준점 일치 검증) + 목차 위치 + 진도 파생값. 첫 진입
+ * (applied_cutoff === 0)은 폴백 대상이 아니다(❓Q1).
  *
- * TODO: R2 구현
+ * @see dev-spec-R2-core.md S6
  */
-router.get('/books/:bookId/briefing', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.get('/books/:bookId/briefing', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    const briefing = await readingState.briefingService.getBriefing(deviceId, bookId);
+    res.json(briefing);
+  } catch (error) {
+    console.error('[API] briefing error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * POST /books/:bookId/recap/stream
  *
- * 리캡 스트리밍
+ * 리캡 스트리밍 (SSE) — 재사용 판정(저장 리캡 일치 → R8, 세션 캐시 적중 → UC-09 A7)을
+ * 서버가 수행해 재사용 시 LLM 호출 0회. SSE 프레임은 R3와 통일한 delta/done/error
+ * 형식을 쓰고, done 프레임에 applied_cutoff를 싣는다(R4 CP0 회신 항목 3).
  *
- * TODO: R2 구현
+ * @see dev-spec-R2-core.md S5
  */
-router.post('/books/:bookId/recap/stream', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  const { page, seq } = req.body ?? {};
+
+  try {
+    if (typeof page === 'number' && typeof seq === 'number') {
+      // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
+      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    }
+    await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 리캡 요청도 조작 이벤트
+
+    // 요청당 스냅샷 1회 (2.1절) — 스트리밍 도중 페이지가 바뀌어도 이 K를 유지한다(UC-27 A5)
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const result = await readingState.recapService.getRecap(deviceId, bookId, snapshot.cutoff, 'realtime');
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    if (result.kind === 'empty') {
+      // ❓Q1 — K=0. 생성 대상 자체가 없다. 클라이언트가 빈 상태 문구를 렌더한다
+      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: snapshot.cutoff })}\n\n`);
+      res.end();
+      return;
+    }
+
+    if (result.kind === 'reused') {
+      // 저장 리캡·세션 캐시 재사용 — LLM 호출 0회, 완성된 텍스트를 단일 delta로 흘린다
+      res.write(`data: ${JSON.stringify({ type: 'delta', text: result.text })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: snapshot.cutoff })}\n\n`);
+      res.end();
+      return;
+    }
+
+    try {
+      for await (const chunk of result.chunks) {
+        res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
+      }
+      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: snapshot.cutoff })}\n\n`);
+      res.end();
+    } catch (streamError) {
+      console.error('[API] recap stream error', { bookId, error: streamError });
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream processing failed' })}\n\n`);
+      res.end();
+    }
+  } catch (error) {
+    console.error('[API] recap error', { bookId, error });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 // ============================================================================
