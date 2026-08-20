@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
@@ -27,6 +27,7 @@ import type { EntryResponse, PageResponse, SsabiTab } from '../types';
 export default function Reader() {
   const { bookId = '' } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const entry = (location.state as { entry?: EntryResponse } | null)?.entry;
 
   const [page, setPage] = useState<PageResponse | null>(null);
@@ -100,33 +101,52 @@ export default function Reader() {
   if (!page) return <Loading />;
 
   return (
-    <div className="flex h-screen">
-      <div className="flex-1">
-        <ReaderView
-          content={page.content}
-          currentPage={page.page_no}
-          totalPages={totalPages}
-          prevPage={page.prev_page}
-          nextPage={page.next_page}
-          onMove={setCurrentPage}
-        />
+    <div className="flex h-screen flex-col bg-canvas">
+      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="뒤로 가기"
+            className="flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink transition-opacity hover:opacity-60"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-serif text-lg font-bold tracking-widest text-ink">RE:ADD</span>
+            <span className="text-xs text-muted">탁류</span>
+          </div>
+        </div>
       </div>
 
-      <aside className="w-96">
-        <SsabiPanel
-          sessionEpoch={session?.session_epoch ?? 0}
-          onTabChange={setTab}
-          graph={graph}
-          graphFailed={graphFailed}
-          recapText={recapText}
-          recapStreaming={recapStreaming}
-          recapFailed={recapError !== null}
-          chatAnswer={chatAnswer}
-          chatStreaming={chatStreaming}
-          chatError={chatError}
-          onAsk={handleAsk}
-        />
-      </aside>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1">
+          <ReaderView
+            content={page.content}
+            currentPage={page.page_no}
+            totalPages={totalPages}
+            prevPage={page.prev_page}
+            nextPage={page.next_page}
+            onMove={setCurrentPage}
+          />
+        </div>
+
+        <aside className="w-96">
+          <SsabiPanel
+            sessionEpoch={session?.session_epoch ?? 0}
+            onTabChange={setTab}
+            graph={graph}
+            graphFailed={graphFailed}
+            recapText={recapText}
+            recapStreaming={recapStreaming}
+            recapFailed={recapError !== null}
+            chatAnswer={chatAnswer}
+            chatStreaming={chatStreaming}
+            chatError={chatError}
+            onAsk={handleAsk}
+          />
+        </aside>
+      </div>
     </div>
   );
 }

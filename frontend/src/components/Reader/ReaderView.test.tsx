@@ -68,4 +68,11 @@ describe('읽기 화면', () => {
 
     expect(onMove).not.toHaveBeenCalled();
   });
+
+  it('FR-PRG-001: 본문 영역이 스크롤 컨테이너다 — 재분할 없이 길이만 늘어난다', () => {
+    render(
+      <ReaderView content="본문" currentPage={1} totalPages={30} prevPage={null} nextPage={2} onMove={() => {}} />
+    );
+    expect(screen.getByRole('article').className).toMatch(/overflow-y-auto/);
+  });
 });
