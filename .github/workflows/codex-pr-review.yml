@@ -1,0 +1,65 @@
+name: Codex pull request review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    # Same-repository branches keep the API key away from untrusted fork code.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      final_message: ${{ steps.run_codex.outputs.final-message }}
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v5
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check OpenAI secret is configured
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is not configured. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Run Codex review
+        id: run_codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/review.md
+          output-file: codex-output.md
+          safety-strategy: drop-sudo
+          sandbox: read-only
+
+      - name: Post Codex review
+        if: steps.run_codex.outputs.final-message != ''
+        uses: actions/github-script@v7
+        env:
+          CODEX_FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const body = process.env.CODEX_FINAL_MESSAGE?.trim();
+            if (!body) return;
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body,
+              event: 'COMMENT',
+            });
