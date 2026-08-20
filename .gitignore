@@ -52,3 +52,6 @@ temp/
 # Database
 *.sqlite
 *.db
+
+# 파이프라인 생성물 — 검수 전 산출물이라 커밋 대상 아님
+backend/data/generated/
