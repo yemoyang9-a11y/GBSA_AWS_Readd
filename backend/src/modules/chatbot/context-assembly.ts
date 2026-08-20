@@ -17,6 +17,7 @@ import type {
   Term,
   Event,
 } from '../../shared/types';
+import * as repo from './repository';
 
 /**
  * 챗봇 근거 조립
@@ -79,14 +80,7 @@ export async function assembleContext(
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
 async function findChapterSummaries(bookId: string, K: number): Promise<ChapterSummary[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM chapter_summaries
-  // WHERE book_id = $1 AND end_page <= $2
-  // ORDER BY chapter_no
-
-  // 임시 스텁
-  console.log(`[Context] Finding chapter summaries for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findChapterSummaries(bookId, K);
 }
 
 /**
@@ -97,14 +91,7 @@ async function findChapterSummaries(bookId: string, K: number): Promise<ChapterS
  * @returns 절단된 원문 (페이지 연결)
  */
 async function getCurrentChapterText(bookId: string, K: number): Promise<string | null> {
-  // TODO: 실제 DB 쿼리
-  // 1. 현재 장 찾기: K가 속한 장
-  // 2. 페이지 조회: WHERE page_no >= chapter.start_page AND page_no <= K
-  // 3. content 연결
-
-  // 임시 스텁
-  console.log(`[Context] Getting current chapter text for book ${bookId}, cutoff ${K}`);
-  return null;
+  return repo.getCurrentChapterText(bookId, K);
 }
 
 /**
@@ -113,12 +100,7 @@ async function getCurrentChapterText(bookId: string, K: number): Promise<string 
  * FR-QNA-006 🚦: 최초 등장 페이지 <= K
  */
 async function findCharacters(bookId: string, K: number): Promise<Character[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM characters
-  // WHERE book_id = $1 AND first_appearance_page <= $2
-
-  console.log(`[Context] Finding characters for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findCharacters(bookId, K);
 }
 
 /**
@@ -130,13 +112,7 @@ async function findCharacters(bookId: string, K: number): Promise<Character[]> {
  * FR-QNA-006 🚦: 확립 페이지 <= K
  */
 async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM relationships
-  // WHERE book_id = $1 AND established_page <= $2
-  // ORDER BY character_a_id, character_b_id, established_page
-
-  console.log(`[Context] Finding relationships for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findRelationships(bookId, K);
 }
 
 /**
@@ -145,14 +121,7 @@ async function findRelationships(bookId: string, K: number): Promise<Relationshi
  * FR-QNA-006 🚦: 근거 페이지 <= K
  */
 async function findCharacterNotes(bookId: string, K: number): Promise<CharacterNote[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM character_notes
-  // WHERE character_id IN (
-  //   SELECT id FROM characters WHERE book_id = $1 AND first_appearance_page <= $2
-  // ) AND source_page <= $2
-
-  console.log(`[Context] Finding character notes for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findCharacterNotes(bookId, K);
 }
 
 /**
@@ -161,12 +130,7 @@ async function findCharacterNotes(bookId: string, K: number): Promise<CharacterN
  * FR-QNA-006 🚦: 최초 등장 페이지 <= K
  */
 async function findTerms(bookId: string, K: number): Promise<Term[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM terms
-  // WHERE book_id = $1 AND first_appearance_page <= $2
-
-  console.log(`[Context] Finding terms for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findTerms(bookId, K);
 }
 
 /**
@@ -175,12 +139,7 @@ async function findTerms(bookId: string, K: number): Promise<Term[]> {
  * FR-QNA-006 🚦: 발생 페이지 <= K
  */
 async function findEvents(bookId: string, K: number): Promise<Event[]> {
-  // TODO: 실제 DB 쿼리
-  // SELECT * FROM events
-  // WHERE book_id = $1 AND occurrence_page <= $2
-
-  console.log(`[Context] Finding events for book ${bookId}, cutoff ${K}`);
-  return [];
+  return repo.findEvents(bookId, K);
 }
 
 /**
@@ -190,11 +149,7 @@ async function findEvents(bookId: string, K: number): Promise<Event[]> {
  * FR-BGK-002 🚦
  */
 async function getBackgroundKnowledge(bookId: string): Promise<string> {
-  // TODO: 실제 DB 쿼리
-  // SELECT background FROM books WHERE id = $1
-
-  console.log(`[Context] Getting background knowledge for book ${bookId}`);
-  return '';
+  return repo.getBackgroundKnowledge(bookId);
 }
 
 /**
