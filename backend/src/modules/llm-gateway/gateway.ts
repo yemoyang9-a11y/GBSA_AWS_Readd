@@ -11,7 +11,6 @@
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getModelForTask, validateModelVersions } from './model-config';
 import { withRetry } from './retry';
-// import { withFallback } from './retry'; // TODO: 필요 시 사용
 
 /**
  * 게이트웨이 인터페이스
@@ -28,16 +27,24 @@ const client = new BedrockRuntimeClient({
 validateModelVersions();
 
 /**
+ * LLM 호출 옵션
+ */
+export interface LLMCallOptions {
+  maxTokens?: number;
+}
+
+/**
  * LLM 호출 (동기)
  *
  * @param task - 작업 유형 (예: "recap", "chatbot", "generate_summary")
  * @param prompt - LLM에 전달할 프롬프트
+ * @param options - 호출 옵션 (maxTokens 등)
  * @returns LLM 응답 텍스트
  *
  * @example
- * const response = await call('recap', '줄거리를 요약해주세요...');
+ * const response = await call('recap', '줄거리를 요약해주세요...', { maxTokens: 8192 });
  */
-export async function call(task: string, prompt: string): Promise<string> {
+export async function call(task: string, prompt: string, options: LLMCallOptions = {}): Promise<string> {
   const startTime = Date.now();
 
   try {
@@ -49,7 +56,7 @@ export async function call(task: string, prompt: string): Promise<string> {
       // 프롬프트 포맷 (Claude Messages API)
       const requestBody = {
         anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: 4096,
+        max_tokens: options.maxTokens || 4096,
         messages: [
           {
             role: 'user',
@@ -101,14 +108,15 @@ export async function call(task: string, prompt: string): Promise<string> {
  *
  * @param task - 작업 유형
  * @param prompt - LLM에 전달할 프롬프트
+ * @param options - 호출 옵션 (maxTokens 등)
  * @yields 텍스트 청크
  *
  * @example
- * for await (const chunk of stream('chatbot', '질문...')) {
+ * for await (const chunk of stream('chatbot', '질문...', { maxTokens: 8192 })) {
  *   console.log(chunk);
  * }
  */
-export async function* stream(task: string, prompt: string): AsyncGenerator<string> {
+export async function* stream(task: string, prompt: string, options: LLMCallOptions = {}): AsyncGenerator<string> {
   const startTime = Date.now();
   let totalTokens = 0;
 
@@ -118,7 +126,7 @@ export async function* stream(task: string, prompt: string): AsyncGenerator<stri
 
     const requestBody = {
       anthropic_version: 'bedrock-2023-05-31',
-      max_tokens: 4096,
+      max_tokens: options.maxTokens || 4096,
       messages: [
         {
           role: 'user',
