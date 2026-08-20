@@ -70,7 +70,6 @@ export async function* handleQuery(
   deviceId: string
 ): AsyncGenerator<string> {
 
-  // const startTime = Date.now(); // TODO: 성능 측정 시 사용
   let noEvidence = false;
 
   try {

@@ -68,31 +68,70 @@ res.end();
 
 ## 🎯 프론트엔드 처리 (R4)
 
-```typescript
-const eventSource = new EventSource('/books/123/chat');
+⚠️ **주의**: EventSource는 GET만 지원하므로 POST 본문·헤더가 필요한 경우 fetch 사용
 
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  
-  switch (data.type) {
-    case 'delta':
-      // 텍스트 추가
-      appendText(data.text);
-      break;
-      
-    case 'done':
-      // 정상 종료
-      eventSource.close();
-      onComplete();
-      break;
-      
-    case 'error':
-      // 오류 처리
-      eventSource.close();
-      onError(data.message);
-      break;
+```typescript
+// POST 본문과 X-Device-Id 헤더를 보낼 수 있는 fetch 사용
+const response = await fetch('/books/123/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Device-Id': deviceId,
+  },
+  body: JSON.stringify({
+    query: '정주사는 누구인가요?',
+    page: 50,  // 선택: 진도 이벤트 동봉 시
+    seq: 123,  // 선택: 진도 이벤트 동봉 시
+  }),
+});
+
+if (!response.ok) {
+  // Rate Limit 등 SSE 열기 전 에러 (일반 JSON)
+  const error = await response.json();
+  throw new Error(error.message);
+}
+
+const reader = response.body!.getReader();
+const decoder = new TextDecoder();
+let buffer = '';
+
+try {
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    
+    // 마지막 줄은 불완전할 수 있으므로 버퍼에 유지
+    buffer = lines.pop() || '';
+    
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+        
+        switch (data.type) {
+          case 'delta':
+            // 텍스트 추가
+            appendText(data.text);
+            break;
+            
+          case 'done':
+            // 정상 종료 (기준점 K 포함)
+            onComplete(data.applied_cutoff);
+            return;
+            
+          case 'error':
+            // 오류 처리
+            onError(data.message);
+            return;
+        }
+      }
+    }
   }
-};
+} finally {
+  reader.releaseLock();
+}
 ```
 
 ---

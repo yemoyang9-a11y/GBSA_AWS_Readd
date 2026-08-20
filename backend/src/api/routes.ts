@@ -15,7 +15,7 @@ const router = express.Router();
 /**
  * Health Check
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -101,7 +101,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
       res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
-      res.end();
+      return res.end();
 
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
@@ -110,13 +110,13 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         type: 'error',
         message: 'Stream processing failed'
       })}\n\n`);
-      res.end();
+      return res.end();
     }
 
   } catch (error) {
     console.error('[API] Chatbot error', { bookId, query, error });
     // SSE 열기 전 에러는 일반 JSON 응답
-    res.status(500).json({
+    return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Internal server error',
     });
@@ -134,8 +134,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
  *
  * TODO: R2 구현
  */
-router.post('/books/:bookId/entry', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/entry', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
 });
 
 /**
@@ -145,8 +145,8 @@ router.post('/books/:bookId/entry', (req: Request, res: Response) => {
  *
  * TODO: R2 구현
  */
-router.post('/books/:bookId/progress', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/progress', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
 });
 
 /**
@@ -156,8 +156,8 @@ router.post('/books/:bookId/progress', (req: Request, res: Response) => {
  *
  * TODO: R2 구현
  */
-router.post('/books/:bookId/heartbeat', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/heartbeat', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
 });
 
 /**
@@ -167,8 +167,8 @@ router.post('/books/:bookId/heartbeat', (req: Request, res: Response) => {
  *
  * TODO: R2 구현
  */
-router.get('/books/:bookId/briefing', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.get('/books/:bookId/briefing', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
 });
 
 /**
@@ -178,8 +178,8 @@ router.get('/books/:bookId/briefing', (req: Request, res: Response) => {
  *
  * TODO: R2 구현
  */
-router.post('/books/:bookId/recap/stream', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
+router.post('/books/:bookId/recap/stream', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R2 담당' });
 });
 
 // ============================================================================
@@ -193,8 +193,8 @@ router.post('/books/:bookId/recap/stream', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -204,8 +204,8 @@ router.get('/books', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/info', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/info', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -215,8 +215,8 @@ router.get('/books/:bookId/info', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/pages/:pageNo', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/pages/:pageNo', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -226,8 +226,8 @@ router.get('/books/:bookId/pages/:pageNo', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/graph', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/graph', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -237,8 +237,8 @@ router.get('/books/:bookId/ssabi/graph', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/characters/:characterId', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/characters/:characterId', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 export default router;
