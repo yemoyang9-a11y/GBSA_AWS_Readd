@@ -30,6 +30,7 @@ export default function TypographicCover({
     <div
       className="flex h-cover w-full flex-col items-center justify-center gap-3 rounded-cover border border-line bg-canvas px-6 text-center"
       data-testid="typographic-cover"
+      aria-hidden="true"
     >
       <span className="font-serif text-2xl font-bold leading-snug text-ink">{title}</span>
       <span className="h-px w-8 bg-line" />
