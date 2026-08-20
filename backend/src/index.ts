@@ -6,6 +6,7 @@
 
 import express from 'express';
 import dotenv from 'dotenv';
+import path from 'path';
 import routes from './api/routes';
 
 // 환경 변수 로드
@@ -17,6 +18,9 @@ const PORT = process.env.PORT || 3000;
 // 미들웨어
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Static files (테스트 페이지)
+app.use('/test', express.static(path.join(__dirname, '../public')));
 
 // CORS (개발용)
 app.use((req, res, next) => {
@@ -53,11 +57,14 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // 서버 시작
 app.listen(PORT, () => {
+  const mockMode = process.env.MOCK_MODE === 'true';
+
   console.log(`
 ┌─────────────────────────────────────────┐
 │  싸비 (Reading Recap) Backend          │
 │  Port: ${PORT}                           │
 │  Environment: ${process.env.NODE_ENV || 'development'}             │
+│  Mock Mode: ${mockMode ? '✅ ENABLED' : '❌ DISABLED'}           │
 │  Node: ${process.version}                      │
 └─────────────────────────────────────────┘
 
@@ -68,7 +75,7 @@ API Endpoints:
   R2 endpoints: /entry, /progress, /briefing, /recap/stream
   R4 endpoints: /books, /pages, /ssabi/graph
 
-Ready for requests!
+${mockMode ? '🧪 Test Page: http://localhost:' + PORT + '/test/test-chatbot.html\n' : ''}Ready for requests!
   `);
 });
 

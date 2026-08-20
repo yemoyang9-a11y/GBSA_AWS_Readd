@@ -1,66 +1,81 @@
 /**
- * 독서 상태 서비스 조합 (R2 담당)
+ * R2 조립 루트 — Postgres 어댑터 + 서비스를 한 곳에서 엮는다 (CP3 실데이터 전환)
  *
- * TODO: R2 구현 시 실제 서비스로 교체
+ * API 라우트(api/routes.ts)와 세션 종료 스위퍼 스크립트(batch/session-sweeper/run-sweep.ts)
+ * 양쪽이 이 함수를 통해 같은 조립 규칙으로 서비스를 얻는다 — 두 곳에서 배선을 따로
+ * 하면 리포지토리 구현이 갈릴 위험이 생긴다.
+ *
+ * ⚠️ R3가 병합 전 자기 브랜치에서 같은 경로에 스텁(cutoff=80 고정 반환)을 만들어뒀다
+ *    (커밋 410f558). 머지 시 이 실구현으로 완전히 덮어썼다 — 스텁을 남기면 K 하드코딩
+ *    버그가 파일만 바뀐 채 되살아난다.
  */
 
-import type { Pool } from 'pg';
-
-export interface CutoffSnapshot {
-  current_page: number;
-  cutoff: number;
-  percent: number;
-  chapter: number | null;
-}
-
-export interface ProgressEvent {
-  page: number;
-  seq: number;
-}
+import type { Pool } from 'pg'
+import { stream as llmStream } from '../llm-gateway/gateway'
+import { systemClock } from './clock'
+import { createCutoffService } from './cutoff.service'
+import { createProgressService } from './progress.service'
+import { createSessionService } from './session.service'
+import { createBriefingService } from './briefing.service'
+import { createRecapService } from './recap.service'
+import type { QueryClient } from './pg-repository'
+import {
+  createPgBookContentReader,
+  createPgConversationHistoryRepository,
+  createPgReadingPositionRepository,
+  createPgReadingSessionRepository,
+  createPgRecapCallLogger,
+  createPgSavedRecapRepository,
+  createPgSessionRecapCacheRepository,
+} from './pg-repository'
+import type { ReadingSessionRepository, ConversationHistoryRepository } from './repository'
 
 export interface ReadingStateServices {
-  progressService: {
-    acceptProgressEvent(deviceId: string, bookId: string, event: ProgressEvent): Promise<void>;
-  };
-  sessionService: {
-    touchActivity(deviceId: string, bookId: string): Promise<void>;
-  };
-  cutoffService: {
-    getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot>;
-  };
+  cutoffService: ReturnType<typeof createCutoffService>
+  progressService: ReturnType<typeof createProgressService>
+  sessionService: ReturnType<typeof createSessionService>
+  briefingService: ReturnType<typeof createBriefingService>
+  recapService: ReturnType<typeof createRecapService>
+  /** 스위퍼 전용 — 라우트는 이 두 개를 직접 쓰지 않는다 */
+  sessions: ReadingSessionRepository
+  conversationHistory: ConversationHistoryRepository
 }
 
-/**
- * 독서 상태 서비스 생성
- *
- * TODO: R2 구현 전 임시 스텁
- */
-export function createReadingStateServices(_pool: Pool): ReadingStateServices {
+function toQueryClient(pool: Pool): QueryClient {
+  return { query: (sql: string, params?: unknown[]) => pool.query(sql, params) }
+}
+
+export function createReadingStateServices(pool: Pool): ReadingStateServices {
+  const db = toQueryClient(pool)
+
+  const positions = createPgReadingPositionRepository(db)
+  const books = createPgBookContentReader(db)
+  const sessions = createPgReadingSessionRepository(db)
+  const savedRecap = createPgSavedRecapRepository(db)
+  const sessionCache = createPgSessionRecapCacheRepository(db)
+  const recapLog = createPgRecapCallLogger(db)
+  const conversationHistory = createPgConversationHistoryRepository(db)
+
+  const cutoffService = createCutoffService({ positions, books })
+  const progressService = createProgressService({ positions })
+  const sessionService = createSessionService({ positions, books, sessions, clock: systemClock })
+  const briefingService = createBriefingService({ cutoffService, books, savedRecap })
+  const recapService = createRecapService({
+    content: books,
+    books,
+    savedRecap,
+    sessionCache,
+    recapLog,
+    llmStream,
+  })
+
   return {
-    progressService: {
-      async acceptProgressEvent(deviceId: string, bookId: string, event: ProgressEvent): Promise<void> {
-        console.log('[ReadingState STUB] acceptProgressEvent', { deviceId, bookId, event });
-        // TODO: R2 구현 - reading_position 업데이트
-      },
-    },
-    sessionService: {
-      async touchActivity(deviceId: string, bookId: string): Promise<void> {
-        console.log('[ReadingState STUB] touchActivity', { deviceId, bookId });
-        // TODO: R2 구현 - reading_sessions 업데이트
-      },
-    },
-    cutoffService: {
-      async getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot> {
-        console.log('[ReadingState STUB] getCutoffSnapshot', { deviceId, bookId });
-        // TODO: R2 구현 - 실제 DB에서 조회
-        // FR-PRG-003 🚦: cutoff = current_page - 1
-        return {
-          current_page: 81,
-          cutoff: 80,
-          percent: 0.4,
-          chapter: 3,
-        };
-      },
-    },
-  };
+    cutoffService,
+    progressService,
+    sessionService,
+    briefingService,
+    recapService,
+    sessions,
+    conversationHistory,
+  }
 }

@@ -79,7 +79,10 @@ export interface ChapterSummary {
  * 브리핑 응답
  */
 export interface BriefingResponse {
-  /** 저장 리캡 (없으면 null, 클라이언트가 스트리밍 폴백 호출) */
+  /** 이 응답이 적용한 기준점 K. 첫 진입 구분의 근거(❓Q1) — recap.service의 판단을 재계산하지 않는다 */
+  applied_cutoff: number
+
+  /** 저장 리캡 (없으면 null, applied_cutoff > 0일 때만 클라이언트가 스트리밍 폴백 호출) */
   recap: string | null
 
   /** 목차 위치 */

@@ -11,6 +11,10 @@
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getModelForTask, validateModelVersions } from './model-config';
 import { withRetry } from './retry';
+import dotenv from 'dotenv';
+
+// 환경 변수 로드 (gateway가 먼저 로드될 수 있으므로)
+dotenv.config();
 
 /**
  * 게이트웨이 인터페이스

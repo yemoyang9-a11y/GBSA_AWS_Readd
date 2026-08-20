@@ -11,8 +11,10 @@ import { checkRateLimit } from '../modules/llm-gateway/rate-limiter';
 import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { pool } from '../config/database';
+import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
 
 const router = express.Router();
+const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 /**
  * Health Check
@@ -69,22 +71,28 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       });
     }
 
-    // R2 연동 - 독서 상태 서비스 초기화
-    const readingState = createReadingStateServices(pool);
+    // 기준점 스냅샷 가져오기
+    let K: number;
 
-    // 진도 이벤트 동봉 처리 (R4 요청)
-    // 페이지 넘기고 바로 물으면 반영돼야 함
-    // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
-    if (typeof page === 'number' && typeof seq === 'number') {
-      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    if (MOCK_MODE) {
+      // Mock 모드: 테스트용 고정 K 값
+      const mockSnapshot = await mockGetCutoffSnapshot(deviceId, bookId);
+      K = mockSnapshot.cutoff;
+      console.log('[Mock] Using mock cutoff:', K);
+    } else {
+      // R2 연동 - 독서 상태 서비스 초기화
+      const readingState = createReadingStateServices(pool);
+
+      // 진도 이벤트 동봉 처리 (R4 요청)
+      if (typeof page === 'number' && typeof seq === 'number') {
+        await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+      }
+      await readingState.sessionService.touchActivity(deviceId, bookId);
+
+      // 기준점 스냅샷 가져오기 (R2 연동)
+      const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+      K = snapshot.cutoff;
     }
-    await readingState.sessionService.touchActivity(deviceId, bookId);
-
-    // 기준점 스냅샷 가져오기 (R2 연동)
-    // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
-    // FR-PRG-003 🚦: 기준점 = current_page - 1
-    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
-    const K = snapshot.cutoff;
 
     // SSE 스트리밍 설정 (NFR-PERF-008)
     res.setHeader('Content-Type', 'text/event-stream');
