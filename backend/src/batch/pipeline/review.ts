@@ -71,7 +71,28 @@ export function reviewKey(target_type: ReviewTargetType, target_id: string): str
   return `${target_type}::${target_id}`;
 }
 
-/** 생성물 전량을 검수 대상 행으로 펼친다. alreadyReviewed에 있는 대상은 다시 내보내지 않는다(재실행 시 판정 보존) */
+export type ReviewRecordRow = {
+  target_type: ReviewTargetType;
+  target_id: string;
+} & Partial<Record<ReviewCriterion, boolean | null>>;
+
+/**
+ * review_records 중 "적용 항목 전부 TRUE"인 대상만 재내보내기 제외 키로 삼는다.
+ * FALSE로 판정된 대상은 행이 존재해도 통과가 아니므로 제외하지 않는다 —
+ * 그래야 검수자가 다음 시트에서 그 대상을 다시 받아 수정 후 재제출할 수 있다.
+ * (이전엔 행 존재 여부만 봐서, 한번 FALSE를 받은 대상은 재수출 경로가 영구히 막혔었다)
+ */
+export function passedReviewKeys(records: ReviewRecordRow[]): Set<string> {
+  const keys = new Set<string>();
+  for (const r of records) {
+    const applicable = APPLICABLE_CRITERIA[r.target_type];
+    const passed = applicable.every((c) => r[c] === true);
+    if (passed) keys.add(reviewKey(r.target_type, r.target_id));
+  }
+  return keys;
+}
+
+/** 생성물 전량을 검수 대상 행으로 펼친다. alreadyReviewed에 있는 대상은 다시 내보내지 않는다(재실행 시 통과 판정 보존 — FALSE 대상은 이 집합에 넣지 말 것, passedReviewKeys 참고) */
 export function buildReviewSheetRows(data: ResolvedBookData, alreadyReviewed: Set<string> = new Set()): ReviewSheetRow[] {
   const rows: ReviewSheetRow[] = [];
   const push = (target_type: ReviewTargetType, target_id: string, page_ref: number | null, content_preview: string): void => {
