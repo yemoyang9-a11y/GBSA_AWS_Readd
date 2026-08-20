@@ -15,6 +15,7 @@ import type {
   ConversationHistoryRepository,
   ReadingPositionRepository,
   ReadingSessionRepository,
+  RecapCallLogger,
   RecapContentReader,
   RecapState,
   SavedRecapRepository,
@@ -25,6 +26,7 @@ import type {
   SweepTarget,
 } from '../../../src/modules/reading-state/repository'
 import type { Clock } from '../../../src/modules/reading-state/clock'
+import type { RecapCallLog } from '../../../src/shared/types'
 
 /** 진도(reading_position) 페이크 — R2 소유 테이블 */
 export class FakeReadingPositionRepository implements ReadingPositionRepository {
@@ -276,6 +278,15 @@ export class FakeConversationHistoryRepository implements ConversationHistoryRep
 
   wasPurged(deviceId: string, bookId: string): boolean {
     return this.purged.includes(`${deviceId}::${bookId}`)
+  }
+}
+
+/** 리캡 호출 로그(NFR-OBS-002 🚦) 페이크 — 기록 건수·필드를 테스트에서 검증한다 (S5) */
+export class FakeRecapCallLogger implements RecapCallLogger {
+  readonly records: RecapCallLog[] = []
+
+  async record(entry: RecapCallLog): Promise<void> {
+    this.records.push(entry)
   }
 }
 

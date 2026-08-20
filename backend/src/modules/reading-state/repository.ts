@@ -10,6 +10,8 @@
  *    이 계층에 추가하지 않는다 (CP4 교차 리뷰 항목 1·2).
  */
 
+import type { RecapCallLog } from '../../shared/types'
+
 /** 진도 테이블(reading_position)의 저장 레코드 — 5.1.2절 */
 export interface StoredPosition {
   /** 마지막으로 열어본 페이지. 이 시스템의 유일한 저장값 (3.3절) */
@@ -226,4 +228,18 @@ export interface SessionRecapCacheRepository {
 export interface ConversationHistoryRepository {
   /** 세션 종료 시 대화 이력을 파기한다. 질의 로그(운영 기록 스토어)는 별도 테이블이며 대상이 아니다. */
   purge(deviceId: string, bookId: string): Promise<void>
+}
+
+// ============================================================================
+// 리캡 호출 로그 — 운영 기록 스토어 (NFR-OBS-002 🚦, S5)
+// ============================================================================
+
+export interface RecapCallLogger {
+  /**
+   * LLM 호출 1회당 정확히 1건 기록한다. 로그가 없으면 FR-SPL-003 판정이 불가능하다
+   * (00-shared 2.4절). 재사용 경로(K=0·저장분 일치·세션 캐시 적중)는 호출이 아니므로
+   * 기록하지 않는다 — "호출 1회 → 로그 1건"의 대구가 재사용 경로에서 깨지면 로그가
+   * 실제 호출 수를 부풀린다.
+   */
+  record(entry: RecapCallLog): Promise<void>
 }
