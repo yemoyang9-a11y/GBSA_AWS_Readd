@@ -28,6 +28,11 @@ router.get('/health', (req: Request, res: Response) => {
  *
  * 챗봇 질의 (SSE 스트리밍)
  *
+ * SSE 프레임 형식 (R4 요청 - delta/done/error 통일):
+ * - delta: data: {"type":"delta","text":"chunk"}\n\n
+ * - done:  data: {"type":"done"}\n\n
+ * - error: data: {"type":"error","message":"..."}\n\n
+ *
  * @see API_CONTRACT.md - R3 제공 API
  */
 router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
@@ -51,7 +56,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   }
 
   try {
-    // Rate Limit 체크 (NFR-AI-017, A1: 디바이스·도서당 분당 3회)
+    // Rate Limit 체크 - SSE 열기 전에 (R4 요청)
+    // NFR-AI-017, A1: 디바이스·도서당 분당 3회
     const rateLimitCheck = checkRateLimit(deviceId, bookId);
     if (!rateLimitCheck.allowed) {
       return res.status(429).json({
@@ -61,14 +67,17 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       });
     }
 
-    // TODO: 진도 이벤트 동봉 처리 (page, seq가 있으면)
-    // if (page && seq) {
-    //   await updateProgress(deviceId, bookId, page, seq);
-    // }
+    // 진도 이벤트 동봉 처리 (R4 요청)
+    // 페이지 넘기고 바로 물으면 반영돼야 함
+    if (page && seq) {
+      // TODO: R2 연동 - updateProgress(deviceId, bookId, page, seq);
+      console.log('[API] Progress event with chatbot', { deviceId, bookId, page, seq });
+    }
 
-    // TODO: 기준점 스냅샷 가져오기 (R2 연동)
-    // const snapshot = await getCutoffSnapshot(deviceId, bookId);
-    // const K = snapshot.cutoff;
+    // 기준점 스냅샷 가져오기 (R2 연동)
+    // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
+    // TODO: const snapshot = await getCutoffSnapshot(deviceId, bookId);
+    // TODO: const K = snapshot.cutoff;
 
     // 임시: 하드코딩된 K (R2 연동 전)
     const K = 80;
@@ -82,21 +91,28 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 챗봇 처리 (스트리밍)
     try {
       for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId)) {
-        res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+        // SSE 프레임 통일 (R4 요청 - delta/done/error)
+        // 근거 부재 거절도 일반 delta로 흘려보냄
+        res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
-      // 스트림 종료
-      res.write('data: [DONE]\n\n');
+      // 스트림 정상 종료
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
       res.end();
 
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
-      res.write(`data: ${JSON.stringify({ error: 'STREAM_ERROR' })}\n\n`);
+      // 에러도 통일된 형식으로
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        message: 'Stream processing failed'
+      })}\n\n`);
       res.end();
     }
 
   } catch (error) {
     console.error('[API] Chatbot error', { bookId, query, error });
+    // SSE 열기 전 에러는 일반 JSON 응답
     res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Internal server error',
