@@ -21,6 +21,8 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
 
 const baseProps = {
   chapters,
+  title: '탁류',
+  author: '채만식',
   onContinue: () => {},
   onRequestFallback: () => {},
 };
@@ -59,6 +61,14 @@ describe('브리핑 화면', () => {
     );
 
     expect(onRequestFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('시안 상단: 표지·제목·저자를 보여준다', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+
+    expect(screen.getByTestId('typographic-cover')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '탁류' })).toBeInTheDocument();
+    expect(screen.getByText('채만식')).toBeInTheDocument();
   });
 
   it('자가 검증 23 / FR-BRF-004 · D12: 목차는 표시 전용이라 이동 가능한 요소가 없다', () => {

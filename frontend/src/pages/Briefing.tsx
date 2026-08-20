@@ -24,6 +24,7 @@ export default function Briefing() {
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
+  const [book, setBook] = useState<{ title: string; author: string } | null>(null);
 
   const {
     text: streamedRecap,
@@ -37,7 +38,10 @@ export default function Briefing() {
 
   useEffect(() => {
     void fetchBriefing(bookId).then(setBriefing);
-    void fetchBookInfo(bookId).then((info) => setChapters(info.chapters));
+    void fetchBookInfo(bookId).then((info) => {
+      setChapters(info.chapters);
+      setBook({ title: info.basic_info.title, author: info.basic_info.author });
+    });
   }, [bookId]);
 
   const handleFallback = useCallback(() => {
@@ -58,6 +62,8 @@ export default function Briefing() {
     <BriefingView
       briefing={briefing}
       chapters={chapters}
+      title={book?.title ?? ''}
+      author={book?.author ?? ''}
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
       streamedRecap={streamedRecap}

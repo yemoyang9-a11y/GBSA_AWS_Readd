@@ -3,6 +3,8 @@ import type { BriefingResponse, ChapterSummary } from '../types';
 import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
 import ProgressBar from '../components/Reader/ProgressBar';
+import TypographicCover from '../components/common/TypographicCover';
+import Button from '../components/common/Button';
 
 /**
  * 브리핑 화면 — S6 (FR-BRF-002~005, D12, D13 ①)
@@ -11,10 +13,14 @@ import ProgressBar from '../components/Reader/ProgressBar';
  * 같은 분기로 묶으면 첫 진입에서 LLM 이 호출된다 (자가 검증 20·21번).
  * 목차는 표시 전용이라 이동 요소를 만들지 않는다 (FR-BRF-004, D12) — 읽기 화면의 목차만
  * 이동 가능하다. '마저 읽기'는 리캡 상태와 무관하게 항상 동작한다 (UC-28 E1, FR-SPL-005 🚦).
+ *
+ * "N일 만이에요"는 만들지 않는다 — BriefingResponse 에 마지막 방문 시각이 없다 (스펙 §7 #6).
  */
 export default function BriefingView({
   briefing,
   chapters,
+  title,
+  author,
   onContinue,
   onRequestFallback,
   streamedRecap,
@@ -22,6 +28,8 @@ export default function BriefingView({
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
+  title: string;
+  author: string;
   onContinue: () => void;
   onRequestFallback: () => void;
   streamedRecap?: string;
@@ -41,36 +49,59 @@ export default function BriefingView({
   }, [view.kind, onRequestFallback]);
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      <section aria-label="리캡">
-        {view.kind === 'empty' ? <p>{EMPTY_RECAP_MESSAGE}</p> : null}
-        {view.kind === 'recap' ? <p>{briefing.recap}</p> : null}
-        {view.kind === 'fallback' ? (
-          <p>{recapFailed ? '리캡을 불러오지 못했습니다' : (streamedRecap ?? '')}</p>
-        ) : null}
-      </section>
+    <main className="mx-auto max-w-3xl bg-canvas px-7 py-6">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="w-24 shrink-0">
+          <TypographicCover title={title} author={author} />
+        </div>
+        <div>
+          <h2 className="font-serif text-xl font-bold text-ink">{title}</h2>
+        </div>
+      </div>
 
-      <section aria-label="진도">
+      <section aria-label="진도" className="mb-6">
+        <div className="mb-1.5 flex items-center justify-between text-[11px]">
+          <span className="text-muted">{briefing.current_chapter.title}</span>
+          <span className="font-bold text-ink">{briefing.progress.percent}%</span>
+        </div>
         <ProgressBar percent={briefing.progress.percent} />
       </section>
 
-      {/* 표시 전용 목차 — 이동 요소(a·button)를 만들지 않는다 (FR-BRF-004, D12) */}
-      <ul aria-label="목차">
-        {chapters.map((chapter) => (
-          <li
-            key={chapter.chapter_no}
-            aria-current={
-              chapter.chapter_no === briefing.current_chapter.chapter_no ? 'true' : undefined
-            }
-          >
-            {chapter.title}
-          </li>
-        ))}
-      </ul>
+      <section aria-label="리캡" className="mb-6">
+        <h3 className="mb-3 font-serif text-base font-bold text-ink">그동안 이런 이야기였어요</h3>
+        <div className="rounded-card border border-line bg-surface p-6 text-sm leading-relaxed text-muted">
+          {view.kind === 'empty' ? <p>{EMPTY_RECAP_MESSAGE}</p> : null}
+          {view.kind === 'recap' ? <p>{briefing.recap}</p> : null}
+          {view.kind === 'fallback' ? (
+            <p>{recapFailed ? '리캡을 불러오지 못했습니다' : (streamedRecap ?? '')}</p>
+          ) : null}
+        </div>
+      </section>
 
-      <button type="button" onClick={onContinue}>
+      <section className="mb-6">
+        <h3 className="mb-3 font-serif text-base font-bold text-ink">목차</h3>
+        {/* 표시 전용 목차 — 이동 요소(a·button)를 만들지 않는다 (FR-BRF-004, D12) */}
+        <ul aria-label="목차" className="flex flex-col gap-2">
+          {chapters.map((chapter) => (
+            <li
+              key={chapter.chapter_no}
+              aria-current={
+                chapter.chapter_no === briefing.current_chapter.chapter_no ? 'true' : undefined
+              }
+              className="flex items-center gap-3 rounded-card border border-line bg-surface px-5 py-4"
+            >
+              <span className="flex size-7 items-center justify-center rounded-full bg-canvas font-serif text-xs text-accent">
+                {chapter.chapter_no}
+              </span>
+              <span className="text-sm text-ink">{chapter.title}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <Button variant="solid" onClick={onContinue}>
         마저 읽기
-      </button>
+      </Button>
     </main>
   );
 }
