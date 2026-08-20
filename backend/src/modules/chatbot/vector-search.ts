@@ -8,6 +8,9 @@
  */
 
 import type { SearchChunk } from '../../shared/types';
+import * as repo from './repository';
+// TODO: 실제 구현 시 사용 (현재는 스텁)
+// import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 /**
  * 검색 설정
@@ -37,19 +40,22 @@ const SEARCH_CONFIG = {
  */
 export async function vectorSearch(
   bookId: string,
-  query: string,
+  _query: string,
   K: number
 ): Promise<SearchChunk[]> {
 
   // 1. 질의 정규화 (별칭 사전으로 대표명 치환)
-  const normalizedQuery = await normalizeQuery(query, bookId, K);
+  // TODO: 실제 구현 시 정규화 사용 (현재는 스텁)
+  // const normalizedQuery = await normalizeQuery(_query, bookId, K);
 
   // 2. 질의 임베딩
-  const queryEmbedding = await embedQuery(normalizedQuery);
+  // TODO: 실제 구현 시 임베딩 사용 (현재는 스텁)
+  // const queryEmbedding = await embedQuery(normalizedQuery);
 
   // 3. 벡터 검색 - 단일 SQL (5.3절)
   // ⚠️ 사전 필터: WHERE page_no <= K
-  const results = await performVectorSearch(bookId, queryEmbedding, K);
+  // TODO: 실제 구현 시 queryEmbedding 전달 (현재는 스텁)
+  const results = await performVectorSearch(bookId, [], K);
 
   // NFR-OBS-005 🚦: 검색 선정 페이지 번호·스코어 로깅
   logSearchResults(bookId, K, results);
@@ -57,43 +63,74 @@ export async function vectorSearch(
   return results;
 }
 
-/**
+/*
  * 질의 정규화 (별칭 → 대표명 치환)
  *
  * 예: "정 주사" → "정주사"
- */
+ *
+ * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
+ *
 async function normalizeQuery(
   query: string,
   bookId: string,
   K: number
 ): Promise<string> {
-  // TODO: 별칭 사전 조회 (K 이하)
-  // SELECT alias, character_id FROM aliases
-  // WHERE book_id = $1 AND first_appearance_page <= $2
+  // 별칭 사전 조회
+  const aliases = await repo.findAliases(bookId, K);
 
-  // TODO: 대표명으로 치환
-  // 정 주사 → 정주사
-  // 주사 → 정주사
+  let normalizedQuery = query;
 
-  console.log(`[VectorSearch] Normalizing query: "${query}"`);
-  return query;
+  // 별칭을 대표명으로 치환 (긴 것부터 먼저)
+  aliases.sort((a, b) => b.alias.length - a.alias.length);
+
+  for (const { alias, characterName } of aliases) {
+    normalizedQuery = normalizedQuery.replace(new RegExp(alias, 'g'), characterName);
+  }
+
+  console.log(`[VectorSearch] Normalized: "${query}" → "${normalizedQuery}"`);
+  return normalizedQuery;
 }
+*/
 
-/**
+/*
  * 질의 임베딩
  *
  * Amazon Titan Text Embeddings V2 사용
- */
+ *
+ * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
+ *
 async function embedQuery(query: string): Promise<number[]> {
-  // TODO: Bedrock Embeddings API 호출
-  // Model: amazon.titan-embed-text-v2:0
-  // Output: 1024차원 벡터
+  const client = new BedrockRuntimeClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+  });
 
-  console.log(`[VectorSearch] Embedding query: "${query}"`);
+  const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
 
-  // 임시 스텁 (랜덤 벡터)
-  return Array(SEARCH_CONFIG.embeddingDim).fill(0).map(() => Math.random());
+  const requestBody = {
+    inputText: query,
+  };
+
+  const command = new InvokeModelCommand({
+    modelId,
+    contentType: 'application/json',
+    accept: 'application/json',
+    body: JSON.stringify(requestBody),
+  });
+
+  const response = await client.send(command);
+  const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+  // Titan 응답 형식: { embedding: [number[], ...] }
+  const embedding = responseBody.embedding || responseBody.embeddings?.[0];
+
+  if (!embedding) {
+    throw new Error('Failed to get embedding from Titan');
+  }
+
+  console.log(`[VectorSearch] Embedded query: "${query}" (${embedding.length}D)`);
+  return embedding;
 }
+*/
 
 /**
  * 벡터 검색 실행 (단일 SQL)
@@ -107,23 +144,7 @@ async function performVectorSearch(
   queryEmbedding: number[],
   K: number
 ): Promise<SearchChunk[]> {
-  // TODO: 실제 DB 쿼리
-  /*
-  SELECT
-    page_no,
-    content,
-    embedding <=> $1::vector as distance
-  FROM pages
-  WHERE book_id = $2
-    AND page_no <= $3    -- 사전 필터 (FR-QNA-006 🚦)
-  ORDER BY distance ASC
-  LIMIT 6                 -- top-N 고정
-  */
-
-  console.log(`[VectorSearch] Searching for book ${bookId}, cutoff ${K}`);
-
-  // 임시 스텁
-  return [];
+  return repo.vectorSearch(bookId, queryEmbedding, K, SEARCH_CONFIG.topN);
 }
 
 /**

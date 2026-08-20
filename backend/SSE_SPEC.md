@@ -20,11 +20,12 @@ data: {"type":"delta","text":"텍스트 청크"}\n\n
 ### 2. Done (정상 종료)
 
 ```
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 - 스트림 정상 완료
 - 프론트가 정상 종료와 연결 끊김을 구분하려면 필수
+- **`applied_cutoff`**: 이 응답에 적용된 기준점 K (R4 요청, NFR-OBS-003 🚦)
 
 ### 3. Error (오류)
 
@@ -45,8 +46,8 @@ data: {"type":"error","message":"오류 메시지"}\n\n
 // Delta
 res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
 
-// Done
-res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+// Done (K 포함)
+res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
 res.end();
 
 // Error
@@ -57,9 +58,9 @@ res.end();
 ### R2: POST /books/:bookId/recap/stream
 
 ```javascript
-// 동일 형식 사용
+// 동일 형식 사용 (K 포함)
 res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
-res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
 res.end();
 ```
 
@@ -67,31 +68,70 @@ res.end();
 
 ## 🎯 프론트엔드 처리 (R4)
 
-```typescript
-const eventSource = new EventSource('/books/123/chat');
+⚠️ **주의**: EventSource는 GET만 지원하므로 POST 본문·헤더가 필요한 경우 fetch 사용
 
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  
-  switch (data.type) {
-    case 'delta':
-      // 텍스트 추가
-      appendText(data.text);
-      break;
-      
-    case 'done':
-      // 정상 종료
-      eventSource.close();
-      onComplete();
-      break;
-      
-    case 'error':
-      // 오류 처리
-      eventSource.close();
-      onError(data.message);
-      break;
+```typescript
+// POST 본문과 X-Device-Id 헤더를 보낼 수 있는 fetch 사용
+const response = await fetch('/books/123/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Device-Id': deviceId,
+  },
+  body: JSON.stringify({
+    query: '정주사는 누구인가요?',
+    page: 50,  // 선택: 진도 이벤트 동봉 시
+    seq: 123,  // 선택: 진도 이벤트 동봉 시
+  }),
+});
+
+if (!response.ok) {
+  // Rate Limit 등 SSE 열기 전 에러 (일반 JSON)
+  const error = await response.json();
+  throw new Error(error.message);
+}
+
+const reader = response.body!.getReader();
+const decoder = new TextDecoder();
+let buffer = '';
+
+try {
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    
+    // 마지막 줄은 불완전할 수 있으므로 버퍼에 유지
+    buffer = lines.pop() || '';
+    
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+        
+        switch (data.type) {
+          case 'delta':
+            // 텍스트 추가
+            appendText(data.text);
+            break;
+            
+          case 'done':
+            // 정상 종료 (기준점 K 포함)
+            onComplete(data.applied_cutoff);
+            return;
+            
+          case 'error':
+            // 오류 처리
+            onError(data.message);
+            return;
+        }
+      }
+    }
   }
-};
+} finally {
+  reader.releaseLock();
+}
 ```
 
 ---
@@ -145,14 +185,14 @@ res.setHeader('Content-Type', 'text/event-stream');
 data: {"type":"delta","text":"정주사는"}\n\n
 data: {"type":"delta","text":" 고무신 장사로"}\n\n
 data: {"type":"delta","text":" 돈을 모았습니다 (p.10)."}\n\n
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 ### 근거 부재
 
 ```
 data: {"type":"delta","text":"현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요."}\n\n
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 ### 오류

@@ -30,7 +30,7 @@ function requireDeviceId(req: Request, res: Response): string | null {
 /**
  * Health Check
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -84,8 +84,10 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 진도 이벤트 동봉 처리 (R4 요청)
     // 페이지 넘기고 바로 물으면 반영돼야 함
+    // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
     if (page && seq) {
-      // TODO: R2 연동 - updateProgress(deviceId, bookId, page, seq);
+      // TODO: R2 연동 - await recordProgressEvent(deviceId, bookId, { page, seq });
+      // 반환값은 기다리지 않음 (fire-and-forget, NFR-PERF-005)
       console.log('[API] Progress event with chatbot', { deviceId, bookId, page, seq });
     }
 
@@ -93,6 +95,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
     // TODO: const snapshot = await getCutoffSnapshot(deviceId, bookId);
     // TODO: const K = snapshot.cutoff;
+    // getCutoffSnapshot은 비동기 (R2 통지 ①)
 
     // 임시: 하드코딩된 K (R2 연동 전)
     const K = 80;
@@ -111,9 +114,9 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
-      // 스트림 정상 종료
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-      res.end();
+      // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
+      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
+      return res.end();
 
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
@@ -122,13 +125,13 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         type: 'error',
         message: 'Stream processing failed'
       })}\n\n`);
-      res.end();
+      return res.end();
     }
 
   } catch (error) {
     console.error('[API] Chatbot error', { bookId, query, error });
     // SSE 열기 전 에러는 일반 JSON 응답
-    res.status(500).json({
+    return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Internal server error',
     });
@@ -318,8 +321,8 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
  *
  * TODO: R4 구현
  */
-router.get('/books', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -329,8 +332,8 @@ router.get('/books', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/info', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/info', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -340,8 +343,8 @@ router.get('/books/:bookId/info', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/pages/:pageNo', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/pages/:pageNo', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -351,8 +354,8 @@ router.get('/books/:bookId/pages/:pageNo', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/graph', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/graph', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 /**
@@ -362,8 +365,8 @@ router.get('/books/:bookId/ssabi/graph', (req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/characters/:characterId', (req: Request, res: Response) => {
-  res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/characters/:characterId', (_req: Request, res: Response) => {
+  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
 });
 
 export default router;
