@@ -137,12 +137,12 @@ export default {
 
 | 컴포넌트 | 지금 | 채울 내용 |
 | --- | --- | --- |
-| `common/ProgressBar` | 빈 div + `role="progressbar"` | 높이 4px 트랙(`line`) + 채움(`ink`), 모서리 2px. **`role="progressbar"`와 `aria-valuenow`를 그대로 유지한다** |
+| `Reader/ProgressBar` | 빈 div + `role="progressbar"` | 높이 4px 트랙(`line`) + 채움(`ink`), 모서리 2px. **`role="progressbar"`와 `aria-valuenow`를 그대로 유지한다.** 기존 import를 깨지 않도록 `common/`으로 옮기지 않는다 |
 | `common/Button` | 무스타일 `<button>` | 솔리드(`ink` 배경·흰 글씨)와 알약형 두 변형 |
 | `Layout/Header` | `<header>싸비</header>` | nav-bar — 좌측 프로필 요약(제목 22px 명조 + 부제 13px), 우측 "도서 검색"·RE:ADD 로고. 높이 80px, 하단 `line` 보더 |
 | `Ssabi/RelationshipGraph` | `<div />` | React Flow + 원형 배치 (§6) |
 
-`Layout/Sidebar`는 **손대지 않는다.** 시안에 대응 영역이 없고(시안의 `sidebar` 노드는 nav 안의 프로필 블록이다) 현재 어디서도 쓰이지 않는다.
+**미사용 스텁 3개는 손대지 않는다** — `Layout/Sidebar`(`<aside />`) · `Reader/PageContent`(`<article />`) · `Reader/PageNavigation`(`<nav />`). 셋 다 어디서도 import되지 않는다. `Sidebar`는 시안에 대응 영역이 없고(시안의 `sidebar` 노드는 nav 안의 프로필 블록이다), `PageContent`·`PageNavigation`은 `ReaderView`가 본문과 내비게이션을 직접 그리고 있어 역할이 겹친다. 제거도 구현도 이번 범위 밖이다(요청 범위 밖의 정리 작업이므로).
 
 ### 4.3 스타일만 입히는 것
 
