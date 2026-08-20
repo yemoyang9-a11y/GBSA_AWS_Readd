@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GraphResponse, SsabiTab } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
-import SsabiToggleButton from '../common/SsabiToggleButton';
 import RecapTab from './RecapTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
@@ -25,7 +24,6 @@ const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
  */
 export default function SsabiPanel({
   sessionEpoch,
-  onClose,
   onTabChange,
   graph,
   graphFailed,
@@ -38,7 +36,6 @@ export default function SsabiPanel({
   onAsk,
 }: {
   sessionEpoch: number;
-  onClose: () => void;
   onTabChange: (tab: SsabiTab) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
@@ -72,9 +69,10 @@ export default function SsabiPanel({
 
   return (
     <section className="flex h-full flex-col border-l border-line bg-surface">
-      <div className="flex items-center justify-between px-6 pb-5 pt-6">
+      {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
+          패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
+      <div className="px-6 pb-5 pt-6">
         <h2 className="font-serif text-base font-extrabold text-ink">싸비의 가이드북</h2>
-        <SsabiToggleButton open onToggle={onClose} />
       </div>
 
       {/* 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]") */}

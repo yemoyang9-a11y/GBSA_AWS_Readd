@@ -10,7 +10,6 @@ const graph: GraphResponse = {
 
 const baseProps = {
   sessionEpoch: 7,
-  onClose: () => {},
   onTabChange: () => {},
   graph,
   graphFailed: false,

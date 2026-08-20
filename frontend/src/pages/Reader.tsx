@@ -116,8 +116,18 @@ export default function Reader() {
   if (!page) return <Loading />;
 
   return (
-    <div className="flex h-screen flex-col bg-canvas">
-      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-line px-8">
+    <div className="relative flex h-screen flex-col bg-canvas">
+      {/*
+       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(72px)
+       * 아래, 패널 헤더의 "싸비의 가이드북"과 같은 줄, 화면 우측에서 24px.
+       * 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고, top-bar 안에 두면
+       * 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
+       */}
+      <div className="absolute right-6 top-24 z-10">
+        <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
+      </div>
+
+      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -133,10 +143,6 @@ export default function Reader() {
           </div>
         </div>
 
-        {/* 열려 있을 때는 이 버튼이 패널 헤더 우측으로 옮겨 간다 */}
-        {panelOpen ? null : (
-          <SsabiToggleButton open={false} onToggle={() => setPanelOpen(true)} />
-        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -155,7 +161,6 @@ export default function Reader() {
           <aside id="ssabi-panel" className="w-[420px] shrink-0">
             <SsabiPanel
               sessionEpoch={session?.session_epoch ?? 0}
-              onClose={() => setPanelOpen(false)}
               onTabChange={setTab}
               graph={graph}
               graphFailed={graphFailed}
