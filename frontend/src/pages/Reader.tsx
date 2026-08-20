@@ -131,7 +131,7 @@ export default function Reader() {
           />
         </div>
 
-        <aside className="w-96">
+        <aside className="w-[420px] shrink-0">
           <SsabiPanel
             sessionEpoch={session?.session_epoch ?? 0}
             onTabChange={setTab}

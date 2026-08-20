@@ -68,8 +68,13 @@ export default function SsabiPanel({
   }, [tab, onTabChange]);
 
   return (
-    <section className="flex h-full flex-col border-l">
-      <div role="tablist" aria-label="싸비" className="flex border-b">
+    <section className="flex h-full flex-col border-l border-line bg-surface">
+      <div className="px-6 pb-5 pt-6">
+        <h2 className="font-serif text-base font-extrabold text-ink">싸비의 가이드북</h2>
+      </div>
+
+      {/* 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]") */}
+      <div role="tablist" aria-label="싸비" className="flex gap-2 px-6">
         {TAB_ORDER.map((it) => (
           <button
             key={it}
@@ -77,14 +82,18 @@ export default function SsabiPanel({
             type="button"
             aria-selected={tab === it}
             onClick={() => setLastTab(it)}
-            className="flex-1 p-2"
+            className={
+              tab === it
+                ? 'rounded-cover border border-ssabi bg-ssabi-soft px-3 py-2 text-xs font-bold text-ssabi'
+                : 'rounded-cover border border-transparent px-3 py-2 text-xs text-muted'
+            }
           >
             {TAB_LABELS[it]}
           </button>
         ))}
       </div>
 
-      <div role="tabpanel" className="flex-1 overflow-y-auto">
+      <div role="tabpanel" className="flex-1 overflow-y-auto px-6 pb-6 pt-5">
         {tab === 'recap' ? (
           <RecapTab text={recapText} streaming={recapStreaming} failed={recapFailed} />
         ) : null}

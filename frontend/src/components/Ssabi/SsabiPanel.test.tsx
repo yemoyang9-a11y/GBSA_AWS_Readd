@@ -82,6 +82,15 @@ describe('싸비 사이드창', () => {
     );
   });
 
+  it('G8: 탭은 3개다 — 시안의 타임라인 탭은 만들지 않는다 (00-shared §2.5 "[이후 확장]")', () => {
+    render(<SsabiPanel {...baseProps} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(3);
+    expect(tabs.map((t) => t.textContent)).toEqual(['리캡', '인물 관계도', '챗봇']);
+    expect(screen.queryByRole('tab', { name: '타임라인' })).not.toBeInTheDocument();
+  });
+
   it('FR-SPL-005 🚦: 관계도 조회가 실패하면 부분 표시로 넘어가지 않는다', () => {
     render(<SsabiPanel {...baseProps} graph={null} graphFailed={true} />);
 

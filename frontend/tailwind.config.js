@@ -15,6 +15,12 @@ export default {
         faint: '#76726e', // 비활성 탭 라벨
         accent: '#3b3db2', // 통계 숫자 강조
         active: '#111111', // 활성 탭 배경
+        ssabi: {
+          // 싸비 전용 강조색. accent(남보라)와 별개다 — 시안이 진도·통계는 남보라로,
+          // 싸비 관련 UI는 테라코타로 구분한다. 한 토큰으로 묶으면 두 계열이 함께 움직인다.
+          DEFAULT: '#c86b3d', // 싸비 활성 탭 테두리·글자, 챗봇 버튼 배경
+          soft: '#fdf6f0', // 싸비 활성 탭 배경
+        },
       },
       fontFamily: {
         serif: ['"Nanum Myeongjo"', 'serif'],
