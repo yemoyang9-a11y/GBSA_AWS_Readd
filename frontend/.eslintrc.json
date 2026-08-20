@@ -1,0 +1,55 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2020": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react-hooks/recommended",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react-hooks"
+  ],
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    ".eslintrc.json"
+  ],
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "BinaryExpression[operator='-'][left.name=/[Pp]age/][right.value=1]",
+        "message": "절대 규칙 2번 — 프론트에서 page - 1 금지. 서버가 내려준 cutoff를 그대로 쓴다 (FR-BRF-005)"
+      },
+      {
+        "selector": "BinaryExpression[operator='-'][left.property.name=/page/i][right.value=1]",
+        "message": "절대 규칙 2번 — 프론트에서 page - 1 금지. 서버가 내려준 cutoff를 그대로 쓴다 (FR-BRF-005)"
+      },
+      {
+        "selector": "BinaryExpression[operator='/'][right.name=/total_?[Pp]ages/i]",
+        "message": "절대 규칙 2번 — 프론트에서 percent 재계산 금지. 서버가 내려준 percent를 그대로 렌더한다 (FR-BRF-005)"
+      },
+      {
+        "selector": "BinaryExpression[operator='/'][right.property.name=/total_?[Pp]ages/i]",
+        "message": "절대 규칙 2번 — 프론트에서 percent 재계산 금지. 서버가 내려준 percent를 그대로 렌더한다 (FR-BRF-005)"
+      }
+    ],
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
+  }
+}
