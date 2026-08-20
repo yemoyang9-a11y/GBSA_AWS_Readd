@@ -43,6 +43,21 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     await waitFor(() => expect(screen.getAllByText(/고태수/).length).toBeGreaterThan(0));
   });
 
+  it('싸비 토글로 패널을 닫았다 다시 열 수 있다 — 기본은 열림', { timeout: 20000 }, async () => {
+    await goToReader();
+
+    // 기본 열림 — 탭이 보인다
+    expect(screen.getByRole('tab', { name: '인물 관계도' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '싸비 닫기' }));
+    // 숨기는 게 아니라 언마운트한다 — 닫힌 패널이 리캡 스트리밍을 계속 내보내면
+    // 그대로 LLM 재호출이고 분당 3회 상한에 걸린다 (NFR-AI-017)
+    expect(screen.queryByRole('tab', { name: '인물 관계도' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    expect(screen.getByRole('tab', { name: '인물 관계도' })).toBeInTheDocument();
+  });
+
   it('챗봇 탭에서 질문하면 답변이 스트리밍으로 들어온다', { timeout: 20000 }, async () => {
     await goToReader();
     await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));

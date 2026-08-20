@@ -14,6 +14,29 @@ import { nextSeq } from '../utils/seq';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
 import type { EntryResponse, PageResponse, SsabiTab } from '../types';
 
+/** 사이드바 토글 아이콘 — 우측 영역이 채워진 패널 모양 */
+function SidebarToggleIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden="true">
+      <rect
+        x="1.2"
+        y="2.7"
+        width="13.6"
+        height="10.6"
+        rx="2.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path d="M9.8 2.7v10.6" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M9.8 2.7h2.6a2.4 2.4 0 0 1 2.4 2.4v6.2a2.4 2.4 0 0 1-2.4 2.4H9.8V2.7Z"
+        fill="currentColor"
+        fillOpacity="0.35"
+      />
+    </svg>
+  );
+}
+
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
  *
@@ -33,6 +56,15 @@ export default function Reader() {
   const [page, setPage] = useState<PageResponse | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [tab, setTab] = useState<SsabiTab>(DEFAULT_SSABI_TAB);
+
+  /**
+   * 싸비 패널 열림 상태. 기본은 열림이다.
+   *
+   * 닫으면 `<aside>` 째로 언마운트한다 — 숨기기만 하면 닫힌 패널의 리캡 탭이 계속 살아 있어
+   * 페이지를 넘길 때마다 보이지도 않는 리캡 스트리밍이 나간다. 그건 그대로 LLM 재호출이고
+   * 분당 3회 상한에 걸린다 (NFR-AI-017). 대신 다시 열면 기본 탭에서 시작한다.
+   */
+  const [panelOpen, setPanelOpen] = useState(true);
 
   /**
    * 시작 페이지·세션은 **서버 진입 판정**이 정한다 (FR-BRF-001, 절대 규칙 8번).
@@ -102,7 +134,7 @@ export default function Reader() {
 
   return (
     <div className="flex h-screen flex-col bg-canvas">
-      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-line px-8">
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -117,6 +149,17 @@ export default function Reader() {
             <span className="text-xs text-muted">탁류</span>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setPanelOpen((open) => !open)}
+          aria-expanded={panelOpen}
+          aria-controls="ssabi-panel"
+          aria-label={panelOpen ? '싸비 닫기' : '싸비 열기'}
+          className="flex size-9 items-center justify-center rounded-lg bg-ink text-surface transition-opacity hover:opacity-80"
+        >
+          <SidebarToggleIcon />
+        </button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -131,21 +174,23 @@ export default function Reader() {
           />
         </div>
 
-        <aside className="w-[420px] shrink-0">
-          <SsabiPanel
-            sessionEpoch={session?.session_epoch ?? 0}
-            onTabChange={setTab}
-            graph={graph}
-            graphFailed={graphFailed}
-            recapText={recapText}
-            recapStreaming={recapStreaming}
-            recapFailed={recapError !== null}
-            chatAnswer={chatAnswer}
-            chatStreaming={chatStreaming}
-            chatError={chatError}
-            onAsk={handleAsk}
-          />
-        </aside>
+        {panelOpen ? (
+          <aside id="ssabi-panel" className="w-[420px] shrink-0">
+            <SsabiPanel
+              sessionEpoch={session?.session_epoch ?? 0}
+              onTabChange={setTab}
+              graph={graph}
+              graphFailed={graphFailed}
+              recapText={recapText}
+              recapStreaming={recapStreaming}
+              recapFailed={recapError !== null}
+              chatAnswer={chatAnswer}
+              chatStreaming={chatStreaming}
+              chatError={chatError}
+              onAsk={handleAsk}
+            />
+          </aside>
+        ) : null}
       </div>
     </div>
   );
