@@ -26,4 +26,14 @@ describe('ProgressBar', () => {
     // 표시만 자른다 — aria 값은 서버가 준 값 그대로다 (절대 규칙 2번)
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '130');
   });
+
+  it('tone 기본값은 ink 다 — 대시보드 호출부가 영향받지 않는다', () => {
+    render(<ProgressBar percent={70} />);
+    expect(screen.getByTestId('progress-fill')).toHaveClass('bg-ink');
+  });
+
+  it('tone="accent" 면 채움이 accent 다 — 브리핑 시안', () => {
+    render(<ProgressBar percent={70} tone="accent" />);
+    expect(screen.getByTestId('progress-fill')).toHaveClass('bg-accent');
+  });
 });

@@ -66,6 +66,7 @@ export default function Briefing() {
       author={book?.author ?? ''}
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
+      onBack={() => navigate('/')}
       streamedRecap={streamedRecap}
       recapFailed={recapError !== null}
     />

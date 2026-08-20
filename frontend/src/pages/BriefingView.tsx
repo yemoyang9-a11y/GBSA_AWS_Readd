@@ -13,9 +13,18 @@ import Button from '../components/common/Button';
  * 같은 분기로 묶으면 첫 진입에서 LLM 이 호출된다 (자가 검증 20·21번).
  * 목차는 표시 전용이라 이동 요소를 만들지 않는다 (FR-BRF-004, D12) — 읽기 화면의 목차만
  * 이동 가능하다. '마저 읽기'는 리캡 상태와 무관하게 항상 동작한다 (UC-28 E1, FR-SPL-005 🚦).
- *
- * "N일 만이에요"는 만들지 않는다 — BriefingResponse 에 마지막 방문 시각이 없다 (스펙 §7 #6).
  */
+
+/**
+ * TODO(mock): 마지막 방문 시각을 주는 엔드포인트가 없어 고정값이다.
+ *   `BriefingResponse` 에 마지막 방문 시각 필드가 생기면 그 값으로 계산해 교체한다.
+ *   사용자 결정(2026-08-20): 시안의 자리를 만들어 두고 지금은 mock 으로 채운다.
+ *   스펙 §7 의 계약 불일치 6번 항목이 "만들지 않는다"에서 이 처리로 바뀐 것이다.
+ */
+const MOCK_DAYS_SINCE_LABEL = '3일 만이에요';
+
+const GREETING_LINES = ['다시 오셨네요.', '여기서부터 기억을 맞춰볼게요.'];
+
 export default function BriefingView({
   briefing,
   chapters,
@@ -23,6 +32,7 @@ export default function BriefingView({
   author,
   onContinue,
   onRequestFallback,
+  onBack,
   streamedRecap,
   recapFailed,
 }: {
@@ -32,6 +42,7 @@ export default function BriefingView({
   author: string;
   onContinue: () => void;
   onRequestFallback: () => void;
+  onBack: () => void;
   streamedRecap?: string;
   recapFailed?: boolean;
 }) {
@@ -50,22 +61,45 @@ export default function BriefingView({
 
   return (
     <main className="mx-auto max-w-3xl bg-canvas px-7 py-6">
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-6 border-b border-line pb-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-ink transition-opacity hover:opacity-60"
+        >
+          <span aria-hidden="true">‹</span>
+          돌아가기
+        </button>
+      </div>
+
+      <div className="mb-6 flex items-start gap-8">
         <div className="w-24 shrink-0">
           <TypographicCover title={title} author={author} />
         </div>
-        <div>
-          <h2 className="font-serif text-xl font-bold text-ink">{title}</h2>
-          <p className="mt-0.5 text-xs text-muted">{author}</p>
+        <div className="pt-2">
+          <p className="text-[13px] font-bold text-accent">{MOCK_DAYS_SINCE_LABEL}</p>
+          <h2 className="mt-2 font-serif text-2xl font-bold leading-snug text-ink">
+            {GREETING_LINES.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </h2>
+          <p className="mt-3 text-[13px] text-muted">
+            {title} · {author}
+          </p>
         </div>
       </div>
 
-      <section aria-label="진도" className="mb-6">
-        <div className="mb-1.5 flex items-center justify-between text-[11px]">
-          <span className="text-muted">{briefing.current_chapter.title}</span>
-          <span className="font-bold text-ink">{briefing.progress.percent}%</span>
+      <section
+        aria-label="진도"
+        className="mb-6 rounded-card border border-line bg-surface px-6 py-5"
+      >
+        <div className="mb-2.5 flex items-center justify-between">
+          <span className="text-sm font-bold text-ink">{briefing.current_chapter.title}</span>
+          <span className="text-sm font-bold text-accent">{briefing.progress.percent}%</span>
         </div>
-        <ProgressBar percent={briefing.progress.percent} />
+        <ProgressBar percent={briefing.progress.percent} tone="accent" />
       </section>
 
       <section aria-label="리캡" className="mb-6">
