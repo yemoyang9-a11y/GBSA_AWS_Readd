@@ -850,7 +850,9 @@ git commit -m "feat(R4): 통계 카드 · 필터 탭 · 버튼 시안 적용"
 
 **Interfaces:**
 - Consumes: Task 1의 토큰
-- Produces: `Header({ title, subtitle }: { title: string; subtitle: string })`. Task 7(대시보드)이 쓴다.
+- Produces: `Header({ subtitle }: { subtitle: string })`. Task 7(대시보드)이 쓴다.
+
+> **시안의 "수진님의 서재" 제목 줄은 만들지 않는다.** 이 앱에는 계정 개념이 없고 디바이스 식별자만 있어서(team-sync §4.8) 사람 이름을 띄울 근거가 없다. 좌측 블록은 시안의 부제 한 줄만 쓴다. `title` prop을 만들지 않는다 — 쓰지 않을 인자를 열어두지 않는다(YAGNI).
 
 - [ ] **Step 1: 실패하는 테스트를 쓴다**
 
@@ -861,19 +863,23 @@ import { render, screen } from '@testing-library/react';
 import Header from './Header';
 
 describe('Header', () => {
-  it('제목과 부제를 렌더한다', () => {
-    render(<Header title="탁류를 읽는 서재" subtitle="오늘도 나만의 페이스로 활자를 마주합니다." />);
-    expect(screen.getByText('탁류를 읽는 서재')).toBeInTheDocument();
+  it('부제를 렌더한다', () => {
+    render(<Header subtitle="오늘도 나만의 페이스로 활자를 마주합니다." />);
     expect(screen.getByText('오늘도 나만의 페이스로 활자를 마주합니다.')).toBeInTheDocument();
   });
 
+  it('사람 이름이 들어간 서재 제목을 렌더하지 않는다 — 계정 개념이 없다 (team-sync §4.8)', () => {
+    const { container } = render(<Header subtitle="부제" />);
+    expect(container.textContent).not.toMatch(/님의 서재/);
+  });
+
   it('RE:ADD 로고를 표시한다', () => {
-    render(<Header title="서재" subtitle="부제" />);
+    render(<Header subtitle="부제" />);
     expect(screen.getByText('RE:ADD')).toBeInTheDocument();
   });
 
   it('도서 검색은 대응 엔드포인트가 없어 비활성이다 (스펙 §7 #3)', () => {
-    render(<Header title="서재" subtitle="부제" />);
+    render(<Header subtitle="부제" />);
     expect(screen.getByRole('button', { name: '도서 검색' })).toBeDisabled();
   });
 });
@@ -882,7 +888,7 @@ describe('Header', () => {
 - [ ] **Step 2: 테스트가 실패하는지 확인한다**
 
 Run: `cd frontend && npx vitest run src/components/Layout/Header.test.tsx`
-Expected: FAIL — `Unable to find an element with the text: 탁류를 읽는 서재`
+Expected: FAIL — `Unable to find an element with the text: 오늘도 나만의 페이스로 활자를 마주합니다.`
 
 - [ ] **Step 3: 구현한다**
 
@@ -892,15 +898,17 @@ Expected: FAIL — `Unable to find an element with the text: 탁류를 읽는 �
 /**
  * nav-bar — 시안 1:102 (높이 80px, 하단 line 보더)
  *
- * 좌측 프로필 요약 + 우측 도서 검색·RE:ADD 로고.
+ * 좌측 부제 + 우측 도서 검색·RE:ADD 로고.
  * "도서 검색"은 대응 엔드포인트가 없어 자리만 두고 비활성으로 둔다 — 없는 API를
  * 지어내지 않는다 (CLAUDE.md 6장, 스펙 §7 #3).
+ *
+ * ⚠️ 시안의 "수진님의 서재" 제목 줄은 만들지 않는다. 이 앱에는 계정 개념이 없고
+ *    디바이스 식별자만 있어(team-sync §4.8) 사람 이름을 띄울 근거가 없다.
  */
-export default function Header({ title, subtitle }: { title: string; subtitle: string }) {
+export default function Header({ subtitle }: { subtitle: string }) {
   return (
     <header className="flex h-navbar items-center justify-between border-b border-line px-7">
-      <div className="flex flex-col gap-2">
-        <p className="font-serif text-[22px] font-extrabold text-ink">{title}</p>
+      <div className="flex flex-col justify-center">
         <p className="text-[13px] text-muted">{subtitle}</p>
       </div>
 
@@ -1073,7 +1081,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-full bg-canvas">
-      <Header title="탁류를 읽는 서재" subtitle="오늘도 나만의 페이스로 활자를 마주합니다." />
+      <Header subtitle="오늘도 나만의 페이스로 활자를 마주합니다." />
 
       <main className="px-7 py-6">
         <div className="mb-6 flex gap-3">

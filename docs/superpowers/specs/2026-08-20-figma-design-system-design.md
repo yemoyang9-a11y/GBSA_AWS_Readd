@@ -139,7 +139,7 @@ export default {
 | --- | --- | --- |
 | `Reader/ProgressBar` | 빈 div + `role="progressbar"` | 높이 4px 트랙(`line`) + 채움(`ink`), 모서리 2px. **`role="progressbar"`와 `aria-valuenow`를 그대로 유지한다.** 기존 import를 깨지 않도록 `common/`으로 옮기지 않는다 |
 | `common/Button` | 무스타일 `<button>` | 솔리드(`ink` 배경·흰 글씨)와 알약형 두 변형 |
-| `Layout/Header` | `<header>싸비</header>` | nav-bar — 좌측 프로필 요약(제목 22px 명조 + 부제 13px), 우측 "도서 검색"·RE:ADD 로고. 높이 80px, 하단 `line` 보더 |
+| `Layout/Header` | `<header>싸비</header>` | nav-bar — 좌측 부제(13px), 우측 "도서 검색"·RE:ADD 로고. 높이 80px, 하단 `line` 보더. **시안의 "수진님의 서재" 제목 줄은 만들지 않는다** (§10 #3) |
 | `Ssabi/RelationshipGraph` | `<div />` | React Flow + 원형 배치 (§6) |
 
 **미사용 스텁 3개는 손대지 않는다** — `Layout/Sidebar`(`<aside />`) · `Reader/PageContent`(`<article />`) · `Reader/PageNavigation`(`<nav />`). 셋 다 어디서도 import되지 않는다. `Sidebar`는 시안에 대응 영역이 없고(시안의 `sidebar` 노드는 nav 안의 프로필 블록이다), `PageContent`·`PageNavigation`은 `ReaderView`가 본문과 내비게이션을 직접 그리고 있어 역할이 겹친다. 제거도 구현도 이번 범위 밖이다(요청 범위 밖의 정리 작업이므로).
@@ -260,7 +260,7 @@ React Flow는 노드 좌표를 요구한다. 외부 레이아웃 라이브러리
 
 1. **`intro_summary` 필드 확정** — 엔드포인트 계획 D-3. 확정 전까지 카드 소개 영역은 비워둔다. `/books`가 R4 소유 엔드포인트라 R4가 정할 수 있다.
 2. **「탁류」소개 문구·부제 문안** — 시안의 "서울 청파동 골목길…" 자리에 들어갈 탁류 문구. R1의 `intro_summary` 또는 `background_and_intro`에서 오지만 아직 값이 없다. 임시 문구로 채우고 실데이터 전환 시 교체한다.
-3. **대시보드 인사 문구의 이름** — 시안은 "수진님의 서재". 데모에서 어떤 이름을 쓸지 미정. 계정 개념이 없으므로(디바이스 식별만) 고정 문구가 된다.
+3. ~~대시보드 인사 문구의 이름~~ — **해소 (2026-08-20).** 시안의 "수진님의 서재" 제목 줄을 **만들지 않기로** 결정했다. 이 앱에는 계정 개념이 없고 디바이스 식별자만 있어(team-sync §4.8) 사람 이름을 띄울 근거가 없다. `Header`는 부제 한 줄만 받으며 `title` prop 자체를 두지 않는다.
 
 ---
 
