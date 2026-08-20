@@ -56,6 +56,7 @@ export default function BriefingView({
         </div>
         <div>
           <h2 className="font-serif text-xl font-bold text-ink">{title}</h2>
+          <p className="mt-0.5 text-xs text-muted">{author}</p>
         </div>
       </div>
 

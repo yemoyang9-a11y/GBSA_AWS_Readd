@@ -68,7 +68,8 @@ describe('브리핑 화면', () => {
 
     expect(screen.getByTestId('typographic-cover')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '탁류' })).toBeInTheDocument();
-    expect(screen.getByText('채만식')).toBeInTheDocument();
+    // 조판 표지(aria-hidden)와 정보 영역 양쪽에 저자가 나온다 — BookCard 와 같은 패턴 (getAllByText).
+    expect(screen.getAllByText('채만식')).toHaveLength(2);
   });
 
   it('자가 검증 23 / FR-BRF-004 · D12: 목차는 표시 전용이라 이동 가능한 요소가 없다', () => {
