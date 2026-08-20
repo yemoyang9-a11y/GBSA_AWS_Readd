@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
-import { fetchBriefing } from '../services/recapService';
+import { fetchBriefing, streamRecap } from '../services/recapService';
+import { useSSE } from '../hooks/useSSE';
+import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { BOOK_ROUTES } from '../utils/routes';
 import type { BriefingResponse, ChapterSummary, EntryResponse } from '../types';
@@ -23,15 +25,25 @@ export default function Briefing() {
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
 
+  const {
+    text: streamedRecap,
+    error: recapError,
+    consume: consumeRecap,
+  } = useSSE();
+
+  // 저장 리캡이 무효일 때만 부른다. 판정은 BriefingView 가 하며(utils/briefingView),
+  // 첫 진입(cutoff = 0)에서는 여기까지 오지 않는다 — 이 화면의 LLM 호출 0회 조건 (D13 ①).
+  const currentPage = briefing?.progress.current_page ?? null;
+
   useEffect(() => {
     void fetchBriefing(bookId).then(setBriefing);
     void fetchBookInfo(bookId).then((info) => setChapters(info.chapters));
   }, [bookId]);
 
   const handleFallback = useCallback(() => {
-    // TODO(S6) POST /recap/stream 스트리밍 폴백 연결 — SSE 프레임은 utils/sse 가 처리한다.
-    //   백엔드 501 스텁이 걷히면 붙인다 (team-sync-r4.md §1.4).
-  }, []);
+    if (currentPage === null) return;
+    void consumeRecap(streamRecap(bookId, currentPage, nextSeq()));
+  }, [consumeRecap, bookId, currentPage]);
 
   const handleContinue = useCallback(() => {
     // '마저 읽기'는 리캡 상태와 무관하게 즉시 동작한다 (UC-28 E1, FR-SPL-005 🚦).
@@ -48,6 +60,8 @@ export default function Briefing() {
       chapters={chapters}
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
+      streamedRecap={streamedRecap}
+      recapFailed={recapError !== null}
     />
   );
 }
