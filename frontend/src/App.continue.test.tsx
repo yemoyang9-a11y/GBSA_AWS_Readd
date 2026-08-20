@@ -18,7 +18,7 @@ describe("'마저 읽기'로 읽기 화면에 들어갈 때", () => {
   it('읽던 페이지에서 이어 읽는다 — 1페이지로 되감지 않는다', { timeout: 20000 }, async () => {
     render(<App />);
 
-    await screen.findByText('탁류', undefined, { timeout: 5000 });
+    await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
     await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
 
     await screen.findByRole('button', { name: '마저 읽기' }, { timeout: 5000 });

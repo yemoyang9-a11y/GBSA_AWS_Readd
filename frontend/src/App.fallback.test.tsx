@@ -19,7 +19,7 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
   }, async () => {
     render(<App />);
 
-    await screen.findByText('탁류', undefined, { timeout: 5000 });
+    await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
     await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
 
     // 21페이지 진입 → K = 20, 저장분도 K = 20 이라 일치 → 저장 리캡 표시
@@ -32,7 +32,7 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
     render(<App />);
 
     // 먼저 읽기 화면에서 페이지를 넘겨 진도를 움직인다 (저장분 K = 20 과 어긋나게)
-    await screen.findByText('탁류', undefined, { timeout: 5000 });
+    await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
     await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
     await screen.findByRole('button', { name: '마저 읽기' }, { timeout: 5000 });
     await userEvent.click(screen.getByRole('button', { name: '마저 읽기' }));

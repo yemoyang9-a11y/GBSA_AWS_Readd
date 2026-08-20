@@ -19,7 +19,7 @@ describe('관통 흐름 (mock 기준)', () => {
     render(<App />);
 
     // 대시보드 — 카탈로그가 뜬다
-    expect(await screen.findByText('탁류')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /탁류/ })).toBeInTheDocument();
 
     // 미완비 도서는 클릭 자체가 막혀 있다 (FR-BRW-002 🚦)
     expect(screen.getByRole('button', { name: /검수 전 도서/ })).toBeDisabled();

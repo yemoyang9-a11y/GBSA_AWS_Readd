@@ -13,7 +13,7 @@ import App from './App';
 /** 대시보드 → 브리핑 → 읽기 화면까지 이동한다 */
 async function goToReader() {
   render(<App />);
-  await screen.findByText('탁류', undefined, { timeout: 5000 });
+  await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
   await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
   await screen.findByRole('button', { name: '마저 읽기' }, { timeout: 5000 });
   await userEvent.click(screen.getByRole('button', { name: '마저 읽기' }));
