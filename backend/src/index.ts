@@ -4,13 +4,13 @@
  * Express 앱 초기화 및 서버 실행
  */
 
-import express from 'express';
+// 환경 변수 로드 - 다른 모듈 임포트 전에 실행 필요 (DATABASE_URL 등)
 import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
 import path from 'path';
 import routes from './api/routes';
-
-// 환경 변수 로드
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

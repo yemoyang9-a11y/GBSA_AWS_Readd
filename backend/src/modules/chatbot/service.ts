@@ -106,7 +106,7 @@ export async function* handleQuery(
     const task = `chatbot_${modelSelection.model}`;
     let responseText = '';
 
-    const streamSource = MOCK_MODE ? getMockLLMResponse(fullPrompt) : llmStream(task, fullPrompt);
+    const streamSource = MOCK_MODE ? getMockLLMResponse(query) : llmStream(task, fullPrompt);
 
     for await (const chunk of streamSource) {
       responseText += chunk;
