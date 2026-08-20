@@ -4,6 +4,9 @@
  *
  * 선행: migrations/001_content_store.sql 적용 필요.
  */
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { pool } from '../../config/database';

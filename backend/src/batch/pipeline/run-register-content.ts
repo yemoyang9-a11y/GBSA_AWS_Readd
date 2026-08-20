@@ -4,6 +4,9 @@
  *
  * 선행: run-register.ts로 도서·장·페이지가 이미 등록돼 있어야 한다(chapter_summaries FK).
  */
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { pool } from '../../config/database';
