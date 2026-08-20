@@ -17,7 +17,7 @@ import { stream as llmStream } from '../llm-gateway/gateway';
  * 근거 부재 토큰 (FR-QNA-004 🚦)
  */
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
-const NO_EVIDENCE_MESSAGE = '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
+export const NO_EVIDENCE_MESSAGE = '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
 
 /**
  * 시스템 규칙 (프롬프트에 포함)
@@ -70,7 +70,7 @@ export async function* handleQuery(
   deviceId: string
 ): AsyncGenerator<string> {
 
-  const startTime = Date.now();
+  // const startTime = Date.now(); // TODO: 성능 측정 시 사용
   let noEvidence = false;
 
   try {

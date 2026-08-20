@@ -69,8 +69,10 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 진도 이벤트 동봉 처리 (R4 요청)
     // 페이지 넘기고 바로 물으면 반영돼야 함
+    // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
     if (page && seq) {
-      // TODO: R2 연동 - updateProgress(deviceId, bookId, page, seq);
+      // TODO: R2 연동 - await recordProgressEvent(deviceId, bookId, { page, seq });
+      // 반환값은 기다리지 않음 (fire-and-forget, NFR-PERF-005)
       console.log('[API] Progress event with chatbot', { deviceId, bookId, page, seq });
     }
 
@@ -78,6 +80,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
     // TODO: const snapshot = await getCutoffSnapshot(deviceId, bookId);
     // TODO: const K = snapshot.cutoff;
+    // getCutoffSnapshot은 비동기 (R2 통지 ①)
 
     // 임시: 하드코딩된 K (R2 연동 전)
     const K = 80;
@@ -96,8 +99,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
-      // 스트림 정상 종료
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
+      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
       res.end();
 
     } catch (streamError) {

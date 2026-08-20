@@ -20,11 +20,12 @@ data: {"type":"delta","text":"텍스트 청크"}\n\n
 ### 2. Done (정상 종료)
 
 ```
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 - 스트림 정상 완료
 - 프론트가 정상 종료와 연결 끊김을 구분하려면 필수
+- **`applied_cutoff`**: 이 응답에 적용된 기준점 K (R4 요청, NFR-OBS-003 🚦)
 
 ### 3. Error (오류)
 
@@ -45,8 +46,8 @@ data: {"type":"error","message":"오류 메시지"}\n\n
 // Delta
 res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
 
-// Done
-res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+// Done (K 포함)
+res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
 res.end();
 
 // Error
@@ -57,9 +58,9 @@ res.end();
 ### R2: POST /books/:bookId/recap/stream
 
 ```javascript
-// 동일 형식 사용
+// 동일 형식 사용 (K 포함)
 res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
-res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
 res.end();
 ```
 
@@ -145,14 +146,14 @@ res.setHeader('Content-Type', 'text/event-stream');
 data: {"type":"delta","text":"정주사는"}\n\n
 data: {"type":"delta","text":" 고무신 장사로"}\n\n
 data: {"type":"delta","text":" 돈을 모았습니다 (p.10)."}\n\n
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 ### 근거 부재
 
 ```
 data: {"type":"delta","text":"현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요."}\n\n
-data: {"type":"done"}\n\n
+data: {"type":"done","applied_cutoff":79}\n\n
 ```
 
 ### 오류

@@ -10,7 +10,8 @@
 
 import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getModelForTask, validateModelVersions } from './model-config';
-import { withRetry, withFallback } from './retry';
+import { withRetry } from './retry';
+// import { withFallback } from './retry'; // TODO: 필요 시 사용
 
 /**
  * 게이트웨이 인터페이스
