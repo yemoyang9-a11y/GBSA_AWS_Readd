@@ -16,8 +16,12 @@ import { FIRST_ENTRY_PAGE } from './cutoff.service'
 import type { Clock } from './clock'
 import type { BookMetaReader, ReadingPositionRepository, ReadingSessionRepository } from './repository'
 
-/** 무조작 30분 — 세션 경계 (R6, FR-DAT-009). 4.4.1절 스위퍼와 같은 기준값을 쓴다. */
-const SESSION_TIMEOUT_MS = 30 * 60_000
+/**
+ * 무조작 30분 — 세션 경계 (R6, FR-DAT-009).
+ * 스위퍼(S4, session-sweeper/sweep.ts)가 대상을 선별할 때 같은 값을 가져다 쓴다 —
+ * 두 곳에서 30분을 따로 정의하면 판정 지점이 둘로 갈린다(FR-BRF-005 🚦와 같은 결의).
+ */
+export const SESSION_TIMEOUT_MS = 30 * 60_000
 
 export class BookNotReadyError extends Error {
   constructor(readonly bookId: string) {
