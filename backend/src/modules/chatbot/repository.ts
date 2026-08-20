@@ -27,14 +27,15 @@ export async function findChapterSummaries(
 ): Promise<ChapterSummary[]> {
   const query = `
     SELECT
-      chapter_no,
-      title,
-      summary as content,
-      end_page
-    FROM chapter_summaries
-    WHERE book_id = $1
-      AND end_page <= $2
-    ORDER BY chapter_no
+      cs.chapter_no,
+      c.title,
+      cs.summary as content,
+      c.end_page
+    FROM chapter_summaries cs
+    JOIN chapters c ON cs.book_id = c.book_id AND cs.chapter_no = c.chapter_no
+    WHERE cs.book_id = $1
+      AND c.end_page <= $2
+    ORDER BY cs.chapter_no
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -221,13 +222,14 @@ export async function findEvents(bookId: string, K: number): Promise<Event[]> {
  */
 export async function getBackgroundKnowledge(bookId: string): Promise<string> {
   const query = `
-    SELECT background_knowledge
-    FROM books
-    WHERE id = $1
+    SELECT content
+    FROM background_and_intro
+    WHERE book_id = $1
+      AND kind = 'background'
   `;
 
   const result = await pool.query(query, [bookId]);
-  return result.rows[0]?.background_knowledge || '';
+  return result.rows[0]?.content || '';
 }
 
 /**
