@@ -17,7 +17,10 @@
 import type { Clock } from '../../modules/reading-state/clock'
 import type { CutoffService } from '../../modules/reading-state/cutoff.service'
 import type { RecapService } from '../../modules/reading-state/recap.service'
-import type { ConversationHistoryRepository, ReadingSessionRepository } from '../../modules/reading-state/repository'
+import type {
+  ConversationHistoryRepository,
+  ReadingSessionRepository,
+} from '../../modules/reading-state/repository'
 import { SESSION_TIMEOUT_MS } from '../../modules/reading-state/session.service'
 
 export interface SweepDeps {

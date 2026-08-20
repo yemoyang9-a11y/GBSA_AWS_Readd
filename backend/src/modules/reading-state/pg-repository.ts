@@ -289,7 +289,9 @@ export function createPgSessionRecapCacheRepository(db: QueryClient): SessionRec
 // 대화 이력 — conversation_history (002, A7 파기 대상)
 // ============================================================================
 
-export function createPgConversationHistoryRepository(db: QueryClient): ConversationHistoryRepository {
+export function createPgConversationHistoryRepository(
+  db: QueryClient
+): ConversationHistoryRepository {
   return {
     async purge(deviceId: string, bookId: string): Promise<void> {
       await db.query(`DELETE FROM conversation_history WHERE device_id = $1 AND book_id = $2`, [

@@ -9,13 +9,18 @@
  *
  * ⚠️ LLM 호출은 `llmStream` 의존성을 통해서만 이뤄진다 — 실제 게이트웨이(⑥) 연결은
  *    라우트 계층(CP3 실데이터 전환 범위)에서 `import { stream } from '../llm-gateway/gateway'`를
- *    주입한다. 여기서 직접 import하지 않는 이유 — 게이트웨이 모듈은 import 시점에
- *    Bedrock 클라이언트를 만들고 모델 버전 환경변수를 검증한다(가드), 그 부작용을 단위
- *    테스트에 끌고 오지 않기 위해 함수 의존성으로 분리했다.
+ *    주입한다. 여기서 직접 import하지 않는 이유 — 게이트웨이 모듈(`gateway.ts`)은 import
+ *    시점에 Bedrock 클라이언트를 만들고 모델 버전 환경변수를 검증한다(가드), 그 부작용을
+ *    단위 테스트에 끌고 오지 않기 위해 함수 의존성으로 분리했다.
+ *
+ *    로그용 모델 ID는 예외다 — `model-config.ts`의 `getModelForTask`는 순수 함수이고
+ *    (import 시점 부작용 없음, MODEL_CONFIG는 env 값을 읽는 객체 리터럴일 뿐) 위
+ *    가드가 걸리는 `gateway.ts`와는 다른 모듈이라 직접 import해도 안전하다.
  */
 
 import { assembleRecapInput } from './recap-assembly'
 import type { RecapAssemblyDeps } from './recap-assembly'
+import { getModelForTask } from '../llm-gateway/model-config'
 import type {
   RecapCallLogger,
   SavedRecapRepository,
@@ -171,7 +176,7 @@ function buildRecapCallLog(
     input_chapter_summary_ids: input.chapter_summaries.map((s) => String(s.chapter_no)),
     current_chapter_cutoff: input.current_chapter_text !== null ? input.cutoff : null,
     output_ref: outputText,
-    model: 'recap', // TODO(CP3): llm-gateway가 실제 사용 모델 ID를 반환하면 교체 — R2 로컬 노트 참조
+    model: getModelForTask('recap'), // 실제 매핑된 모델 ID (R3 소유 설정, model-config.ts)
     tokens: estimateTokens(input, outputText),
     trigger,
   }

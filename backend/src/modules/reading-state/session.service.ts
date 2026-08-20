@@ -14,7 +14,11 @@
 
 import { FIRST_ENTRY_PAGE } from './cutoff.service'
 import type { Clock } from './clock'
-import type { BookMetaReader, ReadingPositionRepository, ReadingSessionRepository } from './repository'
+import type {
+  BookMetaReader,
+  ReadingPositionRepository,
+  ReadingSessionRepository,
+} from './repository'
 
 /**
  * 무조작 30분 — 세션 경계 (R6, FR-DAT-009).

@@ -172,6 +172,9 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
     expect(entry.trigger).toBe('realtime')
     expect(typeof entry.output_ref).toBe('string')
     expect(entry.output_ref.length).toBeGreaterThan(0)
+    // model은 태스크명 placeholder가 아니라 model-config.ts가 매핑한 실제 모델 ID다
+    expect(entry.model).toBe(process.env.BEDROCK_CLAUDE_HAIKU)
+    expect(entry.model).not.toBe('recap')
   })
 
   test('K가 장 종료 페이지와 일치(원문 미투입)하면 로그의 절단 페이지가 null', async () => {
