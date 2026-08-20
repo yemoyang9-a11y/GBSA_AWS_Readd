@@ -21,6 +21,7 @@ import {
   mockRelationships,
 } from './fixtures';
 import type {
+  SseFrame,
   BriefingResponse,
   CatalogResponse,
   CharacterResponse,
@@ -46,14 +47,14 @@ let currentPage = 21;
 let sessionEpoch = 1;
 
 /** 기준점 결정기 대역 — 서버의 유일한 계산 지점 (00-shared §2.1) */
-function snapshot() {
+function snapshot(page = currentPage) {
   const totalPages = 30;
-  const cutoff = deriveCutoff(currentPage);
-  const chapter = mockChapters.find((c) => currentPage >= c.start_page && currentPage <= c.end_page);
+  const cutoff = deriveCutoff(page);
+  const chapter = mockChapters.find((c) => page >= c.start_page && page <= c.end_page);
   return {
-    current_page: currentPage,
+    current_page: page,
     cutoff,
-    percent: derivePercent(currentPage, totalPages),
+    percent: derivePercent(page, totalPages),
     chapter,
     total_pages: totalPages,
   };
@@ -118,8 +119,10 @@ export function mockBriefingResponse(): BriefingResponse {
 }
 
 /** 관계도 — 서버 쿼리 대역. 노드·간선·별칭 전부 K 이하만 (FR-SPL-002 🚦, D6, A6) */
-export function mockGraphResponse(): GraphResponse {
-  const { cutoff: k } = snapshot();
+export function mockGraphResponse(page?: number): GraphResponse {
+  // 요청에 동봉된 page 를 진도 이벤트와 동일하게 처리한 뒤 기준점을 파생한다 (00-shared §2.5)
+  if (page !== undefined) currentPage = page;
+  const { cutoff: k } = snapshot(page);
 
   const nodes = mockCharacters
     .filter((c) => c.first_appearance_page <= k)
@@ -155,8 +158,12 @@ export function mockGraphResponse(): GraphResponse {
   return { nodes, edges };
 }
 
-export function mockCharacterResponse(characterId: string): CharacterResponse | null {
-  const { cutoff: k } = snapshot();
+export function mockCharacterResponse(
+  characterId: string,
+  page?: number
+): CharacterResponse | null {
+  if (page !== undefined) currentPage = page;
+  const { cutoff: k } = snapshot(page);
   const character = mockCharacters.find((c) => c.id === characterId && c.first_appearance_page <= k);
   if (!character) return null; // 쿼리 결과 0행 → 404. 초과 여부를 판별한 게 아니다 (절대 규칙 7번)
 
@@ -178,12 +185,36 @@ export function mockCharacterResponse(characterId: string): CharacterResponse | 
   };
 }
 
-/** 리캡·챗봇 스트림 대역 — SSE_SPEC.md 형식 그대로 (delta/done/error) */
-export async function* mockStream(text: string): AsyncGenerator<string> {
+/**
+ * 리캡·챗봇 스트림 대역 — SSE_SPEC.md 형식 그대로 (delta/done/error).
+ * 실제 경로는 fetch 응답을 readSseStream 이 파싱하지만, 대역은 프레임을 바로 내보낸다.
+ */
+export async function* mockStreamFrames(text: string): AsyncGenerator<SseFrame> {
   const { cutoff } = snapshot();
   for (const piece of text.match(/.{1,8}/gu) ?? []) {
-    await new Promise((resolve) => setTimeout(resolve, 40));
-    yield `data: ${JSON.stringify({ type: 'delta', text: piece })}\n\n`;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    yield { type: 'delta', text: piece };
   }
-  yield `data: ${JSON.stringify({ type: 'done', applied_cutoff: cutoff })}\n\n`;
+  yield { type: 'done', applied_cutoff: cutoff };
+}
+
+/** 저장 리캡이 없을 때의 실시간 생성분 (FR-DAT-010 — 영구 저장하지 않는다) */
+export function mockRecapText(): string {
+  const { cutoff } = snapshot();
+  return `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었고, 딸 초봉은 제중당 약국에서 일하기 시작했습니다. (mock 실시간 리캡)`;
+}
+
+/**
+ * 챗봇 답변 대역. 근거 부재 문구도 일반 delta 로 흘린다 (FR-QNA-004 🚦) —
+ * 프론트가 거절 여부를 판별하지 않게 하려는 것이 이 규칙의 요지다.
+ */
+export function mockChatAnswer(query: string): string {
+  const { cutoff } = snapshot();
+  const known = mockCharacters.filter((c) => c.first_appearance_page <= cutoff);
+  const mentioned = known.find((c) => query.includes(c.name));
+
+  if (!mentioned) {
+    return '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
+  }
+  return `${mentioned.name}에 대해 ${cutoff}페이지까지의 내용으로 답하면, 아직 드러난 것은 많지 않습니다. (mock 답변)`;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { SsabiTab } from '../../types';
+import type { GraphResponse, SsabiTab } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
 import RecapTab from './RecapTab';
 import RelationshipTab from './RelationshipTab';
@@ -14,23 +14,38 @@ const TAB_LABELS: Record<SsabiTab, string> = {
 const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
 
 /**
- * 싸비 사이드창 3탭 — S5 (FR-SVB-002·003·004·005)
+ * 싸비 사이드창 3탭 — S5 (FR-SVB-002·004·005)
  *
- * 최초 열기 기본 탭은 인물 관계도이며, 세션이 바뀌면 기본 탭으로 초기화한다.
+ * 이 컴포넌트가 갖는 상태는 "어느 탭이 열려 있는가" 하나다. 조회는 컨테이너가 하고,
+ * 페이지 변경 시 재조회(FR-SVB-003)도 그쪽 책임이다.
  * 세션 경계는 서버가 준 session_epoch 의 **변화**로만 판정한다 — 클라이언트가 30분 규칙을
  * 다시 계산하지 않는다 (절대 규칙 8번, 자가 검증 17번).
- * 페이지가 바뀌면 열려 있는 탭만 재조회한다 (FR-SVB-003).
- * 이 컴포넌트는 본문 페이지를 옮기는 수단을 갖지 않는다 — 싸비 조작이 읽던 위치를 바꾸지
- * 않는다는 규칙을 구조로 지킨다 (FR-SVB-005).
+ * 본문 페이지를 옮기는 수단을 갖지 않아 FR-SVB-005 를 구조로 지킨다.
  */
 export default function SsabiPanel({
-  currentPage,
   sessionEpoch,
-  onTabDataNeeded,
+  onTabChange,
+  graph,
+  graphFailed,
+  recapText,
+  recapStreaming,
+  recapFailed,
+  chatAnswer,
+  chatStreaming,
+  chatError,
+  onAsk,
 }: {
-  currentPage: number;
   sessionEpoch: number;
-  onTabDataNeeded: (tab: SsabiTab, page: number) => void;
+  onTabChange: (tab: SsabiTab) => void;
+  graph: GraphResponse | null;
+  graphFailed: boolean;
+  recapText: string;
+  recapStreaming: boolean;
+  recapFailed: boolean;
+  chatAnswer: string;
+  chatStreaming: boolean;
+  chatError: string | null;
+  onAsk: (query: string) => void;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(null);
   const previousEpoch = useRef<number | null>(null);
@@ -49,8 +64,8 @@ export default function SsabiPanel({
   }, [sessionEpoch]);
 
   useEffect(() => {
-    onTabDataNeeded(tab, currentPage);
-  }, [tab, currentPage, onTabDataNeeded]);
+    onTabChange(tab);
+  }, [tab, onTabChange]);
 
   return (
     <section className="flex h-full flex-col border-l">
@@ -70,9 +85,18 @@ export default function SsabiPanel({
       </div>
 
       <div role="tabpanel" className="flex-1 overflow-y-auto">
-        {tab === 'recap' ? <RecapTab /> : null}
-        {tab === 'relationship' ? <RelationshipTab /> : null}
-        {tab === 'chatbot' ? <ChatbotTab /> : null}
+        {tab === 'recap' ? (
+          <RecapTab text={recapText} streaming={recapStreaming} failed={recapFailed} />
+        ) : null}
+        {tab === 'relationship' ? <RelationshipTab graph={graph} failed={graphFailed} /> : null}
+        {tab === 'chatbot' ? (
+          <ChatbotTab
+            answer={chatAnswer}
+            streaming={chatStreaming}
+            error={chatError}
+            onAsk={onAsk}
+          />
+        ) : null}
       </div>
     </section>
   );

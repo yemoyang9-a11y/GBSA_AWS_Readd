@@ -10,6 +10,11 @@ import App from './App';
  * 실제 API가 붙은 뒤 그쪽을 대상으로 따로 검증해야 한다.
  */
 describe('관통 흐름 (mock 기준)', () => {
+  // jsdom 은 파일 안에서 주소를 유지한다 — 앞 테스트가 남긴 경로에서 시작하지 않도록 되돌린다
+  beforeEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
   it('대시보드에서 도서를 고르면 브리핑을 거쳐 읽기 화면까지 이어진다', async () => {
     render(<App />);
 

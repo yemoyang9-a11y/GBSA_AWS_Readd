@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
 import { fetchBriefing } from '../services/recapService';
 import { fetchBookInfo } from '../services/bookService';
 import { BOOK_ROUTES } from '../utils/routes';
-import type { BriefingResponse, ChapterSummary } from '../types';
+import type { BriefingResponse, ChapterSummary, EntryResponse } from '../types';
 
 /**
  * 브리핑 화면 컨테이너 — S6
@@ -17,6 +17,8 @@ import type { BriefingResponse, ChapterSummary } from '../types';
 export default function Briefing() {
   const { bookId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const entry = (location.state as { entry?: EntryResponse } | null)?.entry;
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -32,9 +34,11 @@ export default function Briefing() {
   }, []);
 
   const handleContinue = useCallback(() => {
-    // '마저 읽기'는 리캡 상태와 무관하게 즉시 동작한다 (UC-28 E1, FR-SPL-005 🚦)
-    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
-  }, [navigate, bookId]);
+    // '마저 읽기'는 리캡 상태와 무관하게 즉시 동작한다 (UC-28 E1, FR-SPL-005 🚦).
+    // 진입 판정 결과를 그대로 넘긴다 — 넘기지 않으면 읽기 화면이 시작 페이지를 몰라
+    // 1페이지로 진도를 보내고, 기준점이 통째로 되감긴다 (FR-PRG-003 🚦).
+    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { state: { entry } });
+  }, [navigate, bookId, entry]);
 
   if (!briefing) return <Loading />;
 

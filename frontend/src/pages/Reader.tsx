@@ -4,15 +4,24 @@ import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
-import { sendProgress } from '../services/progressService';
+import { enterBook, sendProgress } from '../services/progressService';
+import { streamRecap } from '../services/recapService';
+import { askChatbot } from '../services/chatbotService';
+import { useSsabiData } from '../hooks/useSsabiData';
+import { useSSE } from '../hooks/useSSE';
+import { nextSeq } from '../utils/seq';
+import { DEFAULT_SSABI_TAB } from '../utils/constants';
 import type { EntryResponse, PageResponse, SsabiTab } from '../types';
 
 /**
- * 읽기 화면 컨테이너 — S3
+ * 읽기 화면 컨테이너 — S3 · S4 · S5
  *
  * 페이지가 열릴 때마다 진도 이벤트를 보낸다 (POST /progress, fire-and-forget).
  * GET /pages 로 흡수하지 않는다 — 선요청 안전 규칙 때문에 R2가 거절했다 (team-sync-r4.md §1.1).
  * 이동할 페이지 번호는 서버 응답의 prev_page·next_page 를 그대로 쓴다.
+ *
+ * 싸비 조회는 열려 있는 탭만 하고, 페이지가 바뀌면 다시 조회한다 (FR-SVB-003).
+ * 리캡·챗봇은 스트리밍이라 useSSE 가 따로 받는다.
  */
 export default function Reader() {
   const { bookId = '' } = useParams();
@@ -21,9 +30,37 @@ export default function Reader() {
 
   const [page, setPage] = useState<PageResponse | null>(null);
   const [totalPages, setTotalPages] = useState(0);
+  const [tab, setTab] = useState<SsabiTab>(DEFAULT_SSABI_TAB);
 
-  // 진입 판정이 알려준 페이지에서 시작한다. 직접 URL 로 들어온 경우 1페이지.
-  const [currentPage, setCurrentPage] = useState(entry?.page ?? 1);
+  /**
+   * 시작 페이지·세션은 **서버 진입 판정**이 정한다 (FR-BRF-001, 절대 규칙 8번).
+   * 브리핑을 거쳐 왔으면 그 결과를 그대로 받고, URL 로 바로 들어왔으면 여기서 판정을 받는다.
+   * 클라이언트가 1페이지라고 가정하면 그 값으로 진도가 발신되어 기준점이 되감긴다.
+   */
+  const [session, setSession] = useState<EntryResponse | null>(entry ?? null);
+  const [currentPage, setCurrentPage] = useState<number | null>(entry?.page ?? null);
+
+  useEffect(() => {
+    if (session) return;
+    void enterBook(bookId).then((judged) => {
+      setSession(judged);
+      setCurrentPage(judged.page);
+    });
+  }, [bookId, session]);
+
+  const {
+    text: recapText,
+    streaming: recapStreaming,
+    error: recapError,
+    consume: consumeRecap,
+  } = useSSE();
+  const {
+    text: chatAnswer,
+    streaming: chatStreaming,
+    error: chatError,
+    consume: consumeChat,
+  } = useSSE();
+  const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
 
   useEffect(() => {
     void fetchBookInfo(bookId).then((info) => {
@@ -33,14 +70,25 @@ export default function Reader() {
   }, [bookId]);
 
   useEffect(() => {
+    if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     void fetchPage(bookId, currentPage).then(setPage);
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     sendProgress(bookId, currentPage);
   }, [bookId, currentPage]);
 
-  const handleTabData = useCallback((_tab: SsabiTab, _page: number) => {
-    // TODO(S4·S5) 탭별 조회 연결 — 관계도·인물 상세는 ssabiService, 리캡·챗봇은 SSE.
-  }, []);
+  // 리캡 탭을 열면 그 시점 기준점으로 받는다. 페이지가 바뀌면 다시 받는다 (FR-SVB-003)
+  useEffect(() => {
+    if (tab !== 'recap' || currentPage === null) return;
+    void consumeRecap(streamRecap(bookId, currentPage, nextSeq()));
+  }, [tab, bookId, currentPage, consumeRecap]);
+
+  const handleAsk = useCallback(
+    (query: string) => {
+      if (currentPage === null) return;
+      void consumeChat(askChatbot(bookId, query, currentPage, nextSeq()));
+    },
+    [consumeChat, bookId, currentPage]
+  );
 
   if (!page) return <Loading />;
 
@@ -59,9 +107,17 @@ export default function Reader() {
 
       <aside className="w-96">
         <SsabiPanel
-          currentPage={page.page_no}
-          sessionEpoch={entry?.session_epoch ?? 0}
-          onTabDataNeeded={handleTabData}
+          sessionEpoch={session?.session_epoch ?? 0}
+          onTabChange={setTab}
+          graph={graph}
+          graphFailed={graphFailed}
+          recapText={recapText}
+          recapStreaming={recapStreaming}
+          recapFailed={recapError !== null}
+          chatAnswer={chatAnswer}
+          chatStreaming={chatStreaming}
+          chatError={chatError}
+          onAsk={handleAsk}
         />
       </aside>
     </div>
