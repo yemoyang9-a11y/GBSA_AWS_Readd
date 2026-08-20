@@ -7,6 +7,7 @@ import {
   checkReviewComplete,
   publishBook,
   reviewKey,
+  passedReviewKeys,
 } from './review';
 import { QueryClient } from './register';
 import { ResolvedBookData } from './check-integrity';
@@ -56,6 +57,49 @@ describe('buildReviewSheetRows — FR-ADM-005 🚦 내보내기', () => {
     const rows = buildReviewSheetRows(DATA, already);
     expect(rows.find((r) => r.target_type === 'character')).toBeUndefined();
     expect(rows).toHaveLength(8);
+  });
+});
+
+describe('passedReviewKeys — FR-ADM-005 🚦 FALSE 판정 대상은 재수출 대상에서 제외하지 않는다', () => {
+  test('적용 항목 전부 TRUE인 대상만 통과 키에 포함된다(positive)', () => {
+    const keys = passedReviewKeys([
+      {
+        target_type: 'relationship',
+        target_id: 'rel-1',
+        hallucination_ok: true,
+        page_boundary_ok: true,
+        info_separation_ok: true,
+      },
+    ]);
+    expect(keys.has(reviewKey('relationship', 'rel-1'))).toBe(true);
+  });
+
+  test('적용 항목 중 하나라도 FALSE면 통과 키에서 빠진다 — 재수출돼 재제출 가능해야 한다(negative)', () => {
+    const keys = passedReviewKeys([
+      {
+        target_type: 'relationship',
+        target_id: 'rel-1',
+        hallucination_ok: false,
+        page_boundary_ok: true,
+        info_separation_ok: true,
+      },
+    ]);
+    expect(keys.has(reviewKey('relationship', 'rel-1'))).toBe(false);
+    expect(keys.size).toBe(0);
+  });
+
+  test('통과 키를 alreadyReviewed로 넘기면 buildReviewSheetRows가 FALSE 판정 대상을 다시 내보낸다', () => {
+    const passed = passedReviewKeys([
+      {
+        target_type: 'relationship',
+        target_id: 'rel-1',
+        hallucination_ok: false,
+        page_boundary_ok: true,
+        info_separation_ok: true,
+      },
+    ]);
+    const rows = buildReviewSheetRows(DATA, passed);
+    expect(rows.find((r) => r.target_type === 'relationship' && r.target_id === 'rel-1')).toBeDefined();
   });
 });
 
