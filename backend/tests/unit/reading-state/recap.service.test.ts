@@ -16,7 +16,7 @@ import {
   makeSeededFakes,
 } from './fakes'
 
-/** 호출 여부를 세는 페이크 LLM 스트리머 — "정" "주사" "는" 세 청크를 낸다. */
+/** 호출 여부를 세는 페이크 LLM 스트리머 — "정" "주사" "는" 세 청크를 낸다. usage는 안 준다(estimate 경로 검증용). */
 function makeFakeLlm() {
   let callCount = 0
   const llmStream = async function* (_task: string, _prompt: string) {
@@ -26,6 +26,16 @@ function makeFakeLlm() {
     yield '는'
   }
   return { llmStream, callCount: () => callCount }
+}
+
+/** gateway.ts(커밋 410f558)처럼 스트림 종료 시 실제 usage를 반환하는 페이크. */
+function makeFakeLlmWithUsage(usage: { inputTokens: number; outputTokens: number }) {
+  const llmStream = async function* (_task: string, _prompt: string) {
+    yield '정'
+    yield '주사'
+    return usage
+  }
+  return { llmStream }
 }
 
 function build() {
@@ -175,6 +185,40 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
     // model은 태스크명 placeholder가 아니라 model-config.ts가 매핑한 실제 모델 ID다
     expect(entry.model).toBe(process.env.BEDROCK_CLAUDE_HAIKU)
     expect(entry.model).not.toBe('recap')
+  })
+
+  test('NFR-OBS-004: llmStream이 실사용량을 반환하면 추정치 대신 그 값을 로그에 쓴다', async () => {
+    const { books } = makeSeededFakes()
+    const savedRecap = new FakeSavedRecapRepository()
+    const sessionCache = new FakeSessionRecapCacheRepository()
+    const recapLog = new FakeRecapCallLogger()
+    const { llmStream } = makeFakeLlmWithUsage({ inputTokens: 1234, outputTokens: 56 })
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap,
+      sessionCache,
+      recapLog,
+      llmStream,
+    })
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime')
+    if (result.kind === 'generated') await drain(result.chunks)
+
+    const [entry] = recapLog.records
+    expect(entry.tokens).toEqual({ input: 1234, output: 56 })
+  })
+
+  test('llmStream이 usage를 반환하지 않으면(테스트 페이크 등) 문자 수 추정치로 대체한다', async () => {
+    const { service, recapLog } = build()
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime')
+    if (result.kind === 'generated') await drain(result.chunks)
+
+    const [entry] = recapLog.records
+    expect(entry.tokens.input).toBeGreaterThan(0)
+    expect(entry.tokens.output).toBeGreaterThan(0)
+    expect(entry.tokens).not.toEqual({ input: 1234, output: 56 }) // 추정치는 실사용량과 우연히 같을 수 없는 값
   })
 
   test('K가 장 종료 페이지와 일치(원문 미투입)하면 로그의 절단 페이지가 null', async () => {

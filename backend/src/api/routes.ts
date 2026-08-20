@@ -85,20 +85,16 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 진도 이벤트 동봉 처리 (R4 요청)
     // 페이지 넘기고 바로 물으면 반영돼야 함
     // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
-    if (page && seq) {
-      // TODO: R2 연동 - await recordProgressEvent(deviceId, bookId, { page, seq });
-      // 반환값은 기다리지 않음 (fire-and-forget, NFR-PERF-005)
-      console.log('[API] Progress event with chatbot', { deviceId, bookId, page, seq });
+    if (typeof page === 'number' && typeof seq === 'number') {
+      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
     }
+    await readingState.sessionService.touchActivity(deviceId, bookId);
 
     // 기준점 스냅샷 가져오기 (R2 연동)
     // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
-    // TODO: const snapshot = await getCutoffSnapshot(deviceId, bookId);
-    // TODO: const K = snapshot.cutoff;
-    // getCutoffSnapshot은 비동기 (R2 통지 ①)
-
-    // 임시: 하드코딩된 K (R2 연동 전)
-    const K = 80;
+    // FR-PRG-003 🚦: 기준점 = current_page - 1
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const K = snapshot.cutoff;
 
     // SSE 스트리밍 설정 (NFR-PERF-008)
     res.setHeader('Content-Type', 'text/event-stream');

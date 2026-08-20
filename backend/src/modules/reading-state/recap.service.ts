@@ -35,12 +35,27 @@ export type RecapResult =
   | { kind: 'reused'; text: string }
   | { kind: 'generated'; chunks: AsyncGenerator<string> }
 
+/**
+ * 스트리밍 종료 시 게이트웨이가 돌려주는 실사용량 (gateway.ts의 LLMStreamUsage와 필드명
+ * 이 다르다 — R2는 게이트웨이 타입을 직접 import하지 않으므로 자체 이름을 쓴다).
+ * `llmStream`이 반환값을 안 주면(테스트 페이크 등) undefined일 수 있다 — 그때는
+ * `estimateTokens` 추정치로 흡수한다.
+ */
+export interface LLMUsage {
+  inputTokens: number
+  outputTokens: number
+}
+
 export interface RecapServiceDeps extends RecapAssemblyDeps {
   savedRecap: SavedRecapRepository
   sessionCache: SessionRecapCacheRepository
   recapLog: RecapCallLogger
-  /** LLM 게이트웨이 스트리밍 호출 (⑥ 경유는 이 함수를 주입하는 쪽의 책임). */
-  llmStream: (task: string, prompt: string) => AsyncGenerator<string>
+  /**
+   * LLM 게이트웨이 스트리밍 호출 (⑥ 경유는 이 함수를 주입하는 쪽의 책임).
+   * 스트림이 끝날 때(`return`) 실제 토큰 사용량을 낼 수 있다 — `for await`는 그 반환값을
+   * 버리므로 아래 `generateAndPersist`는 제너레이터를 수동으로 `.next()`해 받는다.
+   */
+  llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>
   /** 세션 캐시 만료 시각 계산용. 주입하지 않으면 24시간 뒤로 둔다(세션 종료 전 소멸 목적일 뿐 — TTL 자체는 스펙 미지정). */
   cacheTtlMs?: number
 }
@@ -114,7 +129,7 @@ async function* generateAndPersist(
     savedRecap: SavedRecapRepository
     sessionCache: SessionRecapCacheRepository
     recapLog: RecapCallLogger
-    llmStream: (task: string, prompt: string) => AsyncGenerator<string>
+    llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>
     cacheTtlMs: number
   }
 ): AsyncGenerator<string> {
@@ -122,10 +137,14 @@ async function* generateAndPersist(
   const prompt = buildRecapPrompt(input)
 
   let fullText = ''
-  for await (const chunk of io.llmStream('recap', prompt)) {
-    fullText += chunk
-    yield chunk
+  const gen = io.llmStream('recap', prompt)
+  let step = await gen.next()
+  while (!step.done) {
+    fullText += step.value
+    yield step.value
+    step = await gen.next()
   }
+  const usage = step.value ?? undefined // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
 
   if (trigger === 'realtime') {
     await io.sessionCache.saveCached(
@@ -139,7 +158,7 @@ async function* generateAndPersist(
     await io.savedRecap.upsertSavedRecap(deviceId, bookId, cutoff, fullText) // FR-DAT-009
   }
 
-  await io.recapLog.record(buildRecapCallLog(deviceId, bookId, input, fullText, trigger)) // NFR-OBS-002 🚦
+  await io.recapLog.record(buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage)) // NFR-OBS-002 🚦
 }
 
 /**
@@ -166,7 +185,8 @@ function buildRecapCallLog(
   bookId: string,
   input: RecapInput,
   outputText: string,
-  trigger: RecapTrigger
+  trigger: RecapTrigger,
+  usage: LLMUsage | undefined
 ): RecapCallLog {
   return {
     timestamp: new Date(),
@@ -177,15 +197,16 @@ function buildRecapCallLog(
     current_chapter_cutoff: input.current_chapter_text !== null ? input.cutoff : null,
     output_ref: outputText,
     model: getModelForTask('recap'), // 실제 매핑된 모델 ID (R3 소유 설정, model-config.ts)
-    tokens: estimateTokens(input, outputText),
+    tokens: usage
+      ? { input: usage.inputTokens, output: usage.outputTokens } // 게이트웨이 실사용량 (커밋 410f558)
+      : estimateTokens(input, outputText), // llmStream이 usage를 안 주는 경우(예: 테스트 페이크)의 대체
     trigger,
   }
 }
 
 /**
- * TODO(CP3) — llm-gateway.stream()은 현재 토큰 사용량을 호출부에 반환하지 않는다
- * (내부적으로 console.log만 한다). 정확한 값이 확보되기 전까지 문자 수 기반 추정치를
- * 쓴다. 게이트웨이가 사용량을 반환하도록 바뀌면 이 추정을 지운다 (docs-local/R2-notes.md).
+ * `llmStream` 의존성이 usage를 반환하지 않을 때만 쓰는 대체 추정치 — 실제 게이트웨이
+ * (`gateway.ts`)는 커밋 410f558부터 스트림 종료 시 진짜 토큰 수를 반환한다.
  */
 function estimateTokens(input: RecapInput, outputText: string): { input: number; output: number } {
   const inputChars =

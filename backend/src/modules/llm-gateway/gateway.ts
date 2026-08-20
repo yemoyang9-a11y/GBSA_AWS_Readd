@@ -34,6 +34,14 @@ export interface LLMCallOptions {
 }
 
 /**
+ * LLM 스트리밍 사용량
+ */
+export interface LLMStreamUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
  * LLM 호출 (동기)
  *
  * @param task - 작업 유형 (예: "recap", "chatbot", "generate_summary")
@@ -110,15 +118,19 @@ export async function call(task: string, prompt: string, options: LLMCallOptions
  * @param prompt - LLM에 전달할 프롬프트
  * @param options - 호출 옵션 (maxTokens 등)
  * @yields 텍스트 청크
+ * @returns 스트리밍 종료 시 토큰 사용량
  *
  * @example
- * for await (const chunk of stream('chatbot', '질문...', { maxTokens: 8192 })) {
+ * const gen = stream('chatbot', '질문...', { maxTokens: 8192 });
+ * for await (const chunk of gen) {
  *   console.log(chunk);
  * }
+ * const usage = gen.return(await gen.next()).value; // 사용량 접근
  */
-export async function* stream(task: string, prompt: string, options: LLMCallOptions = {}): AsyncGenerator<string> {
+export async function* stream(task: string, prompt: string, options: LLMCallOptions = {}): AsyncGenerator<string, LLMStreamUsage> {
   const startTime = Date.now();
-  let totalTokens = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
 
   try {
     // 모델 매핑 (D13 ②, NFR-AI-001)
@@ -159,8 +171,17 @@ export async function* stream(task: string, prompt: string, options: LLMCallOpti
 
         if (chunk.type === 'content_block_delta') {
           if (chunk.delta?.type === 'text_delta') {
-            totalTokens++;
             yield chunk.delta.text;
+          }
+        } else if (chunk.type === 'message_start') {
+          // 입력 토큰은 message_start에 포함
+          if (chunk.message?.usage?.input_tokens) {
+            inputTokens = chunk.message.usage.input_tokens;
+          }
+        } else if (chunk.type === 'message_delta') {
+          // 출력 토큰은 message_delta에 포함
+          if (chunk.delta?.usage?.output_tokens) {
+            outputTokens = chunk.delta.usage.output_tokens;
           }
         }
       }
@@ -171,10 +192,14 @@ export async function* stream(task: string, prompt: string, options: LLMCallOpti
     logMetrics({
       task,
       modelId,
-      outputTokens: totalTokens,
+      inputTokens,
+      outputTokens,
       durationMs: duration,
       streaming: true,
     });
+
+    // 토큰 사용량 반환 (호출부가 로그에 기록 가능)
+    return { inputTokens, outputTokens };
 
   } catch (error) {
     console.error('LLM Gateway Stream Error:', { task, error });
