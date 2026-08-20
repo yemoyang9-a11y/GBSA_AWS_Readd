@@ -40,22 +40,19 @@ const SEARCH_CONFIG = {
  */
 export async function vectorSearch(
   bookId: string,
-  _query: string,
+  query: string,
   K: number
 ): Promise<SearchChunk[]> {
 
   // 1. 질의 정규화 (별칭 사전으로 대표명 치환)
-  // TODO: 실제 구현 시 정규화 사용 (현재는 스텁)
-  // const normalizedQuery = await normalizeQuery(_query, bookId, K);
+  const normalizedQuery = await normalizeQuery(query, bookId, K);
 
   // 2. 질의 임베딩
-  // TODO: 실제 구현 시 임베딩 사용 (현재는 스텁)
-  // const queryEmbedding = await embedQuery(normalizedQuery);
+  const queryEmbedding = await embedQuery(normalizedQuery);
 
   // 3. 벡터 검색 - 단일 SQL (5.3절)
   // ⚠️ 사전 필터: WHERE page_no <= K
-  // TODO: 실제 구현 시 queryEmbedding 전달 (현재는 스텁)
-  const results = await performVectorSearch(bookId, [], K);
+  const results = await performVectorSearch(bookId, queryEmbedding, K);
 
   // NFR-OBS-005 🚦: 검색 선정 페이지 번호·스코어 로깅
   logSearchResults(bookId, K, results);
@@ -63,13 +60,11 @@ export async function vectorSearch(
   return results;
 }
 
-/*
+/**
  * 질의 정규화 (별칭 → 대표명 치환)
  *
  * 예: "정 주사" → "정주사"
- *
- * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
- *
+ */
 async function normalizeQuery(
   query: string,
   bookId: string,
@@ -90,47 +85,50 @@ async function normalizeQuery(
   console.log(`[VectorSearch] Normalized: "${query}" → "${normalizedQuery}"`);
   return normalizedQuery;
 }
-*/
 
-/*
+/**
  * 질의 임베딩
  *
  * Amazon Titan Text Embeddings V2 사용
  *
- * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
- *
-async function embedQuery(query: string): Promise<number[]> {
-  const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
+ * TODO: 실제 Bedrock 연결 전까지는 스텁 (빈 벡터 반환)
+ */
+async function embedQuery(_query: string): Promise<number[]> {
+  // TODO: 실제 구현 시 아래 주석 해제
+  // const client = new BedrockRuntimeClient({
+  //   region: process.env.AWS_REGION || 'us-east-1',
+  // });
+  //
+  // const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
+  //
+  // const requestBody = {
+  //   inputText: query,
+  // };
+  //
+  // const command = new InvokeModelCommand({
+  //   modelId,
+  //   contentType: 'application/json',
+  //   accept: 'application/json',
+  //   body: JSON.stringify(requestBody),
+  // });
+  //
+  // const response = await client.send(command);
+  // const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+  //
+  // // Titan 응답 형식: { embedding: [number[], ...] }
+  // const embedding = responseBody.embedding || responseBody.embeddings?.[0];
+  //
+  // if (!embedding) {
+  //   throw new Error('Failed to get embedding from Titan');
+  // }
+  //
+  // console.log(`[VectorSearch] Embedded query: "${query}" (${embedding.length}D)`);
+  // return embedding;
 
-  const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
-
-  const requestBody = {
-    inputText: query,
-  };
-
-  const command = new InvokeModelCommand({
-    modelId,
-    contentType: 'application/json',
-    accept: 'application/json',
-    body: JSON.stringify(requestBody),
-  });
-
-  const response = await client.send(command);
-  const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-
-  // Titan 응답 형식: { embedding: [number[], ...] }
-  const embedding = responseBody.embedding || responseBody.embeddings?.[0];
-
-  if (!embedding) {
-    throw new Error('Failed to get embedding from Titan');
-  }
-
-  console.log(`[VectorSearch] Embedded query: "${query}" (${embedding.length}D)`);
-  return embedding;
+  // 스텁: 빈 배열 반환 (실제 구현 시 1024차원 벡터 반환)
+  console.log(`[VectorSearch] Embedding stub: query length = ${_query.length}`);
+  return [];
 }
-*/
 
 /**
  * 벡터 검색 실행 (단일 SQL)
