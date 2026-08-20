@@ -28,7 +28,7 @@
 | G8 | 싸비 탭은 **3개**다(리캡·인물 관계도·챗봇). 시안의 타임라인 탭은 만들지 않는다 | 00-shared §2.5 "[이후 확장]" |
 | G9 | 기존 테스트 77개가 계속 통과해야 한다. 마크업이 바뀌면 쿼리를 옮기되 **검증의 의미를 유지**한다. 테스트를 느슨하게 바꾸지 않는다 | CLAUDE.md 7장 |
 | G10 | 컴포넌트는 데이터 조회·상태 판단을 하지 않는다. props로 받은 것만 렌더한다 | 스펙 §4 |
-| G11 | 색·간격은 `theme.extend` 토큰 이름으로 쓴다. 임의 값(`text-[#...]`)을 새로 만들지 않는다 | 스펙 §3 |
+| G11 | **색은 반드시 토큰 이름으로 쓴다** — `text-[#1c1b1a]` 같은 색 리터럴을 새로 만들지 않는다. 글자 크기·일회성 간격은 토큰이 없으므로 Tailwind 기본 유틸리티나 임의 값(`text-[13px]`)을 써도 된다 | 스펙 §3 |
 | G12 | 커밋 형식 `{type}(R4): {요약} — {조항 ID}`, **작업 단위 1개 = 커밋 1개** | CLAUDE.md 10장 |
 
 ### 실측 토큰 값 (스펙 §3에서 verbatim)
@@ -982,9 +982,11 @@ describe('Dashboard', () => {
   it('통계는 카탈로그에서 센다 — 진도가 있으면 읽는 중 (스펙 §7 #1)', async () => {
     renderDashboard();
     expect(await screen.findByText('탁류')).toBeInTheDocument();
-    expect(screen.getByText('읽는 중').closest('div')).toBeInTheDocument();
+    // ⚠️ "읽는 중"은 통계 라벨·필터 탭·카드 진도 라벨 세 곳에 나온다.
+    //    getByText 로 찾으면 다중 매치로 실패하므로 testid 로 범위를 좁힌다.
     // 읽는 중 1권, 완독은 판정 데이터가 없어 0
     expect(screen.getByTestId('stat-reading')).toHaveTextContent('1');
+    expect(screen.getByTestId('stat-reading')).toHaveTextContent('읽는 중');
     expect(screen.getByTestId('stat-done')).toHaveTextContent('0');
   });
 
