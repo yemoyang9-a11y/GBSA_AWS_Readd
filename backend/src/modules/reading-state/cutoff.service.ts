@@ -55,7 +55,7 @@ export interface CutoffService {
  * 과 같은 상태이며, 같은 규칙이 그대로 `cutoff = 0`을 만든다 — **별도 분기를 만들지 않는다**
  * (3.3절 경계값).
  */
-const FIRST_ENTRY_PAGE = 1
+export const FIRST_ENTRY_PAGE = 1
 
 /** 진도 % 표시 자리수. API_CONTRACT.md 예시(80 / 340 → 23.5)와 같은 규칙 */
 const PERCENT_DECIMALS = 1
