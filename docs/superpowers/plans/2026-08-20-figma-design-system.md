@@ -28,7 +28,7 @@
 | G8 | 싸비 탭은 **3개**다(리캡·인물 관계도·챗봇). 시안의 타임라인 탭은 만들지 않는다 | 00-shared §2.5 "[이후 확장]" |
 | G9 | 기존 테스트 77개가 계속 통과해야 한다. 마크업이 바뀌면 쿼리를 옮기되 **검증의 의미를 유지**한다. 테스트를 느슨하게 바꾸지 않는다 | CLAUDE.md 7장 |
 | G10 | 컴포넌트는 데이터 조회·상태 판단을 하지 않는다. props로 받은 것만 렌더한다 | 스펙 §4 |
-| G11 | **색은 반드시 토큰 이름으로 쓴다** — `text-[#1c1b1a]` 같은 색 리터럴을 새로 만들지 않는다. 글자 크기·일회성 간격은 토큰이 없으므로 Tailwind 기본 유틸리티나 임의 값(`text-[13px]`)을 써도 된다 | 스펙 §3 |
+| G11 | **색 리터럴을 새로 만들지 않는다** — `text-[#1c1b1a]` 같은 임의 값 색상 금지. 시안에서 뽑은 색은 반드시 `theme.extend` 토큰 이름으로 쓴다. **다만 Tailwind 기본 팔레트의 `white`·`black`은 허용한다** — 시안이 어두운 버튼 위 흰 글씨를 그렇게 지정했고, 이는 카드 배경(`surface`)과 우연히 같은 hex일 뿐 역할이 다르다. 둘을 한 토큰으로 묶으면 카드 배경을 바꿀 때 버튼 글씨까지 따라 바뀐다. 글자 크기·일회성 간격은 토큰이 없으므로 기본 유틸리티나 임의 값(`text-[13px]`)을 쓴다 | 스펙 §3 |
 | G12 | 커밋 형식 `{type}(R4): {요약} — {조항 ID}`, **작업 단위 1개 = 커밋 1개** | CLAUDE.md 10장 |
 
 ### 실측 토큰 값 (스펙 §3에서 verbatim)
@@ -1146,39 +1146,66 @@ cd frontend && cat src/pages/BriefingView.tsx src/pages/BriefingView.test.tsx
 
 기존 props 시그니처를 **바꾸지 않는다.** 이 태스크는 마크업과 클래스만 다룬다.
 
-- [ ] **Step 2: 목차에 이동 요소가 없음을 고정하는 테스트를 추가한다**
+- [ ] **Step 2: 도서 정보를 뷰까지 내려보낸다**
 
-`frontend/src/pages/BriefingView.test.tsx`에 추가한다(기존 케이스는 지우지 않는다):
+시안의 브리핑 상단에는 표지·제목·저자가 있는데 `BriefingView`는 그 값을 받지 않는다. 데이터는 **이미 컨테이너에 있다** — `Briefing.tsx`가 `fetchBookInfo(bookId)`를 호출해 `info.chapters`만 쓰고 `info.basic_info`(`title`·`author`)를 버리고 있다.
+
+`frontend/src/pages/Briefing.tsx`에 상태를 하나 더 둔다:
 
 ```tsx
-it('FR-BRF-004, D12: 목차 항목에 이동 가능한 요소가 없다', () => {
-  // 렌더 인자는 기존 테스트의 헬퍼를 그대로 쓴다
-  renderBriefing();
+const [book, setBook] = useState<{ title: string; author: string } | null>(null);
+```
 
-  const toc = screen.getByTestId('briefing-toc');
-  expect(within(toc).queryAllByRole('button')).toHaveLength(0);
-  expect(within(toc).queryAllByRole('link')).toHaveLength(0);
+기존 `useEffect`의 `fetchBookInfo` 체인을 바꾼다:
+
+```tsx
+    void fetchBookInfo(bookId).then((info) => {
+      setChapters(info.chapters);
+      setBook({ title: info.basic_info.title, author: info.basic_info.author });
+    });
+```
+
+그리고 `<BriefingView>`에 `title={book?.title ?? ''} author={book?.author ?? ''}`를 넘긴다.
+
+`BriefingView`의 props에 `title: string; author: string`을 **필수로** 추가한다. 테스트 파일의 `baseProps` 객체에 `title: '탁류', author: '채만식'` 두 줄을 더하면 기존 9개 케이스가 그대로 통과한다 — 단언을 고치는 게 아니라 렌더 인자를 채우는 것이므로 검증이 약해지지 않는다.
+
+- [ ] **Step 3: 상단 헤더 테스트를 추가한다**
+
+`frontend/src/pages/BriefingView.test.tsx`에 추가한다(기존 케이스는 하나도 지우지 않는다):
+
+```tsx
+it('시안 상단: 표지·제목·저자를 보여준다', () => {
+  render(<BriefingView {...baseProps} briefing={briefing()} />);
+
+  expect(screen.getByTestId('typographic-cover')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '탁류' })).toBeInTheDocument();
+  expect(screen.getByText('채만식')).toBeInTheDocument();
 });
 ```
 
-`within`을 `@testing-library/react`에서 import한다. `renderBriefing()`은 기존 테스트 파일의 헬퍼를 재사용하고, 없으면 기존 `render(...)` 호출을 그대로 복사해 쓴다.
-
-- [ ] **Step 3: 테스트가 실패하는지 확인한다**
-
-Run: `cd frontend && npx vitest run src/pages/BriefingView.test.tsx`
-Expected: FAIL — `Unable to find an element by: [data-testid="briefing-toc"]`
+> **목차 테스트는 추가하지 않는다.** `BriefingView.test.tsx`에 이미
+> `자가 검증 23 / FR-BRF-004 · D12: 목차는 표시 전용이라 이동 가능한 요소가 없다`가 있고,
+> `getByRole('list', { name: '목차' })` + `querySelectorAll('a, button')` 길이 0으로
+> 정확히 같은 것을 검증한다. 중복 테스트는 리뷰에서 결함으로 잡힌다.
 
 - [ ] **Step 4: 시안대로 마크업·스타일을 입힌다**
 
 구조는 시안 `1:477` 순서를 따른다.
 
 ```
-표지(TypographicCover, 폭 축소) | "N일 만이에요" · 인사 2줄 · 제목·저자
+표지(TypographicCover, 폭 축소) | 제목(h2) · 저자
 현재 장 + percent  →  ProgressBar
 "그동안 이런 이야기였어요"  →  리캡 본문 카드 (rounded-card, border-line)
-"목차"  →  data-testid="briefing-toc" 리스트 (표시 전용)
+"목차"  →  aria-label="목차" 리스트 (표시 전용, 기존 구조 유지)
 '마저 읽기'  →  Button variant="solid"
 ```
+
+> **시안의 "N일 만이에요"는 만들지 않는다.** `BriefingResponse`에 마지막 방문 시각이 없고
+> 다른 어떤 엔드포인트도 그 값을 주지 않는다. 없는 데이터를 지어내지 않는다(CLAUDE.md 6장).
+> 스펙 §7의 계약 불일치 목록에 6번째 항목으로 추가된다.
+>
+> **목차 `<ul>`의 `aria-label="목차"`를 유지한다.** 기존 테스트가 그 이름으로 조회한다.
+> `data-testid`로 바꾸면 그 테스트가 깨진다.
 
 핵심 클래스: 페이지 `bg-canvas px-7 py-6`, 리캡 카드 `rounded-card border border-line bg-surface p-6 text-sm leading-relaxed text-muted`, 목차 행 `flex items-center gap-3 rounded-card border border-line bg-surface px-5 py-4`, 장 번호 뱃지 `flex size-7 items-center justify-center rounded-full bg-canvas font-serif text-xs text-accent`.
 
