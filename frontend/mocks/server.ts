@@ -46,6 +46,13 @@ function derivePercent(page: number, total: number): number {
 let currentPage = 21;
 let sessionEpoch = 1;
 
+/**
+ * 저장 리캡 대역 — 사용자·도서당 1건 (FR-DAT-009).
+ * **재사용은 기준점 완전 일치 시에만** 한다 (FR-DAT-010, R8). 진도가 움직이면 저장분이
+ * 무효가 되어 `recap: null` 로 내려가고, 클라이언트가 스트리밍 폴백을 부른다.
+ */
+const savedRecap = { cutoff: 20, text: '20페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었습니다. (mock 저장 리캡)' };
+
 /** 기준점 결정기 대역 — 서버의 유일한 계산 지점 (00-shared §2.1) */
 function snapshot(page = currentPage) {
   const totalPages = 30;
@@ -102,10 +109,8 @@ export function mockBriefingResponse(): BriefingResponse {
   const snap = snapshot();
   return {
     applied_cutoff: snap.cutoff,
-    recap:
-      snap.cutoff === 0
-        ? null
-        : `${snap.cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었고... (mock 저장 리캡)`,
+    // 기준점이 저장분과 정확히 같을 때만 재사용한다 (FR-DAT-010, R8)
+    recap: snap.cutoff === savedRecap.cutoff ? savedRecap.text : null,
     current_chapter: {
       chapter_no: snap.chapter?.chapter_no ?? 1,
       title: snap.chapter?.title ?? '',

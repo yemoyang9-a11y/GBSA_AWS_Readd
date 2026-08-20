@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { BriefingResponse, ChapterSummary } from '../types';
 import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
@@ -28,10 +28,16 @@ export default function BriefingView({
   recapFailed?: boolean;
 }) {
   const view = resolveBriefingView(briefing);
+  const requested = useRef(false);
 
   useEffect(() => {
-    if (view.kind === 'fallback') onRequestFallback();
     // 첫 진입(empty)에서는 호출하지 않는다 — 이 화면의 LLM 호출 0회 조건 (D13 ①)
+    if (view.kind !== 'fallback' || requested.current) return;
+
+    // 화면당 1회로 고정한다. 스트리밍이 들어오며 다시 그려질 때 재호출되면 그대로 LLM
+    // 재호출이고, 디바이스·도서당 분당 3회 상한에 걸린다 (NFR-AI-017).
+    requested.current = true;
+    onRequestFallback();
   }, [view.kind, onRequestFallback]);
 
   return (
