@@ -8,6 +8,7 @@
 --    동작해도 로그가 비면 통과를 증명할 수 없다"(00-shared 2.4절).
 -- ⚠️ 세션 종료 스위퍼가 파기하는 대화 이력(conversation_history, 002)과 다른 테이블이다.
 --    이 로그는 게이트 판정 근거이므로 파기 대상이 아니다 (A7 주석).
+-- ⚠️ book_id는 TEXT다 — 002와 같은 이유(002_reading_state.sql 상단 주석 참조).
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS recap_call_log (
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS recap_call_log (
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     device_id                 UUID        NOT NULL,
-    book_id                   UUID        NOT NULL,
+    book_id                   TEXT        NOT NULL,
 
     -- 이 호출이 적용한 기준점 K (FR-SPL-003 🚦 판정의 핵심 필드)
     cutoff_page               INTEGER     NOT NULL CHECK (cutoff_page >= 0),

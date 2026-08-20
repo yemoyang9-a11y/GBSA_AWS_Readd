@@ -11,6 +11,14 @@
 --
 -- ⚠️ 영문 물리명은 이 파일에서 처음 정한 것이다 (스펙은 한글 논리명만 규정).
 --    팀 합의 전이므로 병합 시 확인이 필요하다.
+--
+-- ⚠️ book_id는 TEXT다 (2026-08-20 수정 — 최초 커밋은 UUID로 잘못 선언했었다).
+--    R1의 001_content_store.sql이 book_id TEXT PRIMARY KEY로 정의하고 실제 값도
+--    'takryu'처럼 사람이 읽는 슬러그다(run-register.ts BOOK_ID 상수). UUID로 두면
+--    실제 도서 ID가 들어오는 즉시 "invalid input syntax for type uuid"로 전부
+--    깨진다 — 로컬 Postgres에 마이그레이션을 직접 적용해보고서야 발견했다(fake
+--    리포지토리는 타입 제약이 없어 이 버그를 못 잡는다). device_id는 계약대로
+--    UUID를 유지한다(00-shared 2.4절 "X-Device-Id: <uuid>").
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -22,7 +30,7 @@
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reading_position (
     device_id     UUID        NOT NULL,
-    book_id       UUID        NOT NULL,
+    book_id       TEXT        NOT NULL,
 
     current_page  INTEGER     NOT NULL CHECK (current_page >= 1),   -- 1-based
 
@@ -41,7 +49,7 @@ CREATE TABLE IF NOT EXISTS reading_position (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reading_session (
     device_id        UUID        NOT NULL,
-    book_id          UUID        NOT NULL,
+    book_id          TEXT        NOT NULL,
 
     -- 조작 이벤트 수신 시 갱신. '조작' = 서버 도달 이벤트 4종 + 가시 하트비트 (A2, 4.4.1절)
     -- 페이지 내 스크롤은 서버 이벤트가 없으므로 계상되지 않는다 (FR-PRG-003 AC④)
@@ -69,7 +77,7 @@ CREATE INDEX IF NOT EXISTS ix_reading_session_sweep
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS saved_recap (
     device_id   UUID        NOT NULL,
-    book_id     UUID        NOT NULL,
+    book_id     TEXT        NOT NULL,
 
     -- 생성 당시의 기준점 K. current_page가 아니라 cutoff를 저장한다 — 재사용 판정의 키
     cutoff_page INTEGER     NOT NULL CHECK (cutoff_page >= 0),      -- 첫 진입은 0
@@ -88,7 +96,7 @@ CREATE TABLE IF NOT EXISTS saved_recap (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS session_recap_cache (
     device_id   UUID        NOT NULL,
-    book_id     UUID        NOT NULL,
+    book_id     TEXT        NOT NULL,
     cutoff_page INTEGER     NOT NULL CHECK (cutoff_page >= 0),
 
     recap_text  TEXT        NOT NULL,
@@ -110,7 +118,7 @@ CREATE INDEX IF NOT EXISTS ix_session_recap_cache_expiry
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS conversation_history (
     device_id     UUID        NOT NULL,
-    book_id       UUID        NOT NULL,
+    book_id       TEXT        NOT NULL,
     session_epoch BIGINT      NOT NULL,
 
     turn_no       INTEGER     NOT NULL CHECK (turn_no >= 1),
