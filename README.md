@@ -174,9 +174,7 @@ R4 → R2 (기준점 스냅샷 필요)
 ## 🛠️ 브랜치 전략
 
 ```
-main       # 안정 버전
-  ↑
-develop    # 통합 브랜치
+main    # 통합 브랜치
   ↑
 feature/R1-pipeline      # R1 작업
 feature/R2-state-recap   # R2 작업
