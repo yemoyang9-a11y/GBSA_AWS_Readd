@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R3 챗봇 테스트</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .status {
+      background: #f8f9fa;
+      padding: 16px 24px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .status-dot.loading {
+      background: #f59e0b;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .chat-area {
+      height: 400px;
+      overflow-y: auto;
+      padding: 24px;
+      background: #fafafa;
+    }
+
+    .message {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      max-width: 80%;
+      line-height: 1.5;
+    }
+
+    .message.user {
+      background: #667eea;
+      color: white;
+      margin-left: auto;
+    }
+
+    .message.assistant {
+      background: white;
+      border: 1px solid #e9ecef;
+    }
+
+    .message.system {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      font-size: 13px;
+      max-width: 100%;
+    }
+
+    .input-area {
+      padding: 24px;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .quick-questions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .quick-btn {
+      padding: 8px 16px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .quick-btn:hover {
+      background: #e5e7eb;
+      transform: translateY(-1px);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .send-btn {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .info {
+      padding: 16px 24px;
+      background: #f0f9ff;
+      border-top: 1px solid #bae6fd;
+      font-size: 13px;
+      color: #0c4a6e;
+    }
+
+    .info strong {
+      color: #075985;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 R3 챗봇 테스트</h1>
+      <p>Mock 모드로 DB/Bedrock 없이 테스트</p>
+    </div>
+
+    <div class="status">
+      <div class="status-item">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">준비 완료</span>
+      </div>
+      <div class="status-item">
+        <span>요청 횟수: <strong id="requestCount">0</strong>/3</span>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="message system">
+        <strong>📖 테스트 시나리오</strong><br>
+        • 기준점 K = 80 (현재 80페이지까지 읽음)<br>
+        • Mock 데이터: 「탁류」 챕터 1~3장<br>
+        • 등장인물: 정주사, 초봉, 박제호<br>
+        • Rate Limit: 3회/분 제한 (4번째는 차단됨)
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="quick-questions">
+        <button class="quick-btn" onclick="sendQuickQuestion('정주사가 누구인가요?')">
+          정주사가 누구인가요?
+        </button>
+        <button class="quick-btn" onclick="sendQuickQuestion('초봉은 어떤 인물인가요?')">
+          초봉은 어떤 인물인가요?
+        </button>
+        <button class="quick-btn" onclick="sendQuickQuestion('정주사와 초봉의 관계는?')">
+          정주사와 초봉의 관계는?
+        </button>
+        <button class="quick-btn" onclick="sendQuickQuestion('4장의 내용은?')">
+          4장의 내용은? (K=80 초과)
+        </button>
+      </div>
+
+      <div class="input-group">
+        <input
+          type="text"
+          id="queryInput"
+          placeholder="질문을 입력하세요..."
+          onkeypress="handleKeyPress(event)"
+        >
+        <button class="send-btn" id="sendBtn" onclick="sendQuery()">
+          전송
+        </button>
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>💡 확인 사항:</strong><br>
+      • SSE 스트리밍 (delta → done)<br>
+      • applied_cutoff 포함 확인<br>
+      • Rate Limit 3회 제한 (4번째 차단)<br>
+      • 근거 부재 처리 (K 초과 질문)<br>
+      • 한 글자씩 스트리밍
+    </div>
+  </div>
+
+  <script>
+    let requestCount = 0;
+    const deviceId = 'test-device-' + Math.random().toString(36).substr(2, 9);
+    let isStreaming = false;
+
+    function addMessage(role, content) {
+      const chatArea = document.getElementById('chatArea');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+      messageDiv.textContent = content;
+      chatArea.appendChild(messageDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+      return messageDiv;
+    }
+
+    function setStatus(text, loading = false) {
+      document.getElementById('statusText').textContent = text;
+      document.getElementById('statusDot').className = loading ? 'status-dot loading' : 'status-dot';
+    }
+
+    function updateRequestCount() {
+      requestCount++;
+      document.getElementById('requestCount').textContent = requestCount;
+    }
+
+    async function sendQuery() {
+      if (isStreaming) return;
+
+      const input = document.getElementById('queryInput');
+      const query = input.value.trim();
+
+      if (!query) return;
+
+      // UI 업데이트
+      addMessage('user', query);
+      input.value = '';
+      setStatus('응답 생성 중...', true);
+      isStreaming = true;
+      document.getElementById('sendBtn').disabled = true;
+
+      // 응답 메시지 준비
+      let responseDiv = addMessage('assistant', '');
+      let fullResponse = '';
+
+      try {
+        const response = await fetch('http://localhost:3000/books/book-1/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': deviceId,
+          },
+          body: JSON.stringify({ query }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          if (response.status === 429) {
+            addMessage('system', `⚠️ Rate Limit: ${error.message}`);
+            setStatus('Rate Limit 초과');
+          } else {
+            throw new Error(error.message);
+          }
+          return;
+        }
+
+        updateRequestCount();
+
+        // SSE 스트림 읽기
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6));
+
+              switch (data.type) {
+                case 'delta':
+                  fullResponse += data.text;
+                  responseDiv.textContent = fullResponse;
+                  chatArea.scrollTop = chatArea.scrollHeight;
+                  break;
+
+                case 'done':
+                  console.log('✅ Stream done. Applied cutoff:', data.applied_cutoff);
+                  addMessage('system', `✅ 완료 (applied_cutoff: ${data.applied_cutoff})`);
+                  setStatus('준비 완료');
+                  break;
+
+                case 'error':
+                  console.error('❌ Stream error:', data.message);
+                  addMessage('system', `❌ 오류: ${data.message}`);
+                  setStatus('오류 발생');
+                  break;
+              }
+            }
+          }
+        }
+
+      } catch (error) {
+        console.error('Request failed:', error);
+        addMessage('system', `❌ 요청 실패: ${error.message}`);
+        setStatus('오류 발생');
+      } finally {
+        isStreaming = false;
+        document.getElementById('sendBtn').disabled = false;
+      }
+    }
+
+    function sendQuickQuestion(question) {
+      document.getElementById('queryInput').value = question;
+      sendQuery();
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter' && !isStreaming) {
+        sendQuery();
+      }
+    }
+
+    // 초기화
+    console.log('Device ID:', deviceId);
+    console.log('Mock Mode: 서버가 MOCK_MODE=true로 실행 중이어야 합니다');
+  </script>
+</body>
+</html>

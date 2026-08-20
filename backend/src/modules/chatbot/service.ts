@@ -12,6 +12,9 @@ import { assembleContext, buildPrompt } from './context-assembly';
 import { vectorSearch } from './vector-search';
 import { selectModel, logModelSelection, recordSelection } from './difficulty-router';
 import { stream as llmStream } from '../llm-gateway/gateway';
+import { getMockContext, getMockSearchResults, getMockLLMResponse } from './__mocks__/mock-data';
+
+const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 /**
  * 근거 부재 토큰 (FR-QNA-004 🚦)
@@ -74,10 +77,10 @@ export async function* handleQuery(
 
   try {
     // 1. 근거 조립 (질의 텍스트는 인자로 넘기지 않음! - NFR-SEC-006 🚦)
-    const context = await assembleContext(bookId, K);
+    const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
 
     // 2. 벡터 검색 (질의 관여, 범위는 K로 강제)
-    const searchResults = await vectorSearch(bookId, query, K);
+    const searchResults = MOCK_MODE ? getMockSearchResults(query, K) : await vectorSearch(bookId, query, K);
 
     // 3. 프롬프트 구성
     const basePrompt = buildPrompt(context, SYSTEM_RULES);
@@ -103,7 +106,9 @@ export async function* handleQuery(
     const task = `chatbot_${modelSelection.model}`;
     let responseText = '';
 
-    for await (const chunk of llmStream(task, fullPrompt)) {
+    const streamSource = MOCK_MODE ? getMockLLMResponse(fullPrompt) : llmStream(task, fullPrompt);
+
+    for await (const chunk of streamSource) {
       responseText += chunk;
 
       // 근거 부재 토큰 감지 (FR-QNA-004 🚦)
