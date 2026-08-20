@@ -36,6 +36,16 @@ export interface ReadingPositionRepository {
    * 아니라 상한을 만들어내는 쪽이므로 상한 개념이 성립하지 않는다 (3.3절).
    */
   findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null>
+
+  /**
+   * 진도 이벤트를 그대로 저장한다. "더 새로운 seq일 때만 수용"의 판단은 이 함수의
+   * 책임이 아니다 — progress.service.ts가 판단을 마친 뒤에만 이 함수를 호출한다
+   * (FR-PRG-002, S2). 리포지토리 계층에 판단 로직을 두면 조회 요청 동봉 경로(3.3절)에서
+   * 같은 판단이 중복·분산될 위험이 있다.
+   *
+   * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
+   */
+  savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void>
 }
 
 /**
