@@ -77,9 +77,17 @@ export interface ChapterSummary {
 
 /**
  * 브리핑 응답
+ *
+ * ⚠️ applied_cutoff 추가 — R2·R4·R3 CP0 회신 합의(docs-local/R2-reply-to-R4-0820.txt 항목 3·7)로
+ *    브리핑 응답 최상단에 K를 싣는다. 첫 진입(applied_cutoff === 0)은 `recap: null`이어도
+ *    스트리밍 폴백 대상이 **아니다** — 클라이언트가 이 필드로 "폴백 필요"와 "표시할 내용
+ *    자체가 없음"을 구분한다(❓Q1). recap/stream의 done 프레임에도 같은 이름으로 싣는다.
  */
 export interface BriefingResponse {
-  /** 저장 리캡 (없으면 null, 클라이언트가 스트리밍 폴백 호출) */
+  /** 이 응답이 적용한 기준점 K. 첫 진입 구분의 근거(❓Q1) — recap.service의 판단을 재계산하지 않는다 */
+  applied_cutoff: number
+
+  /** 저장 리캡 (없으면 null, applied_cutoff > 0일 때만 클라이언트가 스트리밍 폴백 호출) */
   recap: string | null
 
   /** 목차 위치 */
