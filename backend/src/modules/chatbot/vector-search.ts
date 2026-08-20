@@ -9,8 +9,7 @@
 
 import type { SearchChunk } from '../../shared/types';
 import * as repo from './repository';
-// TODO: 실제 구현 시 사용 (현재는 스텁)
-// import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 /**
  * 검색 설정
@@ -90,44 +89,44 @@ async function normalizeQuery(
  * 질의 임베딩
  *
  * Amazon Titan Text Embeddings V2 사용
- *
- * TODO: 실제 Bedrock 연결 전까지는 스텁 (빈 벡터 반환)
+ * FR-QNA-006 🚦: 벡터 검색을 위한 실제 임베딩 생성
  */
-async function embedQuery(_query: string): Promise<number[]> {
-  // TODO: 실제 구현 시 아래 주석 해제
-  // const client = new BedrockRuntimeClient({
-  //   region: process.env.AWS_REGION || 'us-east-1',
-  // });
-  //
-  // const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
-  //
-  // const requestBody = {
-  //   inputText: query,
-  // };
-  //
-  // const command = new InvokeModelCommand({
-  //   modelId,
-  //   contentType: 'application/json',
-  //   accept: 'application/json',
-  //   body: JSON.stringify(requestBody),
-  // });
-  //
-  // const response = await client.send(command);
-  // const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-  //
-  // // Titan 응답 형식: { embedding: [number[], ...] }
-  // const embedding = responseBody.embedding || responseBody.embeddings?.[0];
-  //
-  // if (!embedding) {
-  //   throw new Error('Failed to get embedding from Titan');
-  // }
-  //
-  // console.log(`[VectorSearch] Embedded query: "${query}" (${embedding.length}D)`);
-  // return embedding;
+async function embedQuery(query: string): Promise<number[]> {
+  const client = new BedrockRuntimeClient({
+    region: process.env.AWS_REGION || 'us-east-1',
+  });
 
-  // 스텁: 빈 배열 반환 (실제 구현 시 1024차원 벡터 반환)
-  console.log(`[VectorSearch] Embedding stub: query length = ${_query.length}`);
-  return [];
+  const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
+
+  const requestBody = {
+    inputText: query,
+  };
+
+  const command = new InvokeModelCommand({
+    modelId,
+    contentType: 'application/json',
+    accept: 'application/json',
+    body: JSON.stringify(requestBody),
+  });
+
+  try {
+    const response = await client.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+    // Titan 응답 형식: { embedding: [number[]], ... }
+    const embedding = responseBody.embedding || responseBody.embeddings?.[0];
+
+    if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
+      throw new Error('Failed to get embedding from Titan: Invalid response format');
+    }
+
+    console.log(`[VectorSearch] Embedded query: "${query.substring(0, 50)}..." (${embedding.length}D)`);
+    return embedding;
+
+  } catch (error) {
+    console.error('[VectorSearch] Embedding failed:', error);
+    throw new Error(`Failed to embed query: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
