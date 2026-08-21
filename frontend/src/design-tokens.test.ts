@@ -7,7 +7,33 @@
 
 import config from '../tailwind.config.js';
 
-const colors = (config.theme?.extend?.colors ?? {}) as Record<string, any>;
+/**
+ * `Config['theme']['extend']` 는 Tailwind 쪽에서 매우 느슨하게 선언돼 있어 그대로 읽으면
+ * 인덱싱마다 타입이 풀린다. 이 테스트가 실제로 단언하는 모양만 좁게 적어 두고 그걸로 읽는다 —
+ * 토큰이 사라지거나 이름이 바뀌면 테스트 실패 이전에 tsc 가 먼저 잡는다.
+ */
+interface ExtendTokens {
+  colors: {
+    canvas: string;
+    surface: string;
+    line: { DEFAULT: string; subtle: string };
+    ink: string;
+    muted: string;
+    faint: string;
+    accent: string;
+    active: string;
+    ssabi: { DEFAULT: string; soft: string };
+  };
+  fontFamily: Record<string, string[]>;
+  borderRadius: Record<string, string>;
+  boxShadow: Record<string, string>;
+  spacing: Record<string, string>;
+  width: Record<string, string>;
+  height: Record<string, string>;
+}
+
+const extend = config.theme?.extend as unknown as ExtendTokens;
+const colors = extend.colors;
 
 describe('디자인 토큰 (스펙 §3)', () => {
   it('색 팔레트가 시안 실측값과 일치한다', () => {
@@ -22,8 +48,15 @@ describe('디자인 토큰 (스펙 §3)', () => {
     expect(colors.active).toBe('#111111');
   });
 
+  it('싸비 강조색은 accent 와 별개 계열이다 — 시안이 두 색을 구분해 쓴다', () => {
+    expect(colors.ssabi.DEFAULT).toBe('#c86b3d');
+    expect(colors.ssabi.soft).toBe('#fdf6f0');
+    // 한 토큰으로 묶으면 진도·통계와 싸비 UI 가 함께 움직인다
+    expect(colors.ssabi.DEFAULT).not.toBe(colors.accent);
+  });
+
   it('서체는 명조·고딕 두 종이며 폴백을 갖는다', () => {
-    const fonts = config.theme?.extend?.fontFamily as Record<string, string[]>;
+    const fonts = extend.fontFamily;
     expect(fonts.serif[0]).toBe('"Nanum Myeongjo"');
     expect(fonts.serif).toContain('serif');
     expect(fonts.sans[0]).toBe('"Gothic A1"');
@@ -31,15 +64,14 @@ describe('디자인 토큰 (스펙 §3)', () => {
   });
 
   it('형태 토큰이 시안 실측값과 일치한다', () => {
-    const t = config.theme?.extend as Record<string, any>;
-    expect(t.borderRadius.card).toBe('16px');
-    expect(t.borderRadius.cover).toBe('8px');
-    expect(t.borderRadius.pill).toBe('20px');
-    expect(t.boxShadow.card).toBe('0 8px 8px rgba(28, 27, 26, 0.03)');
-    expect(t.width['book-card']).toBe('312px');
-    expect(t.height.cover).toBe('240px');
-    expect(t.height.navbar).toBe('80px');
-    expect(t.spacing.card).toBe('18px');
-    expect(t.spacing.gutter).toBe('24px');
+    expect(extend.borderRadius.card).toBe('16px');
+    expect(extend.borderRadius.cover).toBe('8px');
+    expect(extend.borderRadius.pill).toBe('20px');
+    expect(extend.boxShadow.card).toBe('0 8px 8px rgba(28, 27, 26, 0.03)');
+    expect(extend.width['book-card']).toBe('312px');
+    expect(extend.height.cover).toBe('240px');
+    expect(extend.height.navbar).toBe('80px');
+    expect(extend.spacing.card).toBe('18px');
+    expect(extend.spacing.gutter).toBe('24px');
   });
 });
