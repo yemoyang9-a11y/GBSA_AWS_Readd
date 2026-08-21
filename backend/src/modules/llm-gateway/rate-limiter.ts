@@ -16,8 +16,8 @@ const requestLog = new Map<string, number[]>();
  * Rate Limit 설정
  */
 const RATE_LIMIT_CONFIG = {
-  maxRequests: 3,        // 최대 요청 수
-  windowMs: 60 * 1000,   // 시간 윈도우 (1분)
+  maxRequests: 3, // 최대 요청 수
+  windowMs: 60 * 1000, // 시간 윈도우 (1분)
 };
 
 /**
@@ -49,7 +49,7 @@ export function checkRateLimit(
   let timestamps = requestLog.get(key) || [];
 
   // 윈도우 밖의 오래된 기록 제거
-  timestamps = timestamps.filter(ts => ts > windowStart);
+  timestamps = timestamps.filter((ts) => ts > windowStart);
 
   // 상한 체크
   if (timestamps.length >= RATE_LIMIT_CONFIG.maxRequests) {
@@ -100,7 +100,7 @@ export function getRateLimitStats(): {
   let activeWindows = 0;
 
   for (const timestamps of requestLog.values()) {
-    const activeTimestamps = timestamps.filter(ts => ts > windowStart);
+    const activeTimestamps = timestamps.filter((ts) => ts > windowStart);
     if (activeTimestamps.length > 0) {
       activeWindows++;
     }
@@ -123,7 +123,7 @@ export function cleanupOldRecords(): void {
   const windowStart = now - RATE_LIMIT_CONFIG.windowMs;
 
   for (const [key, timestamps] of requestLog.entries()) {
-    const activeTimestamps = timestamps.filter(ts => ts > windowStart);
+    const activeTimestamps = timestamps.filter((ts) => ts > windowStart);
 
     if (activeTimestamps.length === 0) {
       requestLog.delete(key);

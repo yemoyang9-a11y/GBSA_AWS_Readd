@@ -82,27 +82,40 @@ function chapterFilePath(chapterNo: number): string {
 }
 
 /** 이 장을 실제 게이트웨이로 생성한다 — 캐시가 있으면 절대 여기까지 오지 않는다 */
-async function generateChapter(chapter: Chapter, pages: Page[], known: string[]): Promise<ChapterOutput> {
+async function generateChapter(
+  chapter: Chapter,
+  pages: Page[],
+  known: string[]
+): Promise<ChapterOutput> {
   const warnings: string[] = [];
   const bounds = { min: chapter.start_page, max: chapter.end_page };
 
   function record(label: string, reportedPages: unknown[]): void {
     const missing = reportedPages.filter((p) => typeof p !== 'number' || !Number.isFinite(p));
     if (missing.length > 0) {
-      warnings.push(`${label}: 페이지 번호 누락/비정수 ${missing.length}건 (LLM이 값을 채우지 않음)`);
+      warnings.push(
+        `${label}: 페이지 번호 누락/비정수 ${missing.length}건 (LLM이 값을 채우지 않음)`
+      );
     }
 
-    const numericPages = reportedPages.filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
+    const numericPages = reportedPages.filter(
+      (p): p is number => typeof p === 'number' && Number.isFinite(p)
+    );
     const result = checkPageBounds(label, numericPages, bounds.min, bounds.max);
     if (!result.ok) {
-      warnings.push(`${label}: 장 범위(${bounds.min}~${bounds.max}) 밖 페이지 → ${result.outOfBounds.join(', ')}`);
+      warnings.push(
+        `${label}: 장 범위(${bounds.min}~${bounds.max}) 밖 페이지 → ${result.outOfBounds.join(', ')}`
+      );
     }
   }
 
   const summaryRaw = await call('generate_summary', buildSummaryPrompt(chapter, pages));
   const { summary } = parseJsonResponse<{ summary: string }>(summaryRaw);
 
-  const characterRaw = await call('generate_character', buildCharacterPrompt(chapter, pages, known));
+  const characterRaw = await call(
+    'generate_character',
+    buildCharacterPrompt(chapter, pages, known)
+  );
   const { characters } = parseJsonResponse<{ characters: RawCharacter[] }>(characterRaw);
   record(
     '인물/별칭/노트',
@@ -114,17 +127,29 @@ async function generateChapter(chapter: Chapter, pages: Page[], known: string[])
   );
 
   const knownForRelationships = [...known, ...characters.map((c) => c.name)];
-  const relRaw = await call('generate_relationship', buildRelationshipPrompt(chapter, pages, knownForRelationships));
+  const relRaw = await call(
+    'generate_relationship',
+    buildRelationshipPrompt(chapter, pages, knownForRelationships)
+  );
   const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
-  record('관계', relationships.map((r) => r.established_page));
+  record(
+    '관계',
+    relationships.map((r) => r.established_page)
+  );
 
   const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
   const { terms } = parseJsonResponse<{ terms: RawTerm[] }>(termRaw);
-  record('용어', terms.map((t) => t.first_appearance_page));
+  record(
+    '용어',
+    terms.map((t) => t.first_appearance_page)
+  );
 
   const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages));
   const { events } = parseJsonResponse<{ events: RawEvent[] }>(eventRaw);
-  record('사건', events.map((e) => e.occurrence_page));
+  record(
+    '사건',
+    events.map((e) => e.occurrence_page)
+  );
 
   return {
     chapter_no: chapter.chapter_no,
@@ -141,14 +166,20 @@ async function generateChapter(chapter: Chapter, pages: Page[], known: string[])
 }
 
 /** 캐시된 장 결과가 있으면 재생하고, 없으면 새로 생성해 즉시 저장한다 */
-async function loadOrGenerateChapter(chapter: Chapter, pages: Page[], known: string[]): Promise<ChapterOutput> {
+async function loadOrGenerateChapter(
+  chapter: Chapter,
+  pages: Page[],
+  known: string[]
+): Promise<ChapterOutput> {
   const filePath = chapterFilePath(chapter.chapter_no);
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
     return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
   }
 
-  console.log(`[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`);
+  console.log(
+    `[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`
+  );
   const output = await generateChapter(chapter, pages, known);
   fs.writeFileSync(filePath, JSON.stringify(output, null, 2), 'utf-8');
   if (output.warnings.length > 0) {
@@ -173,8 +204,17 @@ async function loadOrGenerateBackground(): Promise<{ background: string; intro: 
 }
 
 /** 해당 장의 관계 결과를 이름→id로 해소해 상태에 병합한다. 매칭 실패는 건너뛰고 경고만 남긴다(지어내지 않는다) */
-function mergeChapterRelationships(state: GenerationState, chapterNo: number, relationships: RawRelationship[]): void {
-  const resolved: { character_a_id: string; character_b_id: string; label: string; established_page: number }[] = [];
+function mergeChapterRelationships(
+  state: GenerationState,
+  chapterNo: number,
+  relationships: RawRelationship[]
+): void {
+  const resolved: {
+    character_a_id: string;
+    character_b_id: string;
+    label: string;
+    established_page: number;
+  }[] = [];
   for (const r of relationships) {
     const aId = resolveCharacterId(state, r.character_a);
     const bId = resolveCharacterId(state, r.character_b);
@@ -184,7 +224,12 @@ function mergeChapterRelationships(state: GenerationState, chapterNo: number, re
       );
       continue;
     }
-    resolved.push({ character_a_id: aId, character_b_id: bId, label: r.label, established_page: r.established_page });
+    resolved.push({
+      character_a_id: aId,
+      character_b_id: bId,
+      label: r.label,
+      established_page: r.established_page,
+    });
   }
   mergeRelationships(state, resolved);
 }
@@ -197,16 +242,23 @@ async function main(): Promise<void> {
   const { pages: allPages, chapters: allChapters } = splitBook(rawText, BOOK_ID);
 
   // MAX_CHAPTERS — 전체 배치 전 소규모 스모크 테스트용. 지정 안 하면 전체 장 처리
-  const maxChapters = process.env.MAX_CHAPTERS ? parseInt(process.env.MAX_CHAPTERS, 10) : allChapters.length;
+  const maxChapters = process.env.MAX_CHAPTERS
+    ? parseInt(process.env.MAX_CHAPTERS, 10)
+    : allChapters.length;
   const chapters = allChapters.slice(0, maxChapters);
-  console.log(`=== 「탁류」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`);
+  console.log(
+    `=== 「탁류」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
+  );
 
   const state = createEmptyState();
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
-  const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] = [];
+  const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] =
+    [];
 
   for (const chapter of chapters) {
-    const pages = allPages.filter((p) => p.page_no >= chapter.start_page && p.page_no <= chapter.end_page);
+    const pages = allPages.filter(
+      (p) => p.page_no >= chapter.start_page && p.page_no <= chapter.end_page
+    );
     const known = knownCharacterNames(state);
 
     const output = await loadOrGenerateChapter(chapter, pages, known);
@@ -215,12 +267,18 @@ async function main(): Promise<void> {
     mergeChapterRelationships(state, chapter.chapter_no, output.relationships);
     mergeTerms(state, output.terms);
 
-    chapterSummaries.push({ chapter_no: output.chapter_no, title: output.title, summary: output.summary });
+    chapterSummaries.push({
+      chapter_no: output.chapter_no,
+      title: output.title,
+      summary: output.summary,
+    });
     for (const e of output.events) {
       allEvents.push({ id: `${chapter.chapter_no}-${allEvents.length}`, ...e });
     }
 
-    console.log(`  누적 인물 ${state.characters.length}명, 관계(이력 포함) ${state.relationships.length}건, 용어 ${state.terms.length}개\n`);
+    console.log(
+      `  누적 인물 ${state.characters.length}명, 관계(이력 포함) ${state.relationships.length}건, 용어 ${state.terms.length}개\n`
+    );
   }
 
   const background = await loadOrGenerateBackground();
@@ -238,8 +296,12 @@ async function main(): Promise<void> {
   fs.writeFileSync(combinedPath, JSON.stringify(combined, null, 2), 'utf-8');
 
   console.log(`=== 완료 — ${combinedPath} ===`);
-  console.log(`인물 ${state.characters.length}명 · 관계(이력 포함) ${state.relationships.length}건 · 용어 ${state.terms.length}개 · 사건 ${allEvents.length}건`);
-  console.log('사람 검토 필요(V4/S7) — 장 요약의 미래 사건 언급, 관계 이력 라벨, 별칭 통합을 직접 확인할 것.');
+  console.log(
+    `인물 ${state.characters.length}명 · 관계(이력 포함) ${state.relationships.length}건 · 용어 ${state.terms.length}개 · 사건 ${allEvents.length}건`
+  );
+  console.log(
+    '사람 검토 필요(V4/S7) — 장 요약의 미래 사건 언급, 관계 이력 라벨, 별칭 통합을 직접 확인할 것.'
+  );
 }
 
 main().catch((err) => {

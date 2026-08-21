@@ -65,7 +65,10 @@ describe('parseChapters — 장 헤더·문단 파싱', () => {
 describe('FR-DAT-002 🚦 splitBook 커버리지 — 누락·중복 0건', () => {
   function longParagraph(sentenceCount: number, sentenceLen: number, seed: string): string {
     const filler = seed.repeat(Math.max(1, Math.ceil((sentenceLen - 1) / seed.length)));
-    return Array.from({ length: sentenceCount }, (_, i) => `${filler.slice(0, sentenceLen - 1)}${i}.`).join(' ');
+    return Array.from(
+      { length: sentenceCount },
+      (_, i) => `${filler.slice(0, sentenceLen - 1)}${i}.`
+    ).join(' ');
   }
 
   const rawText = [
@@ -114,7 +117,9 @@ describe('D11 🚦 페이지 경계 — 장 가로지름 금지 · 문장 중간
   test('어떤 페이지도 두 장에 걸치지 않는다', () => {
     const { pages, chapters } = splitBook(rawText, BOOK_ID);
     for (const page of pages) {
-      const owners = chapters.filter((c) => page.page_no >= c.start_page && page.page_no <= c.end_page);
+      const owners = chapters.filter(
+        (c) => page.page_no >= c.start_page && page.page_no <= c.end_page
+      );
       expect(owners).toHaveLength(1);
     }
   });
@@ -171,7 +176,9 @@ describe('FR-DAT-001 🚦 장 경계 커버리지 — 간극·중첩 0', () => {
       return `문장 ${n} 내용을 충분히 길게 채워서 페이지 분할이 여러 장에 걸쳐 발생하도록 만든다.`;
     }
     const para = Array.from({ length: 25 }, (_, i) => sentence(i)).join(' ');
-    const rawText = ['1 장1', '', para, '', '2 장2', '', para, '', '3 장3', '', para, ''].join('\n');
+    const rawText = ['1 장1', '', para, '', '2 장2', '', para, '', '3 장3', '', para, ''].join(
+      '\n'
+    );
 
     const { pages, chapters } = splitBook(rawText, BOOK_ID);
     const totalPages = pages.length;

@@ -15,22 +15,22 @@
  *    싸비가 제공하는 정보뿐이다. 미완비 도서 차단은 별개이며 라우트의 ensureBookReady 가 맡는다.
  */
 
-import type { ContentRepository, PageRow } from './repository'
+import type { ContentRepository, PageRow } from './repository';
 
 export interface PageServiceDeps {
-  content: ContentRepository
+  content: ContentRepository;
 }
 
 export interface PageService {
-  getPage(bookId: string, pageNo: number): Promise<PageRow | null>
+  getPage(bookId: string, pageNo: number): Promise<PageRow | null>;
 }
 
 export function createPageService(deps: PageServiceDeps): PageService {
-  const { content } = deps
+  const { content } = deps;
 
   return {
     async getPage(bookId: string, pageNo: number): Promise<PageRow | null> {
-      return content.findPage(bookId, pageNo)
+      return content.findPage(bookId, pageNo);
     },
-  }
+  };
 }

@@ -48,7 +48,12 @@ export const ALL_CRITERIA: ReviewCriterion[] = [
 
 /** 대상 종류별 적용 판정 항목 (FR-ADM-005 표의 "확인 내용"을 대상별로 분해) */
 export const APPLICABLE_CRITERIA: Record<ReviewTargetType, ReviewCriterion[]> = {
-  chapter_summary: ['hallucination_ok', 'page_boundary_ok', 'recap_continuity_ok', 'info_separation_ok'],
+  chapter_summary: [
+    'hallucination_ok',
+    'page_boundary_ok',
+    'recap_continuity_ok',
+    'info_separation_ok',
+  ],
   character: ['hallucination_ok', 'alias_merge_ok', 'page_boundary_ok', 'info_separation_ok'],
   alias: ['hallucination_ok', 'page_boundary_ok'],
   character_note: ['hallucination_ok', 'page_boundary_ok', 'info_separation_ok'],
@@ -93,9 +98,17 @@ export function passedReviewKeys(records: ReviewRecordRow[]): Set<string> {
 }
 
 /** 생성물 전량을 검수 대상 행으로 펼친다. alreadyReviewed에 있는 대상은 다시 내보내지 않는다(재실행 시 통과 판정 보존 — FALSE 대상은 이 집합에 넣지 말 것, passedReviewKeys 참고) */
-export function buildReviewSheetRows(data: ResolvedBookData, alreadyReviewed: Set<string> = new Set()): ReviewSheetRow[] {
+export function buildReviewSheetRows(
+  data: ResolvedBookData,
+  alreadyReviewed: Set<string> = new Set()
+): ReviewSheetRow[] {
   const rows: ReviewSheetRow[] = [];
-  const push = (target_type: ReviewTargetType, target_id: string, page_ref: number | null, content_preview: string): void => {
+  const push = (
+    target_type: ReviewTargetType,
+    target_id: string,
+    page_ref: number | null,
+    content_preview: string
+  ): void => {
     if (alreadyReviewed.has(reviewKey(target_type, target_id))) return;
     rows.push({ target_type, target_id, page_ref, content_preview });
   };
@@ -107,7 +120,12 @@ export function buildReviewSheetRows(data: ResolvedBookData, alreadyReviewed: Se
   for (const c of data.characters) {
     push('character', c.id, c.first_appearance_page, c.name);
     for (const a of c.aliases) {
-      push('alias', `${c.id}::${a.alias}`, a.first_appearance_page, `${c.name} ← ${a.alias} (${a.type})`);
+      push(
+        'alias',
+        `${c.id}::${a.alias}`,
+        a.first_appearance_page,
+        `${c.name} ← ${a.alias} (${a.type})`
+      );
     }
     for (const n of c.notes) {
       push('character_note', n.id, n.source_page, `${c.name}: ${n.note}`);
@@ -230,7 +248,9 @@ function parseBooleanCell(value: string, context: string): boolean {
   const v = value.trim().toUpperCase();
   if (v === 'TRUE') return true;
   if (v === 'FALSE') return false;
-  throw new Error(`검수 시트 판정값이 비었거나 유효하지 않음 (TRUE/FALSE만 허용) — ${context}: "${value}"`);
+  throw new Error(
+    `검수 시트 판정값이 비었거나 유효하지 않음 (TRUE/FALSE만 허용) — ${context}: "${value}"`
+  );
 }
 
 /**
@@ -241,7 +261,9 @@ export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
   const table = parseCsv(csvText);
   const [header, ...dataRows] = table;
   if (!header || REVIEW_SHEET_COLUMNS.some((col, i) => header[i] !== col)) {
-    throw new Error('검수 시트 헤더가 예상 컬럼과 다름 — toReviewSheetCsv로 생성된 파일인지 확인할 것');
+    throw new Error(
+      '검수 시트 헤더가 예상 컬럼과 다름 — toReviewSheetCsv로 생성된 파일인지 확인할 것'
+    );
   }
 
   return dataRows.map((cells) => {
@@ -278,7 +300,8 @@ export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
 /** target_id에서 alias 대상의 (character_id, alias) 쌍을 복원한다 */
 function splitAliasTargetId(target_id: string): { character_id: string; alias: string } {
   const idx = target_id.indexOf('::');
-  if (idx < 0) throw new Error(`alias 대상 id 형식이 아님(character_id::alias 필요): "${target_id}"`);
+  if (idx < 0)
+    throw new Error(`alias 대상 id 형식이 아님(character_id::alias 필요): "${target_id}"`);
   return { character_id: target_id.slice(0, idx), alias: target_id.slice(idx + 2) };
 }
 
@@ -292,14 +315,17 @@ export async function applyCorrection(
 ): Promise<void> {
   switch (target_type) {
     case 'chapter_summary':
-      await client.query('UPDATE chapter_summaries SET summary = $1 WHERE book_id = $2 AND chapter_no = $3', [
-        correctedContent,
-        bookId,
-        Number(target_id),
-      ]);
+      await client.query(
+        'UPDATE chapter_summaries SET summary = $1 WHERE book_id = $2 AND chapter_no = $3',
+        [correctedContent, bookId, Number(target_id)]
+      );
       return;
     case 'character':
-      await client.query('UPDATE characters SET name = $1 WHERE book_id = $2 AND id = $3', [correctedContent, bookId, target_id]);
+      await client.query('UPDATE characters SET name = $1 WHERE book_id = $2 AND id = $3', [
+        correctedContent,
+        bookId,
+        target_id,
+      ]);
       return;
     case 'alias': {
       const { character_id, alias } = splitAliasTargetId(target_id);
@@ -310,34 +336,54 @@ export async function applyCorrection(
       return;
     }
     case 'character_note':
-      await client.query('UPDATE character_notes SET note = $1 WHERE book_id = $2 AND id = $3', [correctedContent, bookId, target_id]);
+      await client.query('UPDATE character_notes SET note = $1 WHERE book_id = $2 AND id = $3', [
+        correctedContent,
+        bookId,
+        target_id,
+      ]);
       return;
     case 'relationship':
-      await client.query('UPDATE relationships SET label = $1 WHERE book_id = $2 AND id = $3', [correctedContent, bookId, target_id]);
+      await client.query('UPDATE relationships SET label = $1 WHERE book_id = $2 AND id = $3', [
+        correctedContent,
+        bookId,
+        target_id,
+      ]);
       return;
     case 'term':
-      await client.query('UPDATE terms SET definition = $1 WHERE book_id = $2 AND id = $3', [correctedContent, bookId, target_id]);
+      await client.query('UPDATE terms SET definition = $1 WHERE book_id = $2 AND id = $3', [
+        correctedContent,
+        bookId,
+        target_id,
+      ]);
       return;
     case 'event':
-      await client.query('UPDATE events SET description = $1 WHERE book_id = $2 AND id = $3', [correctedContent, bookId, target_id]);
+      await client.query('UPDATE events SET description = $1 WHERE book_id = $2 AND id = $3', [
+        correctedContent,
+        bookId,
+        target_id,
+      ]);
       return;
     case 'background':
-      await client.query("UPDATE background_and_intro SET content = $1 WHERE book_id = $2 AND kind = 'background'", [
-        correctedContent,
-        bookId,
-      ]);
+      await client.query(
+        "UPDATE background_and_intro SET content = $1 WHERE book_id = $2 AND kind = 'background'",
+        [correctedContent, bookId]
+      );
       return;
     case 'intro':
-      await client.query("UPDATE background_and_intro SET content = $1 WHERE book_id = $2 AND kind = 'intro'", [
-        correctedContent,
-        bookId,
-      ]);
+      await client.query(
+        "UPDATE background_and_intro SET content = $1 WHERE book_id = $2 AND kind = 'intro'",
+        [correctedContent, bookId]
+      );
       return;
   }
 }
 
 /** 판정 기록을 적재하고(수정 내용이 있으면 먼저 원본에 반영한다) — 대상당 1행으로 upsert(재실행 시 중복 방지, migrations/003) */
-export async function applyReviewJudgments(client: QueryClient, bookId: string, rows: FilledReviewRow[]): Promise<void> {
+export async function applyReviewJudgments(
+  client: QueryClient,
+  bookId: string,
+  rows: FilledReviewRow[]
+): Promise<void> {
   for (const row of rows) {
     if (row.corrected_content) {
       await applyCorrection(client, bookId, row.target_type, row.target_id, row.corrected_content);
@@ -409,21 +455,38 @@ async function findIncomplete(
   for (const row of result.rows) {
     const missingCriteria = applicable.filter((c) => row[c] !== true);
     if (missingCriteria.length > 0) {
-      missing.push({ target_type: targetType, target_id: row.target_id, missing_criteria: missingCriteria });
+      missing.push({
+        target_type: targetType,
+        target_id: row.target_id,
+        missing_criteria: missingCriteria,
+      });
     }
   }
   return missing;
 }
 
 /** FR-ADM-005 🚦 — 생성물 전량에 대해 적용 판정 항목이 전부 TRUE인 검수 기록이 있는지 확인한다 */
-export async function checkReviewComplete(client: QueryClient, bookId: string): Promise<ReviewCompletionReport> {
+export async function checkReviewComplete(
+  client: QueryClient,
+  bookId: string
+): Promise<ReviewCompletionReport> {
   const missing: MissingReviewItem[] = [];
 
   missing.push(
-    ...(await findIncomplete(client, bookId, 'chapter_summary', 'SELECT chapter_no::text AS target_id FROM chapter_summaries WHERE book_id = $1'))
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'chapter_summary',
+      'SELECT chapter_no::text AS target_id FROM chapter_summaries WHERE book_id = $1'
+    ))
   );
   missing.push(
-    ...(await findIncomplete(client, bookId, 'character', 'SELECT id AS target_id FROM characters WHERE book_id = $1'))
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'character',
+      'SELECT id AS target_id FROM characters WHERE book_id = $1'
+    ))
   );
   missing.push(
     ...(await findIncomplete(
@@ -434,13 +497,37 @@ export async function checkReviewComplete(client: QueryClient, bookId: string): 
     ))
   );
   missing.push(
-    ...(await findIncomplete(client, bookId, 'character_note', 'SELECT id AS target_id FROM character_notes WHERE book_id = $1'))
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'character_note',
+      'SELECT id AS target_id FROM character_notes WHERE book_id = $1'
+    ))
   );
   missing.push(
-    ...(await findIncomplete(client, bookId, 'relationship', 'SELECT id AS target_id FROM relationships WHERE book_id = $1'))
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'relationship',
+      'SELECT id AS target_id FROM relationships WHERE book_id = $1'
+    ))
   );
-  missing.push(...(await findIncomplete(client, bookId, 'term', 'SELECT id AS target_id FROM terms WHERE book_id = $1')));
-  missing.push(...(await findIncomplete(client, bookId, 'event', 'SELECT id AS target_id FROM events WHERE book_id = $1')));
+  missing.push(
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'term',
+      'SELECT id AS target_id FROM terms WHERE book_id = $1'
+    ))
+  );
+  missing.push(
+    ...(await findIncomplete(
+      client,
+      bookId,
+      'event',
+      'SELECT id AS target_id FROM events WHERE book_id = $1'
+    ))
+  );
   missing.push(
     ...(await findIncomplete(
       client,
@@ -462,11 +549,17 @@ export async function checkReviewComplete(client: QueryClient, bookId: string): 
 }
 
 /** FR-ADM-006 — 검수 미완료 상태에서 공개 전환 시도는 거절한다(R12, 스크립트 차원의 강제) */
-export async function publishBook(client: QueryClient, bookId: string): Promise<ReviewCompletionReport> {
+export async function publishBook(
+  client: QueryClient,
+  bookId: string
+): Promise<ReviewCompletionReport> {
   const report = await checkReviewComplete(client, bookId);
   if (!report.complete) {
     return report;
   }
-  await client.query("UPDATE books SET publish_status = 'published', ssabi_ready = true WHERE book_id = $1", [bookId]);
+  await client.query(
+    "UPDATE books SET publish_status = 'published', ssabi_ready = true WHERE book_id = $1",
+    [bookId]
+  );
   return report;
 }

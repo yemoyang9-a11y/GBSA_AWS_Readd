@@ -21,7 +21,11 @@ async function main(): Promise<void> {
 
   const { pages, chapters } = splitBook(rawText, BOOK_ID);
   const report = validateSplit(pages, chapters, rawText);
-  if (report.coverageViolations > 0 || report.crossChapterViolations > 0 || report.midSentenceViolations > 0) {
+  if (
+    report.coverageViolations > 0 ||
+    report.crossChapterViolations > 0 ||
+    report.midSentenceViolations > 0
+  ) {
     console.error('[FAIL] 게이트 위반이 있어 등록을 진행하지 않는다', report);
     process.exit(1);
   }

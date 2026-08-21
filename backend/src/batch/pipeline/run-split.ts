@@ -28,14 +28,26 @@ function main(): void {
 
   console.log('\n=== S3 실측 3건 (CP1 보고용) ===');
   console.log('① 총 페이지 수:', measurements.totalPages);
-  console.log('   700자 미만 비율(장 마지막 제외):', (measurements.underMinRatio * 100).toFixed(2) + '%');
+  console.log(
+    '   700자 미만 비율(장 마지막 제외):',
+    (measurements.underMinRatio * 100).toFixed(2) + '%'
+  );
   console.log('   1,400자 초과 비율:', (measurements.overMaxRatio * 100).toFixed(2) + '%');
-  console.log('② 문장 경계 폴백 횟수(문단 경계를 못 쓴 페이지 수):', measurements.sentenceFallbackCount);
-  console.log('③ 가장 긴 장의 원문 절단 최대 크기(R3 성능예산 입력):', measurements.longestChapterRawLength, '자');
+  console.log(
+    '② 문장 경계 폴백 횟수(문단 경계를 못 쓴 페이지 수):',
+    measurements.sentenceFallbackCount
+  );
+  console.log(
+    '③ 가장 긴 장의 원문 절단 최대 크기(R3 성능예산 입력):',
+    measurements.longestChapterRawLength,
+    '자'
+  );
   console.log('\n장 수:', chapters.length);
 
   const hasViolation =
-    report.coverageViolations > 0 || report.crossChapterViolations > 0 || report.midSentenceViolations > 0;
+    report.coverageViolations > 0 ||
+    report.crossChapterViolations > 0 ||
+    report.midSentenceViolations > 0;
   if (hasViolation) {
     console.error('\n[FAIL] 게이트 위반 발견 — 다음 단계로 진행하지 않는다 (CLAUDE.md 7장)');
     process.exit(1);

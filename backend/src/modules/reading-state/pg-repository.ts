@@ -30,11 +30,11 @@ import type {
   StoredSavedRecap,
   StoredSession,
   SweepTarget,
-} from './repository'
-import type { RecapCallLog } from '../../shared/types'
+} from './repository';
+import type { RecapCallLog } from '../../shared/types';
 
 export interface QueryClient {
-  query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>
+  query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
 }
 
 // ============================================================================
@@ -47,9 +47,9 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
       const { rows } = await db.query(
         `SELECT current_page, event_seq FROM reading_position WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
-      )
-      if (rows.length === 0) return null
-      return { current_page: rows[0].current_page, event_seq: Number(rows[0].event_seq) }
+      );
+      if (rows.length === 0) return null;
+      return { current_page: rows[0].current_page, event_seq: Number(rows[0].event_seq) };
     },
 
     async savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void> {
@@ -59,7 +59,7 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
          ON CONFLICT (device_id, book_id) DO UPDATE SET
            current_page = $3, event_seq = $4, updated_at = now()`,
         [deviceId, bookId, position.current_page, position.event_seq]
-      )
+      );
     },
 
     async resetEventSeq(deviceId: string, bookId: string): Promise<void> {
@@ -67,9 +67,9 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
       await db.query(
         `UPDATE reading_position SET event_seq = 0 WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
-      )
+      );
     },
-  }
+  };
 }
 
 // ============================================================================
@@ -79,13 +79,13 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
 export function createPgBookContentReader(db: QueryClient): BookMetaReader & RecapContentReader {
   return {
     async findTotalPages(bookId: string): Promise<number | null> {
-      const { rows } = await db.query(`SELECT total_pages FROM books WHERE book_id = $1`, [bookId])
-      return rows.length === 0 ? null : rows[0].total_pages
+      const { rows } = await db.query(`SELECT total_pages FROM books WHERE book_id = $1`, [bookId]);
+      return rows.length === 0 ? null : rows[0].total_pages;
     },
 
     async findReadiness(bookId: string): Promise<boolean | null> {
-      const { rows } = await db.query(`SELECT ssabi_ready FROM books WHERE book_id = $1`, [bookId])
-      return rows.length === 0 ? null : Boolean(rows[0].ssabi_ready)
+      const { rows } = await db.query(`SELECT ssabi_ready FROM books WHERE book_id = $1`, [bookId]);
+      return rows.length === 0 ? null : Boolean(rows[0].ssabi_ready);
     },
 
     async findChapterContaining(bookId: string, pageNo: number): Promise<ChapterBoundary | null> {
@@ -93,15 +93,15 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
         `SELECT chapter_no, title, start_page, end_page FROM chapters
          WHERE book_id = $1 AND start_page <= $2 AND $2 <= end_page`,
         [bookId, pageNo]
-      )
-      if (rows.length === 0) return null
-      const row = rows[0]
+      );
+      if (rows.length === 0) return null;
+      const row = rows[0];
       return {
         chapter_no: row.chapter_no,
         title: row.title,
         start_page: row.start_page,
         end_page: row.end_page,
-      }
+      };
     },
 
     async findCompletedChapterSummaries(
@@ -117,13 +117,13 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
          WHERE cs.book_id = $1 AND c.end_page <= $2
          ORDER BY cs.chapter_no ASC`,
         [bookId, cutoff]
-      )
+      );
       return rows.map((row) => ({
         chapter_no: row.chapter_no,
         title: row.title,
         content: row.summary,
         end_page: row.end_page,
-      }))
+      }));
     },
 
     async findCurrentChapterPageTexts(
@@ -137,10 +137,10 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
          WHERE book_id = $1 AND page_no >= $2 AND page_no <= $3
          ORDER BY page_no ASC`,
         [bookId, fromPage, cutoff]
-      )
-      return rows.map((row) => row.content)
+      );
+      return rows.map((row) => row.content);
     },
-  }
+  };
 }
 
 // ============================================================================
@@ -154,13 +154,13 @@ export function createPgReadingSessionRepository(db: QueryClient): ReadingSessio
         `SELECT last_activity_at, recap_state, session_epoch FROM reading_session
          WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
-      )
-      if (rows.length === 0) return null
+      );
+      if (rows.length === 0) return null;
       return {
         last_activity_at: rows[0].last_activity_at,
         recap_state: rows[0].recap_state as RecapState,
         session_epoch: Number(rows[0].session_epoch),
-      }
+      };
     },
 
     async recordActivity(deviceId: string, bookId: string): Promise<void> {
@@ -170,7 +170,7 @@ export function createPgReadingSessionRepository(db: QueryClient): ReadingSessio
          ON CONFLICT (device_id, book_id) DO UPDATE SET
            last_activity_at = now(), recap_state = 'none'`,
         [deviceId, bookId]
-      )
+      );
     },
 
     async startNewSession(deviceId: string, bookId: string): Promise<{ session_epoch: number }> {
@@ -181,8 +181,8 @@ export function createPgReadingSessionRepository(db: QueryClient): ReadingSessio
            last_activity_at = now(), recap_state = 'none', session_epoch = reading_session.session_epoch + 1
          RETURNING session_epoch`,
         [deviceId, bookId]
-      )
-      return { session_epoch: Number(rows[0].session_epoch) }
+      );
+      return { session_epoch: Number(rows[0].session_epoch) };
     },
 
     async findSweepTargets(before: Date): Promise<SweepTarget[]> {
@@ -191,22 +191,22 @@ export function createPgReadingSessionRepository(db: QueryClient): ReadingSessio
         `SELECT device_id, book_id FROM reading_session
          WHERE recap_state = 'none' AND last_activity_at < $1`,
         [before]
-      )
-      return rows.map((row) => ({ device_id: row.device_id, book_id: row.book_id }))
+      );
+      return rows.map((row) => ({ device_id: row.device_id, book_id: row.book_id }));
     },
 
     async markPending(deviceId: string, bookId: string): Promise<void> {
-      await setRecapState(db, deviceId, bookId, 'pending')
+      await setRecapState(db, deviceId, bookId, 'pending');
     },
 
     async markDone(deviceId: string, bookId: string): Promise<void> {
-      await setRecapState(db, deviceId, bookId, 'done')
+      await setRecapState(db, deviceId, bookId, 'done');
     },
 
     async markFailed(deviceId: string, bookId: string): Promise<void> {
-      await setRecapState(db, deviceId, bookId, 'failed')
+      await setRecapState(db, deviceId, bookId, 'failed');
     },
-  }
+  };
 }
 
 async function setRecapState(
@@ -218,7 +218,7 @@ async function setRecapState(
   await db.query(
     `UPDATE reading_session SET recap_state = $3 WHERE device_id = $1 AND book_id = $2`,
     [deviceId, bookId, state]
-  )
+  );
 }
 
 // ============================================================================
@@ -231,9 +231,9 @@ export function createPgSavedRecapRepository(db: QueryClient): SavedRecapReposit
       const { rows } = await db.query(
         `SELECT cutoff_page, recap_text FROM saved_recap WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
-      )
-      if (rows.length === 0) return null
-      return { cutoff_page: rows[0].cutoff_page, recap_text: rows[0].recap_text }
+      );
+      if (rows.length === 0) return null;
+      return { cutoff_page: rows[0].cutoff_page, recap_text: rows[0].recap_text };
     },
 
     async upsertSavedRecap(
@@ -249,9 +249,9 @@ export function createPgSavedRecapRepository(db: QueryClient): SavedRecapReposit
          ON CONFLICT (device_id, book_id) DO UPDATE SET
            cutoff_page = $3, recap_text = $4, created_at = now()`,
         [deviceId, bookId, cutoffPage, recapText]
-      )
+      );
     },
-  }
+  };
 }
 
 export function createPgSessionRecapCacheRepository(db: QueryClient): SessionRecapCacheRepository {
@@ -261,8 +261,8 @@ export function createPgSessionRecapCacheRepository(db: QueryClient): SessionRec
         `SELECT recap_text FROM session_recap_cache
          WHERE device_id = $1 AND book_id = $2 AND cutoff_page = $3 AND expires_at > now()`,
         [deviceId, bookId, cutoff]
-      )
-      return rows.length === 0 ? null : rows[0].recap_text
+      );
+      return rows.length === 0 ? null : rows[0].recap_text;
     },
 
     async saveCached(
@@ -280,9 +280,9 @@ export function createPgSessionRecapCacheRepository(db: QueryClient): SessionRec
          ON CONFLICT (device_id, book_id, cutoff_page) DO UPDATE SET
            recap_text = $4, created_at = now(), expires_at = $5`,
         [deviceId, bookId, cutoff, recapText, expiresAt]
-      )
+      );
     },
-  }
+  };
 }
 
 // ============================================================================
@@ -297,9 +297,9 @@ export function createPgConversationHistoryRepository(
       await db.query(`DELETE FROM conversation_history WHERE device_id = $1 AND book_id = $2`, [
         deviceId,
         bookId,
-      ])
+      ]);
     },
-  }
+  };
 }
 
 // ============================================================================
@@ -327,7 +327,7 @@ export function createPgRecapCallLogger(db: QueryClient): RecapCallLogger {
           entry.tokens.output,
           entry.trigger,
         ]
-      )
+      );
     },
-  }
+  };
 }

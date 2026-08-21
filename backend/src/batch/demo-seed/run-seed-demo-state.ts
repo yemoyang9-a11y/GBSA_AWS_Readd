@@ -21,42 +21,42 @@
  *
  * cutoff와 K는 같은 뜻이다 — R1 스크립트의 인자명과 맞춘다.
  */
-import * as dotenv from 'dotenv'
-dotenv.config()
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-import { pool } from '../../config/database'
-import { createPgReadingPositionRepository } from '../../modules/reading-state/pg-repository'
+import { pool } from '../../config/database';
+import { createPgReadingPositionRepository } from '../../modules/reading-state/pg-repository';
 
-const BOOK_ID = 'takryu'
-const DEVICE_ID = process.env.DEMO_DEVICE_ID || '11111111-1111-4111-8111-111111111111'
+const BOOK_ID = 'takryu';
+const DEVICE_ID = process.env.DEMO_DEVICE_ID || '11111111-1111-4111-8111-111111111111';
 
 async function main(): Promise<void> {
-  const cutoffArg = process.argv[2]
-  const cutoff = cutoffArg ? parseInt(cutoffArg, 10) : NaN
+  const cutoffArg = process.argv[2];
+  const cutoff = cutoffArg ? parseInt(cutoffArg, 10) : NaN;
   if (!Number.isInteger(cutoff) || cutoff < 0) {
-    console.error('[FAIL] 기준점(cutoff)을 정수로 지정할 것 — 예: run-seed-demo-state.ts 100')
-    process.exit(1)
+    console.error('[FAIL] 기준점(cutoff)을 정수로 지정할 것 — 예: run-seed-demo-state.ts 100');
+    process.exit(1);
   }
 
   const positions = createPgReadingPositionRepository({
     query: (sql, params) => pool.query(sql, params),
-  })
+  });
 
   // current_page = cutoff + 1 (R2 불변식: cutoff = current_page - 1, FR-PRG-003 🚦)
-  await positions.savePosition(DEVICE_ID, BOOK_ID, { current_page: cutoff + 1, event_seq: 1 })
-  console.log(`[OK] reading_position 주입 완료 — current_page=${cutoff + 1} (cutoff=${cutoff})`)
+  await positions.savePosition(DEVICE_ID, BOOK_ID, { current_page: cutoff + 1, event_seq: 1 });
+  console.log(`[OK] reading_position 주입 완료 — current_page=${cutoff + 1} (cutoff=${cutoff})`);
 
   // 세션 레코드 삭제 — 다음 POST /entry가 반드시 새 세션으로 판정하게 만든다 (R6)
   await pool.query(`DELETE FROM reading_session WHERE device_id = $1 AND book_id = $2`, [
     DEVICE_ID,
     BOOK_ID,
-  ])
-  console.log('[OK] reading_session 리셋 완료 — 다음 진입은 반드시 브리핑을 경유한다')
+  ]);
+  console.log('[OK] reading_session 리셋 완료 — 다음 진입은 반드시 브리핑을 경유한다');
 
-  await pool.end()
+  await pool.end();
 }
 
 main().catch((err) => {
-  console.error('[FAIL] 시연 상태 주입 실패', err)
-  process.exit(1)
-})
+  console.error('[FAIL] 시연 상태 주입 실패', err);
+  process.exit(1);
+});

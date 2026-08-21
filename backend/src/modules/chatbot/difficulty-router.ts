@@ -46,7 +46,7 @@ export function selectModel(query: string): ModelSelection {
 
   // 2. 복잡성 키워드: "왜", "어떻게", "비교", "차이"
   const complexKeywords = ['왜', '어떻게', '이유', '비교', '차이', '관계', '영향'];
-  const hasComplexKeyword = complexKeywords.some(kw => query.includes(kw));
+  const hasComplexKeyword = complexKeywords.some((kw) => query.includes(kw));
 
   if (hasComplexKeyword) {
     return {
@@ -83,10 +83,7 @@ export function selectModel(query: string): ModelSelection {
  * @param selection - 모델 선택 결과
  * @param query - 질의 (로그용)
  */
-export function logModelSelection(
-  selection: ModelSelection,
-  query: string
-): void {
+export function logModelSelection(selection: ModelSelection, query: string): void {
   console.log('[DifficultyRouter] Model selected', {
     timestamp: new Date().toISOString(),
     model: selection.model,

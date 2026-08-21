@@ -18,7 +18,10 @@ import { parseFilledReviewSheet, applyReviewJudgments } from './review';
 const BOOK_ID = 'takryu';
 
 async function main(): Promise<void> {
-  const sheetPath = path.join(__dirname, `../../../data/generated/full/review-sheet-${BOOK_ID}.csv`);
+  const sheetPath = path.join(
+    __dirname,
+    `../../../data/generated/full/review-sheet-${BOOK_ID}.csv`
+  );
   const csv = fs.readFileSync(sheetPath, 'utf-8');
 
   const rows = parseFilledReviewSheet(csv);
@@ -26,7 +29,9 @@ async function main(): Promise<void> {
 
   await applyReviewJudgments(pool, BOOK_ID, rows);
 
-  console.log(`[OK] 검수 판정 ${rows.length}건 기록, 수정 반영 ${corrections}건 (NFR-AI-012) — ${sheetPath}`);
+  console.log(
+    `[OK] 검수 판정 ${rows.length}건 기록, 수정 반영 ${corrections}건 (NFR-AI-012) — ${sheetPath}`
+  );
   await pool.end();
 }
 

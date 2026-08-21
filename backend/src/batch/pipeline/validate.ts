@@ -8,7 +8,12 @@ export interface PageBoundsResult {
   outOfBounds: number[];
 }
 
-export function checkPageBounds(label: string, reportedPages: number[], min: number, max: number): PageBoundsResult {
+export function checkPageBounds(
+  label: string,
+  reportedPages: number[],
+  min: number,
+  max: number
+): PageBoundsResult {
   const outOfBounds = reportedPages.filter((p) => p < min || p > max);
   return { ok: outOfBounds.length === 0, label, outOfBounds };
 }

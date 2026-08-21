@@ -32,13 +32,28 @@ export function getMockContext(K: number): ChatbotContext {
 
 function getMockChapterSummaries(K: number): ChapterSummary[] {
   const all = [
-    { chapter_no: 1, title: '1장', content: '정주사가 고무신 장사로 돈을 모으는 이야기', end_page: 20 },
-    { chapter_no: 2, title: '2장', content: '초봉이가 등장하고 정주사와 만나는 이야기', end_page: 50 },
-    { chapter_no: 3, title: '3장', content: '정주사와 초봉이의 관계가 복잡해지는 이야기', end_page: 80 },
+    {
+      chapter_no: 1,
+      title: '1장',
+      content: '정주사가 고무신 장사로 돈을 모으는 이야기',
+      end_page: 20,
+    },
+    {
+      chapter_no: 2,
+      title: '2장',
+      content: '초봉이가 등장하고 정주사와 만나는 이야기',
+      end_page: 50,
+    },
+    {
+      chapter_no: 3,
+      title: '3장',
+      content: '정주사와 초봉이의 관계가 복잡해지는 이야기',
+      end_page: 80,
+    },
     { chapter_no: 4, title: '4장', content: '초봉이가 선택의 기로에 서는 이야기', end_page: 120 },
   ];
 
-  return all.filter(ch => ch.end_page <= K);
+  return all.filter((ch) => ch.end_page <= K);
 }
 
 function getMockCurrentChapter(K: number): string {
@@ -60,7 +75,7 @@ function getMockCharacters(K: number): Character[] {
     { id: 'char-3', book_id: 'book-1', name: '박제호', first_appearance_page: 60 },
   ];
 
-  return all.filter(char => char.first_appearance_page <= K);
+  return all.filter((char) => char.first_appearance_page <= K);
 }
 
 function getMockRelationships(K: number): Relationship[] {
@@ -83,7 +98,7 @@ function getMockRelationships(K: number): Relationship[] {
     },
   ];
 
-  return all.filter(rel => rel.established_page <= K);
+  return all.filter((rel) => rel.established_page <= K);
 }
 
 /**
@@ -94,18 +109,18 @@ export function getMockSearchResults(query: string, K: number): SearchChunk[] {
   if (query.includes('정주사')) {
     return [
       { page_no: 10, content: '정주사는 고무신 장사로 큰 돈을 벌었다.', distance: 0.15 },
-      { page_no: 15, content: '정주사는 영악하고 약삭빠른 사람이었다.', distance: 0.20 },
-    ].filter(chunk => chunk.page_no <= K);
+      { page_no: 15, content: '정주사는 영악하고 약삭빠른 사람이었다.', distance: 0.2 },
+    ].filter((chunk) => chunk.page_no <= K);
   } else if (query.includes('초봉')) {
     return [
       { page_no: 25, content: '초봉이가 처음 등장했다.', distance: 0.12 },
       { page_no: 30, content: '초봉은 아름다운 외모를 가졌지만 가난했다.', distance: 0.18 },
-    ].filter(chunk => chunk.page_no <= K);
+    ].filter((chunk) => chunk.page_no <= K);
   } else {
     // 기본 검색 결과
-    return [
-      { page_no: 5, content: '탁류의 배경은 1930년대 군산이다.', distance: 0.25 },
-    ].filter(chunk => chunk.page_no <= K);
+    return [{ page_no: 5, content: '탁류의 배경은 1930년대 군산이다.', distance: 0.25 }].filter(
+      (chunk) => chunk.page_no <= K
+    );
   }
 }
 
@@ -118,7 +133,8 @@ export async function* getMockLLMResponse(prompt: string): AsyncGenerator<string
 
   // 1. 가장 구체적: 관계 질문
   if (prompt.includes('관계')) {
-    response = '정주사와 초봉의 관계는 처음에는 단순했으나 점차 복잡해집니다 (p.30-50). 정주사는 초봉에게 탐욕스러운 시선을 보내며, 초봉은 자신의 처지를 한탄합니다. 두 사람의 관계는 시간이 지날수록 더욱 복잡한 양상을 띱니다.';
+    response =
+      '정주사와 초봉의 관계는 처음에는 단순했으나 점차 복잡해집니다 (p.30-50). 정주사는 초봉에게 탐욕스러운 시선을 보내며, 초봉은 자신의 처지를 한탄합니다. 두 사람의 관계는 시간이 지날수록 더욱 복잡한 양상을 띱니다.';
   }
   // 2. K 초과 질문 (4장)
   else if (prompt.includes('4장') || prompt.includes('사장')) {
@@ -126,11 +142,13 @@ export async function* getMockLLMResponse(prompt: string): AsyncGenerator<string
   }
   // 3. 초봉 질문
   else if (prompt.includes('초봉')) {
-    response = '초봉은 아름다운 외모를 가진 여성으로 p.25에 처음 등장합니다. 그녀는 가난한 처지였지만 당당한 성격을 지녔습니다 (p.30). 정주사가 그녀에게 관심을 보이기 시작합니다.';
+    response =
+      '초봉은 아름다운 외모를 가진 여성으로 p.25에 처음 등장합니다. 그녀는 가난한 처지였지만 당당한 성격을 지녔습니다 (p.30). 정주사가 그녀에게 관심을 보이기 시작합니다.';
   }
   // 4. 정주사 질문
   else if (prompt.includes('정주사')) {
-    response = '정주사는 고무신 장사로 돈을 모은 영악한 인물입니다 (p.10). 그는 약삭빠른 성격으로 많은 재산을 축적했습니다 (p.15). 돈에 대한 집착이 강하고 계산이 빠른 사람입니다.';
+    response =
+      '정주사는 고무신 장사로 돈을 모은 영악한 인물입니다 (p.10). 그는 약삭빠른 성격으로 많은 재산을 축적했습니다 (p.15). 돈에 대한 집착이 강하고 계산이 빠른 사람입니다.';
   }
   // 5. 기타
   else {
@@ -141,7 +159,7 @@ export async function* getMockLLMResponse(prompt: string): AsyncGenerator<string
   for (const char of response) {
     yield char;
     // 약간의 지연 추가 (더 실감나게)
-    await new Promise(resolve => setTimeout(resolve, 20));
+    await new Promise((resolve) => setTimeout(resolve, 20));
   }
 }
 

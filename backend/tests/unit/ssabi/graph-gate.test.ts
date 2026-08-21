@@ -95,9 +95,7 @@ describe('FR-SPL-002 🚦: 관계도 스포일러 상한', () => {
       // Negative: "낯선 사이" 라벨은 없어야 함
       const oldLabel = relationships.find(
         (r) =>
-          r.character_a_id === 'char-2' &&
-          r.character_b_id === 'char-4' &&
-          r.label === '낯선 사이'
+          r.character_a_id === 'char-2' && r.character_b_id === 'char-4' && r.label === '낯선 사이'
       );
       expect(oldLabel).toBeUndefined();
     });
@@ -156,10 +154,7 @@ describe('FR-SPL-002 🚦: 관계도 스포일러 상한', () => {
       const notes = await repository.findCharacterNotes('takryu', 20);
 
       expect(notes).toHaveLength(2);
-      expect(notes.map((n) => n.note)).toEqual([
-        '고무신 장사로 돈을 모았다.',
-        '정주사의 딸이다.',
-      ]);
+      expect(notes.map((n) => n.note)).toEqual(['고무신 장사로 돈을 모았다.', '정주사의 딸이다.']);
 
       // FR-SPL-002 🚦: 모든 노트의 source_page <= 20
       for (const note of notes) {
@@ -241,9 +236,7 @@ describe('FR-SPL-002 🚦: 관계도 스포일러 상한', () => {
       }
 
       // A6: 초봉-고태수는 "연인" (최신)
-      const choBongTaesu = graph.edges.find(
-        (e) => e.source === 'char-2' && e.target === 'char-4'
-      );
+      const choBongTaesu = graph.edges.find((e) => e.source === 'char-2' && e.target === 'char-4');
       expect(choBongTaesu?.label).toBe('연인');
     });
 

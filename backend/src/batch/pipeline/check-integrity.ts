@@ -38,19 +38,29 @@ function isValidPage(page: unknown, totalPages: number): boolean {
 }
 
 /** H1 — 페이지 참조 값이 정수이며 1..totalPages 범위 안인지 (book_id별 도메인 제약) */
-function checkPageRanges(data: ResolvedBookData, totalPages: number, issues: IntegrityIssue[]): void {
+function checkPageRanges(
+  data: ResolvedBookData,
+  totalPages: number,
+  issues: IntegrityIssue[]
+): void {
   const push = (rule: string, label: string, page: unknown): void => {
     if (!isValidPage(page, totalPages)) {
-      issues.push({ severity: 'hard', rule, message: `${label}의 페이지 값이 유효 범위(1~${totalPages}) 밖: ${JSON.stringify(page)}` });
+      issues.push({
+        severity: 'hard',
+        rule,
+        message: `${label}의 페이지 값이 유효 범위(1~${totalPages}) 밖: ${JSON.stringify(page)}`,
+      });
     }
   };
 
   for (const c of data.characters) {
     push('H1-page-range', `인물 "${c.name}" 최초 등장`, c.first_appearance_page);
-    for (const a of c.aliases) push('H1-page-range', `인물 "${c.name}" 별칭 "${a.alias}"`, a.first_appearance_page);
+    for (const a of c.aliases)
+      push('H1-page-range', `인물 "${c.name}" 별칭 "${a.alias}"`, a.first_appearance_page);
     for (const n of c.notes) push('H1-page-range', `인물 "${c.name}" 노트`, n.source_page);
   }
-  for (const r of data.relationships) push('H1-page-range', `관계 "${r.label}"`, r.established_page);
+  for (const r of data.relationships)
+    push('H1-page-range', `관계 "${r.label}"`, r.established_page);
   for (const t of data.terms) push('H1-page-range', `용어 "${t.term}"`, t.first_appearance_page);
   for (const e of data.events) push('H1-page-range', `사건 "${e.event}"`, e.occurrence_page);
 }
@@ -60,7 +70,11 @@ function checkTermUniqueness(data: ResolvedBookData, issues: IntegrityIssue[]): 
   const seen = new Set<string>();
   for (const t of data.terms) {
     if (seen.has(t.term)) {
-      issues.push({ severity: 'hard', rule: 'H2-term-unique', message: `용어 "${t.term}" 중복 (DDL UNIQUE(book_id, term) 위반)` });
+      issues.push({
+        severity: 'hard',
+        rule: 'H2-term-unique',
+        message: `용어 "${t.term}" 중복 (DDL UNIQUE(book_id, term) 위반)`,
+      });
     }
     seen.add(t.term);
   }
@@ -71,7 +85,11 @@ function checkCharacterNameUniqueness(data: ResolvedBookData, issues: IntegrityI
   const seen = new Set<string>();
   for (const c of data.characters) {
     if (seen.has(c.name)) {
-      issues.push({ severity: 'hard', rule: 'H3-character-name-unique', message: `인물 대표명 "${c.name}" 중복 생성됨` });
+      issues.push({
+        severity: 'hard',
+        rule: 'H3-character-name-unique',
+        message: `인물 대표명 "${c.name}" 중복 생성됨`,
+      });
     }
     seen.add(c.name);
   }
@@ -82,7 +100,11 @@ function checkRelationshipCharacterRefs(data: ResolvedBookData, issues: Integrit
   const ids = new Set(data.characters.map((c) => c.id));
   for (const r of data.relationships) {
     if (!ids.has(r.character_a_id) || !ids.has(r.character_b_id)) {
-      issues.push({ severity: 'hard', rule: 'H4-relationship-fk', message: `관계 "${r.label}"의 인물 id가 인물 목록에 없음 (a=${r.character_a_id}, b=${r.character_b_id})` });
+      issues.push({
+        severity: 'hard',
+        rule: 'H4-relationship-fk',
+        message: `관계 "${r.label}"의 인물 id가 인물 목록에 없음 (a=${r.character_a_id}, b=${r.character_b_id})`,
+      });
     }
   }
 }

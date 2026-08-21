@@ -20,7 +20,8 @@ const MOCK_MODE = process.env.MOCK_MODE === 'true';
  * 근거 부재 토큰 (FR-QNA-004 🚦)
  */
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
-export const NO_EVIDENCE_MESSAGE = '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
+export const NO_EVIDENCE_MESSAGE =
+  '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
 
 /**
  * 시스템 규칙 (프롬프트에 포함)
@@ -72,7 +73,6 @@ export async function* handleQuery(
   K: number,
   deviceId: string
 ): AsyncGenerator<string> {
-
   let noEvidence = false;
 
   try {
@@ -80,7 +80,9 @@ export async function* handleQuery(
     const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
 
     // 2. 벡터 검색 (질의 관여, 범위는 K로 강제)
-    const searchResults = MOCK_MODE ? getMockSearchResults(query, K) : await vectorSearch(bookId, query, K);
+    const searchResults = MOCK_MODE
+      ? getMockSearchResults(query, K)
+      : await vectorSearch(bookId, query, K);
 
     // 3. 프롬프트 구성
     const basePrompt = buildPrompt(context, SYSTEM_RULES);
@@ -89,7 +91,7 @@ export async function* handleQuery(
     let fullPrompt = basePrompt;
     if (searchResults.length > 0) {
       fullPrompt += '\n\n## 검색 결과 (관련 페이지)\n\n';
-      searchResults.forEach(result => {
+      searchResults.forEach((result) => {
         fullPrompt += `### p.${result.page_no}\n${result.content}\n\n`;
       });
     }
@@ -134,16 +136,16 @@ export async function* handleQuery(
       cutoff_page: K,
       query,
       input_records: {
-        chapter_summaries: context.chapter_summaries.map(ch => ch.title),
+        chapter_summaries: context.chapter_summaries.map((ch) => ch.title),
         current_chapter_pages: [], // TODO
-        characters: context.entities.characters.map(c => c.id),
-        relationships: context.entities.relationships.map(r => r.id),
-        character_notes: context.entities.character_notes.map(n => n.id),
-        terms: context.entities.terms.map(t => t.id),
-        events: context.entities.events.map(e => e.id),
+        characters: context.entities.characters.map((c) => c.id),
+        relationships: context.entities.relationships.map((r) => r.id),
+        character_notes: context.entities.character_notes.map((n) => n.id),
+        terms: context.entities.terms.map((t) => t.id),
+        events: context.entities.events.map((e) => e.id),
         background: context.background ? 'included' : 'none',
       },
-      search_selected_pages: searchResults.map(r => ({
+      search_selected_pages: searchResults.map((r) => ({
         page_no: r.page_no,
         distance: r.distance,
       })),
@@ -155,7 +157,6 @@ export async function* handleQuery(
         output: responseText.length, // 임시
       },
     });
-
   } catch (error) {
     console.error('[Chatbot] Query failed', { bookId, query, K, error });
     throw error;

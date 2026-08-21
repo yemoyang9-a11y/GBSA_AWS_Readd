@@ -15,8 +15,8 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
  * 검색 설정
  */
 const SEARCH_CONFIG = {
-  topN: 6,              // 고정 (FR-QNA-006)
-  embeddingDim: 1024,   // Amazon Titan Text Embeddings V2
+  topN: 6, // 고정 (FR-QNA-006)
+  embeddingDim: 1024, // Amazon Titan Text Embeddings V2
 };
 
 /**
@@ -42,7 +42,6 @@ export async function vectorSearch(
   query: string,
   K: number
 ): Promise<SearchChunk[]> {
-
   // 1. 질의 정규화 (별칭 사전으로 대표명 치환)
   const normalizedQuery = await normalizeQuery(query, bookId, K);
 
@@ -64,11 +63,7 @@ export async function vectorSearch(
  *
  * 예: "정 주사" → "정주사"
  */
-async function normalizeQuery(
-  query: string,
-  bookId: string,
-  K: number
-): Promise<string> {
+async function normalizeQuery(query: string, bookId: string, K: number): Promise<string> {
   // 별칭 사전 조회
   const aliases = await repo.findAliases(bookId, K);
 
@@ -120,12 +115,15 @@ async function embedQuery(query: string): Promise<number[]> {
       throw new Error('Failed to get embedding from Titan: Invalid response format');
     }
 
-    console.log(`[VectorSearch] Embedded query: "${query.substring(0, 50)}..." (${embedding.length}D)`);
+    console.log(
+      `[VectorSearch] Embedded query: "${query.substring(0, 50)}..." (${embedding.length}D)`
+    );
     return embedding;
-
   } catch (error) {
     console.error('[VectorSearch] Embedding failed:', error);
-    throw new Error(`Failed to embed query: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to embed query: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -151,13 +149,9 @@ async function performVectorSearch(
  *
  * 인젝션 판정 ②의 대조 대상
  */
-function logSearchResults(
-  bookId: string,
-  K: number,
-  results: SearchChunk[]
-): void {
-  const pages = results.map(r => r.page_no);
-  const scores = results.map(r => r.distance);
+function logSearchResults(bookId: string, K: number, results: SearchChunk[]): void {
+  const pages = results.map((r) => r.page_no);
+  const scores = results.map((r) => r.distance);
 
   console.log('[VectorSearch] Results', {
     timestamp: new Date().toISOString(),
@@ -181,9 +175,7 @@ export function validateSearchResults(
   results: SearchChunk[],
   K: number
 ): { valid: boolean; violations: number[] } {
-  const violations = results
-    .filter(r => r.page_no > K)
-    .map(r => r.page_no);
+  const violations = results.filter((r) => r.page_no > K).map((r) => r.page_no);
 
   return {
     valid: violations.length === 0,

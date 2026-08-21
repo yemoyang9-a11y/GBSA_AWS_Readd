@@ -16,26 +16,54 @@ function mockClient(): { client: QueryClient; calls: { sql: string; params?: unk
 }
 
 describe('registerBook — FR-ADM-001 원문 등록', () => {
-  const rawText = ['1 장1', '', '내용 문장입니다.', '', '2 장2', '', '둘째 장 문장입니다.', ''].join('\n');
+  const rawText = [
+    '1 장1',
+    '',
+    '내용 문장입니다.',
+    '',
+    '2 장2',
+    '',
+    '둘째 장 문장입니다.',
+    '',
+  ].join('\n');
   const { pages, chapters } = splitBook(rawText, 'takryu');
 
   test('도서 메타(발표연도·분량 포함)를 1건 upsert한다', async () => {
     const { client, calls } = mockClient();
     await registerBook(
       client,
-      { book_id: 'takryu', title: '탁류', author: '채만식', publish_year: 1937, extent: '411페이지' },
+      {
+        book_id: 'takryu',
+        title: '탁류',
+        author: '채만식',
+        publish_year: 1937,
+        extent: '411페이지',
+      },
       chapters,
       pages
     );
 
     const bookCall = calls.find((c) => c.sql.includes('INSERT INTO books'));
     expect(bookCall).toBeDefined();
-    expect(bookCall?.params).toEqual(['takryu', '탁류', '채만식', null, 1937, '411페이지', pages.length]);
+    expect(bookCall?.params).toEqual([
+      'takryu',
+      '탁류',
+      '채만식',
+      null,
+      1937,
+      '411페이지',
+      pages.length,
+    ]);
   });
 
   test('모든 장을 upsert한다', async () => {
     const { client, calls } = mockClient();
-    await registerBook(client, { book_id: 'takryu', title: '탁류', author: '채만식' }, chapters, pages);
+    await registerBook(
+      client,
+      { book_id: 'takryu', title: '탁류', author: '채만식' },
+      chapters,
+      pages
+    );
 
     const chapterCalls = calls.filter((c) => c.sql.includes('INSERT INTO chapters'));
     expect(chapterCalls).toHaveLength(chapters.length);
@@ -43,7 +71,12 @@ describe('registerBook — FR-ADM-001 원문 등록', () => {
 
   test('모든 페이지를 upsert한다 (원문 등록 완전성)', async () => {
     const { client, calls } = mockClient();
-    await registerBook(client, { book_id: 'takryu', title: '탁류', author: '채만식' }, chapters, pages);
+    await registerBook(
+      client,
+      { book_id: 'takryu', title: '탁류', author: '채만식' },
+      chapters,
+      pages
+    );
 
     const pageCalls = calls.filter((c) => c.sql.includes('INSERT INTO pages'));
     expect(pageCalls).toHaveLength(pages.length);
@@ -51,7 +84,12 @@ describe('registerBook — FR-ADM-001 원문 등록', () => {
 
   test('도서 메타 누락 필드는 null로 들어간다(값을 지어내지 않는다)', async () => {
     const { client, calls } = mockClient();
-    await registerBook(client, { book_id: 'takryu', title: '탁류', author: '채만식' }, chapters, pages);
+    await registerBook(
+      client,
+      { book_id: 'takryu', title: '탁류', author: '채만식' },
+      chapters,
+      pages
+    );
 
     const bookCall = calls.find((c) => c.sql.includes('INSERT INTO books'));
     expect(bookCall?.params?.[3]).toBeNull(); // cover_url
@@ -75,10 +113,20 @@ describe('registerGeneratedContent — S4/S5 산출물 적재 (FR-DAT-003~008)',
       { id: 'char-2', name: '고태수', first_appearance_page: 2, aliases: [], notes: [] },
     ],
     relationships: [
-      { id: 'rel-1', character_a_id: 'char-1', character_b_id: 'char-2', label: '싸움 중재', established_page: 2 },
+      {
+        id: 'rel-1',
+        character_a_id: 'char-1',
+        character_b_id: 'char-2',
+        label: '싸움 중재',
+        established_page: 2,
+      },
     ],
-    terms: [{ id: 'term-1', term: '미두장', definition: '선물 곡물 거래소', first_appearance_page: 2 }],
-    events: [{ id: '1-0', event: '멱살잡이', description: '정주사가 봉욕을 당함', occurrence_page: 2 }],
+    terms: [
+      { id: 'term-1', term: '미두장', definition: '선물 곡물 거래소', first_appearance_page: 2 },
+    ],
+    events: [
+      { id: '1-0', event: '멱살잡이', description: '정주사가 봉욕을 당함', occurrence_page: 2 },
+    ],
     background_and_intro: { background: '배경 설명', intro: '소개 문구' },
   };
 

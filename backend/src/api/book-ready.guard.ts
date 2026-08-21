@@ -14,8 +14,8 @@
  * 구분해도 새는 정보가 없다 — 도서 목록 자체가 미완비 도서를 포함해 내려간다 (S2).
  */
 
-import type { Response } from 'express'
-import type { ContentRepository } from '../modules/content/repository'
+import type { Response } from 'express';
+import type { ContentRepository } from '../modules/content/repository';
 
 /**
  * @returns 진행해도 되면 true. false 면 이 함수가 이미 응답을 보냈으므로 핸들러는 즉시 return 한다.
@@ -25,18 +25,18 @@ export async function ensureBookReady(
   bookId: string,
   res: Response
 ): Promise<boolean> {
-  const ready = await content.findReadiness(bookId)
+  const ready = await content.findReadiness(bookId);
 
   if (ready === null) {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Book not found' })
-    return false
+    res.status(404).json({ error: 'NOT_FOUND', message: 'Book not found' });
+    return false;
   }
 
   if (!ready) {
     // 대문자 상수 — API_CONTRACT.md 에러 표 형식 (team-sync §4.2)
-    res.status(403).json({ error: 'BOOK_NOT_READY', message: 'Book is not ready' })
-    return false
+    res.status(403).json({ error: 'BOOK_NOT_READY', message: 'Book is not ready' });
+    return false;
   }
 
-  return true
+  return true;
 }

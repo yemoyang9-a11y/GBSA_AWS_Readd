@@ -21,10 +21,7 @@ import type {
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
-export async function findChapterSummaries(
-  bookId: string,
-  K: number
-): Promise<ChapterSummary[]> {
+export async function findChapterSummaries(bookId: string, K: number): Promise<ChapterSummary[]> {
   const query = `
     SELECT
       cs.chapter_no,
@@ -47,10 +44,7 @@ export async function findChapterSummaries(
  *
  * FR-QNA-006 🚦: [현재 장 시작 .. K]
  */
-export async function getCurrentChapterText(
-  bookId: string,
-  K: number
-): Promise<string | null> {
+export async function getCurrentChapterText(bookId: string, K: number): Promise<string | null> {
   // 1. K가 속한 장 찾기
   const chapterQuery = `
     SELECT chapter_no, start_page, end_page
@@ -79,14 +73,10 @@ export async function getCurrentChapterText(
     ORDER BY page_no
   `;
 
-  const pagesResult = await pool.query(pagesQuery, [
-    bookId,
-    chapter.start_page,
-    K,
-  ]);
+  const pagesResult = await pool.query(pagesQuery, [bookId, chapter.start_page, K]);
 
   // 3. 페이지 내용 연결
-  return pagesResult.rows.map(row => row.content).join('\n\n');
+  return pagesResult.rows.map((row) => row.content).join('\n\n');
 }
 
 /**
@@ -94,10 +84,7 @@ export async function getCurrentChapterText(
  *
  * FR-QNA-006 🚦: 최초 등장 페이지 <= K
  */
-export async function findCharacters(
-  bookId: string,
-  K: number
-): Promise<Character[]> {
+export async function findCharacters(bookId: string, K: number): Promise<Character[]> {
   const query = `
     SELECT
       id,
@@ -120,10 +107,7 @@ export async function findCharacters(
  * A6: 이력 전체를 확립 페이지와 병기
  * FR-QNA-006 🚦: 확립 페이지 <= K
  */
-export async function findRelationships(
-  bookId: string,
-  K: number
-): Promise<Relationship[]> {
+export async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
   const query = `
     SELECT
       id,
@@ -147,10 +131,7 @@ export async function findRelationships(
  *
  * FR-QNA-006 🚦: 근거 페이지 <= K
  */
-export async function findCharacterNotes(
-  bookId: string,
-  K: number
-): Promise<CharacterNote[]> {
+export async function findCharacterNotes(bookId: string, K: number): Promise<CharacterNote[]> {
   const query = `
     SELECT
       cn.id,
@@ -293,7 +274,7 @@ export async function findAliases(
   `;
 
   const result = await pool.query(query, [bookId, K]);
-  return result.rows.map(row => ({
+  return result.rows.map((row) => ({
     alias: row.alias,
     characterName: row.character_name,
   }));

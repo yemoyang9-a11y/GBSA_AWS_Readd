@@ -132,17 +132,17 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
       res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
       return res.end();
-
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
       // 에러도 통일된 형식으로
-      res.write(`data: ${JSON.stringify({
-        type: 'error',
-        message: 'Stream processing failed'
-      })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          message: 'Stream processing failed',
+        })}\n\n`
+      );
       return res.end();
     }
-
   } catch (error) {
     console.error('[API] Chatbot error', { bookId, query, error });
     // SSE 열기 전 에러는 일반 JSON 응답
@@ -180,7 +180,9 @@ router.post('/books/:bookId/entry', async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (error instanceof BookNotReadyError) {
-      res.status(403).json({ error: 'BOOK_NOT_READY', message: '미완비 도서는 진입할 수 없습니다' });
+      res
+        .status(403)
+        .json({ error: 'BOOK_NOT_READY', message: '미완비 도서는 진입할 수 없습니다' });
       return;
     }
     console.error('[API] entry error', { bookId, error });
@@ -286,7 +288,12 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
 
     // 요청당 스냅샷 1회 (2.1절) — 스트리밍 도중 페이지가 바뀌어도 이 K를 유지한다(UC-27 A5)
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
-    const result = await readingState.recapService.getRecap(deviceId, bookId, snapshot.cutoff, 'realtime');
+    const result = await readingState.recapService.getRecap(
+      deviceId,
+      bookId,
+      snapshot.cutoff,
+      'realtime'
+    );
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -316,7 +323,9 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
       res.end();
     } catch (streamError) {
       console.error('[API] recap stream error', { bookId, error: streamError });
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream processing failed' })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', message: 'Stream processing failed' })}\n\n`
+      );
       res.end();
     }
   } catch (error) {
@@ -451,37 +460,30 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
  *
  * TODO: R4 구현
  */
-router.get(
-  '/books/:bookId/ssabi/characters/:characterId',
-  async (req: Request, res: Response) => {
-    const { bookId, characterId } = req.params;
-    const deviceId = requireDeviceId(req, res);
-    if (!deviceId) return;
+router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, res: Response) => {
+  const { bookId, characterId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
 
-    // FR-BRW-002 🚦: 미완비 도서 거절
-    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+  // FR-BRW-002 🚦: 미완비 도서 거절
+  if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
 
-    try {
-      // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
-      const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+  try {
+    // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
 
-      const detail = await ssabiServices.character.getCharacter(
-        bookId,
-        characterId,
-        snapshot.cutoff
-      );
+    const detail = await ssabiServices.character.getCharacter(bookId, characterId, snapshot.cutoff);
 
-      // 기준점 이하에서 아직 등장하지 않은 인물은 "없는 인물"과 같게 응답한다.
-      // 이유를 구분해 알리면 그 차이가 곧 미등장 인물의 존재를 알려준다 (절대 규칙 7번)
-      if (detail === null) {
-        return res.status(404).json({ error: 'NOT_FOUND', message: 'Character not found' });
-      }
-      return res.json(detail);
-    } catch (error) {
-      console.error('[API] ssabi/characters error', { bookId, characterId, error });
-      return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    // 기준점 이하에서 아직 등장하지 않은 인물은 "없는 인물"과 같게 응답한다.
+    // 이유를 구분해 알리면 그 차이가 곧 미등장 인물의 존재를 알려준다 (절대 규칙 7번)
+    if (detail === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Character not found' });
     }
+    return res.json(detail);
+  } catch (error) {
+    console.error('[API] ssabi/characters error', { bookId, characterId, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
-);
+});
 
 export default router;

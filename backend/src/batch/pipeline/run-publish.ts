@@ -20,7 +20,9 @@ async function main(): Promise<void> {
   if (!report.complete) {
     console.error(`[FAIL] 검수 미완료 ${report.missing.length}건 — 공개 전환 거절 (FR-ADM-006)`);
     for (const item of report.missing) {
-      console.error(`  - ${item.target_type}:${item.target_id} 누락 항목: ${item.missing_criteria.join(', ')}`);
+      console.error(
+        `  - ${item.target_type}:${item.target_id} 누락 항목: ${item.missing_criteria.join(', ')}`
+      );
     }
     await pool.end();
     process.exit(1);

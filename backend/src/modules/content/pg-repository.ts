@@ -15,10 +15,10 @@ import type {
   ChapterRow,
   ContentRepository,
   PageRow,
-} from './repository'
+} from './repository';
 
 export interface QueryClient {
-  query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>
+  query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
 }
 
 export function createPgContentRepository(db: QueryClient): ContentRepository {
@@ -30,16 +30,16 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
         `SELECT book_id, title, author, cover_url, intro_summary, ssabi_ready
            FROM books
           ORDER BY title ASC`
-      )
-      return rows
+      );
+      return rows;
     },
 
     async findReadiness(bookId: string): Promise<boolean | null> {
       // FR-BRW-002 🚦 — R2의 POST /entry와 같은 컬럼(ssabi_ready)을 본다.
       // 서로 다른 컬럼을 보면 대시보드는 잠겨 있는데 직접 진입은 되는 구멍이 생긴다 (R12, team-sync §4.7)
-      const { rows } = await db.query(`SELECT ssabi_ready FROM books WHERE book_id = $1`, [bookId])
-      if (rows.length === 0) return null
-      return rows[0].ssabi_ready
+      const { rows } = await db.query(`SELECT ssabi_ready FROM books WHERE book_id = $1`, [bookId]);
+      if (rows.length === 0) return null;
+      return rows[0].ssabi_ready;
     },
 
     async findBasicInfo(bookId: string): Promise<BookBasicRow | null> {
@@ -49,9 +49,9 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
            FROM books
           WHERE book_id = $1`,
         [bookId]
-      )
-      if (rows.length === 0) return null
-      return rows[0]
+      );
+      if (rows.length === 0) return null;
+      return rows[0];
     },
 
     async findChapters(bookId: string): Promise<ChapterRow[]> {
@@ -64,8 +64,8 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
           WHERE book_id = $1
           ORDER BY chapter_no ASC`,
         [bookId]
-      )
-      return rows
+      );
+      return rows;
     },
 
     async findBackgroundAndIntro(bookId: string): Promise<BackgroundAndIntro> {
@@ -74,12 +74,12 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
       const { rows } = await db.query(
         `SELECT kind, content FROM background_and_intro WHERE book_id = $1`,
         [bookId]
-      )
-      const byKind = new Map<string, string>(rows.map((r: any) => [r.kind, r.content]))
+      );
+      const byKind = new Map<string, string>(rows.map((r: any) => [r.kind, r.content]));
       return {
         introduction: byKind.get('intro') ?? '',
         background: byKind.get('background') ?? '',
-      }
+      };
     },
 
     async findPage(bookId: string, pageNo: number): Promise<PageRow | null> {
@@ -94,9 +94,9 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
            FROM pages p
           WHERE p.book_id = $1 AND p.page_no = $2`,
         [bookId, pageNo]
-      )
-      if (rows.length === 0) return null
-      return rows[0]
+      );
+      if (rows.length === 0) return null;
+      return rows[0];
     },
-  }
+  };
 }

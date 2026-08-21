@@ -18,19 +18,19 @@
  */
 export interface CutoffSnapshot {
   /** 마지막으로 열어본 페이지 (저장값) */
-  current_page: number
+  current_page: number;
 
   /** 기준점 (current_page - 1) - FR-PRG-003 🚦 */
-  cutoff: number
+  cutoff: number;
 
   /** 진도 퍼센트 (current_page / total_pages) */
-  percent: number
+  percent: number;
 
   /** 현재 장 정보 */
   chapter: {
-    chapter_no: number
-    title: string
-  }
+    chapter_no: number;
+    title: string;
+  };
 }
 
 // ============================================================================
@@ -44,10 +44,10 @@ export interface CutoffSnapshot {
  */
 export interface ProgressEvent {
   /** 페이지 번호 */
-  page: number
+  page: number;
 
   /** 클라이언트 단조 증가 시퀀스 (순서 보장용) */
-  seq: number
+  seq: number;
 }
 
 // ============================================================================
@@ -59,20 +59,20 @@ export interface ProgressEvent {
  */
 export interface RecapInput {
   /** 완결된 장 요약 목록 (종료 페이지 <= K) */
-  chapter_summaries: ChapterSummary[]
+  chapter_summaries: ChapterSummary[];
 
   /** 현재 장 원문 절단 [현재 장 시작 .. K] */
-  current_chapter_text: string | null
+  current_chapter_text: string | null;
 
   /** 기준점 (로그용) */
-  cutoff: number
+  cutoff: number;
 }
 
 export interface ChapterSummary {
-  chapter_no: number
-  title: string
-  content: string
-  end_page: number
+  chapter_no: number;
+  title: string;
+  content: string;
+  end_page: number;
 }
 
 /**
@@ -85,23 +85,23 @@ export interface ChapterSummary {
  */
 export interface BriefingResponse {
   /** 이 응답이 적용한 기준점 K. 첫 진입 구분의 근거(❓Q1) — recap.service의 판단을 재계산하지 않는다 */
-  applied_cutoff: number
+  applied_cutoff: number;
 
   /** 저장 리캡 (없으면 null, applied_cutoff > 0일 때만 클라이언트가 스트리밍 폴백 호출) */
-  recap: string | null
+  recap: string | null;
 
   /** 목차 위치 */
   current_chapter: {
-    chapter_no: number
-    title: string
-  }
+    chapter_no: number;
+    title: string;
+  };
 
   /** 진도 파생값 */
   progress: {
-    current_page: number
-    total_pages: number
-    percent: number
-  }
+    current_page: number;
+    total_pages: number;
+    percent: number;
+  };
 }
 
 // ============================================================================
@@ -113,11 +113,11 @@ export interface BriefingResponse {
  */
 export interface ChatRequest {
   /** 사용자 질문 */
-  query: string
+  query: string;
 
   /** 진도 이벤트 동봉 (선택사항) */
-  page?: number
-  seq?: number
+  page?: number;
+  seq?: number;
 }
 
 /**
@@ -127,31 +127,31 @@ export interface ChatRequest {
  */
 export interface ChatbotContext {
   /** 장 요약 전량 */
-  chapter_summaries: ChapterSummary[]
+  chapter_summaries: ChapterSummary[];
 
   /** 현재 장 원문 */
-  current_chapter_text: string | null
+  current_chapter_text: string | null;
 
   /** 엔티티 전량 */
   entities: {
-    characters: Character[]
-    relationships: Relationship[]
-    character_notes: CharacterNote[]
-    terms: Term[]
-    events: Event[]
-  }
+    characters: Character[];
+    relationships: Relationship[];
+    character_notes: CharacterNote[];
+    terms: Term[];
+    events: Event[];
+  };
 
   /** 배경지식 전문 (상한 없음 - R5) */
-  background: string
+  background: string;
 }
 
 /**
  * 검색 청크 결과
  */
 export interface SearchChunk {
-  page_no: number
-  content: string
-  distance: number
+  page_no: number;
+  content: string;
+  distance: number;
 }
 
 // ============================================================================
@@ -162,20 +162,20 @@ export interface SearchChunk {
  * 카탈로그 아이템
  */
 export interface BookCatalogItem {
-  book_id: string
-  title: string
-  author: string
-  cover_url: string
-  total_pages: number
+  book_id: string;
+  title: string;
+  author: string;
+  cover_url: string;
+  total_pages: number;
 
   /** 싸비 데이터 준비 여부 (완비 여부) */
-  ssabi_ready: boolean
+  ssabi_ready: boolean;
 
   /** 읽던 도서인 경우 진도 정보 */
   progress?: {
-    current_page: number
-    percent: number
-  }
+    current_page: number;
+    percent: number;
+  };
 }
 
 /**
@@ -185,40 +185,40 @@ export interface BookCatalogItem {
  */
 export interface RelationshipGraph {
   /** 노드 = 인물 (최초 등장 페이지 <= K) */
-  nodes: GraphNode[]
+  nodes: GraphNode[];
 
   /** 간선 = 관계 (확립 페이지 <= K, 최신 라벨 1개) */
-  edges: GraphEdge[]
+  edges: GraphEdge[];
 }
 
 export interface GraphNode {
-  id: string
-  name: string
-  first_appearance_page: number
+  id: string;
+  name: string;
+  first_appearance_page: number;
 
   /** 별칭 목록 (최초 등장 페이지 <= K) */
-  aliases: string[]
+  aliases: string[];
 }
 
 export interface GraphEdge {
-  source: string
-  target: string
-  label: string
-  established_page: number
+  source: string;
+  target: string;
+  label: string;
+  established_page: number;
 }
 
 /**
  * 인물 상세 정보
  */
 export interface CharacterDetail {
-  name: string
-  first_appearance_page: number
+  name: string;
+  first_appearance_page: number;
 
   /** 별칭 목록 */
-  aliases: Alias[]
+  aliases: Alias[];
 
   /** 인물 노트 (근거 페이지 <= K, 최대 8문장) */
-  notes: string
+  notes: string;
 }
 
 // ============================================================================
@@ -226,18 +226,18 @@ export interface CharacterDetail {
 // ============================================================================
 
 export interface Character {
-  id: string
-  book_id: string
-  name: string
-  first_appearance_page: number
+  id: string;
+  book_id: string;
+  name: string;
+  first_appearance_page: number;
 }
 
 export interface Alias {
-  id: string
-  character_id: string
-  alias: string
-  type: 'name' | 'title' | 'kinship' | 'nickname'
-  first_appearance_page: number
+  id: string;
+  character_id: string;
+  alias: string;
+  type: 'name' | 'title' | 'kinship' | 'nickname';
+  first_appearance_page: number;
 }
 
 /**
@@ -247,52 +247,52 @@ export interface Alias {
  * @see A6 결정
  */
 export interface Relationship {
-  id: string
-  book_id: string
-  character_a_id: string
-  character_b_id: string
-  label: string
-  established_page: number
+  id: string;
+  book_id: string;
+  character_a_id: string;
+  character_b_id: string;
+  label: string;
+  established_page: number;
 }
 
 export interface CharacterNote {
-  id: string
-  character_id: string
-  note: string
-  source_page: number
+  id: string;
+  character_id: string;
+  note: string;
+  source_page: number;
 }
 
 export interface Term {
-  id: string
-  book_id: string
-  term: string
-  definition: string
-  first_appearance_page: number
+  id: string;
+  book_id: string;
+  term: string;
+  definition: string;
+  first_appearance_page: number;
 }
 
 export interface Event {
-  id: string
-  book_id: string
-  event: string
-  description: string
-  occurrence_page: number
+  id: string;
+  book_id: string;
+  event: string;
+  description: string;
+  occurrence_page: number;
 }
 
 export interface Page {
-  id: string
-  book_id: string
-  page_no: number
-  content: string
-  embedding?: number[] // 1024 차원 벡터
+  id: string;
+  book_id: string;
+  page_no: number;
+  content: string;
+  embedding?: number[]; // 1024 차원 벡터
 }
 
 export interface Chapter {
-  id: string
-  book_id: string
-  chapter_no: number
-  title: string
-  start_page: number
-  end_page: number
+  id: string;
+  book_id: string;
+  chapter_no: number;
+  title: string;
+  start_page: number;
+  end_page: number;
 }
 
 // ============================================================================
@@ -304,31 +304,31 @@ export interface Chapter {
  * NFR-OBS-002 🚦
  */
 export interface RecapCallLog {
-  timestamp: Date
-  device_id: string
-  book_id: string
-  cutoff_page: number
+  timestamp: Date;
+  device_id: string;
+  book_id: string;
+  cutoff_page: number;
 
   /** 투입 장 요약 ID 목록 */
-  input_chapter_summary_ids: string[]
+  input_chapter_summary_ids: string[];
 
   /** 현재 장 절단 페이지 */
-  current_chapter_cutoff: number | null
+  current_chapter_cutoff: number | null;
 
   /** 출력 참조 (S3 또는 로그 ID) */
-  output_ref: string
+  output_ref: string;
 
   /** 사용 모델 */
-  model: string
+  model: string;
 
   /** 토큰 수 */
   tokens: {
-    input: number
-    output: number
-  }
+    input: number;
+    output: number;
+  };
 
   /** 트리거 유형 */
-  trigger: 'realtime' | 'session_end'
+  trigger: 'realtime' | 'session_end';
 }
 
 /**
@@ -336,44 +336,44 @@ export interface RecapCallLog {
  * NFR-OBS-005 🚦
  */
 export interface ChatbotQueryLog {
-  timestamp: Date
-  device_id: string
-  book_id: string
-  cutoff_page: number
-  query: string
+  timestamp: Date;
+  device_id: string;
+  book_id: string;
+  cutoff_page: number;
+  query: string;
 
   /** 투입 레코드 ID 전수 (구분별) */
   input_records: {
-    chapter_summaries: string[]
-    current_chapter_pages: number[]
-    characters: string[]
-    relationships: string[]
-    character_notes: string[]
-    terms: string[]
-    events: string[]
-    background: string
-  }
+    chapter_summaries: string[];
+    current_chapter_pages: number[];
+    characters: string[];
+    relationships: string[];
+    character_notes: string[];
+    terms: string[];
+    events: string[];
+    background: string;
+  };
 
   /** 검색 선정 페이지 번호·스코어 */
   search_selected_pages: Array<{
-    page_no: number
-    distance: number
-  }>
+    page_no: number;
+    distance: number;
+  }>;
 
   /** 근거 부재 여부 */
-  no_evidence: boolean
+  no_evidence: boolean;
 
   /** 선택된 모델 */
-  model: string
+  model: string;
 
   /** 출력 참조 */
-  output_ref: string
+  output_ref: string;
 
   /** 토큰 수 */
   tokens: {
-    input: number
-    output: number
-  }
+    input: number;
+    output: number;
+  };
 }
 
 // ============================================================================
@@ -381,14 +381,14 @@ export interface ChatbotQueryLog {
 // ============================================================================
 
 export interface ApiError {
-  error: string
-  message: string
-  code?: string
+  error: string;
+  message: string;
+  code?: string;
 }
 
 export interface ApiSuccess<T = unknown> {
-  success: true
-  data: T
+  success: true;
+  data: T;
 }
 
 // ============================================================================
@@ -396,13 +396,13 @@ export interface ApiSuccess<T = unknown> {
 // ============================================================================
 
 export interface EnvConfig {
-  DATABASE_URL: string
-  AWS_REGION: string
-  AWS_ACCESS_KEY_ID: string
-  AWS_SECRET_ACCESS_KEY: string
-  BEDROCK_EMBED_MODEL: string
-  BEDROCK_CLAUDE_SONNET: string
-  BEDROCK_CLAUDE_HAIKU: string
-  PORT: number
-  NODE_ENV: 'development' | 'production' | 'test'
+  DATABASE_URL: string;
+  AWS_REGION: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  BEDROCK_EMBED_MODEL: string;
+  BEDROCK_CLAUDE_SONNET: string;
+  BEDROCK_CLAUDE_HAIKU: string;
+  PORT: number;
+  NODE_ENV: 'development' | 'production' | 'test';
 }

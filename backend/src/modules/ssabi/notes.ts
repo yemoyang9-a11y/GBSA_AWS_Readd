@@ -13,20 +13,20 @@
  * DB 나 서비스에 묶여 있으면 fixture 만으로 그 경계를 짚기 어렵다.
  */
 
-import type { CharacterNote } from '../../shared/types'
+import type { CharacterNote } from '../../shared/types';
 
 /** 표시 상한 문장 수 (A5) */
-const MAX_SENTENCES = 8
+const MAX_SENTENCES = 8;
 
 export function truncateNotes(notes: CharacterNote[]): string {
-  const sentences = notes.map((note) => note.note)
+  const sentences = notes.map((note) => note.note);
 
   if (sentences.length <= MAX_SENTENCES) {
-    return sentences.join(' ')
+    return sentences.join(' ');
   }
 
   // 최초 1문장 + 최근 7문장 — 인물의 도입부 맥락을 잃지 않으면서 최신 서술을 보여준다
-  const first = sentences[0]
-  const recent = sentences.slice(-(MAX_SENTENCES - 1))
-  return [first, ...recent].join(' ')
+  const first = sentences[0];
+  const recent = sentences.slice(-(MAX_SENTENCES - 1));
+  return [first, ...recent].join(' ');
 }

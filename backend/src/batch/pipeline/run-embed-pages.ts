@@ -20,15 +20,16 @@ async function main(): Promise<void> {
     [BOOK_ID]
   )) as { rows: { page_no: number; content: string }[] };
 
-  console.log(`=== "${BOOK_ID}" 임베딩 대상 ${pending.rows.length}페이지 (이미 완료된 페이지는 건너뜀) ===`);
+  console.log(
+    `=== "${BOOK_ID}" 임베딩 대상 ${pending.rows.length}페이지 (이미 완료된 페이지는 건너뜀) ===`
+  );
 
   for (const page of pending.rows) {
     const embedding = await embedText(page.content);
-    await pool.query('UPDATE pages SET embedding = $1::vector WHERE book_id = $2 AND page_no = $3', [
-      toVectorLiteral(embedding),
-      BOOK_ID,
-      page.page_no,
-    ]);
+    await pool.query(
+      'UPDATE pages SET embedding = $1::vector WHERE book_id = $2 AND page_no = $3',
+      [toVectorLiteral(embedding), BOOK_ID, page.page_no]
+    );
     console.log(`  [완료] ${page.page_no}페이지`);
   }
 

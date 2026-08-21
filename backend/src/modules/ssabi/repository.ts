@@ -71,11 +71,7 @@ export interface SsabiRepository {
    *
    * @returns 인물 정보 또는 null (존재하지 않거나 cutoff 초과)
    */
-  getCharacter(
-    bookId: string,
-    characterId: string,
-    cutoff: number
-  ): Promise<Character | null>;
+  getCharacter(bookId: string, characterId: string, cutoff: number): Promise<Character | null>;
 
   /**
    * 관계도 그래프 조회 (조립형)

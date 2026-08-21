@@ -11,12 +11,12 @@
  *    만들지 않는다(CLAUDE.md 절대 규칙 3번).
  */
 
-import type { RecapInput } from '../../shared/types'
-import type { BookMetaReader, RecapContentReader } from './repository'
+import type { RecapInput } from '../../shared/types';
+import type { BookMetaReader, RecapContentReader } from './repository';
 
 export interface RecapAssemblyDeps {
-  content: RecapContentReader
-  books: BookMetaReader
+  content: RecapContentReader;
+  books: BookMetaReader;
 }
 
 /**
@@ -36,18 +36,18 @@ export async function assembleRecapInput(
   cutoff: number
 ): Promise<RecapInput> {
   if (cutoff <= 0) {
-    return { chapter_summaries: [], current_chapter_text: null, cutoff }
+    return { chapter_summaries: [], current_chapter_text: null, cutoff };
   }
 
-  const chapterSummaries = await deps.content.findCompletedChapterSummaries(bookId, cutoff)
+  const chapterSummaries = await deps.content.findCompletedChapterSummaries(bookId, cutoff);
 
-  const chapterAtK = await deps.books.findChapterContaining(bookId, cutoff)
+  const chapterAtK = await deps.books.findChapterContaining(bookId, cutoff);
   if (chapterAtK === null) {
     // 장 범위 합집합 완전 커버는 파이프라인이 검증한다(FR-DAT-001 🚦). 도달했다면 데이터
     // 결함이므로 빈 값으로 메우지 않는다 — 실패 = 미노출(FR-SPL-005 🚦, R11).
     throw new Error(
       `[recap-assembly] cutoff=${cutoff}가 속한 장을 찾을 수 없어 조립을 만들지 않는다: bookId=${bookId}`
-    )
+    );
   }
 
   const currentChapterText =
@@ -55,7 +55,7 @@ export async function assembleRecapInput(
       ? null // K가 장 종료 페이지와 일치 — 요약만, 원문 중복 투입 방지
       : (
           await deps.content.findCurrentChapterPageTexts(bookId, cutoff, chapterAtK.start_page)
-        ).join('\n')
+        ).join('\n');
 
   return {
     chapter_summaries: chapterSummaries.map((s) => ({
@@ -66,5 +66,5 @@ export async function assembleRecapInput(
     })),
     current_chapter_text: currentChapterText,
     cutoff,
-  }
+  };
 }

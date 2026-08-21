@@ -11,41 +11,41 @@
  *    (폴백 대상 아님)이다. 합치면 첫 진입에서 불필요한 스트리밍 폴백 호출이 발생한다.
  */
 
-import type { CutoffService } from './cutoff.service'
-import type { BookMetaReader, SavedRecapRepository } from './repository'
-import type { BriefingResponse } from '../../shared/types'
+import type { CutoffService } from './cutoff.service';
+import type { BookMetaReader, SavedRecapRepository } from './repository';
+import type { BriefingResponse } from '../../shared/types';
 
 export interface BriefingServiceDeps {
-  cutoffService: CutoffService
-  books: BookMetaReader
-  savedRecap: SavedRecapRepository
+  cutoffService: CutoffService;
+  books: BookMetaReader;
+  savedRecap: SavedRecapRepository;
 }
 
 export interface BriefingService {
-  getBriefing(deviceId: string, bookId: string): Promise<BriefingResponse>
+  getBriefing(deviceId: string, bookId: string): Promise<BriefingResponse>;
 }
 
 export function createBriefingService(deps: BriefingServiceDeps): BriefingService {
-  const { cutoffService, books, savedRecap } = deps
+  const { cutoffService, books, savedRecap } = deps;
 
   return {
     async getBriefing(deviceId: string, bookId: string): Promise<BriefingResponse> {
-      const snapshot = await cutoffService.getCutoffSnapshot(deviceId, bookId) // 요청당 1회 (2.1절)
-      const totalPages = await books.findTotalPages(bookId)
+      const snapshot = await cutoffService.getCutoffSnapshot(deviceId, bookId); // 요청당 1회 (2.1절)
+      const totalPages = await books.findTotalPages(bookId);
       if (totalPages === null) {
         // cutoffService가 같은 조회로 이미 통과했으므로 이 분기는 사실상 도달하지 않는다.
         // 도달한다면 조회 사이 데이터가 사라진 결함이므로 메우지 않는다 (FR-SPL-005 🚦).
-        throw new Error(`[briefing] total_pages를 확인할 수 없다: bookId=${bookId}`)
+        throw new Error(`[briefing] total_pages를 확인할 수 없다: bookId=${bookId}`);
       }
 
-      let recap: string | null = null
+      let recap: string | null = null;
       if (snapshot.cutoff > 0) {
         // ❓Q1 — K=0은 재사용 판정 자체를 하지 않는다. "만들 내용이 없음"과
         // "저장분이 없어서 못 보여줌"을 같은 null로 뭉개면 첫 진입에서 불필요한
         // 스트리밍 폴백이 발생한다(4.1절).
-        const saved = await savedRecap.findSavedRecap(deviceId, bookId)
+        const saved = await savedRecap.findSavedRecap(deviceId, bookId);
         if (saved !== null && saved.cutoff_page === snapshot.cutoff) {
-          recap = saved.recap_text // R8 — 완전 일치만 재사용
+          recap = saved.recap_text; // R8 — 완전 일치만 재사용
         }
         // saved === null 이거나 기준점이 다르면 recap은 null로 남고, applied_cutoff > 0
         // 이므로 클라이언트가 스트리밍 폴백을 호출한다(recap/stream).
@@ -60,7 +60,7 @@ export function createBriefingService(deps: BriefingServiceDeps): BriefingServic
           total_pages: totalPages,
           percent: snapshot.percent,
         },
-      }
+      };
     },
-  }
+  };
 }
