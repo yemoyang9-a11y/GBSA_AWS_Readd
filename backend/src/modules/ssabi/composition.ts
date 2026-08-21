@@ -10,6 +10,7 @@ import type { Pool } from 'pg';
 import type { SsabiRepository } from './repository';
 import { createPgSsabiRepository, type QueryClient } from './pg-repository';
 import { createGraphService, type GraphService } from './graph.service';
+import { createCharacterService, type CharacterService } from './character.service';
 
 /**
  * 싸비 서비스 집합
@@ -17,6 +18,7 @@ import { createGraphService, type GraphService } from './graph.service';
 export interface SsabiServices {
   repository: SsabiRepository;
   graph: GraphService;
+  character: CharacterService;
 }
 
 function toQueryClient(pool: Pool): QueryClient {
@@ -36,5 +38,6 @@ export function createSsabiServices(pool: Pool): SsabiServices {
   return {
     repository,
     graph: createGraphService({ repository }),
+    character: createCharacterService({ repository }),
   };
 }

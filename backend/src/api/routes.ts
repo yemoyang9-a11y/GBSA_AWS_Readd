@@ -443,8 +443,37 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/characters/:characterId', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
-});
+router.get(
+  '/books/:bookId/ssabi/characters/:characterId',
+  async (req: Request, res: Response) => {
+    const { bookId, characterId } = req.params;
+    const deviceId = requireDeviceId(req, res);
+    if (!deviceId) return;
+
+    // FR-BRW-002 🚦: 미완비 도서 거절
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    try {
+      // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
+      const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+
+      const detail = await ssabiServices.character.getCharacter(
+        bookId,
+        characterId,
+        snapshot.cutoff
+      );
+
+      // 기준점 이하에서 아직 등장하지 않은 인물은 "없는 인물"과 같게 응답한다.
+      // 이유를 구분해 알리면 그 차이가 곧 미등장 인물의 존재를 알려준다 (절대 규칙 7번)
+      if (detail === null) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Character not found' });
+      }
+      return res.json(detail);
+    } catch (error) {
+      console.error('[API] ssabi/characters error', { bookId, characterId, error });
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  }
+);
 
 export default router;
