@@ -59,3 +59,7 @@ backend/data/generated/
 
 # 로컬 작업 메모 (세션 간 인계용, git 미포함)
 CLAUDE.local.md
+
+# DB 덤프 — 파생 데이터이고 용량이 크다. 저장소에 넣지 않는다
+dump/
+*.dump
