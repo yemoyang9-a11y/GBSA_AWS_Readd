@@ -52,6 +52,12 @@ export function getModelForTask(task: string): string {
  * 버전이 변경되면 가드레일 재수행 필요
  */
 export function validateModelVersions(): void {
+  // Mock 모드에서는 validation skip
+  if (process.env.MOCK_MODE === 'true') {
+    console.log('⚠️  Mock Mode: Skipping model version validation');
+    return;
+  }
+
   const requiredEnvVars = [
     'BEDROCK_CLAUDE_SONNET',
     'BEDROCK_CLAUDE_HAIKU',

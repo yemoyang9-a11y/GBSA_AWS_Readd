@@ -4,12 +4,13 @@
  * Express 앱 초기화 및 서버 실행
  */
 
-import express from 'express';
+// 환경 변수 로드 - 다른 모듈 임포트 전에 실행 필요 (DATABASE_URL 등)
 import dotenv from 'dotenv';
-import routes from './api/routes';
-
-// 환경 변수 로드
 dotenv.config();
+
+import express from 'express';
+import path from 'path';
+import routes from './api/routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,13 +19,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Static files (테스트 페이지)
+app.use('/test', express.static(path.join(__dirname, '../public')));
+
 // CORS (개발용)
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, X-Device-Id');
 
-  if (_req.method === 'OPTIONS') {
+  if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
 
@@ -53,11 +57,14 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // 서버 시작
 app.listen(PORT, () => {
+  const mockMode = process.env.MOCK_MODE === 'true';
+
   console.log(`
 ┌─────────────────────────────────────────┐
 │  싸비 (Reading Recap) Backend          │
 │  Port: ${PORT}                           │
 │  Environment: ${process.env.NODE_ENV || 'development'}             │
+│  Mock Mode: ${mockMode ? '✅ ENABLED' : '❌ DISABLED'}           │
 │  Node: ${process.version}                      │
 └─────────────────────────────────────────┘
 
@@ -68,7 +75,7 @@ API Endpoints:
   R2 endpoints: /entry, /progress, /briefing, /recap/stream
   R4 endpoints: /books, /pages, /ssabi/graph
 
-Ready for requests!
+${mockMode ? '🧪 Test Page: http://localhost:' + PORT + '/test/test-chatbot.html\n' : ''}Ready for requests!
   `);
 });
 

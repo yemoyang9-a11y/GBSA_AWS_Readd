@@ -204,7 +204,12 @@ export interface SavedRecapRepository {
   findSavedRecap(deviceId: string, bookId: string): Promise<StoredSavedRecap | null>
 
   /** 사용자·도서당 1건 upsert (R7, FR-DAT-009). */
-  upsertSavedRecap(deviceId: string, bookId: string, cutoffPage: number, recapText: string): Promise<void>
+  upsertSavedRecap(
+    deviceId: string,
+    bookId: string,
+    cutoffPage: number,
+    recapText: string
+  ): Promise<void>
 }
 
 export interface SessionRecapCacheRepository {

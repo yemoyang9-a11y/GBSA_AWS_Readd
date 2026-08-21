@@ -53,9 +53,9 @@ export async function assembleRecapInput(
   const currentChapterText =
     chapterAtK.end_page === cutoff
       ? null // K가 장 종료 페이지와 일치 — 요약만, 원문 중복 투입 방지
-      : (await deps.content.findCurrentChapterPageTexts(bookId, cutoff, chapterAtK.start_page)).join(
-          '\n'
-        )
+      : (
+          await deps.content.findCurrentChapterPageTexts(bookId, cutoff, chapterAtK.start_page)
+        ).join('\n')
 
   return {
     chapter_summaries: chapterSummaries.map((s) => ({

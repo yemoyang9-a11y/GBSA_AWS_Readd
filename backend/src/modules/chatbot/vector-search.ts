@@ -9,8 +9,7 @@
 
 import type { SearchChunk } from '../../shared/types';
 import * as repo from './repository';
-// TODO: 실제 구현 시 사용 (현재는 스텁)
-// import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 /**
  * 검색 설정
@@ -40,22 +39,19 @@ const SEARCH_CONFIG = {
  */
 export async function vectorSearch(
   bookId: string,
-  _query: string,
+  query: string,
   K: number
 ): Promise<SearchChunk[]> {
 
   // 1. 질의 정규화 (별칭 사전으로 대표명 치환)
-  // TODO: 실제 구현 시 정규화 사용 (현재는 스텁)
-  // const normalizedQuery = await normalizeQuery(_query, bookId, K);
+  const normalizedQuery = await normalizeQuery(query, bookId, K);
 
   // 2. 질의 임베딩
-  // TODO: 실제 구현 시 임베딩 사용 (현재는 스텁)
-  // const queryEmbedding = await embedQuery(normalizedQuery);
+  const queryEmbedding = await embedQuery(normalizedQuery);
 
   // 3. 벡터 검색 - 단일 SQL (5.3절)
   // ⚠️ 사전 필터: WHERE page_no <= K
-  // TODO: 실제 구현 시 queryEmbedding 전달 (현재는 스텁)
-  const results = await performVectorSearch(bookId, [], K);
+  const results = await performVectorSearch(bookId, queryEmbedding, K);
 
   // NFR-OBS-005 🚦: 검색 선정 페이지 번호·스코어 로깅
   logSearchResults(bookId, K, results);
@@ -63,13 +59,11 @@ export async function vectorSearch(
   return results;
 }
 
-/*
+/**
  * 질의 정규화 (별칭 → 대표명 치환)
  *
  * 예: "정 주사" → "정주사"
- *
- * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
- *
+ */
 async function normalizeQuery(
   query: string,
   bookId: string,
@@ -90,15 +84,13 @@ async function normalizeQuery(
   console.log(`[VectorSearch] Normalized: "${query}" → "${normalizedQuery}"`);
   return normalizedQuery;
 }
-*/
 
-/*
+/**
  * 질의 임베딩
  *
  * Amazon Titan Text Embeddings V2 사용
- *
- * TODO: 실제 구현 시 사용 (현재는 스텁으로 주석 처리)
- *
+ * FR-QNA-006 🚦: 벡터 검색을 위한 실제 임베딩 생성
+ */
 async function embedQuery(query: string): Promise<number[]> {
   const client = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || 'us-east-1',
@@ -117,20 +109,25 @@ async function embedQuery(query: string): Promise<number[]> {
     body: JSON.stringify(requestBody),
   });
 
-  const response = await client.send(command);
-  const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+  try {
+    const response = await client.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-  // Titan 응답 형식: { embedding: [number[], ...] }
-  const embedding = responseBody.embedding || responseBody.embeddings?.[0];
+    // Titan 응답 형식: { embedding: [number[]], ... }
+    const embedding = responseBody.embedding || responseBody.embeddings?.[0];
 
-  if (!embedding) {
-    throw new Error('Failed to get embedding from Titan');
+    if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
+      throw new Error('Failed to get embedding from Titan: Invalid response format');
+    }
+
+    console.log(`[VectorSearch] Embedded query: "${query.substring(0, 50)}..." (${embedding.length}D)`);
+    return embedding;
+
+  } catch (error) {
+    console.error('[VectorSearch] Embedding failed:', error);
+    throw new Error(`Failed to embed query: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-
-  console.log(`[VectorSearch] Embedded query: "${query}" (${embedding.length}D)`);
-  return embedding;
 }
-*/
 
 /**
  * 벡터 검색 실행 (단일 SQL)
