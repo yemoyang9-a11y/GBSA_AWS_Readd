@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import RelationshipTab from './RelationshipTab';
 import type { GraphResponse } from '../../types';
 
@@ -32,6 +32,33 @@ describe('RelationshipTab', () => {
     expect(within(people).getByText('정주사')).toBeInTheDocument();
     expect(within(people).getByText('초봉')).toBeInTheDocument();
     expect(within(people).getByText('정 주사')).toBeInTheDocument();
+  });
+
+  it('되감기 슬라이더의 오른쪽 끝이 현재 진도다 — 처음에는 받은 것 전부가 보인다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+
+    const scrub = screen.getByLabelText('시점 되감기');
+    // 눈금은 받은 데이터에서 만들어진다 — 정주사(1)·초봉(3)·부녀(5)
+    expect(scrub).toHaveValue('2');
+    expect(screen.getByText('현재까지')).toBeInTheDocument();
+
+    const people = screen.getByRole('region', { name: '인물' });
+    expect(within(people).getByText('초봉')).toBeInTheDocument();
+  });
+
+  it('되감으면 그 시점 이후에 등장한 인물·관계가 사라진다', async () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+
+    // 1페이지 시점 — 정주사만 있고 초봉도 관계도 아직 없다
+    fireEvent.change(screen.getByLabelText('시점 되감기'), { target: { value: '0' } });
+
+    expect(screen.getByText('1페이지 시점')).toBeInTheDocument();
+    const people = screen.getByRole('region', { name: '인물' });
+    expect(within(people).getByText('정주사')).toBeInTheDocument();
+    expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
+
+    const relations = screen.getByRole('region', { name: '관계' });
+    expect(within(relations).queryByText('부녀')).not.toBeInTheDocument();
   });
 
   it('FR-SPL-005 🚦: 조회 실패는 부분 표시로 넘어가지 않는다', () => {
