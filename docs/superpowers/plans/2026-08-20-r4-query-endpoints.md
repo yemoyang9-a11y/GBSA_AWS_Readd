@@ -100,6 +100,67 @@ background_and_intro (book_id, kind CHECK IN ('background','intro'), content)
 
 ---
 
+## 팀 분담 (2026-08-21 합의) — R1 · R3 · R4 3인
+
+**소유권** — 이 5개 엔드포인트는 계약상 R4 소유지만, **조회 엔드포인트 5종에 한해 세 사람이
+소유권을 공유한다.** CLAUDE.md 6장("다른 파트의 파일을 수정하지 않는다")의 예외를 이 범위에
+한해 두는 것이며, 범위 밖 파일에는 적용되지 않는다.
+
+| 담당 | 태스크 | 분량 | 배정 근거 |
+| --- | --- | --- | --- |
+| **R1** | 1. content 모듈 → 4. `/info` | 572줄 | 001 DDL 저자. 컬럼명·적재 위치를 아는 유일한 사람이고 D-2 도 R1 이 답했다 |
+| **R3** | 6. ssabi 모듈 → 7. `/graph` | 808줄 | 챗봇이 전량 주입(B-1)으로 인물·관계·배경지식을 이미 읽는다. 같은 테이블 도메인 |
+| **R4** | 2. `/books` → 3. 가드 → 5. `/pages` | 683줄 | D-1·D-3 으로 `/books` 응답 형태를 정했고, 가드는 대시보드 카드 비활성화와 짝이다 |
+| — | 8. `/characters` | 432줄 | **미배정.** 소비 화면이 없어 데모에 불필요. 먼저 끝난 사람이 가져간다 |
+
+**R2 는 이번 분담에 없다.** 다섯 엔드포인트 전부가 `reading-state/cutoff.service.ts` 의
+`getCutoffSnapshot` 을 호출하지만 **그 파일은 R2 소유다. 호출만 하고 수정하지 않는다.**
+변경이 필요하면 R2 에게 요청한다.
+
+---
+
+## `routes.ts` 병합 순서
+
+**충돌 지점은 핸들러가 아니라 파일 상단이다.** 9~14행 import 블록과 19행 근처 조립 줄에
+세 사람이 모두 줄을 추가한다. 그 12줄 구역만 직렬화하면 나머지는 전부 병렬로 간다.
+
+### Round 0 — 새 파일만. 순서 무관, 충돌 없음
+
+- R1 `content/repository.ts` (포트 + Row 타입, 어댑터 없이)
+- R3 `ssabi/repository.ts` (포트. **모든 메서드가 cutoff 인자를 갖는다** — G1)
+
+**이 두 파일을 먼저 올리는 것이 3인 병렬의 전제다.** 포트만 있으면 나머지 사람이 fake
+리포지토리로 서비스와 게이트 테스트를 먼저 쓸 수 있다. 어댑터를 기다리지 않는다.
+
+### Round 1 — `routes.ts` 상단. 반드시 이 순서로, 한 번에 한 명
+
+1. **R4 — 가드** (`api/book-ready.guard.ts` 신규 + import 1줄 + 4개 핸들러에 배선)
+   **가드를 가장 먼저 넣는 이유** — 4개 핸들러를 건드리는데 지금은 본문이 501 한 줄이라
+   가장 싸다. 구현이 끝난 뒤에 넣으면 완성된 핸들러 4개를 전부 다시 고쳐야 한다.
+2. **R1 — content 조립** (import 1줄 + `createContentServices(pool)` 1줄)
+3. **R3 — ssabi 조립** (import 1줄 + `createSsabiServices(pool)` 1줄)
+
+각 커밋은 **`routes.ts` 변경만 담는다.** 다른 파일과 섞으면 충돌 해결이 어려워진다.
+앞사람 커밋이 올라간 것을 확인하고 시작한다.
+
+### Round 2 — 핸들러 본문 교체. 순서 무관, 병렬
+
+각자 자기 `router.get(...)` 블록만 바꾸므로 서로 부딪히지 않는다.
+
+- R4 `/books` · `/pages` · R1 `/info` · R3 `/graph`
+
+### Round 3
+
+- `/characters` (Task 8)
+
+### 공통 규칙
+
+- 병합 직전 `git fetch && git rebase` — 팀원들이 자주 push 한다
+- 작업 브랜치는 `feature/R4-query-endpoints` 를 공유한다
+- 커밋 형식은 그대로 `{type}({파트}): {요약} — {조항 ID}`. 각자 자기 파트 태그를 쓴다
+
+---
+
 ### D-1. `GET /books`에 `total_pages`를 넣는가
 
 `team-sync-r4.md` §4.5(🟡 미해소)는 **넣지 말자**고 한다 — 대시보드에 `current_page / total_pages` 재계산 재료를 주지 않기 위해서다(절대 규칙 2번). 그런데 `frontend/src/types/book.ts`의 `BookSummary`에는 `total_pages: number`가 필수 필드로 들어 있다.
