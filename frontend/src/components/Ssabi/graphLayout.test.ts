@@ -1,4 +1,4 @@
-import { centralNodeIndex, radialLayout } from './graphLayout';
+import { centralNodeIndex, radialLayout, shouldShowEdgeLabels, EDGE_LABEL_LIMIT } from './graphLayout';
 
 /**
  * 관계도 배치 — 스펙 §6
@@ -91,5 +91,27 @@ describe('radialLayout — 중심 1명 + 둘레', () => {
     const midA = { x: (c.x + a.x) / 2, y: (c.y + a.y) / 2 };
     const midB = { x: (c.x + b.x) / 2, y: (c.y + b.y) / 2 };
     expect(midA).not.toEqual(midB);
+  });
+});
+
+/**
+ * shouldShowEdgeLabels — polish (2026-08-21)
+ *
+ * 실 데이터(「탁류」 100p 시점, 인물 30·간선 51)에서 캔버스 라벨이 중심 근처에 뭉쳐
+ * 읽을 수 없었다. 관계 목록이 항상 텍스트로 병기하므로(NFR-USE-006) 간선이 많을 땐
+ * 캔버스 라벨만 생략한다.
+ */
+describe('shouldShowEdgeLabels — 간선이 많으면 캔버스 라벨을 생략한다', () => {
+  it(`${EDGE_LABEL_LIMIT}개 이하면 라벨을 보여준다`, () => {
+    expect(shouldShowEdgeLabels(EDGE_LABEL_LIMIT)).toBe(true);
+    expect(shouldShowEdgeLabels(0)).toBe(true);
+  });
+
+  it(`${EDGE_LABEL_LIMIT}개를 넘으면 라벨을 생략한다`, () => {
+    expect(shouldShowEdgeLabels(EDGE_LABEL_LIMIT + 1)).toBe(false);
+  });
+
+  it('실 데이터 규모(간선 51개)에서는 라벨을 생략한다', () => {
+    expect(shouldShowEdgeLabels(51)).toBe(false);
   });
 });

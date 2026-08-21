@@ -99,4 +99,20 @@ describe('싸비 사이드창', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText(/정주사/)).not.toBeInTheDocument();
   });
+
+  it('critique P1: 확인된 기준점이 있으면 헤더에 "Np까지 확인" 배지를 보여준다', () => {
+    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
+    expect(screen.getByText('79p까지 확인')).toBeInTheDocument();
+  });
+
+  it('critique P1: 아직 아무 스트림도 확인해 주지 않았으면(null) 배지를 그리지 않는다', () => {
+    render(<SsabiPanel {...baseProps} />);
+    expect(screen.queryByText(/까지 확인/)).not.toBeInTheDocument();
+  });
+
+  it('polish: 헤더가 여닫기 버튼(Reader가 그리는 고정 위치, size-9)과 겹치지 않을 오른쪽 여백을 확보한다', () => {
+    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
+    // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
+    expect(screen.getByText('싸비의 가이드북').parentElement).toHaveClass('pr-20');
+  });
 });

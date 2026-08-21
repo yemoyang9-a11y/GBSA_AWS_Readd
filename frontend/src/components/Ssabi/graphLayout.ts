@@ -23,6 +23,22 @@ export interface Point {
 const DEFAULT_RADIUS = 110;
 const DEFAULT_CENTER: Point = { x: 180, y: 140 };
 
+/**
+ * 간선 라벨을 캔버스에 그릴 상한 (polish, 2026-08-21).
+ *
+ * 실 데이터(「탁류」 100p 시점, 인물 30·간선 51)로 실측하니 중심 인물에서 뻗는 간선 라벨이
+ * 원 중심 근처에서 서로 겹쳐 읽을 수 없는 글자 뭉치가 됐다(위 방사형 배치 설명의 "중점이
+ * 흩어진다"는 짝을 이룬 두 간선끼리는 맞지만, 스포크가 20개가 넘으면 흩어진 자리끼리도
+ * 다시 빽빽해진다). 이 값을 넘으면 간선은 선으로만 그리고, 라벨은 관계 목록에서 텍스트로
+ * 확인한다 — 정보를 숨기는 게 아니라 이미 있는 텍스트 표시 수단(NFR-USE-006)으로 옮기는
+ * 것뿐이다.
+ */
+export const EDGE_LABEL_LIMIT = 15;
+
+export function shouldShowEdgeLabels(edgeCount: number): boolean {
+  return edgeCount <= EDGE_LABEL_LIMIT;
+}
+
 /** 원주에 n 개를 균등 분포시킨다. 12시에서 시작해 시계 방향 */
 function ringPoints(n: number, radius: number, center: Point): Point[] {
   return Array.from({ length: n }, (_, i) => {

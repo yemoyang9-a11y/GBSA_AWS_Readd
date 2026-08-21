@@ -4,7 +4,9 @@
  * 받은 조각을 순서대로 이어 붙이기만 한다. 스트리밍 중 페이지가 바뀌어도 끊지 않는다 —
  * 진행 중인 응답은 시작 시점 기준점을 유지한다 (UC-27 A5).
  *
- * 조판은 시안 패널 본문 실측값을 따른다 — Gothic A1 15px, muted, 행간 1.6 (97:1246).
+ * 조판은 시안 패널 본문 실측값을 따른다 — Gothic A1 15px, 행간 1.6 (97:1246).
+ * 색은 ink로 둔다(critique P2, 2026-08-21) — 이 탭에서 독자가 실제로 찾는 본문이라, muted는
+ * 저자명·타임스탬프 같은 진짜 보조 요소에만 남긴다.
  * 바깥 여백은 `SsabiPanel` 의 탭 콘텐츠 영역이 갖고 있으므로 여기서 다시 주지 않는다.
  */
 export default function RecapTab({
@@ -25,7 +27,7 @@ export default function RecapTab({
 
   return (
     <div className="space-y-3">
-      <p className="whitespace-pre-wrap text-[15px] leading-[1.6] text-muted">{text}</p>
+      <p className="whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">{text}</p>
       {streaming ? (
         <span aria-live="polite" className="block text-[11px] text-faint">
           불러오는 중

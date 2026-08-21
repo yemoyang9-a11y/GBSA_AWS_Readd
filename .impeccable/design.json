@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-21T07:05:00Z",
+  "title": "Design System: RE:ADD (싸비)",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "차분한 인디고 (Calm Indigo)",
+        "canonical": "#3b3db2",
+        "tonalRamp": ["#14153f", "#201f75", "#2b2996", "#3436a3", "#3b3db2", "#6567c6", "#9a9bdb", "#d6d6f2"]
+      },
+      "ssabi": {
+        "role": "secondary",
+        "displayName": "따뜻한 테라코타 (Warm Terracotta)",
+        "canonical": "#c86b3d",
+        "tonalRamp": ["#3d1f0f", "#5c2f16", "#7c3f1d", "#a3542a", "#c86b3d", "#d68e66", "#e3b294", "#f2dbc8"]
+      },
+      "ssabi-soft": {
+        "role": "secondary-surface",
+        "displayName": "테라코타 소프트",
+        "canonical": "#fdf6f0",
+        "tonalRamp": ["#c86b3d", "#d68e66", "#e3b294", "#eecead", "#f5ddc4", "#f9e8d8", "#fcf1e7", "#fdf6f0"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "따뜻한 오프화이트 (Canvas)",
+        "canonical": "#faf8f5",
+        "tonalRamp": ["#3a3833", "#5a564e", "#847e73", "#a89f92", "#cdc4b5", "#e6ded2", "#f4efe7", "#faf8f5"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "서페이스 화이트",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#3a3833", "#5a564e", "#847e73", "#a89f92", "#cdc4b5", "#e6ded2", "#f7f5f2", "#ffffff"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "잉크 (Ink)",
+        "canonical": "#1c1b1a",
+        "tonalRamp": ["#000000", "#0e0d0d", "#1c1b1a", "#3a3836", "#57534f", "#807b76", "#aaa49d", "#d4cfc8"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "뮤티드 그레이",
+        "canonical": "#6e6a66",
+        "tonalRamp": ["#1c1b1a", "#302e2c", "#453f3b", "#57534f", "#6e6a66", "#8a857f", "#a8a29b", "#c9c3ba"]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "페인트 그레이",
+        "canonical": "#76726e",
+        "tonalRamp": ["#1c1b1a", "#332f2c", "#4a4541", "#5e5954", "#76726e", "#928d87", "#afaaa2", "#cec9c0"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "라인",
+        "canonical": "#ebe6e0",
+        "tonalRamp": ["#5e5954", "#79736c", "#948d85", "#afa89d", "#cac2b6", "#ded7cd", "#ebe6e0", "#f4f1ec"]
+      },
+      "active": {
+        "role": "neutral",
+        "displayName": "액티브 블랙",
+        "canonical": "#111111",
+        "tonalRamp": ["#000000", "#0a0a0a", "#111111", "#2b2b2b", "#4a4a4a", "#6f6f6f", "#9a9a9a", "#c8c8c8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "RE:ADD 워드마크, 도서 카드 제목." },
+      "prose": { "displayName": "Reading Prose", "purpose": "읽기 화면 본문 전용 — 이 시스템에서 유일하게 560px 폭 제한을 받는 텍스트." },
+      "title": { "displayName": "Title", "purpose": "패널·섹션 헤더(\"싸비의 가이드북\")." },
+      "body": { "displayName": "Body", "purpose": "싸비 패널 탭 본문(리캡 등), 보통 muted 색상과 함께." },
+      "label": { "displayName": "Label", "purpose": "탭 라벨, nav 텍스트, 캡션, 스트리밍 표시." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 8px 8px rgba(28, 27, 26, 0.03)", "purpose": "도서 카드의 앰비언트 리프트. 시스템 전체에서 유일한 그림자." }
+    ],
+    "motion": [
+      { "name": "opacity-transition", "value": "opacity 0.2s ease", "purpose": "버튼·아이콘 버튼 hover/disabled 전환." },
+      { "name": "spin-loader", "value": "animate-spin (1s linear infinite)", "purpose": "Loading 컴포넌트의 중립 스피너 — 색은 항상 line/ink만, 액센트는 쓰지 않는다." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "강조 동작(예: '마저 읽기', 에러 재시도) — ink 배경 + 흰 글씨.",
+      "html": "<button class=\"ds-btn-primary\">마저 읽기</button>",
+      "css": ".ds-btn-primary { background: #1c1b1a; color: #ffffff; font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 13px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s ease; } .ds-btn-primary:hover { opacity: 0.85; } .ds-btn-primary:focus-visible { outline: 2px solid #3b3db2; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Pill Button",
+      "kind": "button",
+      "refersTo": "button-pill",
+      "description": "보조 동작 — 알약형, surface 배경 + line-subtle 테두리.",
+      "html": "<button class=\"ds-btn-pill\">도서 검색</button>",
+      "css": ".ds-btn-pill { background: #ffffff; color: #76726e; font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 13px; padding: 8px 16px; border: 1px solid #edeae6; border-radius: 20px; cursor: pointer; transition: opacity 0.2s ease; } .ds-btn-pill:hover { opacity: 0.8; } .ds-btn-pill:focus-visible { outline: 2px solid #3b3db2; outline-offset: 2px; } .ds-btn-pill:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Filter Tabs",
+      "kind": "chip",
+      "refersTo": "tab-active",
+      "description": "대시보드 필터 탭 — 선택 시 active(#111) 배경, 미선택은 line-subtle 테두리.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab--active\" aria-pressed=\"true\">읽는 중</button><button class=\"ds-tab\" aria-pressed=\"false\">전체</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 8px; } .ds-tab { font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 13px; padding: 8px 16px; border-radius: 20px; border: 1px solid #edeae6; background: #ffffff; color: #76726e; cursor: pointer; } .ds-tab--active { background: #111111; color: #ffffff; border-color: #111111; font-weight: 700; } .ds-tab:hover { opacity: 0.85; } .ds-tab:focus-visible { outline: 2px solid #3b3db2; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ssabi Tabs",
+      "kind": "chip",
+      "refersTo": "ssabi-tab-active",
+      "description": "싸비 패널 내부 3탭 — 선택 시 ssabi-soft 배경 + ssabi 테두리·텍스트. 필터 탭보다 조용한 선택 신호.",
+      "html": "<div role=\"tablist\" class=\"ds-ssabi-tabs\"><button role=\"tab\" class=\"ds-ssabi-tab ds-ssabi-tab--active\" aria-selected=\"true\">리캡</button><button role=\"tab\" class=\"ds-ssabi-tab\" aria-selected=\"false\">인물 관계도</button><button role=\"tab\" class=\"ds-ssabi-tab\" aria-selected=\"false\">챗봇</button></div>",
+      "css": ".ds-ssabi-tabs { display: flex; gap: 8px; } .ds-ssabi-tab { font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 12px; padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #6e6a66; cursor: pointer; } .ds-ssabi-tab--active { background: #fdf6f0; border-color: #c86b3d; color: #c86b3d; font-weight: 700; } .ds-ssabi-tab:focus-visible { outline: 2px solid #3b3db2; outline-offset: 2px; }"
+    },
+    {
+      "name": "Book Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "312px 고정폭 도서 카드. 표지 없는 도서는 명조 조판(TypographicCover)으로 대신하고, 진도가 있으면 진도 바를 붙인다.",
+      "html": "<div class=\"ds-book-card\"><div class=\"ds-typographic-cover\"><span class=\"ds-cover-title\">탁류</span><span class=\"ds-cover-rule\"></span><span class=\"ds-cover-author\">채만식</span></div><span class=\"ds-book-title\">탁류</span><span class=\"ds-book-author\">채만식</span><div class=\"ds-book-progress\"><div class=\"ds-progress-track\"><div class=\"ds-progress-fill\" style=\"width:65%\"></div></div></div></div>",
+      "css": ".ds-book-card { width: 312px; background: #ffffff; border-radius: 16px; padding: 18px; box-shadow: 0 8px 8px rgba(28, 27, 26, 0.03); font-family: \"Gothic A1\", system-ui, sans-serif; } .ds-typographic-cover { height: 240px; width: 100%; border-radius: 8px; border: 1px solid #ebe6e0; background: #faf8f5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; } .ds-cover-title { font-family: \"Nanum Myeongjo\", serif; font-size: 24px; font-weight: 700; color: #1c1b1a; } .ds-cover-rule { width: 32px; height: 1px; background: #ebe6e0; } .ds-cover-author { font-size: 12px; color: #6e6a66; } .ds-book-title { display: block; margin-top: 16px; font-family: \"Nanum Myeongjo\", serif; font-size: 18px; font-weight: 700; color: #1c1b1a; } .ds-book-author { display: block; margin-top: 2px; font-size: 12px; color: #6e6a66; } .ds-book-progress { margin-top: 16px; border-top: 1px solid #ebe6e0; padding-top: 16px; } .ds-progress-track { height: 4px; width: 100%; border-radius: 2px; background: #ebe6e0; overflow: hidden; } .ds-progress-fill { height: 100%; background: #1c1b1a; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "대시보드 통계 카드 — 값은 명조 24px 인디고, 라벨은 고딕 12px faint.",
+      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-value\">3</span><span class=\"ds-stat-label\">읽는 중</span></div>",
+      "css": ".ds-stat-card { display: flex; flex-direction: column; gap: 8px; border-radius: 16px; border: 1px solid #edeae6; background: #ffffff; padding: 16px; } .ds-stat-value { font-family: \"Nanum Myeongjo\", serif; font-size: 24px; font-weight: 700; color: #3b3db2; } .ds-stat-label { font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #76726e; }"
+    },
+    {
+      "name": "Loading",
+      "kind": "custom",
+      "refersTo": "loading",
+      "description": "중립 스피너 + 맥락 문구. 전체 화면(canvas 배경)과 패널 내부(배경 없음) 두 변형.",
+      "html": "<div class=\"ds-loading\" role=\"status\"><span class=\"ds-loading-spinner\" aria-hidden=\"true\"></span><span class=\"ds-loading-text\">책을 펼치는 중</span></div>",
+      "css": ".ds-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 64px 24px; text-align: center; } .ds-loading-spinner { width: 20px; height: 20px; border-radius: 9999px; border: 2px solid #ebe6e0; border-top-color: #1c1b1a; animation: ds-spin 1s linear infinite; } .ds-loading-text { font-family: \"Gothic A1\", system-ui, sans-serif; font-size: 13px; color: #6e6a66; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
+    },
+    {
+      "name": "Ssabi Toggle Button",
+      "kind": "custom",
+      "refersTo": "ssabi-toggle",
+      "description": "싸비 패널 여닫기 버튼(시그니처 컴포넌트). 열림/닫힘과 무관하게 화면의 같은 자리에 고정된다.",
+      "html": "<button class=\"ds-ssabi-toggle\" aria-expanded=\"false\" aria-label=\"싸비 열기\"><svg viewBox=\"0 0 16 16\" width=\"16\" height=\"16\" fill=\"none\" aria-hidden=\"true\"><rect x=\"1.2\" y=\"2.7\" width=\"13.6\" height=\"10.6\" rx=\"2.4\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M9.8 2.7v10.6\" stroke=\"currentColor\" stroke-width=\"1.3\"/><path d=\"M9.8 2.7h2.6a2.4 2.4 0 0 1 2.4 2.4v6.2a2.4 2.4 0 0 1-2.4 2.4H9.8V2.7Z\" fill=\"currentColor\" fill-opacity=\"0.35\"/></svg></button>",
+      "css": ".ds-ssabi-toggle { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; border: none; background: #1c1b1a; color: #ffffff; cursor: pointer; transition: opacity 0.2s ease; } .ds-ssabi-toggle:hover { opacity: 0.8; } .ds-ssabi-toggle:focus-visible { outline: 2px solid #3b3db2; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "표지 없는 고전의 조판실 (The Typesetting Room for a Coverless Classic)",
+    "overview": "「탁류」는 1937년 공개도메인 작품이라 정본 표지가 없다. 이 시스템은 그 결핍을 이미지로 메우는 대신, 명조체 조판으로 표지 구실을 하게 만든다(TypographicCover) — 이 결정 하나가 시스템 전체의 태도를 대표한다: 없는 것을 지어내지 않고, 활자 그 자체로 정체성을 세운다.\n톤은 차분한 에디토리얼 원톤이다. 따뜻한 오프화이트 캔버스 위에 흰 카드가 얹히고, 그림자는 있는 듯 없는 듯한 수준 하나뿐이다. 게임화·네온·다크모드 테크 무드는 의도적으로 피한다.\n색은 정확히 두 개의 액센트만 쓴다. 차분한 인디고는 진도·통계 숫자에만, 따뜻한 테라코타는 싸비가 소유한 UI에만 쓰이고 둘은 코드 수준에서도 절대 섞이지 않는다.",
+    "keyCharacteristics": [
+      "따뜻한 오프화이트 캔버스 위, 거의 평면적인 흰 카드",
+      "명조 = 책의 목소리, 고딕 = 인터페이스의 목소리 — 절대 섞지 않는다",
+      "인디고(진도·통계)와 테라코타(싸비) 두 액센트만, 각자의 영역 밖으로 새지 않는다",
+      "표지·삽화 없이 활자 조판만으로 정체성을 세운다"
+    ],
+    "rules": [
+      { "name": "The Two Accents Rule", "body": "인디고는 진도·통계에만, 테라코타는 싸비 UI에만 쓴다. 한 요소에 두 액센트가 동시에 나타나는 순간 두 개념이 시각적으로 뒤섞인다.", "section": "colors" },
+      { "name": "The Serif Page Rule", "body": "명조는 독자가 책으로서 대하는 것에만 쓴다. 인터페이스 요소가 명조를 빌리는 순간 그 요소는 스스로를 본문의 일부라고 주장하는 셈이 된다.", "section": "typography" },
+      { "name": "The Barely-There Rule", "body": "그림자는 있는 듯 없는 듯해야 한다. 오프셋을 키우거나 블러를 진하게 하거나 색을 넣고 싶어지는 순간, 다른 시스템을 만들고 있다는 신호다.", "section": "elevation" }
+    ],
+    "dos": [
+      "인디고는 진도·통계 숫자에만, 테라코타는 싸비 소유 UI에만 쓴다.",
+      "명조는 책(워드마크·제목·본문), 고딕은 인터페이스(탭·버튼·캡션)로 엄격히 나눈다.",
+      "표지가 없는 도서는 이미지를 지어내지 말고 명조 조판(TypographicCover)으로 대신한다.",
+      "그림자는 card 토큰 하나만 쓴다.",
+      "읽기 화면 본문은 폭 560px, 명조 18px/행간 2를 유지하고 폰트·화면 크기 변화에 페이지를 다시 나누지 않는다."
+    ],
+    "donts": [
+      "진도 바를 읽기 화면에 넣지 않는다 — 페이지 번호만 표시한다.",
+      "아이콘 전용 컨트롤에 텍스트 라벨이나 aria-label 없이 배포하지 않는다.",
+      "액센트 두 색을 한 요소 안에서 함께 쓰지 않는다.",
+      "그림자·입체감을 표현 수단으로 늘리지 않는다."
+    ]
+  }
+}

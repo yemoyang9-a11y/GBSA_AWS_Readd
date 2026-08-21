@@ -41,7 +41,7 @@ export default function RelationshipTab({
   const shown = useMemo(() => (graph ? graphUpTo(graph, at) : null), [graph, at]);
 
   if (failed) return <p role="alert">관계도를 불러오지 못했습니다</p>;
-  if (!graph || !shown) return <Loading />;
+  if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   const nameOf = (id: string) => shown.nodes.find((n) => n.id === id)?.name ?? id;
 

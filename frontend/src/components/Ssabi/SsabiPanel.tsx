@@ -24,6 +24,7 @@ const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
  */
 export default function SsabiPanel({
   sessionEpoch,
+  appliedCutoff = null,
   onTabChange,
   graph,
   graphFailed,
@@ -36,6 +37,11 @@ export default function SsabiPanel({
   onAsk,
 }: {
   sessionEpoch: number;
+  /**
+   * 리캡·챗봇 스트림의 done 프레임이 확인해 준 기준점(FR-SPL-002 관련 NFR-OBS-003).
+   * 둘 다 아직 안 받았으면 null — 이땐 배지를 그리지 않는다. 프론트가 스스로 계산하지 않는다.
+   */
+  appliedCutoff?: number | null;
   onTabChange: (tab: SsabiTab) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
@@ -71,8 +77,18 @@ export default function SsabiPanel({
     <section className="flex h-full flex-col border-l border-line bg-surface">
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
           패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
-      <div className="px-6 pb-5 pt-6">
+      <div className="flex items-center justify-between gap-2 pb-5 pl-6 pr-20 pt-6">
+        {/*
+         * pr-20(80px) — 여닫기 버튼은 Reader가 이 헤더와 같은 줄, 같은 우측 여백(right-6)에
+         * 고정 위치로 그린다(size-9=36px). px-6만 쓰면 이 배지의 오른쪽 끝이 버튼과 정확히
+         * 같은 x좌표에서 겹친다 — 버튼 폭(36px) + 여유(20px)만큼 오른쪽을 비워 겹침을 막는다.
+         */}
         <h2 className="font-serif text-base font-extrabold text-ink">싸비의 가이드북</h2>
+        {appliedCutoff !== null ? (
+          <span className="shrink-0 rounded-pill bg-ssabi-soft px-2.5 py-1 text-[11px] font-bold text-ssabi">
+            {appliedCutoff}p까지 확인
+          </span>
+        ) : null}
       </div>
 
       {/* 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]") */}

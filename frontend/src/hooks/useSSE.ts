@@ -14,6 +14,12 @@ export function useSSE() {
   const [text, setText] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * done 프레임이 실어 온 적용된 기준점. 프론트가 계산한 값이 아니라 서버가 확인해 준
+   * 값이므로 표시에 써도 절대 규칙 2번과 부딪히지 않는다 — 마지막으로 받은 값을 유지하고,
+   * 다음 요청이 시작돼도(consume 재호출) 새 done 이 올 때까지는 지우지 않는다.
+   */
+  const [appliedCutoff, setAppliedCutoff] = useState<number | null>(null);
 
   const consume = useCallback(async (frames: AsyncGenerator<SseFrame>) => {
     setText('');
@@ -32,7 +38,11 @@ export function useSSE() {
           setError(frame.message);
           return;
         }
-        return; // done
+        // done
+        if (typeof frame.applied_cutoff === 'number') {
+          setAppliedCutoff(frame.applied_cutoff);
+        }
+        return;
       }
     } finally {
       setStreaming(false);
@@ -44,5 +54,5 @@ export function useSSE() {
     setError(null);
   }, []);
 
-  return { text, streaming, error, consume, reset };
+  return { text, streaming, error, appliedCutoff, consume, reset };
 }

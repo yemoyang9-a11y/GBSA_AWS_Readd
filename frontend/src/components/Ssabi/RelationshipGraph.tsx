@@ -1,7 +1,7 @@
 import { ReactFlow, Background, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { GraphResponse } from '../../types';
-import { centralNodeIndex, radialLayout } from './graphLayout';
+import { centralNodeIndex, radialLayout, shouldShowEdgeLabels } from './graphLayout';
 
 /**
  * 관계도 그래프 렌더 — S4
@@ -18,6 +18,10 @@ import { centralNodeIndex, radialLayout } from './graphLayout';
  *    Tailwind 클래스가 닿지 않는다. G11 의 "토큰 이름으로 쓴다"를 지킬 수 없는 유일한
  *    구간이라, 값을 아래 한 곳에 모으고 어느 토큰의 값인지 이름으로 남긴다.
  *    tailwind.config.js 의 해당 토큰을 바꾸면 여기도 함께 고쳐야 한다.
+ *
+ * 간선이 많으면(graphLayout.ts의 shouldShowEdgeLabels 기준 초과) 캔버스 라벨을 생략한다
+ * (polish, 2026-08-21) — 실 데이터(100p 시점, 간선 51개)에서 라벨이 중심 근처에 뭉쳐
+ * 읽을 수 없었다. 아래 "관계" 목록이 항상 텍스트로 병기하므로 NFR-USE-006은 그대로 지켜진다.
  */
 const TOKEN = {
   surface: '#ffffff',
@@ -49,11 +53,15 @@ export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
     },
   }));
 
+  const showLabels = shouldShowEdgeLabels(graph.edges.length);
+
   const edges: Edge[] = graph.edges.map((edge) => ({
     id: `${edge.source}-${edge.target}`,
     source: edge.source,
     target: edge.target,
-    label: edge.label, // NFR-USE-006 — 글자로 병기
+    // NFR-USE-006(글자로 병기)은 아래 "관계" 목록이 항상 만족한다 — 캔버스 라벨은
+    // 간선이 적어 겹치지 않을 때만 얹는 보너스다 (graphLayout.ts의 EDGE_LABEL_LIMIT 참조).
+    label: showLabels ? edge.label : undefined,
     labelStyle: { fontSize: 11, fill: TOKEN.muted },
     style: { stroke: TOKEN.line },
   }));

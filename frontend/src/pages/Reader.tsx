@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
+import Button from '../components/common/Button';
 import SsabiToggleButton from '../components/common/SsabiToggleButton';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
 import { enterBook, sendProgress } from '../services/progressService';
@@ -57,26 +58,48 @@ export default function Reader() {
   const [session, setSession] = useState<EntryResponse | null>(entry ?? null);
   const [currentPage, setCurrentPage] = useState<number | null>(entry?.page ?? null);
 
+  /**
+   * 진입 판정 실패 상태. 실패 시 무한 로딩 대신 재시도 UI를 보여준다 —
+   * 크리틱 P0: 이전에는 `.catch` 가 없어 백엔드 장애 시 "불러오는 중"에서 영원히 멈췄다.
+   */
+  const [entryError, setEntryError] = useState(false);
+  const [pageError, setPageError] = useState(false);
+
+  const loadEntry = useCallback(() => {
+    setEntryError(false);
+    void enterBook(bookId)
+      .then((judged) => {
+        setSession(judged);
+        setCurrentPage(judged.page);
+      })
+      .catch(() => setEntryError(true));
+  }, [bookId]);
+
   useEffect(() => {
     if (session) return;
-    void enterBook(bookId).then((judged) => {
-      setSession(judged);
-      setCurrentPage(judged.page);
-    });
-  }, [bookId, session]);
+    loadEntry();
+  }, [session, loadEntry]);
 
   const {
     text: recapText,
     streaming: recapStreaming,
     error: recapError,
+    appliedCutoff: recapAppliedCutoff,
     consume: consumeRecap,
   } = useSSE();
   const {
     text: chatAnswer,
     streaming: chatStreaming,
     error: chatError,
+    appliedCutoff: chatAppliedCutoff,
     consume: consumeChat,
   } = useSSE();
+  /**
+   * 패널 헤더에 보여줄 "확인된 기준점". 리캡(R2 확정 필드)을 우선하고, 아직 리캡을 열지
+   * 않았다면 챗봇 쪽 값을 쓴다. 관계도 탭은 계약에 이 값이 아직 없어(GraphResponse TODO)
+   * 관계도만 본 상태에서는 표시할 수 없다 — 프론트가 K를 계산해서 채우지 않는다(절대 규칙 2번).
+   */
+  const panelAppliedCutoff = recapAppliedCutoff ?? chatAppliedCutoff;
   const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
 
   /**
@@ -92,12 +115,22 @@ export default function Reader() {
     });
   }, [bookId]);
 
+  const loadPage = useCallback(
+    (targetPage: number) => {
+      setPageError(false);
+      void fetchPage(bookId, targetPage)
+        .then(setPage)
+        .catch(() => setPageError(true));
+    },
+    [bookId]
+  );
+
   useEffect(() => {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
-    void fetchPage(bookId, currentPage).then(setPage);
+    loadPage(currentPage);
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     sendProgress(bookId, currentPage);
-  }, [bookId, currentPage]);
+  }, [bookId, currentPage, loadPage]);
 
   // 리캡 탭을 열면 그 시점 기준점으로 받는다. 페이지가 바뀌면 다시 받는다 (FR-SVB-003)
   useEffect(() => {
@@ -113,7 +146,30 @@ export default function Reader() {
     [consumeChat, bookId, currentPage]
   );
 
-  if (!page) return <Loading />;
+  if (entryError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
+        <p role="alert" className="text-[13px] text-muted">
+          읽기를 시작하지 못했습니다
+        </p>
+        <Button onClick={loadEntry}>다시 시도</Button>
+      </div>
+    );
+  }
+
+  if (!page) {
+    if (pageError) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
+          <p role="alert" className="text-[13px] text-muted">
+            페이지를 불러오지 못했습니다
+          </p>
+          <Button onClick={() => currentPage !== null && loadPage(currentPage)}>다시 시도</Button>
+        </div>
+      );
+    }
+    return <Loading message="책을 펼치는 중" />;
+  }
 
   return (
     <div className="relative flex h-screen flex-col bg-canvas">
@@ -161,6 +217,7 @@ export default function Reader() {
           <aside id="ssabi-panel" className="w-[420px] shrink-0">
             <SsabiPanel
               sessionEpoch={session?.session_epoch ?? 0}
+              appliedCutoff={panelAppliedCutoff}
               onTabChange={setTab}
               graph={graph}
               graphFailed={graphFailed}
