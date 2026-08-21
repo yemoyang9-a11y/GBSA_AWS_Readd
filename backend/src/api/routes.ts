@@ -324,12 +324,22 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
 /**
  * GET /books
  *
- * 카탈로그 조회
+ * 카탈로그 조회 — FR-BRW-001, FR-BRW-002 🚦, FR-BRF-005 🚦 (R4)
  *
- * TODO: R4 구현
+ * 미완비 도서도 목록에 담는다 — 대시보드가 표지를 띄우고 잠그려면 목록에 있어야 한다.
+ * 그래서 이 핸들러에는 ensureBookReady 를 걸지 않는다. 차단은 개별 도서 조회에서 한다.
  */
-router.get('/books', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books', async (req: Request, res: Response) => {
+  // 읽던 도서 판정에 디바이스가 필요하다 (진도는 디바이스별로 저장된다)
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    return res.json(await contentServices.catalogService.getCatalog(deviceId));
+  } catch (error) {
+    console.error('[API] Catalog error', { error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
@@ -359,12 +369,36 @@ router.get('/books/:bookId/info', async (req: Request, res: Response) => {
 /**
  * GET /books/:bookId/pages/:pageNo
  *
- * 본문 페이지 단건
+ * 본문 페이지 단건 — FR-PRG-001, R3 (R4)
  *
- * TODO: R4 구현
+ * 진도를 받지 않는다. (page, seq)를 동봉받지 않으므로 프리페치가 기준점을 밀 수 없다
+ * (team-sync §1.1·§4.3). 진도는 POST /books/{b}/progress 하나로만 올라간다.
+ * 본문 접근 자체는 상한 대상이 아니다 (R3, FR-SPL-001).
  */
-router.get('/books/:bookId/pages/:pageNo', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/pages/:pageNo', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const pageNo = Number(req.params.pageNo);
+
+  // 페이지 번호는 1-based 정수 (API_CONTRACT.md 공통 규칙)
+  if (!Number.isInteger(pageNo) || pageNo < 1) {
+    return res
+      .status(400)
+      .json({ error: 'BAD_REQUEST', message: 'pageNo must be a positive integer' });
+  }
+
+  try {
+    // FR-BRW-002 🚦 — UI 차단만으로는 부족하다. API를 직접 호출해도 서버가 거절한다
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    const page = await contentServices.pageService.getPage(bookId, pageNo);
+    if (page === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Page not found' });
+    }
+    return res.json(page);
+  } catch (error) {
+    console.error('[API] Page error', { bookId, pageNo, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
