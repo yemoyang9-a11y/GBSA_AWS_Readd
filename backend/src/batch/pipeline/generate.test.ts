@@ -10,7 +10,14 @@ import {
 } from './generate';
 import { Chapter, Page } from '../../shared/types';
 
-const chapter: Chapter = { id: 'c1', book_id: 'takryu', chapter_no: 1, title: '인간기념물', start_page: 1, end_page: 2 };
+const chapter: Chapter = {
+  id: 'c1',
+  book_id: 'takryu',
+  chapter_no: 1,
+  title: '인간기념물',
+  start_page: 1,
+  end_page: 2,
+};
 const pages: Page[] = [
   { id: 'p1', book_id: 'takryu', page_no: 1, content: '첫 페이지 내용.' },
   { id: 'p2', book_id: 'takryu', page_no: 2, content: '둘째 페이지 내용.' },
@@ -59,7 +66,9 @@ describe('프롬프트 빌더 — 장 번호·제목·원문이 포함되는지'
 
 describe('parseJsonResponse', () => {
   test('순수 JSON을 파싱한다', () => {
-    expect(parseJsonResponse<{ summary: string }>('{"summary": "요약"}')).toEqual({ summary: '요약' });
+    expect(parseJsonResponse<{ summary: string }>('{"summary": "요약"}')).toEqual({
+      summary: '요약',
+    });
   });
 
   test('마크다운 코드블록으로 감싼 JSON도 파싱한다', () => {

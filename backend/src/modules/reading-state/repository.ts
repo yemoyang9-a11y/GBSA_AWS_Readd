@@ -10,21 +10,21 @@
  *    이 계층에 추가하지 않는다 (CP4 교차 리뷰 항목 1·2).
  */
 
-import type { RecapCallLog } from '../../shared/types'
+import type { RecapCallLog } from '../../shared/types';
 
 /** 진도 테이블(reading_position)의 저장 레코드 — 5.1.2절 */
 export interface StoredPosition {
   /** 마지막으로 열어본 페이지. 이 시스템의 유일한 저장값 (3.3절) */
-  current_page: number
+  current_page: number;
 
   /** 클라이언트 단조 증가 시퀀스. 순서 보장용 (FR-PRG-002) */
-  event_seq: number
+  event_seq: number;
 }
 
 /** 장 경계 테이블에서 뽑은 장 식별 정보 */
 export interface ChapterRef {
-  chapter_no: number
-  title: string
+  chapter_no: number;
+  title: string;
 }
 
 /**
@@ -33,8 +33,8 @@ export interface ChapterRef {
  * S1)와 다른 소비처이므로 별도 타입으로 둔다 — 기존 소비처의 계약을 넓히지 않는다.
  */
 export interface ChapterBoundary extends ChapterRef {
-  start_page: number
-  end_page: number
+  start_page: number;
+  end_page: number;
 }
 
 /**
@@ -47,7 +47,7 @@ export interface ReadingPositionRepository {
    * cutoff 인자 없음의 근거 — 이 조회가 **cutoff의 원천**이다. 상한을 적용받는 쪽이
    * 아니라 상한을 만들어내는 쪽이므로 상한 개념이 성립하지 않는다 (3.3절).
    */
-  findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null>
+  findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null>;
 
   /**
    * 진도 이벤트를 그대로 저장한다. "더 새로운 seq일 때만 수용"의 판단은 이 함수의
@@ -57,7 +57,7 @@ export interface ReadingPositionRepository {
    *
    * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
    */
-  savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void>
+  savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void>;
 
   /**
    * 저장된 `event_seq`를 0으로 되돌린다. 저장 위치가 없으면 아무 것도 하지 않는다 —
@@ -67,7 +67,7 @@ export interface ReadingPositionRepository {
    * 거치므로 클라이언트가 seq를 이어붙이지 않아도 된다). cutoff 인자 없음의 근거 —
    * findPosition·savePosition과 동일하게 cutoff의 원천이다.
    */
-  resetEventSeq(deviceId: string, bookId: string): Promise<void>
+  resetEventSeq(deviceId: string, bookId: string): Promise<void>;
 }
 
 /**
@@ -82,7 +82,7 @@ export interface BookMetaReader {
    * cutoff 인자 없음의 근거 — 도서 메타이며 위치 값을 가진 레코드가 아니다.
    * 전체 페이지 수는 진도와 무관하게 대시보드에도 노출되는 값이다 (FR-BRW-001).
    */
-  findTotalPages(bookId: string): Promise<number | null>
+  findTotalPages(bookId: string): Promise<number | null>;
 
   /**
    * `pageNo`가 속한 장을 찾는다 (start_page <= pageNo <= end_page). 없으면 null.
@@ -94,7 +94,7 @@ export interface BookMetaReader {
    * S5가 같은 함수를 K(cutoff)에 대해 호출해 "K가 장 중간인지"를 판정한다 — 그 호출도
    * 조회 대상은 장 경계(상한 비대상)이지 장 요약이 아니므로 이 근거가 그대로 적용된다.
    */
-  findChapterContaining(bookId: string, pageNo: number): Promise<ChapterBoundary | null>
+  findChapterContaining(bookId: string, pageNo: number): Promise<ChapterBoundary | null>;
 
   /**
    * 도서의 완비 여부(ssabi_ready) — 미완비 도서 진입 거절의 근거 (FR-BRW-002, S3).
@@ -104,31 +104,31 @@ export interface BookMetaReader {
    * cutoff 인자 없음의 근거 — 도서 메타이며 진도와 무관한 정적 플래그다(대시보드에도
    * 동일 값이 노출된다, FR-BRW-002).
    */
-  findReadiness(bookId: string): Promise<boolean | null>
+  findReadiness(bookId: string): Promise<boolean | null>;
 }
 
 // ============================================================================
 // 세션 — 무조작 30분 판정 + 스위퍼 대상 선별 (R6, FR-DAT-011, S3·S4)
 // ============================================================================
 
-export type RecapState = 'none' | 'pending' | 'done' | 'failed'
+export type RecapState = 'none' | 'pending' | 'done' | 'failed';
 
 /** 세션 테이블(reading_session)의 저장 레코드 — 5.1.2절 */
 export interface StoredSession {
-  last_activity_at: Date
-  recap_state: RecapState
-  session_epoch: number
+  last_activity_at: Date;
+  recap_state: RecapState;
+  session_epoch: number;
 }
 
 /** 스위퍼 스캔이 선별한 대상 1건 */
 export interface SweepTarget {
-  device_id: string
-  book_id: string
+  device_id: string;
+  book_id: string;
 }
 
 export interface ReadingSessionRepository {
   /** (디바이스, 도서)의 세션 레코드를 읽는다. 없으면 null (= 이 조합 최초 진입). */
-  findSession(deviceId: string, bookId: string): Promise<StoredSession | null>
+  findSession(deviceId: string, bookId: string): Promise<StoredSession | null>;
 
   /**
    * "조작 이벤트 수신" 갱신 — `last_activity_at = now`, `recap_state = 'none'` (4.4.1절).
@@ -136,14 +136,14 @@ export interface ReadingSessionRepository {
    * 이 함수의 책임이 아니다 — 그 판단은 session.service.ts의 진입 판정이 미리 마친다
    * (S2와 같은 층 분리 원칙: 리포지토리는 판단하지 않고 쓴다).
    */
-  recordActivity(deviceId: string, bookId: string): Promise<void>
+  recordActivity(deviceId: string, bookId: string): Promise<void>;
 
   /**
    * 새 세션 경계를 연다 — `session_epoch`를 1 증가시키고(레코드가 없으면 1로 시작)
    * `last_activity_at = now`, `recap_state = 'none'`을 함께 쓴다. 진입 판정(S3)이
    * "새 세션"으로 판단했을 때만 호출한다.
    */
-  startNewSession(deviceId: string, bookId: string): Promise<{ session_epoch: number }>
+  startNewSession(deviceId: string, bookId: string): Promise<{ session_epoch: number }>;
 
   /**
    * 스위퍼 스캔 대상 — `recap_state = 'none' AND last_activity_at < before` (4.4.1절).
@@ -151,16 +151,16 @@ export interface ReadingSessionRepository {
    * cutoff 인자 없음의 근거 — 이 조회의 필터는 진도 상한이 아니라 세션 비활성 시각이다.
    * 스위퍼는 실행 단위이며 상한 개념이 없는 쓰기 주체와 동급이다(00-shared 2.2절 예외).
    */
-  findSweepTargets(before: Date): Promise<SweepTarget[]>
+  findSweepTargets(before: Date): Promise<SweepTarget[]>;
 
   /** 스위퍼가 잡을 발행하기 전에 상태를 선점한다 — 다음 스캔이 같은 대상을 다시 집지 않는다. */
-  markPending(deviceId: string, bookId: string): Promise<void>
+  markPending(deviceId: string, bookId: string): Promise<void>;
 
   /** 리캡 생성 잡 성공 종료. */
-  markDone(deviceId: string, bookId: string): Promise<void>
+  markDone(deviceId: string, bookId: string): Promise<void>;
 
   /** 리캡 생성 잡 실패 종료 — 사용자 동선은 막지 않는다 (NFR-AI-016, 브리핑 폴백으로 흡수). */
-  markFailed(deviceId: string, bookId: string): Promise<void>
+  markFailed(deviceId: string, bookId: string): Promise<void>;
 }
 
 // ============================================================================
@@ -169,10 +169,10 @@ export interface ReadingSessionRepository {
 
 /** 완결된 장 요약 1건. `id`는 없다 — PK가 (도서ID, 장 번호)이므로 로그의 "요약 ID"는 장 번호를 쓴다 (5.1.1절). */
 export interface ChapterSummaryRecord {
-  chapter_no: number
-  title: string
-  content: string
-  end_page: number
+  chapter_no: number;
+  title: string;
+  content: string;
+  end_page: number;
 }
 
 export interface RecapContentReader {
@@ -180,14 +180,14 @@ export interface RecapContentReader {
    * 완결된 장 요약 전부 — `종료 페이지 <= cutoff` (FR-SPL-003 🚦). 상한이 걸리는 조회이므로
    * `findX(bookId, cutoff, ...)` 형태를 따른다 (00-shared 2.2절).
    */
-  findCompletedChapterSummaries(bookId: string, cutoff: number): Promise<ChapterSummaryRecord[]>
+  findCompletedChapterSummaries(bookId: string, cutoff: number): Promise<ChapterSummaryRecord[]>;
 
   /**
    * `fromPage`부터 `cutoff`까지의 본문 페이지 텍스트 — "현재 장 원문 절단"의 원천
    * (FR-SPL-003 🚦). `fromPage`는 K가 속한 장의 시작 페이지이며, 호출부(recap-assembly)가
    * `findChapterContaining(bookId, cutoff)`로 먼저 구해 넘긴다. 페이지 번호 순으로 반환한다.
    */
-  findCurrentChapterPageTexts(bookId: string, cutoff: number, fromPage: number): Promise<string[]>
+  findCurrentChapterPageTexts(bookId: string, cutoff: number, fromPage: number): Promise<string[]>;
 }
 
 // ============================================================================
@@ -195,13 +195,13 @@ export interface RecapContentReader {
 // ============================================================================
 
 export interface StoredSavedRecap {
-  cutoff_page: number
-  recap_text: string
+  cutoff_page: number;
+  recap_text: string;
 }
 
 export interface SavedRecapRepository {
   /** (디바이스, 도서)의 저장 리캡을 읽는다. 없으면 null. */
-  findSavedRecap(deviceId: string, bookId: string): Promise<StoredSavedRecap | null>
+  findSavedRecap(deviceId: string, bookId: string): Promise<StoredSavedRecap | null>;
 
   /** 사용자·도서당 1건 upsert (R7, FR-DAT-009). */
   upsertSavedRecap(
@@ -209,12 +209,12 @@ export interface SavedRecapRepository {
     bookId: string,
     cutoffPage: number,
     recapText: string
-  ): Promise<void>
+  ): Promise<void>;
 }
 
 export interface SessionRecapCacheRepository {
   /** 기준점(cutoff)별 적중 판정 — 다르면 캐시 미스다 (R8, UC-09 A7). */
-  findCached(deviceId: string, bookId: string, cutoff: number): Promise<string | null>
+  findCached(deviceId: string, bookId: string, cutoff: number): Promise<string | null>;
 
   /** 실시간 생성분 적재. 영구 저장이 아니다 — `expiresAt` 이후 스위퍼·TTL이 정리한다 (FR-DAT-010). */
   saveCached(
@@ -223,7 +223,7 @@ export interface SessionRecapCacheRepository {
     cutoff: number,
     recapText: string,
     expiresAt: Date
-  ): Promise<void>
+  ): Promise<void>;
 }
 
 // ============================================================================
@@ -232,7 +232,7 @@ export interface SessionRecapCacheRepository {
 
 export interface ConversationHistoryRepository {
   /** 세션 종료 시 대화 이력을 파기한다. 질의 로그(운영 기록 스토어)는 별도 테이블이며 대상이 아니다. */
-  purge(deviceId: string, bookId: string): Promise<void>
+  purge(deviceId: string, bookId: string): Promise<void>;
 }
 
 // ============================================================================
@@ -246,5 +246,5 @@ export interface RecapCallLogger {
    * 기록하지 않는다 — "호출 1회 → 로그 1건"의 대구가 재사용 경로에서 깨지면 로그가
    * 실제 호출 수를 부풀린다.
    */
-  record(entry: RecapCallLog): Promise<void>
+  record(entry: RecapCallLog): Promise<void>;
 }

@@ -25,12 +25,12 @@
  *    반영된 다음 이 함수가 파생만 담당한다.
  */
 
-import type { CutoffSnapshot } from '../../shared/types'
-import type { BookMetaReader, ReadingPositionRepository } from './repository'
+import type { CutoffSnapshot } from '../../shared/types';
+import type { BookMetaReader, ReadingPositionRepository } from './repository';
 
 export interface CutoffServiceDeps {
-  positions: ReadingPositionRepository
-  books: BookMetaReader
+  positions: ReadingPositionRepository;
+  books: BookMetaReader;
 }
 
 export interface CutoffService {
@@ -44,7 +44,7 @@ export interface CutoffService {
    * @throws 도서가 없거나 장 커버리지에 구멍이 있으면 스냅샷을 만들지 않고 던진다.
    *         실패 = 미노출이 원칙이므로 기본값으로 메우지 않는다 (FR-SPL-005 🚦, R11).
    */
-  getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot>
+  getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot>;
 }
 
 /**
@@ -55,43 +55,43 @@ export interface CutoffService {
  * 과 같은 상태이며, 같은 규칙이 그대로 `cutoff = 0`을 만든다 — **별도 분기를 만들지 않는다**
  * (3.3절 경계값).
  */
-export const FIRST_ENTRY_PAGE = 1
+export const FIRST_ENTRY_PAGE = 1;
 
 /** 진도 % 표시 자리수. API_CONTRACT.md 예시(80 / 340 → 23.5)와 같은 규칙 */
-const PERCENT_DECIMALS = 1
+const PERCENT_DECIMALS = 1;
 
 export function createCutoffService(deps: CutoffServiceDeps): CutoffService {
-  const { positions, books } = deps
+  const { positions, books } = deps;
 
   return {
     async getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot> {
-      const stored = await positions.findPosition(deviceId, bookId)
+      const stored = await positions.findPosition(deviceId, bookId);
 
       // 저장값 — 유일한 원천 (3.3절)
-      const currentPage = stored?.current_page ?? FIRST_ENTRY_PAGE
+      const currentPage = stored?.current_page ?? FIRST_ENTRY_PAGE;
 
-      const totalPages = await books.findTotalPages(bookId)
+      const totalPages = await books.findTotalPages(bookId);
       if (totalPages === null || totalPages <= 0) {
         throw new Error(
           `[cutoff] 도서의 total_pages를 확인할 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
-        )
+        );
       }
 
-      const chapter = await books.findChapterContaining(bookId, currentPage)
+      const chapter = await books.findChapterContaining(bookId, currentPage);
       if (chapter === null) {
         // 장 범위 합집합 = [1, 마지막 페이지] 완전 커버는 파이프라인이 검증한다
         // (FR-DAT-001 🚦). 여기 도달했다면 데이터 결함이므로 조용히 삼키지 않는다.
         throw new Error(
           `[cutoff] page=${currentPage}가 속한 장을 찾을 수 없어 스냅샷을 만들지 않는다: bookId=${bookId}`
-        )
+        );
       }
 
       // ── 파생 계산: 이 블록이 시스템 전체의 유일한 계산 지점이다 ──────────────
-      const cutoff = currentPage - 1 // FR-PRG-003 🚦 — 스포일러 상한 K
+      const cutoff = currentPage - 1; // FR-PRG-003 🚦 — 스포일러 상한 K
       const percent = round(
         (currentPage / totalPages) * 100, // FR-BRF-005 🚦 — 단일 원천
         PERCENT_DECIMALS
-      )
+      );
       // ───────────────────────────────────────────────────────────────────────
 
       return {
@@ -102,12 +102,12 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService {
           chapter_no: chapter.chapter_no,
           title: chapter.title,
         },
-      }
+      };
     },
-  }
+  };
 }
 
 function round(value: number, decimals: number): number {
-  const factor = 10 ** decimals
-  return Math.round(value * factor) / factor
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
 }

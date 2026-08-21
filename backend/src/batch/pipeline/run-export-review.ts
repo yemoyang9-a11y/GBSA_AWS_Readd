@@ -13,7 +13,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { pool } from '../../config/database';
 import { ResolvedBookData } from './check-integrity';
-import { buildReviewSheetRows, toReviewSheetCsv, passedReviewKeys, ALL_CRITERIA, ReviewRecordRow } from './review';
+import {
+  buildReviewSheetRows,
+  toReviewSheetCsv,
+  passedReviewKeys,
+  ALL_CRITERIA,
+  ReviewRecordRow,
+} from './review';
 
 const BOOK_ID = 'takryu';
 
@@ -33,7 +39,9 @@ async function main(): Promise<void> {
   const outPath = path.join(__dirname, `../../../data/generated/full/review-sheet-${BOOK_ID}.csv`);
   fs.writeFileSync(outPath, csv, 'utf-8');
 
-  console.log(`[OK] 검수 시트 ${rows.length}건 내보냄 (검수 통과 ${alreadyReviewed.size}건은 제외) → ${outPath}`);
+  console.log(
+    `[OK] 검수 시트 ${rows.length}건 내보냄 (검수 통과 ${alreadyReviewed.size}건은 제외) → ${outPath}`
+  );
   await pool.end();
 }
 

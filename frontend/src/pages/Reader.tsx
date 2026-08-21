@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
+import SsabiToggleButton from '../components/common/SsabiToggleButton';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
 import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
@@ -27,11 +28,26 @@ import type { EntryResponse, PageResponse, SsabiTab } from '../types';
 export default function Reader() {
   const { bookId = '' } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const entry = (location.state as { entry?: EntryResponse } | null)?.entry;
 
   const [page, setPage] = useState<PageResponse | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [tab, setTab] = useState<SsabiTab>(DEFAULT_SSABI_TAB);
+
+  /**
+   * 싸비 패널 열림 상태. **기본은 닫힘**이다 — 읽기 화면에 들어오면 본문만 보이고,
+   * 사용자가 top-bar 우측 토글을 눌러야 싸비가 열린다 (시안 47:132 "싸비없는 책읽기").
+   *
+   * 닫을 때는 `<aside>` 째로 언마운트한다. 숨기기만 하면 닫힌 패널의 리캡 탭이 계속 살아 있어
+   * 페이지를 넘길 때마다 보이지도 않는 리캡 스트리밍이 나간다 — 아래 리캡 effect 가 선택된
+   * 탭만 보고 패널 가시성은 보지 않기 때문이다. 그건 그대로 LLM 재호출이고 분당 3회 상한에
+   * 걸린다 (NFR-AI-017).
+   *
+   * TODO 대가로 닫았다 열면 탭이 기본값으로 돌아간다. 탭 기억과 무의미한 호출 차단을 함께
+   *   만족시키려면 조회 effect 들의 조건에 이 상태를 넣어야 한다 — 추가 기능 작업에서 처리.
+   */
+  const [panelOpen, setPanelOpen] = useState(false);
 
   /**
    * 시작 페이지·세션은 **서버 진입 판정**이 정한다 (FR-BRF-001, 절대 규칙 8번).
@@ -100,33 +116,65 @@ export default function Reader() {
   if (!page) return <Loading />;
 
   return (
-    <div className="flex h-screen">
-      <div className="flex-1">
-        <ReaderView
-          content={page.content}
-          currentPage={page.page_no}
-          totalPages={totalPages}
-          prevPage={page.prev_page}
-          nextPage={page.next_page}
-          onMove={setCurrentPage}
-        />
+    <div className="relative flex h-screen flex-col bg-canvas">
+      {/*
+       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(72px)
+       * 아래, 패널 헤더의 "싸비의 가이드북"과 같은 줄, 화면 우측에서 24px.
+       * 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고, top-bar 안에 두면
+       * 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
+       */}
+      <div className="absolute right-6 top-24 z-10">
+        <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
       </div>
 
-      <aside className="w-96">
-        <SsabiPanel
-          sessionEpoch={session?.session_epoch ?? 0}
-          onTabChange={setTab}
-          graph={graph}
-          graphFailed={graphFailed}
-          recapText={recapText}
-          recapStreaming={recapStreaming}
-          recapFailed={recapError !== null}
-          chatAnswer={chatAnswer}
-          chatStreaming={chatStreaming}
-          chatError={chatError}
-          onAsk={handleAsk}
-        />
-      </aside>
+      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="뒤로 가기"
+            className="flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink transition-opacity hover:opacity-60"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-serif text-lg font-bold tracking-widest text-ink">RE:ADD</span>
+            <span className="text-xs text-muted">탁류</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1">
+          <ReaderView
+            content={page.content}
+            currentPage={page.page_no}
+            totalPages={totalPages}
+            prevPage={page.prev_page}
+            nextPage={page.next_page}
+            onMove={setCurrentPage}
+          />
+        </div>
+
+        {panelOpen ? (
+          <aside id="ssabi-panel" className="w-[420px] shrink-0">
+            <SsabiPanel
+              sessionEpoch={session?.session_epoch ?? 0}
+              onTabChange={setTab}
+              graph={graph}
+              graphFailed={graphFailed}
+              recapText={recapText}
+              recapStreaming={recapStreaming}
+              recapFailed={recapError !== null}
+              chatAnswer={chatAnswer}
+              chatStreaming={chatStreaming}
+              chatError={chatError}
+              onAsk={handleAsk}
+            />
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 }

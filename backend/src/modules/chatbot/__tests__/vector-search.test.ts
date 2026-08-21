@@ -13,7 +13,7 @@ describe('벡터 검색 - FR-QNA-006 🚦', () => {
       const K = 80;
       const results: SearchChunk[] = [
         { page_no: 50, content: '...', distance: 0.15 },
-        { page_no: 75, content: '...', distance: 0.20 },
+        { page_no: 75, content: '...', distance: 0.2 },
         { page_no: 80, content: '...', distance: 0.25 }, // 경계값
       ];
 
@@ -27,7 +27,7 @@ describe('벡터 검색 - FR-QNA-006 🚦', () => {
       const K = 80;
       const results: SearchChunk[] = [
         { page_no: 50, content: '...', distance: 0.15 },
-        { page_no: 81, content: '...', distance: 0.10 }, // 위반!
+        { page_no: 81, content: '...', distance: 0.1 }, // 위반!
         { page_no: 85, content: '...', distance: 0.12 }, // 위반!
       ];
 
@@ -41,7 +41,7 @@ describe('벡터 검색 - FR-QNA-006 🚦', () => {
       const K = 100;
       const results: SearchChunk[] = [
         { page_no: 99, content: '...', distance: 0.15 },
-        { page_no: 100, content: '...', distance: 0.20 }, // K = 100, valid
+        { page_no: 100, content: '...', distance: 0.2 }, // K = 100, valid
       ];
 
       const validation = validateSearchResults(results, K);

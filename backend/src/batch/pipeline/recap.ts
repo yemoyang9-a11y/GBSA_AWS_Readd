@@ -21,7 +21,11 @@ interface ChapterRow {
 }
 
 /** 완결된 장 요약(종료 페이지 <= cutoff) + 현재 장 원문 절단[현재 장 시작..cutoff]을 조립한다 */
-export async function assembleRecapInput(client: QueryClient, bookId: string, cutoff: number): Promise<RecapInput> {
+export async function assembleRecapInput(
+  client: QueryClient,
+  bookId: string,
+  cutoff: number
+): Promise<RecapInput> {
   const chaptersResult = (await client.query(
     `SELECT chapter_no, title, start_page, end_page FROM chapters WHERE book_id = $1 ORDER BY chapter_no`,
     [bookId]
@@ -63,7 +67,9 @@ export async function assembleRecapInput(client: QueryClient, bookId: string, cu
 export function buildRecapPrompt(input: RecapInput, title: string, author: string): string {
   const summaryBlock =
     input.chapter_summaries.length > 0
-      ? input.chapter_summaries.map((cs) => `${cs.chapter_no}장 "${cs.title}": ${cs.content}`).join('\n')
+      ? input.chapter_summaries
+          .map((cs) => `${cs.chapter_no}장 "${cs.title}": ${cs.content}`)
+          .join('\n')
       : '(없음 — 아직 완결된 장 없음)';
 
   const currentBlock = input.current_chapter_text

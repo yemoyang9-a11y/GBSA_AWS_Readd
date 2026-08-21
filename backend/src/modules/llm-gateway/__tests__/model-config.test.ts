@@ -41,7 +41,7 @@ describe('모델 설정', () => {
     test('반환된 모델 ID는 Bedrock 형식', () => {
       const tasks = ['chatbot_easy', 'chatbot_hard', 'recap'];
 
-      tasks.forEach(task => {
+      tasks.forEach((task) => {
         const modelId = getModelForTask(task as any);
         // 빈 문자열이거나 Bedrock 형식
         expect(typeof modelId).toBe('string');

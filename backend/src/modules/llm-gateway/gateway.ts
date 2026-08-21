@@ -8,7 +8,11 @@
  * @see dev-spec-R3-ai.md 1장, 2장
  */
 
-import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+  InvokeModelWithResponseStreamCommand,
+} from '@aws-sdk/client-bedrock-runtime';
 import { getModelForTask, validateModelVersions } from './model-config';
 import { withRetry } from './retry';
 import dotenv from 'dotenv';
@@ -56,7 +60,11 @@ export interface LLMStreamUsage {
  * @example
  * const response = await call('recap', '줄거리를 요약해주세요...', { maxTokens: 8192 });
  */
-export async function call(task: string, prompt: string, options: LLMCallOptions = {}): Promise<string> {
+export async function call(
+  task: string,
+  prompt: string,
+  options: LLMCallOptions = {}
+): Promise<string> {
   const startTime = Date.now();
 
   try {
@@ -64,34 +72,36 @@ export async function call(task: string, prompt: string, options: LLMCallOptions
     const modelId = getModelForTask(task);
 
     // 재시도 로직 포함 호출 (NFR-AI-003)
-    const result = await withRetry(async () => {
-      // 프롬프트 포맷 (Claude Messages API)
-      const requestBody = {
-        anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: options.maxTokens || 4096,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      };
+    const result = await withRetry(
+      async () => {
+        // 프롬프트 포맷 (Claude Messages API)
+        const requestBody = {
+          anthropic_version: 'bedrock-2023-05-31',
+          max_tokens: options.maxTokens || 4096,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        };
 
-      // Bedrock 호출
-      const command = new InvokeModelCommand({
-        modelId,
-        contentType: 'application/json',
-        accept: 'application/json',
-        body: JSON.stringify(requestBody),
-      });
+        // Bedrock 호출
+        const command = new InvokeModelCommand({
+          modelId,
+          contentType: 'application/json',
+          accept: 'application/json',
+          body: JSON.stringify(requestBody),
+        });
 
-      const response = await client.send(command);
+        const response = await client.send(command);
 
-      // 응답 파싱
-      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-      return responseBody;
-
-    }, { task, modelId });
+        // 응답 파싱
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        return responseBody;
+      },
+      { task, modelId }
+    );
 
     const text = result.content[0].text;
 
@@ -106,7 +116,6 @@ export async function call(task: string, prompt: string, options: LLMCallOptions
     });
 
     return text;
-
   } catch (error) {
     console.error('LLM Gateway Error:', { task, error });
     throw new Error(`LLM call failed for task "${task}": ${error}`);
@@ -131,7 +140,11 @@ export async function call(task: string, prompt: string, options: LLMCallOptions
  * }
  * const usage = gen.return(await gen.next()).value; // 사용량 접근
  */
-export async function* stream(task: string, prompt: string, options: LLMCallOptions = {}): AsyncGenerator<string, LLMStreamUsage> {
+export async function* stream(
+  task: string,
+  prompt: string,
+  options: LLMCallOptions = {}
+): AsyncGenerator<string, LLMStreamUsage> {
   const startTime = Date.now();
   let inputTokens = 0;
   let outputTokens = 0;
@@ -159,10 +172,7 @@ export async function* stream(task: string, prompt: string, options: LLMCallOpti
     });
 
     // 재시도 로직 포함 (NFR-AI-003)
-    const response = await withRetry(
-      () => client.send(command),
-      { task, modelId }
-    );
+    const response = await withRetry(() => client.send(command), { task, modelId });
 
     if (!response.body) {
       throw new Error('No response stream');
@@ -204,7 +214,6 @@ export async function* stream(task: string, prompt: string, options: LLMCallOpti
 
     // 토큰 사용량 반환 (호출부가 로그에 기록 가능)
     return { inputTokens, outputTokens };
-
   } catch (error) {
     console.error('LLM Gateway Stream Error:', { task, error });
     throw new Error(`LLM stream failed for task "${task}": ${error}`);

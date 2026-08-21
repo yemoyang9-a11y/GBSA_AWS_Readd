@@ -10,15 +10,15 @@
  *    버그가 파일만 바뀐 채 되살아난다.
  */
 
-import type { Pool } from 'pg'
-import { stream as llmStream } from '../llm-gateway/gateway'
-import { systemClock } from './clock'
-import { createCutoffService } from './cutoff.service'
-import { createProgressService } from './progress.service'
-import { createSessionService } from './session.service'
-import { createBriefingService } from './briefing.service'
-import { createRecapService } from './recap.service'
-import type { QueryClient } from './pg-repository'
+import type { Pool } from 'pg';
+import { stream as llmStream } from '../llm-gateway/gateway';
+import { systemClock } from './clock';
+import { createCutoffService } from './cutoff.service';
+import { createProgressService } from './progress.service';
+import { createSessionService } from './session.service';
+import { createBriefingService } from './briefing.service';
+import { createRecapService } from './recap.service';
+import type { QueryClient } from './pg-repository';
 import {
   createPgBookContentReader,
   createPgConversationHistoryRepository,
@@ -27,39 +27,39 @@ import {
   createPgRecapCallLogger,
   createPgSavedRecapRepository,
   createPgSessionRecapCacheRepository,
-} from './pg-repository'
-import type { ReadingSessionRepository, ConversationHistoryRepository } from './repository'
+} from './pg-repository';
+import type { ReadingSessionRepository, ConversationHistoryRepository } from './repository';
 
 export interface ReadingStateServices {
-  cutoffService: ReturnType<typeof createCutoffService>
-  progressService: ReturnType<typeof createProgressService>
-  sessionService: ReturnType<typeof createSessionService>
-  briefingService: ReturnType<typeof createBriefingService>
-  recapService: ReturnType<typeof createRecapService>
+  cutoffService: ReturnType<typeof createCutoffService>;
+  progressService: ReturnType<typeof createProgressService>;
+  sessionService: ReturnType<typeof createSessionService>;
+  briefingService: ReturnType<typeof createBriefingService>;
+  recapService: ReturnType<typeof createRecapService>;
   /** 스위퍼 전용 — 라우트는 이 두 개를 직접 쓰지 않는다 */
-  sessions: ReadingSessionRepository
-  conversationHistory: ConversationHistoryRepository
+  sessions: ReadingSessionRepository;
+  conversationHistory: ConversationHistoryRepository;
 }
 
 function toQueryClient(pool: Pool): QueryClient {
-  return { query: (sql: string, params?: unknown[]) => pool.query(sql, params) }
+  return { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
 }
 
 export function createReadingStateServices(pool: Pool): ReadingStateServices {
-  const db = toQueryClient(pool)
+  const db = toQueryClient(pool);
 
-  const positions = createPgReadingPositionRepository(db)
-  const books = createPgBookContentReader(db)
-  const sessions = createPgReadingSessionRepository(db)
-  const savedRecap = createPgSavedRecapRepository(db)
-  const sessionCache = createPgSessionRecapCacheRepository(db)
-  const recapLog = createPgRecapCallLogger(db)
-  const conversationHistory = createPgConversationHistoryRepository(db)
+  const positions = createPgReadingPositionRepository(db);
+  const books = createPgBookContentReader(db);
+  const sessions = createPgReadingSessionRepository(db);
+  const savedRecap = createPgSavedRecapRepository(db);
+  const sessionCache = createPgSessionRecapCacheRepository(db);
+  const recapLog = createPgRecapCallLogger(db);
+  const conversationHistory = createPgConversationHistoryRepository(db);
 
-  const cutoffService = createCutoffService({ positions, books })
-  const progressService = createProgressService({ positions })
-  const sessionService = createSessionService({ positions, books, sessions, clock: systemClock })
-  const briefingService = createBriefingService({ cutoffService, books, savedRecap })
+  const cutoffService = createCutoffService({ positions, books });
+  const progressService = createProgressService({ positions });
+  const sessionService = createSessionService({ positions, books, sessions, clock: systemClock });
+  const briefingService = createBriefingService({ cutoffService, books, savedRecap });
   const recapService = createRecapService({
     content: books,
     books,
@@ -67,7 +67,7 @@ export function createReadingStateServices(pool: Pool): ReadingStateServices {
     sessionCache,
     recapLog,
     llmStream,
-  })
+  });
 
   return {
     cutoffService,
@@ -77,5 +77,5 @@ export function createReadingStateServices(pool: Pool): ReadingStateServices {
     recapService,
     sessions,
     conversationHistory,
-  }
+  };
 }

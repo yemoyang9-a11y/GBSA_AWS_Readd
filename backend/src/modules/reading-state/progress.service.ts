@@ -14,11 +14,11 @@
  *    cutoff.service.ts가 담당한다 (FR-BRF-005 🚦, 계산 지점 단일화).
  */
 
-import type { ProgressEvent } from '../../shared/types'
-import type { ReadingPositionRepository } from './repository'
+import type { ProgressEvent } from '../../shared/types';
+import type { ReadingPositionRepository } from './repository';
 
 export interface ProgressServiceDeps {
-  positions: ReadingPositionRepository
+  positions: ReadingPositionRepository;
 }
 
 export interface ProgressService {
@@ -30,11 +30,11 @@ export interface ProgressService {
    * 비블로킹·동기 커밋 여부는 호출부(라우트 핸들러)의 책임이다 — 이 함수 자체는
    * 저장소 쓰기 1회로 끝나는 순수 판단 로직이다.
    */
-  acceptProgressEvent(deviceId: string, bookId: string, event: ProgressEvent): Promise<void>
+  acceptProgressEvent(deviceId: string, bookId: string, event: ProgressEvent): Promise<void>;
 }
 
 export function createProgressService(deps: ProgressServiceDeps): ProgressService {
-  const { positions } = deps
+  const { positions } = deps;
 
   return {
     async acceptProgressEvent(
@@ -42,17 +42,17 @@ export function createProgressService(deps: ProgressServiceDeps): ProgressServic
       bookId: string,
       event: ProgressEvent
     ): Promise<void> {
-      const stored = await positions.findPosition(deviceId, bookId)
+      const stored = await positions.findPosition(deviceId, bookId);
 
       // FR-PRG-002 — 저장 위치가 없으면(첫 진입) 무조건 수용, 있으면 더 새로운 seq만 수용
       if (stored !== null && event.seq <= stored.event_seq) {
-        return
+        return;
       }
 
       await positions.savePosition(deviceId, bookId, {
         current_page: event.page,
         event_seq: event.seq,
-      })
+      });
     },
-  }
+  };
 }

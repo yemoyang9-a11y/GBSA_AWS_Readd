@@ -124,15 +124,20 @@ export function selectCuts(fullText: string, candidates: Candidate[]): number[] 
   while (start < total) {
     const ahead = sorted.filter((c) => c.offset > start);
     const options: Candidate[] = [...ahead, { offset: total, isParagraphEnd: true }];
-    const inRange = options.filter((c) => c.offset - start >= MIN_SIZE && c.offset - start <= MAX_SIZE);
+    const inRange = options.filter(
+      (c) => c.offset - start >= MIN_SIZE && c.offset - start <= MAX_SIZE
+    );
 
     const pool = inRange.length > 0 ? inRange : options;
-    const preferred = inRange.length > 0 && pool.some((c) => c.isParagraphEnd)
-      ? pool.filter((c) => c.isParagraphEnd)
-      : pool;
+    const preferred =
+      inRange.length > 0 && pool.some((c) => c.isParagraphEnd)
+        ? pool.filter((c) => c.isParagraphEnd)
+        : pool;
 
     const chosen = preferred.reduce((best, c) =>
-      Math.abs(c.offset - start - TARGET_SIZE) < Math.abs(best.offset - start - TARGET_SIZE) ? c : best
+      Math.abs(c.offset - start - TARGET_SIZE) < Math.abs(best.offset - start - TARGET_SIZE)
+        ? c
+        : best
     );
 
     cuts.push(chosen.offset);
@@ -143,7 +148,11 @@ export function selectCuts(fullText: string, candidates: Candidate[]): number[] 
 }
 
 /** 장 하나를 페이지로 분할한다. startPageNo부터 순차 번호를 매긴다 */
-export function splitChapterToPages(bookId: string, paragraphs: string[], startPageNo: number): Page[] {
+export function splitChapterToPages(
+  bookId: string,
+  paragraphs: string[],
+  startPageNo: number
+): Page[] {
   const fullText = buildChapterFullText(paragraphs);
   const candidates = findCandidates(paragraphs);
   const cuts = selectCuts(fullText, candidates);
@@ -210,7 +219,11 @@ const SENTENCE_END_TRAILING_RE = /[.!?…]+[”’」』]*\s*$/;
  * V1/V2 자가 검증 — 파이프라인 실행마다 돌리는 것을 전제로 한다.
  * 하나라도 위반이면 다음 단계로 진행하지 않는다(05-test-guide.md, CLAUDE.md 7장).
  */
-export function validateSplit(pages: Page[], chapters: Chapter[], rawText: string): ValidationReport {
+export function validateSplit(
+  pages: Page[],
+  chapters: Chapter[],
+  rawText: string
+): ValidationReport {
   const details: string[] = [];
   const parsedChapters = parseChapters(rawText);
 
@@ -230,7 +243,9 @@ export function validateSplit(pages: Page[], chapters: Chapter[], rawText: strin
 
   let crossChapterViolations = 0;
   for (const page of pages) {
-    const owners = chapters.filter((c) => page.page_no >= c.start_page && page.page_no <= c.end_page);
+    const owners = chapters.filter(
+      (c) => page.page_no >= c.start_page && page.page_no <= c.end_page
+    );
     if (owners.length !== 1) {
       crossChapterViolations++;
       details.push(`D11 위반: 페이지 ${page.page_no}가 장 ${owners.length}개에 걸침`);
@@ -241,7 +256,9 @@ export function validateSplit(pages: Page[], chapters: Chapter[], rawText: strin
   let underMinViolations = 0;
   let oversizedPages = 0;
   for (const page of pages) {
-    const chapter = chapters.find((c) => page.page_no >= c.start_page && page.page_no <= c.end_page);
+    const chapter = chapters.find(
+      (c) => page.page_no >= c.start_page && page.page_no <= c.end_page
+    );
     const isLastOfChapter = chapter ? page.page_no === chapter.end_page : false;
     const len = page.content.length;
 
@@ -251,11 +268,15 @@ export function validateSplit(pages: Page[], chapters: Chapter[], rawText: strin
     }
     if (!isLastOfChapter && len < MIN_SIZE) {
       underMinViolations++;
-      details.push(`D11 위반: 페이지 ${page.page_no} 길이 ${len}자 (700자 미만, 장 마지막 페이지 아님)`);
+      details.push(
+        `D11 위반: 페이지 ${page.page_no} 길이 ${len}자 (700자 미만, 장 마지막 페이지 아님)`
+      );
     }
     if (len > MAX_SIZE) {
       oversizedPages++;
-      details.push(`D11: 페이지 ${page.page_no} 길이 ${len}자 (1,400자 초과 — 경계 없는 긴 문장/문단)`);
+      details.push(
+        `D11: 페이지 ${page.page_no} 길이 ${len}자 (1,400자 초과 — 경계 없는 긴 문장/문단)`
+      );
     }
   }
 
@@ -268,7 +289,9 @@ export function validateSplit(pages: Page[], chapters: Chapter[], rawText: strin
   for (let i = 0; i < sortedChapters.length - 1; i++) {
     if (sortedChapters[i + 1].start_page !== sortedChapters[i].end_page + 1) {
       chapterCoverageViolations++;
-      details.push(`FR-DAT-001 위반: 장 ${sortedChapters[i].chapter_no}~${sortedChapters[i + 1].chapter_no} 사이 간극/중첩`);
+      details.push(
+        `FR-DAT-001 위반: 장 ${sortedChapters[i].chapter_no}~${sortedChapters[i + 1].chapter_no} 사이 간극/중첩`
+      );
     }
   }
 
@@ -291,7 +314,11 @@ export interface Measurements {
 }
 
 /** S3 — CP1 보고용 실측 3건 */
-export function computeMeasurements(pages: Page[], chapters: Chapter[], rawText: string): Measurements {
+export function computeMeasurements(
+  pages: Page[],
+  chapters: Chapter[],
+  rawText: string
+): Measurements {
   const parsedChapters = parseChapters(rawText);
 
   let underMin = 0;

@@ -37,10 +37,9 @@ import * as repo from './repository';
  */
 export async function assembleContext(
   bookId: string,
-  K: number  // cutoff (기준점)
+  K: number // cutoff (기준점)
   // ⚠️ query는 인자로 받지 않는다! (NFR-SEC-006 🚦)
 ): Promise<ChatbotContext> {
-
   // ① 전량 주입분 (질의 비관여, 결정적)
   // 같은 K에서 질의를 바꿔도 이 부분은 동일해야 함
 
@@ -52,7 +51,7 @@ export async function assembleContext(
 
   // ② 엔티티 전량 (각 <= K)
   const characters = await findCharacters(bookId, K);
-  const relationships = await findRelationships(bookId, K);  // A6: 이력 전체, 페이지 병기
+  const relationships = await findRelationships(bookId, K); // A6: 이력 전체, 페이지 병기
   const characterNotes = await findCharacterNotes(bookId, K);
   const terms = await findTerms(bookId, K);
   const events = await findEvents(bookId, K);
@@ -161,24 +160,16 @@ async function getBackgroundKnowledge(bookId: string): Promise<string> {
  * @param systemRules - 시스템 규칙 (근거 외 생성 금지, 근거 부재 토큰 규약)
  * @returns 구조화된 프롬프트
  */
-export function buildPrompt(
-  context: ChatbotContext,
-  systemRules: string
-): string {
+export function buildPrompt(context: ChatbotContext, systemRules: string): string {
   // NFR-AI-005: 근거 외 생성 금지
   // A10: 모델의 사전 지식 누설 방지 (유일한 수단, 100% 보장 아님)
 
-  const sections: string[] = [
-    systemRules,
-    '',
-    '# 근거 데이터',
-    '',
-  ];
+  const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
 
   // 장 요약
   if (context.chapter_summaries.length > 0) {
     sections.push('## 장 요약');
-    context.chapter_summaries.forEach(ch => {
+    context.chapter_summaries.forEach((ch) => {
       sections.push(`### ${ch.title} (종료: p.${ch.end_page})`);
       sections.push(ch.content);
       sections.push('');
@@ -195,7 +186,7 @@ export function buildPrompt(
   // 인물
   if (context.entities.characters.length > 0) {
     sections.push('## 인물');
-    context.entities.characters.forEach(char => {
+    context.entities.characters.forEach((char) => {
       sections.push(`- ${char.name} (첫 등장: p.${char.first_appearance_page})`);
     });
     sections.push('');
@@ -204,7 +195,7 @@ export function buildPrompt(
   // 관계 (이력 전체, 페이지 병기 - A6)
   if (context.entities.relationships.length > 0) {
     sections.push('## 인물 관계 (이력)');
-    context.entities.relationships.forEach(rel => {
+    context.entities.relationships.forEach((rel) => {
       sections.push(`- ${rel.label} (확립: p.${rel.established_page})`);
     });
     sections.push('');
@@ -213,7 +204,7 @@ export function buildPrompt(
   // 용어
   if (context.entities.terms.length > 0) {
     sections.push('## 용어');
-    context.entities.terms.forEach(term => {
+    context.entities.terms.forEach((term) => {
       sections.push(`- **${term.term}**: ${term.definition} (p.${term.first_appearance_page})`);
     });
     sections.push('');
@@ -222,7 +213,7 @@ export function buildPrompt(
   // 사건
   if (context.entities.events.length > 0) {
     sections.push('## 사건');
-    context.entities.events.forEach(event => {
+    context.entities.events.forEach((event) => {
       sections.push(`- ${event.event} (p.${event.occurrence_page}): ${event.description}`);
     });
     sections.push('');

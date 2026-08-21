@@ -37,8 +37,12 @@ async function main(): Promise<void> {
   const { pages: allPages, chapters } = splitBook(rawText, BOOK_ID);
 
   const chapter = chapters[0];
-  const pages = allPages.filter((p) => p.page_no >= chapter.start_page && p.page_no <= chapter.end_page);
-  console.log(`=== 표본: ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}, ${pages.length}페이지) ===\n`);
+  const pages = allPages.filter(
+    (p) => p.page_no >= chapter.start_page && p.page_no <= chapter.end_page
+  );
+  console.log(
+    `=== 표본: ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}, ${pages.length}페이지) ===\n`
+  );
 
   const results: Record<string, unknown> = {};
   const pageRange = { min: chapter.start_page, max: chapter.end_page };
@@ -46,7 +50,10 @@ async function main(): Promise<void> {
   function reportPageBounds(label: string, reportedPages: number[]): void {
     const result = checkPageBounds(label, reportedPages, pageRange.min, pageRange.max);
     if (!result.ok) {
-      console.warn(`  [경고] ${label}: 장 범위(${pageRange.min}~${pageRange.max}) 밖 페이지 태깅 발견 →`, result.outOfBounds);
+      console.warn(
+        `  [경고] ${label}: 장 범위(${pageRange.min}~${pageRange.max}) 밖 페이지 태깅 발견 →`,
+        result.outOfBounds
+      );
     } else {
       console.log(`  [OK] ${label}: 페이지 태깅 전부 장 범위 안 (${reportedPages.length}건)`);
     }
@@ -76,10 +83,23 @@ async function main(): Promise<void> {
 
   // 3) 관계
   console.log('\n--- ③ 관계 ---');
-  const relRaw = await call('generate_relationship', buildRelationshipPrompt(chapter, pages, knownNames));
-  const relOut = parseJsonResponse<{ relationships: { character_a: string; character_b: string; label: string; established_page: number }[] }>(relRaw);
+  const relRaw = await call(
+    'generate_relationship',
+    buildRelationshipPrompt(chapter, pages, knownNames)
+  );
+  const relOut = parseJsonResponse<{
+    relationships: {
+      character_a: string;
+      character_b: string;
+      label: string;
+      established_page: number;
+    }[];
+  }>(relRaw);
   console.log(JSON.stringify(relOut, null, 1));
-  reportPageBounds('관계', relOut.relationships.map((r) => r.established_page));
+  reportPageBounds(
+    '관계',
+    relOut.relationships.map((r) => r.established_page)
+  );
   results.relationships = relOut;
 
   // 4) 배경지식 · 소개 (장 무관, 책 전체 1회)
@@ -92,17 +112,27 @@ async function main(): Promise<void> {
   // 5) 용어
   console.log('\n--- ⑤ 용어 ---');
   const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
-  const termOut = parseJsonResponse<{ terms: { term: string; definition: string; first_appearance_page: number }[] }>(termRaw);
+  const termOut = parseJsonResponse<{
+    terms: { term: string; definition: string; first_appearance_page: number }[];
+  }>(termRaw);
   console.log(JSON.stringify(termOut, null, 1));
-  reportPageBounds('용어', termOut.terms.map((t) => t.first_appearance_page));
+  reportPageBounds(
+    '용어',
+    termOut.terms.map((t) => t.first_appearance_page)
+  );
   results.terms = termOut;
 
   // 6) 사건
   console.log('\n--- ⑥ 사건 ---');
   const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages));
-  const eventOut = parseJsonResponse<{ events: { event: string; description: string; occurrence_page: number }[] }>(eventRaw);
+  const eventOut = parseJsonResponse<{
+    events: { event: string; description: string; occurrence_page: number }[];
+  }>(eventRaw);
   console.log(JSON.stringify(eventOut, null, 1));
-  reportPageBounds('사건', eventOut.events.map((e) => e.occurrence_page));
+  reportPageBounds(
+    '사건',
+    eventOut.events.map((e) => e.occurrence_page)
+  );
   results.events = eventOut;
 
   const outDir = path.join(__dirname, '../../../data/generated');

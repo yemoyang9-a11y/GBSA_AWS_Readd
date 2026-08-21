@@ -64,7 +64,10 @@ function normalize(text: string): string {
 }
 
 /** 대표명 또는 별칭 문자열로 기존 인물을 찾는다 (관계 추출이 별칭으로 인물을 지칭하는 경우 대응) */
-function findCharacter(state: GenerationState, nameOrAlias: string): AccumulatedCharacter | undefined {
+function findCharacter(
+  state: GenerationState,
+  nameOrAlias: string
+): AccumulatedCharacter | undefined {
   const target = normalize(nameOrAlias);
   return state.characters.find(
     (c) => c.name === target || c.aliases.some((a) => a.alias === target)
@@ -88,18 +91,28 @@ interface ChapterCharacterInput {
  * 기존 인물이면 id를 재사용하고 별칭·노트만 추가한다 — 새 인물로 다시 만들지 않는다.
  * 이미 등록된 별칭은 최초 등장 페이지를 덮어쓰지 않는다(더 이른 장이 항상 먼저 처리되므로).
  */
-export function mergeCharacters(state: GenerationState, chapterCharacters: ChapterCharacterInput[]): void {
+export function mergeCharacters(
+  state: GenerationState,
+  chapterCharacters: ChapterCharacterInput[]
+): void {
   for (const c of chapterCharacters) {
     const name = normalize(c.name);
     let existing = findCharacter(state, name);
     if (!existing) {
-      existing = { id: uuidv4(), name, first_appearance_page: c.first_appearance_page, aliases: [], notes: [] };
+      existing = {
+        id: uuidv4(),
+        name,
+        first_appearance_page: c.first_appearance_page,
+        aliases: [],
+        notes: [],
+      };
       state.characters.push(existing);
     }
 
     for (const a of c.aliases) {
       const aliasText = normalize(a.alias);
-      const already = existing.aliases.some((ex) => ex.alias === aliasText) || existing.name === aliasText;
+      const already =
+        existing.aliases.some((ex) => ex.alias === aliasText) || existing.name === aliasText;
       if (!already) {
         existing.aliases.push({
           alias: aliasText,
@@ -116,7 +129,10 @@ export function mergeCharacters(state: GenerationState, chapterCharacters: Chapt
 }
 
 /** 이름 또는 별칭으로 인물 id를 찾는다. 못 찾으면 undefined(관계 추출과 인물 추출 간 표기 불일치 — 검수 대상) */
-export function resolveCharacterId(state: GenerationState, nameOrAlias: string): string | undefined {
+export function resolveCharacterId(
+  state: GenerationState,
+  nameOrAlias: string
+): string | undefined {
   return findCharacter(state, nameOrAlias)?.id;
 }
 
@@ -136,10 +152,15 @@ interface ChapterRelationshipInput {
  * 같은 쌍의 가장 최근 행과 라벨이 같으면 재서술로 보고 건너뛴다.
  * 라벨이 다르면 새 행을 추가한다 — 기존 행은 절대 수정·삭제하지 않는다.
  */
-export function mergeRelationships(state: GenerationState, chapterRelationships: ChapterRelationshipInput[]): void {
+export function mergeRelationships(
+  state: GenerationState,
+  chapterRelationships: ChapterRelationshipInput[]
+): void {
   for (const r of chapterRelationships) {
     const key = pairKey(r.character_a_id, r.character_b_id);
-    const history = state.relationships.filter((x) => pairKey(x.character_a_id, x.character_b_id) === key);
+    const history = state.relationships.filter(
+      (x) => pairKey(x.character_a_id, x.character_b_id) === key
+    );
     const latest = history.sort((a, b) => a.established_page - b.established_page).at(-1);
 
     if (latest && latest.label === normalize(r.label)) {
@@ -168,7 +189,12 @@ export function mergeTerms(state: GenerationState, chapterTerms: ChapterTermInpu
     const term = normalize(t.term);
     const already = state.terms.some((x) => x.term === term);
     if (!already) {
-      state.terms.push({ id: uuidv4(), term, definition: t.definition, first_appearance_page: t.first_appearance_page });
+      state.terms.push({
+        id: uuidv4(),
+        term,
+        definition: t.definition,
+        first_appearance_page: t.first_appearance_page,
+      });
     }
   }
 }

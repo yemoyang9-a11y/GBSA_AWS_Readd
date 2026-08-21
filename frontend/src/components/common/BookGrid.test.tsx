@@ -8,7 +8,7 @@ const readyBook: BookSummary = {
   title: '탁류',
   author: '채만식',
   cover_url: '/covers/takryu.jpg',
-  total_pages: 411,
+  intro_summary: null,
   ssabi_ready: true,
 };
 
@@ -17,7 +17,7 @@ const notReadyBook: BookSummary = {
   title: '검수 전 도서',
   author: '미상',
   cover_url: '/covers/draft.jpg',
-  total_pages: 100,
+  intro_summary: null,
   ssabi_ready: false,
 };
 

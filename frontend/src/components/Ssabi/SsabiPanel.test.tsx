@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SsabiPanel from './SsabiPanel';
 import type { GraphResponse } from '../../types';
@@ -40,7 +40,9 @@ describe('싸비 사이드창', () => {
 
   it('열린 탭에 받은 데이터를 보여준다', () => {
     render(<SsabiPanel {...baseProps} />);
-    expect(screen.getByText(/정주사/)).toBeInTheDocument();
+    // 이름은 그래프 노드와 인물 카드 양쪽에 나온다 — 인물 영역으로 좁힌다
+    const people = screen.getByRole('region', { name: '인물' });
+    expect(within(people).getByText(/정주사/)).toBeInTheDocument();
   });
 
   it('탭을 고르면 그 탭이 선택된다', async () => {
@@ -80,6 +82,15 @@ describe('싸비 사이드창', () => {
       'aria-selected',
       'true'
     );
+  });
+
+  it('G8: 탭은 3개다 — 시안의 타임라인 탭은 만들지 않는다 (00-shared §2.5 "[이후 확장]")', () => {
+    render(<SsabiPanel {...baseProps} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(3);
+    expect(tabs.map((t) => t.textContent)).toEqual(['리캡', '인물 관계도', '챗봇']);
+    expect(screen.queryByRole('tab', { name: '타임라인' })).not.toBeInTheDocument();
   });
 
   it('FR-SPL-005 🚦: 관계도 조회가 실패하면 부분 표시로 넘어가지 않는다', () => {

@@ -44,7 +44,7 @@ function isRetryableError(error: any): boolean {
   ];
 
   const errorName = error.name || error.code || '';
-  return retryableErrors.some(name => errorName.includes(name));
+  return retryableErrors.some((name) => errorName.includes(name));
 }
 
 /**
@@ -72,10 +72,7 @@ export async function withRetry<T>(
       const result = await Promise.race([
         fn(),
         new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error('Request timeout')),
-            RETRY_CONFIG.timeoutMs
-          )
+          setTimeout(() => reject(new Error('Request timeout')), RETRY_CONFIG.timeoutMs)
         ),
       ]);
 
@@ -85,7 +82,6 @@ export async function withRetry<T>(
       }
 
       return result;
-
     } catch (error: any) {
       lastError = error;
 
@@ -100,15 +96,18 @@ export async function withRetry<T>(
         console.error('Max retries reached', {
           attempts: attempt + 1,
           error,
-          context
+          context,
         });
         break;
       }
 
       // 재시도 전 대기
       const delay = calculateDelay(attempt);
-      console.warn(`Retrying after ${delay}ms (attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries})`, context);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      console.warn(
+        `Retrying after ${delay}ms (attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries})`,
+        context
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
@@ -141,7 +140,6 @@ export async function withFallback<T>(
   try {
     // 1차 시도: 지정된 모델
     return await fn(primaryModelId);
-
   } catch (error) {
     console.warn('Primary model failed, trying fallback', {
       primary: primaryModelId,
@@ -154,7 +152,6 @@ export async function withFallback<T>(
       const result = await fn(fallbackModelId);
       console.log('Fallback model succeeded', { fallback: fallbackModelId });
       return result;
-
     } catch (fallbackError) {
       console.error('Fallback model also failed', {
         fallback: fallbackModelId,

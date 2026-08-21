@@ -26,7 +26,7 @@ describe('난이도 라우팅', () => {
         '두 사건의 차이를 설명해주세요',
       ];
 
-      queries.forEach(query => {
+      queries.forEach((query) => {
         const result = selectModel(query);
         expect(result.model).toBe('sonnet');
         expect(result.reason).toContain('복잡한 추론 키워드');
@@ -52,7 +52,7 @@ describe('난이도 라우팅', () => {
         '이 장면은 어디인가요?',
       ];
 
-      simpleQueries.forEach(query => {
+      simpleQueries.forEach((query) => {
         const result = selectModel(query);
         expect(result.model).toBe('haiku');
         expect(result.reason).toContain('단순 질의');

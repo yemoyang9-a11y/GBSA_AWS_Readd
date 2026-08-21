@@ -21,20 +21,25 @@ export async function embedText(text: string): Promise<number[]> {
     throw new Error('BEDROCK_EMBED_MODEL 환경변수가 설정되지 않음');
   }
 
-  const responseBody = await withRetry(async () => {
-    const command = new InvokeModelCommand({
-      modelId,
-      contentType: 'application/json',
-      accept: 'application/json',
-      body: JSON.stringify({ inputText: text }),
-    });
-    const response = await bedrockClient.send(command);
-    return JSON.parse(new TextDecoder().decode(response.body));
-  }, { task: 'embed_page', modelId });
+  const responseBody = await withRetry(
+    async () => {
+      const command = new InvokeModelCommand({
+        modelId,
+        contentType: 'application/json',
+        accept: 'application/json',
+        body: JSON.stringify({ inputText: text }),
+      });
+      const response = await bedrockClient.send(command);
+      return JSON.parse(new TextDecoder().decode(response.body));
+    },
+    { task: 'embed_page', modelId }
+  );
 
   const embedding = responseBody.embedding;
   if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIM) {
-    throw new Error(`Titan 임베딩 응답이 예상 차원(${EMBEDDING_DIM})과 다름: ${JSON.stringify(embedding?.length)}`);
+    throw new Error(
+      `Titan 임베딩 응답이 예상 차원(${EMBEDDING_DIM})과 다름: ${JSON.stringify(embedding?.length)}`
+    );
   }
   return embedding;
 }

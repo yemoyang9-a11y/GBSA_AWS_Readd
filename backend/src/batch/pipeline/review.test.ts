@@ -25,10 +25,20 @@ const DATA: ResolvedBookData = {
     },
   ],
   relationships: [
-    { id: 'rel-1', character_a_id: 'char-1', character_b_id: 'char-1', label: '자기소개', established_page: 2 },
+    {
+      id: 'rel-1',
+      character_a_id: 'char-1',
+      character_b_id: 'char-1',
+      label: '자기소개',
+      established_page: 2,
+    },
   ],
-  terms: [{ id: 'term-1', term: '미두장', definition: '선물 곡물 거래소', first_appearance_page: 2 }],
-  events: [{ id: '1-0', event: '멱살잡이', description: '정주사가 봉욕을 당함', occurrence_page: 2 }],
+  terms: [
+    { id: 'term-1', term: '미두장', definition: '선물 곡물 거래소', first_appearance_page: 2 },
+  ],
+  events: [
+    { id: '1-0', event: '멱살잡이', description: '정주사가 봉욕을 당함', occurrence_page: 2 },
+  ],
   background_and_intro: { background: '배경 설명, 쉼표 포함', intro: '소개 문구\n줄바꿈 포함' },
 };
 
@@ -99,7 +109,9 @@ describe('passedReviewKeys — FR-ADM-005 🚦 FALSE 판정 대상은 재수출 
       },
     ]);
     const rows = buildReviewSheetRows(DATA, passed);
-    expect(rows.find((r) => r.target_type === 'relationship' && r.target_id === 'rel-1')).toBeDefined();
+    expect(
+      rows.find((r) => r.target_type === 'relationship' && r.target_id === 'rel-1')
+    ).toBeDefined();
   });
 });
 
@@ -162,7 +174,9 @@ describe('parseFilledReviewSheet — FR-ADM-005 🚦 부분 판정으로 반영 
   });
 
   test('적용 항목 하나라도 비어 있으면 실패한다(negative — 0건도 통과 아님)', () => {
-    expect(() => parseFilledReviewSheet(sheetWithChapterSummaryRow({ recap_continuity_ok: '' }))).toThrow();
+    expect(() =>
+      parseFilledReviewSheet(sheetWithChapterSummaryRow({ recap_continuity_ok: '' }))
+    ).toThrow();
   });
 
   test('reviewer가 비어 있으면 실패한다', () => {
@@ -170,7 +184,10 @@ describe('parseFilledReviewSheet — FR-ADM-005 🚦 부분 판정으로 반영 
   });
 });
 
-function mockClient(responder?: (sql: string) => unknown): { client: QueryClient; calls: { sql: string; params?: unknown[] }[] } {
+function mockClient(responder?: (sql: string) => unknown): {
+  client: QueryClient;
+  calls: { sql: string; params?: unknown[] }[];
+} {
   const calls: { sql: string; params?: unknown[] }[] = [];
   return {
     client: {
@@ -190,7 +207,12 @@ describe('applyReviewJudgments — 판정 기록 적재 + 수정 반영(NFR-AI-0
       {
         target_type: 'chapter_summary',
         target_id: '1',
-        criteria: { hallucination_ok: true, page_boundary_ok: true, recap_continuity_ok: true, info_separation_ok: true },
+        criteria: {
+          hallucination_ok: true,
+          page_boundary_ok: true,
+          recap_continuity_ok: true,
+          info_separation_ok: true,
+        },
         corrected_content: null,
         correction_note: null,
         reviewer: '홍길동',
@@ -224,7 +246,8 @@ describe('applyReviewJudgments — 판정 기록 적재 + 수정 반영(NFR-AI-0
 describe('checkReviewComplete / publishBook — FR-ADM-006, R12 검수 미완료 시 공개 전환 거절', () => {
   test('전량 미검수(0건)면 공개 전환을 거절한다(negative)', async () => {
     const { client, calls } = mockClient((sql) => {
-      if (sql.includes('chapter_summaries')) return { rows: [{ target_id: '1', hallucination_ok: null }] };
+      if (sql.includes('chapter_summaries'))
+        return { rows: [{ target_id: '1', hallucination_ok: null }] };
       return { rows: [] };
     });
 

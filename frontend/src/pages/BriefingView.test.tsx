@@ -21,8 +21,11 @@ function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
 
 const baseProps = {
   chapters,
+  title: '탁류',
+  author: '채만식',
   onContinue: () => {},
   onRequestFallback: () => {},
+  onBack: () => {},
 };
 
 /**
@@ -59,6 +62,23 @@ describe('브리핑 화면', () => {
     );
 
     expect(onRequestFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('시안 상단: 표지·경과 안내·인사·제목·저자를 보여준다', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+
+    expect(screen.getByTestId('typographic-cover')).toBeInTheDocument();
+    expect(screen.getByText('3일 만이에요')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /다시 오셨네요/ })).toBeInTheDocument();
+    expect(screen.getByText('탁류 · 채만식')).toBeInTheDocument();
+  });
+
+  it('돌아가기를 누르면 onBack 이 불린다', async () => {
+    const onBack = vi.fn();
+    render(<BriefingView {...baseProps} briefing={briefing()} onBack={onBack} />);
+
+    await userEvent.click(screen.getByRole('button', { name: '돌아가기' }));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('자가 검증 23 / FR-BRF-004 · D12: 목차는 표시 전용이라 이동 가능한 요소가 없다', () => {

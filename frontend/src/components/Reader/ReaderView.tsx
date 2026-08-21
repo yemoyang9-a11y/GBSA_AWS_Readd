@@ -27,12 +27,15 @@ export default function ReaderView({
   onMove: (page: number) => void;
 }) {
   return (
-    <main className="flex h-full flex-col">
-      <article role="article" className="flex-1 overflow-y-auto whitespace-pre-wrap p-6">
+    <main className="flex h-full flex-col bg-canvas">
+      <article
+        role="article"
+        className="mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-serif text-[18px] leading-[2] text-ink"
+      >
         {content}
       </article>
 
-      <nav className="flex items-center justify-between border-t p-4">
+      <nav className="flex items-center justify-between border-t border-line px-8 py-4 text-[13px] text-muted">
         <button
           type="button"
           disabled={prevPage === null}
@@ -42,7 +45,7 @@ export default function ReaderView({
           이전 페이지
         </button>
 
-        <span>{formatPageIndicator(currentPage, totalPages)}</span>
+        <span className="font-sans text-ink">{formatPageIndicator(currentPage, totalPages)}</span>
 
         <button
           type="button"

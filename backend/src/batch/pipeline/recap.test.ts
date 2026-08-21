@@ -15,7 +15,10 @@ interface FakeDb {
 }
 
 /** 실제 Postgres의 ANY/BETWEEN 필터를 그대로 흉내낸다 — SQL 텍스트만 보고 통과시키지 않는다 */
-function fakeClient(db: FakeDb): { client: QueryClient; inserts: { sql: string; params?: unknown[] }[] } {
+function fakeClient(db: FakeDb): {
+  client: QueryClient;
+  inserts: { sql: string; params?: unknown[] }[];
+} {
   const inserts: { sql: string; params?: unknown[] }[] = [];
   const client: QueryClient = {
     query: async (sql: string, params?: unknown[]) => {
@@ -56,7 +59,10 @@ function buildFixtureDb(): FakeDb {
     ],
     pages: Array.from({ length: 10 }, (_, i) => {
       const page_no = 21 + i;
-      return { page_no, content: page_no <= 25 ? `p${page_no}-현재까지` : `p${page_no}-미래스포일러` };
+      return {
+        page_no,
+        content: page_no <= 25 ? `p${page_no}-현재까지` : `p${page_no}-미래스포일러`,
+      };
     }),
   };
 }
@@ -116,7 +122,11 @@ describe('assembleRecapInput — FR-SPL-002: 조회 결과에 기준점 초과 �
 describe('buildRecapPrompt — 조립된 입력 밖의 내용을 추가하지 않는다', () => {
   test('전달받은 장 요약·현재 장 원문만 프롬프트에 담는다', () => {
     const prompt = buildRecapPrompt(
-      { chapter_summaries: [{ chapter_no: 1, title: '1장', content: '1장 요약', end_page: 10 }], current_chapter_text: '현재 원문', cutoff: 15 },
+      {
+        chapter_summaries: [{ chapter_no: 1, title: '1장', content: '1장 요약', end_page: 10 }],
+        current_chapter_text: '현재 원문',
+        cutoff: 15,
+      },
       '탁류',
       '채만식'
     );
@@ -128,7 +138,11 @@ describe('buildRecapPrompt — 조립된 입력 밖의 내용을 추가하지 �
   });
 
   test('완결된 장이 없으면 그 사실을 명시한다(지어내지 않는다)', () => {
-    const prompt = buildRecapPrompt({ chapter_summaries: [], current_chapter_text: null, cutoff: 3 }, '탁류', '채만식');
+    const prompt = buildRecapPrompt(
+      { chapter_summaries: [], current_chapter_text: null, cutoff: 3 },
+      '탁류',
+      '채만식'
+    );
     expect(prompt).toContain('없음 — 아직 완결된 장 없음');
   });
 });
@@ -140,12 +154,23 @@ describe('injectDemoRecap — S8: saved_recap upsert', () => {
       client,
       async () => '{"recap": "지금까지의 줄거리"}',
       (raw) => JSON.parse(raw),
-      { deviceId: '11111111-1111-4111-8111-111111111111', bookId: 'takryu', cutoff: 25, title: '탁류', author: '채만식' }
+      {
+        deviceId: '11111111-1111-4111-8111-111111111111',
+        bookId: 'takryu',
+        cutoff: 25,
+        title: '탁류',
+        author: '채만식',
+      }
     );
 
     expect(recap).toBe('지금까지의 줄거리');
     expect(inserts).toHaveLength(1);
     expect(inserts[0].sql).toContain('ON CONFLICT (device_id, book_id)');
-    expect(inserts[0].params).toEqual(['11111111-1111-4111-8111-111111111111', 'takryu', 25, '지금까지의 줄거리']);
+    expect(inserts[0].params).toEqual([
+      '11111111-1111-4111-8111-111111111111',
+      'takryu',
+      25,
+      '지금까지의 줄거리',
+    ]);
   });
 });

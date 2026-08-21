@@ -27,7 +27,6 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
 describe('챗봇 전체 플로우 - FR-QNA-006 🚦', () => {
   test('FR-QNA-006: handleQuery는 K를 모든 단계에 전파', async () => {
     // TODO: Mock repository 추가 후 구현
-
     // const K = 80;
     // // 1. 근거 조립 시 K 사용
     // // 2. 벡터 검색 시 K 사용

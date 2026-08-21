@@ -34,7 +34,15 @@ export async function registerBook(
      VALUES ($1, $2, $3, $4, $5, $6, $7, false, 'draft')
      ON CONFLICT (book_id) DO UPDATE SET
        title = $2, author = $3, cover_url = $4, publish_year = $5, extent = $6, total_pages = $7`,
-    [meta.book_id, meta.title, meta.author, meta.cover_url ?? null, meta.publish_year ?? null, meta.extent ?? null, pages.length]
+    [
+      meta.book_id,
+      meta.title,
+      meta.author,
+      meta.cover_url ?? null,
+      meta.publish_year ?? null,
+      meta.extent ?? null,
+      pages.length,
+    ]
   );
 
   for (const chapter of chapters) {
@@ -66,7 +74,10 @@ export async function registerBook(
  *
  * review_status는 여기서 건드리지 않는다 — 재실행 시 이미 검수된 판정을 되돌리면 안 된다(DDL 기본값 'pending'은 최초 삽입에만 적용).
  */
-export async function registerGeneratedContent(client: QueryClient, data: ResolvedBookData): Promise<void> {
+export async function registerGeneratedContent(
+  client: QueryClient,
+  data: ResolvedBookData
+): Promise<void> {
   const { book_id } = data;
 
   for (const cs of data.chapter_summaries) {

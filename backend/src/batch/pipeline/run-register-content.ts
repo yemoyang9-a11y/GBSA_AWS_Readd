@@ -19,22 +19,32 @@ async function main(): Promise<void> {
   const filePath = path.join(__dirname, '../../../data/generated/full/all-resolved.json');
   const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
 
-  const bookResult = (await pool.query('SELECT total_pages FROM books WHERE book_id = $1', [BOOK_ID])) as {
+  const bookResult = (await pool.query('SELECT total_pages FROM books WHERE book_id = $1', [
+    BOOK_ID,
+  ])) as {
     rows: { total_pages: number }[];
   };
   if (bookResult.rows.length === 0) {
-    console.error(`[FAIL] "${BOOK_ID}" 도서가 아직 등록되지 않음 — run-register.ts를 먼저 실행할 것`);
+    console.error(
+      `[FAIL] "${BOOK_ID}" 도서가 아직 등록되지 않음 — run-register.ts를 먼저 실행할 것`
+    );
     process.exit(1);
   }
   const totalPages = bookResult.rows[0].total_pages;
 
   const report = checkIntegrity(data, totalPages);
   if (!report.ok) {
-    console.error('[FAIL] hard 위반이 있어 등록을 진행하지 않는다 — 데이터를 고치지 말고 생성 프롬프트를 고쳐 재실행할 것', report.issues);
+    console.error(
+      '[FAIL] hard 위반이 있어 등록을 진행하지 않는다 — 데이터를 고치지 말고 생성 프롬프트를 고쳐 재실행할 것',
+      report.issues
+    );
     process.exit(1);
   }
   if (report.issues.length > 0) {
-    console.warn(`[WARN] review 대상 ${report.issues.length}건 — 등록은 진행하되 S7 검수에서 반드시 확인할 것`, report.issues);
+    console.warn(
+      `[WARN] review 대상 ${report.issues.length}건 — 등록은 진행하되 S7 검수에서 반드시 확인할 것`,
+      report.issues
+    );
   }
 
   await registerGeneratedContent(pool, data);

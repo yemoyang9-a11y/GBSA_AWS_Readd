@@ -31,15 +31,22 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const chapterCheck = (await pool.query('SELECT count(*)::int AS n FROM chapters WHERE book_id = $1', [BOOK_ID])) as {
+  const chapterCheck = (await pool.query(
+    'SELECT count(*)::int AS n FROM chapters WHERE book_id = $1',
+    [BOOK_ID]
+  )) as {
     rows: { n: number }[];
   };
   if (chapterCheck.rows[0].n === 0) {
-    console.error(`[FAIL] "${BOOK_ID}" 장 경계가 아직 등록되지 않음 — run-register.ts를 먼저 실행할 것`);
+    console.error(
+      `[FAIL] "${BOOK_ID}" 장 경계가 아직 등록되지 않음 — run-register.ts를 먼저 실행할 것`
+    );
     process.exit(1);
   }
 
-  console.log(`=== device_id=${DEVICE_ID}, book_id=${BOOK_ID}, cutoff=${cutoff} 리캡 주입 시작 ===`);
+  console.log(
+    `=== device_id=${DEVICE_ID}, book_id=${BOOK_ID}, cutoff=${cutoff} 리캡 주입 시작 ===`
+  );
 
   const recap = await injectDemoRecap(
     pool,

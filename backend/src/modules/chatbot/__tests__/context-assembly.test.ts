@@ -20,7 +20,6 @@ describe('근거 조립 - NFR-SEC-006 🚦', () => {
   test('NFR-SEC-006: 같은 K에서 질의를 바꿔도 전량 주입분은 동일해야 함', async () => {
     // Mock repository를 사용한 테스트
     // TODO: repository mock 추가 후 구현
-
     // const context1 = await assembleContext('book-123', 80);
     // const context2 = await assembleContext('book-123', 80);
     //
@@ -35,7 +34,6 @@ describe('근거 조립 범위 - FR-QNA-006 🚦', () => {
   test('FR-QNA-006: 조립된 컨텍스트 내 모든 엔티티는 <= K', async () => {
     // Mock repository를 사용한 테스트
     // TODO: repository mock 추가 후 구현
-
     // const K = 80;
     // const context = await assembleContext('book-123', K);
     //
@@ -59,7 +57,6 @@ describe('근거 조립 범위 - FR-QNA-006 🚦', () => {
 
   test('FR-QNA-006: 장 요약은 end_page <= K만 포함', async () => {
     // TODO: repository mock 추가 후 구현
-
     // const K = 80;
     // const context = await assembleContext('book-123', K);
     //
@@ -72,7 +69,6 @@ describe('근거 조립 범위 - FR-QNA-006 🚦', () => {
 describe('배경지식 - FR-BGK-002 🚦', () => {
   test('FR-BGK-002: 배경지식은 K와 무관 (상한 없음)', async () => {
     // TODO: repository mock 추가 후 구현
-
     // const context1 = await assembleContext('book-123', 10);   // K=10
     // const context2 = await assembleContext('book-123', 200);  // K=200
     //

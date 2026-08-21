@@ -26,8 +26,13 @@ ${buildPageTaggedText(pages)}`;
 }
 
 /** 인물 + 별칭 + 인물 노트 — FR-DAT-004, D6(전 별칭 태깅), A5(노트 상한) */
-export function buildCharacterPrompt(chapter: Chapter, pages: Page[], knownCharacterNames: string[]): string {
-  const known = knownCharacterNames.length > 0 ? knownCharacterNames.join(', ') : '(없음 — 이 장이 첫 장)';
+export function buildCharacterPrompt(
+  chapter: Chapter,
+  pages: Page[],
+  knownCharacterNames: string[]
+): string {
+  const known =
+    knownCharacterNames.length > 0 ? knownCharacterNames.join(', ') : '(없음 — 이 장이 첫 장)';
   return `다음은 「탁류」 ${chapter.chapter_no}장 "${chapter.title}"의 원문이다(각 문단 앞에 [페이지 N] 표시).
 이 장에서 처음 등장하거나 언급되는 인물을 전부 추출하라.
 
@@ -45,8 +50,13 @@ ${buildPageTaggedText(pages)}`;
 }
 
 /** 관계 — FR-DAT-005, A6(이력형 복수 행), 확립 페이지 = 이른 쪽 */
-export function buildRelationshipPrompt(chapter: Chapter, pages: Page[], knownCharacterNames: string[]): string {
-  const known = knownCharacterNames.length > 0 ? knownCharacterNames.join(', ') : '(없음 — 이 장이 첫 장)';
+export function buildRelationshipPrompt(
+  chapter: Chapter,
+  pages: Page[],
+  knownCharacterNames: string[]
+): string {
+  const known =
+    knownCharacterNames.length > 0 ? knownCharacterNames.join(', ') : '(없음 — 이 장이 첫 장)';
   return `다음은 「탁류」 ${chapter.chapter_no}장 "${chapter.title}"의 원문이다(각 문단 앞에 [페이지 N] 표시).
 이 장에서 드러나는 인물 간 관계를 추출하라.
 

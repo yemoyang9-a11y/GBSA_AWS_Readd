@@ -18,22 +18,22 @@
  *    가드가 걸리는 `gateway.ts`와는 다른 모듈이라 직접 import해도 안전하다.
  */
 
-import { assembleRecapInput } from './recap-assembly'
-import type { RecapAssemblyDeps } from './recap-assembly'
-import { getModelForTask } from '../llm-gateway/model-config'
+import { assembleRecapInput } from './recap-assembly';
+import type { RecapAssemblyDeps } from './recap-assembly';
+import { getModelForTask } from '../llm-gateway/model-config';
 import type {
   RecapCallLogger,
   SavedRecapRepository,
   SessionRecapCacheRepository,
-} from './repository'
-import type { RecapCallLog, RecapInput } from '../../shared/types'
+} from './repository';
+import type { RecapCallLog, RecapInput } from '../../shared/types';
 
-export type RecapTrigger = 'realtime' | 'session_end'
+export type RecapTrigger = 'realtime' | 'session_end';
 
 export type RecapResult =
   | { kind: 'empty' }
   | { kind: 'reused'; text: string }
-  | { kind: 'generated'; chunks: AsyncGenerator<string> }
+  | { kind: 'generated'; chunks: AsyncGenerator<string> };
 
 /**
  * 스트리밍 종료 시 게이트웨이가 돌려주는 실사용량 (gateway.ts의 LLMStreamUsage와 필드명
@@ -42,22 +42,22 @@ export type RecapResult =
  * `estimateTokens` 추정치로 흡수한다.
  */
 export interface LLMUsage {
-  inputTokens: number
-  outputTokens: number
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface RecapServiceDeps extends RecapAssemblyDeps {
-  savedRecap: SavedRecapRepository
-  sessionCache: SessionRecapCacheRepository
-  recapLog: RecapCallLogger
+  savedRecap: SavedRecapRepository;
+  sessionCache: SessionRecapCacheRepository;
+  recapLog: RecapCallLogger;
   /**
    * LLM 게이트웨이 스트리밍 호출 (⑥ 경유는 이 함수를 주입하는 쪽의 책임).
    * 스트림이 끝날 때(`return`) 실제 토큰 사용량을 낼 수 있다 — `for await`는 그 반환값을
    * 버리므로 아래 `generateAndPersist`는 제너레이터를 수동으로 `.next()`해 받는다.
    */
-  llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>
+  llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>;
   /** 세션 캐시 만료 시각 계산용. 주입하지 않으면 24시간 뒤로 둔다(세션 종료 전 소멸 목적일 뿐 — TTL 자체는 스펙 미지정). */
-  cacheTtlMs?: number
+  cacheTtlMs?: number;
 }
 
 export interface RecapService {
@@ -74,13 +74,13 @@ export interface RecapService {
     bookId: string,
     cutoff: number,
     trigger: RecapTrigger
-  ): Promise<RecapResult>
+  ): Promise<RecapResult>;
 }
 
-const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60_000
+const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60_000;
 
 export function createRecapService(deps: RecapServiceDeps): RecapService {
-  const { savedRecap, sessionCache, recapLog, llmStream, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = deps
+  const { savedRecap, sessionCache, recapLog, llmStream, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = deps;
 
   return {
     async getRecap(
@@ -90,18 +90,18 @@ export function createRecapService(deps: RecapServiceDeps): RecapService {
       trigger: RecapTrigger
     ): Promise<RecapResult> {
       if (cutoff <= 0) {
-        return { kind: 'empty' } // ❓Q1 — 생성 대상 자체가 없다. 호출 0회
+        return { kind: 'empty' }; // ❓Q1 — 생성 대상 자체가 없다. 호출 0회
       }
 
       if (trigger === 'realtime') {
-        const saved = await savedRecap.findSavedRecap(deviceId, bookId)
+        const saved = await savedRecap.findSavedRecap(deviceId, bookId);
         if (saved !== null && saved.cutoff_page === cutoff) {
-          return { kind: 'reused', text: saved.recap_text } // R8 — 완전 일치만 재사용
+          return { kind: 'reused', text: saved.recap_text }; // R8 — 완전 일치만 재사용
         }
 
-        const cached = await sessionCache.findCached(deviceId, bookId, cutoff)
+        const cached = await sessionCache.findCached(deviceId, bookId, cutoff);
         if (cached !== null) {
-          return { kind: 'reused', text: cached } // UC-09 A7
+          return { kind: 'reused', text: cached }; // UC-09 A7
         }
       }
       // trigger === 'session_end'는 재사용 판정 자체를 건너뛴다 — 세션 종료 잡은 진도와
@@ -113,10 +113,10 @@ export function createRecapService(deps: RecapServiceDeps): RecapService {
         recapLog,
         llmStream,
         cacheTtlMs,
-      })
-      return { kind: 'generated', chunks }
+      });
+      return { kind: 'generated', chunks };
     },
-  }
+  };
 }
 
 async function* generateAndPersist(
@@ -126,25 +126,25 @@ async function* generateAndPersist(
   cutoff: number,
   trigger: RecapTrigger,
   io: {
-    savedRecap: SavedRecapRepository
-    sessionCache: SessionRecapCacheRepository
-    recapLog: RecapCallLogger
-    llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>
-    cacheTtlMs: number
+    savedRecap: SavedRecapRepository;
+    sessionCache: SessionRecapCacheRepository;
+    recapLog: RecapCallLogger;
+    llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>;
+    cacheTtlMs: number;
   }
 ): AsyncGenerator<string> {
-  const input = await assembleRecapInput(assemblyDeps, bookId, cutoff)
-  const prompt = buildRecapPrompt(input)
+  const input = await assembleRecapInput(assemblyDeps, bookId, cutoff);
+  const prompt = buildRecapPrompt(input);
 
-  let fullText = ''
-  const gen = io.llmStream('recap', prompt)
-  let step = await gen.next()
+  let fullText = '';
+  const gen = io.llmStream('recap', prompt);
+  let step = await gen.next();
   while (!step.done) {
-    fullText += step.value
-    yield step.value
-    step = await gen.next()
+    fullText += step.value;
+    yield step.value;
+    step = await gen.next();
   }
-  const usage = step.value ?? undefined // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
+  const usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
 
   if (trigger === 'realtime') {
     await io.sessionCache.saveCached(
@@ -153,12 +153,12 @@ async function* generateAndPersist(
       cutoff,
       fullText,
       new Date(Date.now() + io.cacheTtlMs)
-    ) // FR-DAT-010 — 영구 저장 없음
+    ); // FR-DAT-010 — 영구 저장 없음
   } else {
-    await io.savedRecap.upsertSavedRecap(deviceId, bookId, cutoff, fullText) // FR-DAT-009
+    await io.savedRecap.upsertSavedRecap(deviceId, bookId, cutoff, fullText); // FR-DAT-009
   }
 
-  await io.recapLog.record(buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage)) // NFR-OBS-002 🚦
+  await io.recapLog.record(buildRecapCallLog(deviceId, bookId, input, fullText, trigger, usage)); // NFR-OBS-002 🚦
 }
 
 /**
@@ -168,8 +168,8 @@ async function* generateAndPersist(
 function buildRecapPrompt(input: RecapInput): string {
   const summaries = input.chapter_summaries
     .map((s) => `[${s.chapter_no}장 ${s.title}] ${s.content}`)
-    .join('\n')
-  const currentChapter = input.current_chapter_text ?? ''
+    .join('\n');
+  const currentChapter = input.current_chapter_text ?? '';
 
   return [
     '아래 자료만으로 독자가 지금까지 읽은 줄거리를 이어서 요약해라.',
@@ -177,7 +177,7 @@ function buildRecapPrompt(input: RecapInput): string {
     summaries || '(없음)',
     '현재 장에서 읽은 부분:',
     currentChapter || '(없음)',
-  ].join('\n\n')
+  ].join('\n\n');
 }
 
 function buildRecapCallLog(
@@ -201,7 +201,7 @@ function buildRecapCallLog(
       ? { input: usage.inputTokens, output: usage.outputTokens } // 게이트웨이 실사용량 (커밋 410f558)
       : estimateTokens(input, outputText), // llmStream이 usage를 안 주는 경우(예: 테스트 페이크)의 대체
     trigger,
-  }
+  };
 }
 
 /**
@@ -211,9 +211,9 @@ function buildRecapCallLog(
 function estimateTokens(input: RecapInput, outputText: string): { input: number; output: number } {
   const inputChars =
     input.chapter_summaries.reduce((sum, s) => sum + s.content.length, 0) +
-    (input.current_chapter_text?.length ?? 0)
+    (input.current_chapter_text?.length ?? 0);
   return {
     input: Math.ceil(inputChars / 2),
     output: Math.ceil(outputText.length / 2),
-  }
+  };
 }

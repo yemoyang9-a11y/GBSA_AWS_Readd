@@ -19,7 +19,7 @@ describe('관통 흐름 (mock 기준)', () => {
     render(<App />);
 
     // 대시보드 — 카탈로그가 뜬다
-    expect(await screen.findByText('탁류')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /탁류/ })).toBeInTheDocument();
 
     // 미완비 도서는 클릭 자체가 막혀 있다 (FR-BRW-002 🚦)
     expect(screen.getByRole('button', { name: /검수 전 도서/ })).toBeDisabled();
@@ -43,6 +43,10 @@ describe('관통 흐름 (mock 기준)', () => {
     // 읽기 화면에는 진도 바가 없고 페이지 번호만 있다 (FR-PRG-004)
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.getByText(/\d+ \/ 30/)).toBeInTheDocument();
+
+    // 싸비는 닫힌 채로 들어온다 — 사용자가 top-bar 우측 토글을 눌러야 열린다
+    expect(screen.queryByRole('tab', { name: '인물 관계도' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
 
     // 싸비 사이드창의 기본 탭은 인물 관계도다 (FR-SVB-002)
     expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute(

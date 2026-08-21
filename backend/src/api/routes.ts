@@ -12,6 +12,9 @@ import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
 import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
+import { createContentServices } from '../modules/content/composition';
+import { createSsabiServices } from '../modules/ssabi/composition';
+import { ensureBookReady } from './book-ready.guard';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
 
 const router = express.Router();
@@ -19,6 +22,10 @@ const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 // R2 서비스 조립 — Postgres 어댑터를 통해 진도·세션·리캡을 다룬다 (composition.ts)
 const readingState = createReadingStateServices(pool);
+// R1 콘텐츠 조회 서비스 조립 — Round 1 전체의 선행(가드·ssabi 조립이 이 인스턴스를 참조한다)
+const contentServices = createContentServices(pool, readingState);
+// R3 싸비 조회 서비스 조립 — 관계도·인물 상세 (G1: 모든 메서드가 cutoff 인자)
+const ssabiServices = createSsabiServices(pool);
 
 function requireDeviceId(req: Request, res: Response): string | null {
   const deviceId = req.headers['x-device-id'] as string | undefined;
@@ -125,17 +132,17 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
       res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
       return res.end();
-
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
       // 에러도 통일된 형식으로
-      res.write(`data: ${JSON.stringify({
-        type: 'error',
-        message: 'Stream processing failed'
-      })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          message: 'Stream processing failed',
+        })}\n\n`
+      );
       return res.end();
     }
-
   } catch (error) {
     console.error('[API] Chatbot error', { bookId, query, error });
     // SSE 열기 전 에러는 일반 JSON 응답
@@ -173,7 +180,9 @@ router.post('/books/:bookId/entry', async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (error instanceof BookNotReadyError) {
-      res.status(403).json({ error: 'BOOK_NOT_READY', message: '미완비 도서는 진입할 수 없습니다' });
+      res
+        .status(403)
+        .json({ error: 'BOOK_NOT_READY', message: '미완비 도서는 진입할 수 없습니다' });
       return;
     }
     console.error('[API] entry error', { bookId, error });
@@ -279,7 +288,12 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
 
     // 요청당 스냅샷 1회 (2.1절) — 스트리밍 도중 페이지가 바뀌어도 이 K를 유지한다(UC-27 A5)
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
-    const result = await readingState.recapService.getRecap(deviceId, bookId, snapshot.cutoff, 'realtime');
+    const result = await readingState.recapService.getRecap(
+      deviceId,
+      bookId,
+      snapshot.cutoff,
+      'realtime'
+    );
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -309,7 +323,9 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
       res.end();
     } catch (streamError) {
       console.error('[API] recap stream error', { bookId, error: streamError });
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream processing failed' })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', message: 'Stream processing failed' })}\n\n`
+      );
       res.end();
     }
   } catch (error) {
@@ -325,45 +341,116 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
 /**
  * GET /books
  *
- * 카탈로그 조회
+ * 카탈로그 조회 — FR-BRW-001, FR-BRW-002 🚦, FR-BRF-005 🚦 (R4)
  *
- * TODO: R4 구현
+ * 미완비 도서도 목록에 담는다 — 대시보드가 표지를 띄우고 잠그려면 목록에 있어야 한다.
+ * 그래서 이 핸들러에는 ensureBookReady 를 걸지 않는다. 차단은 개별 도서 조회에서 한다.
  */
-router.get('/books', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books', async (req: Request, res: Response) => {
+  // 읽던 도서 판정에 디바이스가 필요하다 (진도는 디바이스별로 저장된다)
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    return res.json(await contentServices.catalogService.getCatalog(deviceId));
+  } catch (error) {
+    console.error('[API] Catalog error', { error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * GET /books/:bookId/info
  *
- * 책 정보 (i 팝업)
- *
- * TODO: R4 구현
+ * 책 정보 (i 팝업) — FR-BRW-003, FR-NAV-001, R5 (R1)
  */
-router.get('/books/:bookId/info', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/info', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+
+  try {
+    // FR-BRW-002 🚦 — UI 차단만으로는 부족하다. API를 직접 호출해도 서버가 거절한다
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    const info = await contentServices.bookInfoService.getInfo(bookId);
+    if (info === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Book not found' });
+    }
+    return res.json(info);
+  } catch (error) {
+    console.error('[API] Book info error', { bookId, error });
+    // 조립 실패는 5xx — 부분 응답을 내지 않는다 (team-sync §4.2, R11)
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * GET /books/:bookId/pages/:pageNo
  *
- * 본문 페이지 단건
+ * 본문 페이지 단건 — FR-PRG-001, R3 (R4)
  *
- * TODO: R4 구현
+ * 진도를 받지 않는다. (page, seq)를 동봉받지 않으므로 프리페치가 기준점을 밀 수 없다
+ * (team-sync §1.1·§4.3). 진도는 POST /books/{b}/progress 하나로만 올라간다.
+ * 본문 접근 자체는 상한 대상이 아니다 (R3, FR-SPL-001).
  */
-router.get('/books/:bookId/pages/:pageNo', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/pages/:pageNo', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const pageNo = Number(req.params.pageNo);
+
+  // 페이지 번호는 1-based 정수 (API_CONTRACT.md 공통 규칙)
+  if (!Number.isInteger(pageNo) || pageNo < 1) {
+    return res
+      .status(400)
+      .json({ error: 'BAD_REQUEST', message: 'pageNo must be a positive integer' });
+  }
+
+  try {
+    // FR-BRW-002 🚦 — UI 차단만으로는 부족하다. API를 직접 호출해도 서버가 거절한다
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    const page = await contentServices.pageService.getPage(bookId, pageNo);
+    if (page === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Page not found' });
+    }
+    return res.json(page);
+  } catch (error) {
+    console.error('[API] Page error', { bookId, pageNo, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
  * GET /books/:bookId/ssabi/graph
  *
- * 관계도 JSON
+ * 관계도 JSON (R3, Task 7)
  *
- * TODO: R4 구현
+ * FR-SPL-002 🚦: cutoff 기준 필터링
+ * A6: 관계는 최신 라벨만 표시
  */
-router.get('/books/:bookId/ssabi/graph', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  // FR-BRW-002 🚦: 미완비 도서 거절
+  const isReady = await ensureBookReady(contentServices.content, bookId, res);
+  if (!isReady) return;
+
+  try {
+    // 기준점 스냅샷 가져오기 (R2 연동)
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const K = snapshot.cutoff;
+
+    // 관계도 조회 (FR-SPL-002 🚦: cutoff 적용)
+    const graph = await ssabiServices.graph.getGraph(bookId, K);
+
+    res.json(graph);
+  } catch (error) {
+    console.error('[API] ssabi/graph error', { bookId, error });
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+    });
+  }
 });
 
 /**
@@ -373,8 +460,30 @@ router.get('/books/:bookId/ssabi/graph', (_req: Request, res: Response) => {
  *
  * TODO: R4 구현
  */
-router.get('/books/:bookId/ssabi/characters/:characterId', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, res: Response) => {
+  const { bookId, characterId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  // FR-BRW-002 🚦: 미완비 도서 거절
+  if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+  try {
+    // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+
+    const detail = await ssabiServices.character.getCharacter(bookId, characterId, snapshot.cutoff);
+
+    // 기준점 이하에서 아직 등장하지 않은 인물은 "없는 인물"과 같게 응답한다.
+    // 이유를 구분해 알리면 그 차이가 곧 미등장 인물의 존재를 알려준다 (절대 규칙 7번)
+    if (detail === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Character not found' });
+    }
+    return res.json(detail);
+  } catch (error) {
+    console.error('[API] ssabi/characters error', { bookId, characterId, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 export default router;

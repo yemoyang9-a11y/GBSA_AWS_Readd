@@ -59,10 +59,20 @@ describe('mergeCharacters — 챕터 간 인물 상태 누적', () => {
   test('노트는 장마다 그대로 누적된다(장당 상한은 프롬프트 책임)', () => {
     const state = createEmptyState();
     mergeCharacters(state, [
-      { name: '정주사', first_appearance_page: 3, aliases: [], notes: [{ note: '몰락한 양반', source_page: 3 }] },
+      {
+        name: '정주사',
+        first_appearance_page: 3,
+        aliases: [],
+        notes: [{ note: '몰락한 양반', source_page: 3 }],
+      },
     ]);
     mergeCharacters(state, [
-      { name: '정주사', first_appearance_page: 3, aliases: [], notes: [{ note: '미두에 손을 댐', source_page: 40 }] },
+      {
+        name: '정주사',
+        first_appearance_page: 3,
+        aliases: [],
+        notes: [{ note: '미두에 손을 댐', source_page: 40 }],
+      },
     ]);
 
     expect(state.characters[0].notes).toHaveLength(2);
@@ -103,23 +113,33 @@ describe('resolveCharacterId / knownCharacterNames', () => {
 describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => {
   test('처음 등장하는 쌍은 새 행으로 추가된다', () => {
     const state = createEmptyState();
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 }]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
+    ]);
 
     expect(state.relationships).toHaveLength(1);
   });
 
   test('같은 쌍, 같은 라벨의 재서술은 중복 행을 만들지 않는다', () => {
     const state = createEmptyState();
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 }]);
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 90 }]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
+    ]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 90 },
+    ]);
 
     expect(state.relationships).toHaveLength(1);
   });
 
   test('같은 쌍, 라벨이 바뀌면 기존 행을 덮어쓰지 않고 새 행을 추가한다(이력형)', () => {
     const state = createEmptyState();
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 }]);
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '부부', established_page: 90 }]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
+    ]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '부부', established_page: 90 },
+    ]);
 
     expect(state.relationships).toHaveLength(2);
     expect(state.relationships[0].label).toBe('약혼');
@@ -129,8 +149,12 @@ describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => 
 
   test('인물 쌍 순서가 뒤바뀌어 보고돼도 같은 쌍으로 인식한다', () => {
     const state = createEmptyState();
-    mergeRelationships(state, [{ character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 }]);
-    mergeRelationships(state, [{ character_a_id: 'b', character_b_id: 'a', label: '부부', established_page: 90 }]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
+    ]);
+    mergeRelationships(state, [
+      { character_a_id: 'b', character_b_id: 'a', label: '부부', established_page: 90 },
+    ]);
 
     expect(state.relationships).toHaveLength(2); // 라벨이 바뀌었으니 새 행 — 순서 뒤바뀜과 무관하게 같은 쌍으로 식별
   });
@@ -147,7 +171,9 @@ describe('mergeTerms — 최초 등장 유일성 (DDL UNIQUE(book_id, term))', (
   test('이미 등장한 용어는 최초 등장 페이지를 덮어쓰지 않는다', () => {
     const state = createEmptyState();
     mergeTerms(state, [{ term: '미두장', definition: '...', first_appearance_page: 3 }]);
-    mergeTerms(state, [{ term: '미두장', definition: '...(다른 설명)', first_appearance_page: 80 }]);
+    mergeTerms(state, [
+      { term: '미두장', definition: '...(다른 설명)', first_appearance_page: 80 },
+    ]);
 
     expect(state.terms).toHaveLength(1);
     expect(state.terms[0].first_appearance_page).toBe(3);

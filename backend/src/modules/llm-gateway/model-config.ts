@@ -14,19 +14,19 @@
  */
 export const MODEL_CONFIG = {
   // 챗봇 응답
-  chatbot_easy: process.env.BEDROCK_CLAUDE_HAIKU || '',    // Haiku (쉬운 질문)
-  chatbot_hard: process.env.BEDROCK_CLAUDE_SONNET || '',   // Sonnet (어렵고 복잡한 질문)
+  chatbot_easy: process.env.BEDROCK_CLAUDE_HAIKU || '', // Haiku (쉬운 질문)
+  chatbot_hard: process.env.BEDROCK_CLAUDE_SONNET || '', // Sonnet (어렵고 복잡한 질문)
 
   // 리캡 종합 (R2)
-  recap: process.env.BEDROCK_CLAUDE_HAIKU || '',            // Haiku (잠정 - FR-RCP-001 🚦 미통과 시 상향)
+  recap: process.env.BEDROCK_CLAUDE_HAIKU || '', // Haiku (잠정 - FR-RCP-001 🚦 미통과 시 상향)
 
   // 배치 생성 6종 (R1) - 미지정, 추후 결정
-  generate_summary: process.env.BEDROCK_CLAUDE_HAIKU || '',        // 장 요약
-  generate_character: process.env.BEDROCK_CLAUDE_HAIKU || '',      // 인물
-  generate_relationship: process.env.BEDROCK_CLAUDE_HAIKU || '',   // 관계
-  generate_background: process.env.BEDROCK_CLAUDE_HAIKU || '',     // 배경지식
-  generate_term: process.env.BEDROCK_CLAUDE_HAIKU || '',           // 용어
-  generate_event: process.env.BEDROCK_CLAUDE_HAIKU || '',          // 사건
+  generate_summary: process.env.BEDROCK_CLAUDE_HAIKU || '', // 장 요약
+  generate_character: process.env.BEDROCK_CLAUDE_HAIKU || '', // 인물
+  generate_relationship: process.env.BEDROCK_CLAUDE_HAIKU || '', // 관계
+  generate_background: process.env.BEDROCK_CLAUDE_HAIKU || '', // 배경지식
+  generate_term: process.env.BEDROCK_CLAUDE_HAIKU || '', // 용어
+  generate_event: process.env.BEDROCK_CLAUDE_HAIKU || '', // 사건
 } as const;
 
 /**
@@ -58,12 +58,9 @@ export function validateModelVersions(): void {
     return;
   }
 
-  const requiredEnvVars = [
-    'BEDROCK_CLAUDE_SONNET',
-    'BEDROCK_CLAUDE_HAIKU',
-  ];
+  const requiredEnvVars = ['BEDROCK_CLAUDE_SONNET', 'BEDROCK_CLAUDE_HAIKU'];
 
-  const missing = requiredEnvVars.filter(key => !process.env[key]);
+  const missing = requiredEnvVars.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);

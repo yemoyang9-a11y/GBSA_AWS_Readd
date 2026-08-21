@@ -43,7 +43,12 @@ describe('H1 — 페이지 범위 (1..totalPages)', () => {
 
   test('페이지가 null/비정수면 hard 위반', () => {
     const data = baseData();
-    data.terms.push({ id: 't1', term: '미두장', definition: '...', first_appearance_page: null as unknown as number });
+    data.terms.push({
+      id: 't1',
+      term: '미두장',
+      definition: '...',
+      first_appearance_page: null as unknown as number,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     expect(report.ok).toBe(false);
   });
@@ -70,7 +75,13 @@ describe('H2 — 용어 텍스트 중복 (DDL UNIQUE(book_id, term))', () => {
 describe('H3 — 인물 대표명 중복', () => {
   test('같은 이름의 인물이 두 번 생성되면 hard 위반', () => {
     const data = baseData();
-    data.characters.push({ id: 'c3', name: '정주사', first_appearance_page: 50, aliases: [], notes: [] });
+    data.characters.push({
+      id: 'c3',
+      name: '정주사',
+      first_appearance_page: 50,
+      aliases: [],
+      notes: [],
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     expect(report.issues.some((i) => i.rule === 'H3-character-name-unique')).toBe(true);
   });
@@ -79,14 +90,26 @@ describe('H3 — 인물 대표명 중복', () => {
 describe('H4 — 관계의 인물 id FK 무결성', () => {
   test('존재하지 않는 인물 id를 참조하면 hard 위반', () => {
     const data = baseData();
-    data.relationships.push({ id: 'r1', character_a_id: 'c1', character_b_id: 'no-such-id', label: '친구', established_page: 10 });
+    data.relationships.push({
+      id: 'r1',
+      character_a_id: 'c1',
+      character_b_id: 'no-such-id',
+      label: '친구',
+      established_page: 10,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     expect(report.issues.some((i) => i.rule === 'H4-relationship-fk')).toBe(true);
   });
 
   test('실제 존재하는 인물끼리의 관계는 위반 없음(positive)', () => {
     const data = baseData();
-    data.relationships.push({ id: 'r1', character_a_id: 'c1', character_b_id: 'c2', label: '부녀', established_page: 10 });
+    data.relationships.push({
+      id: 'r1',
+      character_a_id: 'c1',
+      character_b_id: 'c2',
+      label: '부녀',
+      established_page: 10,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     expect(report.issues.filter((i) => i.rule === 'H4-relationship-fk')).toHaveLength(0);
   });
@@ -95,8 +118,20 @@ describe('H4 — 관계의 인물 id FK 무결성', () => {
 describe('REVIEW — 같은 쌍·같은 페이지에 라벨 충돌', () => {
   test('같은 established_page에 라벨이 다르면 review 항목으로 보고된다(hard 아님)', () => {
     const data = baseData();
-    data.relationships.push({ id: 'r1', character_a_id: 'c1', character_b_id: 'c2', label: '약혼', established_page: 30 });
-    data.relationships.push({ id: 'r2', character_a_id: 'c2', character_b_id: 'c1', label: '부부', established_page: 30 });
+    data.relationships.push({
+      id: 'r1',
+      character_a_id: 'c1',
+      character_b_id: 'c2',
+      label: '약혼',
+      established_page: 30,
+    });
+    data.relationships.push({
+      id: 'r2',
+      character_a_id: 'c2',
+      character_b_id: 'c1',
+      label: '부부',
+      established_page: 30,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     const found = report.issues.find((i) => i.rule === 'REVIEW-relationship-label-conflict');
     expect(found).toBeDefined();
@@ -106,10 +141,24 @@ describe('REVIEW — 같은 쌍·같은 페이지에 라벨 충돌', () => {
 
   test('같은 페이지에 라벨이 같으면(재서술) 충돌 아님(positive)', () => {
     const data = baseData();
-    data.relationships.push({ id: 'r1', character_a_id: 'c1', character_b_id: 'c2', label: '약혼', established_page: 30 });
-    data.relationships.push({ id: 'r2', character_a_id: 'c1', character_b_id: 'c2', label: '약혼', established_page: 30 });
+    data.relationships.push({
+      id: 'r1',
+      character_a_id: 'c1',
+      character_b_id: 'c2',
+      label: '약혼',
+      established_page: 30,
+    });
+    data.relationships.push({
+      id: 'r2',
+      character_a_id: 'c1',
+      character_b_id: 'c2',
+      label: '약혼',
+      established_page: 30,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
-    expect(report.issues.filter((i) => i.rule === 'REVIEW-relationship-label-conflict')).toHaveLength(0);
+    expect(
+      report.issues.filter((i) => i.rule === 'REVIEW-relationship-label-conflict')
+    ).toHaveLength(0);
   });
 });
 
@@ -126,8 +175,16 @@ describe('REVIEW — name형 별칭이 여러 인물에게 쓰이는 경우', ()
 
   test('kinship/title형 별칭이 여러 인물에게 쓰이는 건 정상(예: "아주머니")(positive)', () => {
     const data = baseData();
-    data.characters[0].aliases.push({ alias: '아주머니', type: 'kinship', first_appearance_page: 3 });
-    data.characters[1].aliases.push({ alias: '아주머니', type: 'kinship', first_appearance_page: 5 });
+    data.characters[0].aliases.push({
+      alias: '아주머니',
+      type: 'kinship',
+      first_appearance_page: 3,
+    });
+    data.characters[1].aliases.push({
+      alias: '아주머니',
+      type: 'kinship',
+      first_appearance_page: 5,
+    });
     const report = checkIntegrity(data, TOTAL_PAGES);
     expect(report.issues.filter((i) => i.rule === 'REVIEW-ambiguous-name-alias')).toHaveLength(0);
   });
