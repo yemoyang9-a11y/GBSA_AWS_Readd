@@ -13,7 +13,24 @@ import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 import { getDeviceId, setDeviceId } from '../utils/storage';
 
+/**
+ * 디바이스 식별자를 확보한다.
+ *
+ * `VITE_DEMO_DEVICE_ID` 가 설정돼 있으면 그 값을 쓴다 — 백엔드 데모 스크립트
+ * (`run-seed-demo-state.ts`·`run-inject-demo-recap.ts`)가 `DEMO_DEVICE_ID` 로 같은
+ * 규약을 쓰고 있어 짝을 맞춘 것이다. 이게 없으면 브라우저가 매번 새 UUID 를 만들어
+ * 시연용으로 적재해 둔 진도·저장 리캡을 볼 수 없다 (실제로 E2E 에서 겪었다 —
+ * 시드는 K=100 인데 브라우저는 자기 디바이스로 1페이지부터 시작했다).
+ *
+ * 설정하지 않으면 종전대로 최초 실행 시 UUID 를 생성한다 (8/20 팀 결정, team-sync §4.8).
+ */
 function ensureDeviceId(): string {
+  const demo = import.meta.env.VITE_DEMO_DEVICE_ID;
+  if (typeof demo === 'string' && demo.length > 0) {
+    if (getDeviceId() !== demo) setDeviceId(demo);
+    return demo;
+  }
+
   const existing = getDeviceId();
   if (existing) return existing;
   const generated = crypto.randomUUID();
