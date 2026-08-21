@@ -12,11 +12,15 @@ import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
 import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
+import { createContentServices } from '../modules/content/composition';
+import { ensureBookReady } from './book-ready.guard';
 
 const router = express.Router();
 
 // R2 서비스 조립 — Postgres 어댑터를 통해 진도·세션·리캡을 다룬다 (composition.ts)
 const readingState = createReadingStateServices(pool);
+// R1 콘텐츠 조회 서비스 조립 — Round 1 전체의 선행(가드·ssabi 조립이 이 인스턴스를 참조한다)
+const contentServices = createContentServices(pool, readingState);
 
 function requireDeviceId(req: Request, res: Response): string | null {
   const deviceId = req.headers['x-device-id'] as string | undefined;
@@ -328,12 +332,25 @@ router.get('/books', (_req: Request, res: Response) => {
 /**
  * GET /books/:bookId/info
  *
- * 책 정보 (i 팝업)
- *
- * TODO: R4 구현
+ * 책 정보 (i 팝업) — FR-BRW-003, FR-NAV-001, R5 (R1)
  */
-router.get('/books/:bookId/info', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/info', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+
+  try {
+    // FR-BRW-002 🚦 — UI 차단만으로는 부족하다. API를 직접 호출해도 서버가 거절한다
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    const info = await contentServices.bookInfoService.getInfo(bookId);
+    if (info === null) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Book not found' });
+    }
+    return res.json(info);
+  } catch (error) {
+    console.error('[API] Book info error', { bookId, error });
+    // 조립 실패는 5xx — 부분 응답을 내지 않는다 (team-sync §4.2, R11)
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
 });
 
 /**
