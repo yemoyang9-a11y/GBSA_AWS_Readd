@@ -67,6 +67,39 @@ background_and_intro (book_id, kind CHECK IN ('background','intro'), content)
 
 **아래 3건은 문서끼리 어긋나 있다. 실행자가 임의로 채우지 말고 확정을 받은 뒤 시작한다(CLAUDE.md 6장).** 각 항목에 이 계획의 권고안을 적었고, 태스크 본문은 권고안 기준으로 쓰였다.
 
+---
+
+### ✅ 확정 (2026-08-21) — 3건 모두 해소. Task 2·4 착수 가능
+
+| # | 결정 | 정한 사람 |
+| --- | --- | --- |
+| D-1 | **`GET /books` 응답에서 `total_pages` 를 뺀다.** 프론트 타입·fixture 에서도 제거했다(커밋 `0348b7e`) | R4 |
+| D-2 | **`/info` 의 `introduction` 은 `background_and_intro WHERE book_id=$1 AND kind='intro'`** | R1 |
+| D-3 | **`GET /books` 에 `intro_summary: string \| null` 을 넣는다.** 단 **출처는 `background_and_intro` 의 `kind='intro'` 행**이다 — 계획 원문의 `books.intro_summary` 가 아니다 | R4 |
+
+**D-1 근거** — `BookSummary.total_pages` 를 읽는 프론트 컴포넌트가 0개임을 확인했다. 읽기 화면의
+"21 / 30" 은 `GET /info` 의 목차 마지막 장 `end_page` 에서 오는 별개 값이다. 남겨두면
+`progress.current_page` 와 함께 퍼센트 재계산 재료가 된다(절대 규칙 2번, FR-BRF-005 🚦).
+
+**D-2 근거 (R1 확인)** — 파이프라인이 `register.ts:141-146` 에서 실제로 이 테이블에 쓴다.
+`background` 도 같은 테이블에 `kind='background'` 로 바로 위 줄에서 쓴다.
+
+**D-3 출처 정정 — 이 계획의 원래 전제가 틀렸다.** 계획 원문은 "`books.intro_summary` 는
+대시보드 카드용 짧은 소개로 본다"고 적었으나, **그 컬럼은 죽은 컬럼이다.** 001 DDL 15행에
+선언만 있고 백엔드 전체에서 읽거나 쓰는 코드가 한 줄도 없다(R1 확인 + 컨트롤러 재확인).
+그대로 두면 카드 소개가 영원히 비어 있게 된다.
+
+대신 `/info` 와 같은 `background_and_intro` `kind='intro'` 행을 쓴다. 근거 셋 —
+① 파이프라인이 실제로 채우는 유일한 곳이다 ② 도서 카드는 이미 `line-clamp-2` 로 두 줄만
+보여주므로 긴 소개가 와도 화면이 깨지지 않는다 ③ 두 자리 모두 상한 예외 콘텐츠(R5)라
+안전 등급이 같다. **틀렸을 때 비용** — 소개 첫 두 줄이 카드 문구로 어색하면, R1 이 짧은
+전용 필드를 채우게 하고 `/books` 의 쿼리 한 줄만 바꾼다.
+
+> `books.intro_summary` 는 R1 소유 파일(001 DDL)의 죽은 컬럼이다. 정리 여부는 R1 이 정한다.
+> R4 는 참조하지 않는다.
+
+---
+
 ### D-1. `GET /books`에 `total_pages`를 넣는가
 
 `team-sync-r4.md` §4.5(🟡 미해소)는 **넣지 말자**고 한다 — 대시보드에 `current_page / total_pages` 재계산 재료를 주지 않기 위해서다(절대 규칙 2번). 그런데 `frontend/src/types/book.ts`의 `BookSummary`에는 `total_pages: number`가 필수 필드로 들어 있다.
