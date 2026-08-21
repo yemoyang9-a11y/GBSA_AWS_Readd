@@ -3,18 +3,24 @@
  *
  * Round 1-3에서 routes.ts에 추가:
  * import { createSsabiServices } from '../modules/ssabi/composition';
- * const ssabi = createSsabiServices(pool);
+ * const ssabiServices = createSsabiServices(pool);
  */
 
 import type { Pool } from 'pg';
 import type { SsabiRepository } from './repository';
+import { createPgSsabiRepository, type QueryClient } from './pg-repository';
+import { createGraphService, type GraphService } from './graph.service';
 
 /**
  * 싸비 서비스 집합
  */
 export interface SsabiServices {
   repository: SsabiRepository;
-  // graph: GraphService;  // Round 2에서 추가
+  graph: GraphService;
+}
+
+function toQueryClient(pool: Pool): QueryClient {
+  return { query: (sql: string, params?: unknown[]) => pool.query(sql, params) };
 }
 
 /**
@@ -24,8 +30,11 @@ export interface SsabiServices {
  * @returns 싸비 서비스 집합
  */
 export function createSsabiServices(pool: Pool): SsabiServices {
-  // TODO: Round 0 완료 후 실제 어댑터 연결
-  // const repository = createSsabiRepositoryAdapter(pool);
+  const db = toQueryClient(pool);
+  const repository = createPgSsabiRepository(db);
 
-  throw new Error('Not implemented: createSsabiServices - Round 1 작업 대기 중');
+  return {
+    repository,
+    graph: createGraphService({ repository }),
+  };
 }

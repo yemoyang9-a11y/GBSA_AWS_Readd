@@ -13,6 +13,7 @@ import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
 import { createContentServices } from '../modules/content/composition';
+import { createSsabiServices } from '../modules/ssabi/composition';
 import { ensureBookReady } from './book-ready.guard';
 
 const router = express.Router();
@@ -21,6 +22,8 @@ const router = express.Router();
 const readingState = createReadingStateServices(pool);
 // R1 콘텐츠 조회 서비스 조립 — Round 1 전체의 선행(가드·ssabi 조립이 이 인스턴스를 참조한다)
 const contentServices = createContentServices(pool, readingState);
+// R3 싸비 조회 서비스 조립 — 관계도·인물 상세 (G1: 모든 메서드가 cutoff 인자)
+const ssabiServices = createSsabiServices(pool);
 
 function requireDeviceId(req: Request, res: Response): string | null {
   const deviceId = req.headers['x-device-id'] as string | undefined;
@@ -367,12 +370,36 @@ router.get('/books/:bookId/pages/:pageNo', (_req: Request, res: Response) => {
 /**
  * GET /books/:bookId/ssabi/graph
  *
- * 관계도 JSON
+ * 관계도 JSON (R3, Task 7)
  *
- * TODO: R4 구현
+ * FR-SPL-002 🚦: cutoff 기준 필터링
+ * A6: 관계는 최신 라벨만 표시
  */
-router.get('/books/:bookId/ssabi/graph', (_req: Request, res: Response) => {
-  return res.status(501).json({ error: 'NOT_IMPLEMENTED', message: 'R4 담당' });
+router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  // FR-BRW-002 🚦: 미완비 도서 거절
+  const isReady = await ensureBookReady(contentServices.content, bookId, res);
+  if (!isReady) return;
+
+  try {
+    // 기준점 스냅샷 가져오기 (R2 연동)
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const K = snapshot.cutoff;
+
+    // 관계도 조회 (FR-SPL-002 🚦: cutoff 적용)
+    const graph = await ssabiServices.graph.getGraph(bookId, K);
+
+    res.json(graph);
+  } catch (error) {
+    console.error('[API] ssabi/graph error', { bookId, error });
+    res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+    });
+  }
 });
 
 /**
