@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SsabiPanel from './SsabiPanel';
 import type { GraphResponse } from '../../types';
@@ -40,7 +40,9 @@ describe('싸비 사이드창', () => {
 
   it('열린 탭에 받은 데이터를 보여준다', () => {
     render(<SsabiPanel {...baseProps} />);
-    expect(screen.getByText(/정주사/)).toBeInTheDocument();
+    // 이름은 그래프 노드와 인물 카드 양쪽에 나온다 — 인물 영역으로 좁힌다
+    const people = screen.getByRole('region', { name: '인물' });
+    expect(within(people).getByText(/정주사/)).toBeInTheDocument();
   });
 
   it('탭을 고르면 그 탭이 선택된다', async () => {
