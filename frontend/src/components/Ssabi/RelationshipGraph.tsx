@@ -1,14 +1,15 @@
 import { ReactFlow, Background, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { GraphResponse } from '../../types';
-import { circularLayout } from './graphLayout';
+import { centralNodeIndex, radialLayout } from './graphLayout';
 
 /**
  * 관계도 그래프 렌더 — S4
  *
  * 서버 JSON(nodes/edges)을 그대로 그린다. 라벨을 글자로 병기하며 색상만으로 구분하지 않는다
  * (NFR-USE-006). 간선은 이력형 최신 라벨 1개만 내려온다 (A6, FR-CHR-001 🚦).
- * 좌표는 graphLayout.ts 의 원형 배치로 만든다 (스펙 §6).
+ * 좌표는 graphLayout.ts 의 **방사형 배치**로 만든다 — 중심 인물 1명 + 나머지를 둘레에
+ * (스펙 §6). 중심 인물은 배치 규칙이 데이터로 고르며, 여기서는 그 결과를 받아 그리기만 한다.
  *
  * ⚠️ 여기서 노드·간선을 걸러내지 않는다. 서버가 이미 기준점 이하로 필터해 내려보냈고,
  *    초과 여부를 판별하는 코드를 프론트에 두지 않는다 (절대 규칙 7번).
@@ -26,7 +27,8 @@ const TOKEN = {
 } as const;
 
 export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
-  const positions = circularLayout(graph.nodes.length);
+  const centerIndex = centralNodeIndex(graph.nodes, graph.edges);
+  const positions = radialLayout(graph.nodes.length, centerIndex);
 
   const nodes: Node[] = graph.nodes.map((node, i) => ({
     id: node.id,
@@ -36,10 +38,13 @@ export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
     draggable: false,
     style: {
       background: TOKEN.surface,
-      border: `1px solid ${TOKEN.line}`,
+      // 중심 인물은 테두리를 강조해 한눈에 구분되게 한다 — 색만으로 구분하지 않으므로
+      // 이름은 그대로 글자로 남는다 (NFR-USE-006)
+      border: i === centerIndex ? `1.5px solid ${TOKEN.ink}` : `1px solid ${TOKEN.line}`,
       borderRadius: 9999,
       padding: '6px 12px',
       fontSize: 12,
+      fontWeight: i === centerIndex ? 700 : 400,
       color: TOKEN.ink,
     },
   }));
