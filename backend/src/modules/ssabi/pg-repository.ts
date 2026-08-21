@@ -61,7 +61,10 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       // FR-SPL-002 🚦: 최초 등장 페이지 <= cutoff
       // character의 book_id로 필터링
       const { rows } = await db.query(
-        `SELECT a.id, a.character_id, a.alias, a.type, a.first_appearance_page
+        // aliases 에는 대리키가 없다 — PK 가 (book_id, alias, character_id) 복합키다.
+        // 컬럼명은 alias_type 이고, API 계약의 필드명은 type 이므로 여기서 매핑한다
+        // (001_content_store.sql 이 컬럼명 정본, API_CONTRACT.md 가 응답 정본).
+        `SELECT a.character_id, a.alias, a.alias_type AS type, a.first_appearance_page
            FROM aliases a
            JOIN characters c ON a.character_id = c.id
           WHERE c.book_id = $1

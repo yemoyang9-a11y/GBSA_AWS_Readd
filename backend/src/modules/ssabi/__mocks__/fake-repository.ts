@@ -269,21 +269,18 @@ export function createTestFixture(): SsabiFixture {
 
   const aliases: Alias[] = [
     {
-      id: 'alias-1',
       character_id: 'char-1',
       alias: '주사',
       type: 'title',
       first_appearance_page: 5,
     },
     {
-      id: 'alias-2',
       character_id: 'char-2',
       alias: '봉이',
       type: 'nickname',
       first_appearance_page: 20,
     },
     {
-      id: 'alias-3',
       character_id: 'char-5',
       alias: '형보',
       type: 'name',

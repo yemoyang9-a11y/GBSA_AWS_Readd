@@ -232,8 +232,17 @@ export interface Character {
   first_appearance_page: number;
 }
 
+/**
+ * 별칭 — `aliases` 테이블에는 **대리키가 없다.** PK 가 (book_id, alias, character_id)
+ * 복합키다 (001_content_store.sql).
+ *
+ * 이 타입에 `id` 가 있어 실제 스키마와 어긋나 있었고, mock QueryClient 테스트가 그
+ * 어긋남을 잡지 못해 실 DB 를 붙인 뒤에야 드러났다 (`column a.id does not exist`).
+ *
+ * `type` 은 API 계약의 필드명이고 DB 컬럼명은 `alias_type` 이다 — 매핑은 어댑터의
+ * SQL 이 `alias_type AS type` 으로 한다.
+ */
 export interface Alias {
-  id: string;
   character_id: string;
   alias: string;
   type: 'name' | 'title' | 'kinship' | 'nickname';

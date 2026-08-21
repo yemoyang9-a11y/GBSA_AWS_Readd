@@ -19,8 +19,9 @@ const JEONG: Character = {
   first_appearance_page: 1,
 };
 
-function alias(id: string, characterId: string, text: string, page: number): Alias {
-  return { id, character_id: characterId, alias: text, type: 'name', first_appearance_page: page };
+// aliases 에는 대리키가 없다 — PK 가 (book_id, alias, character_id) 복합키다
+function alias(characterId: string, text: string, page: number): Alias {
+  return { character_id: characterId, alias: text, type: 'name', first_appearance_page: page };
 }
 
 function note(id: string, characterId: string, text: string, page: number): CharacterNote {
@@ -78,7 +79,7 @@ describe('CharacterService', () => {
   test('인물·별칭·노트를 모아 상세를 만든다 (FR-CHR-004)', async () => {
     const service = createCharacterService({
       repository: fakeRepo({
-        aliases: [alias('a1', 'jeong', '정 주사', 1), alias('a2', 'jeong', '주사', 2)],
+        aliases: [alias('jeong', '정 주사', 1), alias('jeong', '주사', 2)],
         notes: [note('n1', 'jeong', '미두장에서 재산을 잃었다.', 3)],
       }),
     });
@@ -94,7 +95,7 @@ describe('CharacterService', () => {
   test('다른 인물의 별칭·노트가 섞이지 않는다', async () => {
     const service = createCharacterService({
       repository: fakeRepo({
-        aliases: [alias('a1', 'jeong', '정 주사', 1), alias('a2', 'chobong', '초봉이', 3)],
+        aliases: [alias('jeong', '정 주사', 1), alias('chobong', '초봉이', 3)],
         notes: [note('n1', 'jeong', '정주사 서술.', 3), note('n2', 'chobong', '초봉 서술.', 4)],
       }),
     });
@@ -129,7 +130,7 @@ describe('CharacterService', () => {
     const service = createCharacterService({
       repository: fakeRepo({
         seen,
-        aliases: [alias('a1', 'jeong', '정 주사', 1)],
+        aliases: [alias('jeong', '정 주사', 1)],
         notes: [note('n1', 'jeong', '서술.', 3)],
       }),
     });
