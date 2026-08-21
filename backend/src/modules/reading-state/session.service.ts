@@ -24,8 +24,29 @@ import type {
  * 무조작 30분 — 세션 경계 (R6, FR-DAT-009).
  * 스위퍼(S4, session-sweeper/sweep.ts)가 대상을 선별할 때 같은 값을 가져다 쓴다 —
  * 두 곳에서 30분을 따로 정의하면 판정 지점이 둘로 갈린다(FR-BRF-005 🚦와 같은 결의).
+ *
+ * ⚠️ **명세값은 30분이고 기본값을 바꾸지 않았다.** `SESSION_TIMEOUT_MS` 환경변수가
+ *    설정된 경우에만 그 값으로 덮는다 — 시연 리허설에서 브리핑 화면(FR-BRF-001)을
+ *    반복해 확인하려면 매번 세션 행을 지워야 하는데, 검증 중에는 그게 번거롭다.
+ *    0 으로 두면 진입할 때마다 새 세션이 되어 브리핑을 항상 거친다.
+ *
+ *    **검증용이며 배포 환경에는 설정하지 않는다.** 값을 넣으면 R6 의 세션 경계가
+ *    그만큼 달라지고, 스위퍼도 같은 상수를 쓰므로 세션 종료 판정까지 함께 움직인다.
  */
-export const SESSION_TIMEOUT_MS = 30 * 60_000;
+const SPEC_SESSION_TIMEOUT_MS = 30 * 60_000;
+
+function resolveSessionTimeout(): number {
+  const raw = process.env.SESSION_TIMEOUT_MS;
+  if (raw === undefined || raw === '') return SPEC_SESSION_TIMEOUT_MS;
+
+  const parsed = Number(raw);
+  // 숫자가 아니거나 음수면 명세값으로 되돌린다 — 오타 하나로 세션 규칙이 조용히 깨지지 않게
+  if (!Number.isFinite(parsed) || parsed < 0) return SPEC_SESSION_TIMEOUT_MS;
+
+  return parsed;
+}
+
+export const SESSION_TIMEOUT_MS = resolveSessionTimeout();
 
 export class BookNotReadyError extends Error {
   constructor(readonly bookId: string) {
