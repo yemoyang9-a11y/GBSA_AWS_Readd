@@ -1,6 +1,7 @@
 # 아키텍처 2회차 · 배포 설계
 
-**버전** v0.5 · **작성** 8/21
+**버전** v0.6 · **작성** 8/21
+**v0.6 변경** — v0.5의 코드 대조가 stale 브랜치(`feature/R2-core`) 기준이었던 것을 `develop`/`main`으로 재검증. ① **2.1절 정정** — 루트 `.env.example`은 모든 브랜치에 실제로 존재함(v0.5에서 "backend/.env.example 최종 수정 8/20 12:58"이라고 쓴 건 루트 파일 값과 뒤바뀐 오기였음, 수정) ② `backend/.env.example`은 `develop`에서 R1이 이미 루트와 동일한 값으로 고쳤음을 확인 — **11장 16번은 develop 기준 해소**, `feature/R2-core`만 미반영 ③ **`global.` 프리픽스를 8/21 직접 `aws bedrock invoke-model`로 실호출 검증 — 성공.** `apac.` 교체는 불필요, **11장 8번 해소** ④ 위 변경에 따라 2.1절 "확정 — 전부 서울" 표의 모델 ID 프리픽스를 `apac.`에서 `global.`(현재 값 유지)로 정정
 **v0.5 변경** — R2 실제 코드(`feature/R2-core`) 대조 결과 반영. ① **2.1절 전제 정정** — `.env.example`은 `us.`가 아니라 이미 `global.` 프리픽스이고, `apac.` 교체 필요 여부는 [확인 필요]로 재분류 (11장 8번) ② **`backend/.env.example`이 루트 `.env.example`과 다른 값(구버전 모델 · `us-east-1`)을 갖고 있음**을 새 항목으로 등록 (11장 16번) ③ R3 게이트웨이 모델 ID 하드코딩 우려 — **해소 확인** (2.1절) ④ 디바이스 식별자 발급 주체 — **해소 확인**, 클라이언트 발급으로 이미 구현됨 (4.4절, 11장 6번) ⑤ 2.6절 세션 리캡 캐시 — `session_epoch` 컬럼은 실제로 없고 **`expires_at` TTL**로 구현돼 있음을 정정, 테이블은 이미 마이그레이션에 존재(002_reading_state.sql)함을 명시
 **v0.4 변경** — 2.2절 `FOR UPDATE SKIP LOCKED` 설명 정정. "필수가 아닌 최적화"라고 썼던 게 틀렸다 — **빼면 서브쿼리 단계에서 두 트랜잭션이 같은 행을 동시에 후보로 담을 수 있고, 바깥 UPDATE의 IN 목록은 그 시점에 고정돼 있어 재검사가 안 되므로 중복 선점이 통과한다.** 실제 SQL 예시는 처음부터 포함하고 있었으므로 구현 위험은 없었지만, 설명을 믿고 나중에 "최적화니까 빼도 된다"고 판단하면 그 순간 버그가 재발하는 문구였다.
 **v0.3 변경** — ① 발표장 네트워크 전제 완화(무선이나 불안정 우려 낮음) → **시연 매체를 prod로 되돌리고 로컬 스택은 폴백으로 재배치** (10장) ② **ECS 미채택 결정 기록** (12.1절 신설) ③ 확장·복원 경로 문서화 (12장 신설) ④ EC2 자동 복구 알람 추가 (5장)
@@ -117,41 +118,47 @@ TECH_STACK.md는 두 곳에서 서로 호출 불가능한 조합을 적어놓았
 
 `us.` 프리픽스는 **미국 리전 교차추론 프로필**이다. 서울 리전 클라이언트로 이 ID를 호출하면 실패한다. 개발 중에는 각자 `.env`가 `us-east-1`이라 안 터졌을 가능성이 크고, 배포에서 처음 드러난다.
 
-> **[확인 필요 — 8/21 재검토]** 위 표는 TECH_STACK.md의 예시만 보고 쓴 것이고, 실제 `feature/R2-core`의 코드는 이미 이 예시와 다르다. 대조 결과:
-> - 루트 `.env.example` (8/20 15:55 최종 수정, `d6e105a`) — `AWS_REGION=ap-northeast-2` · 모델 ID는 `us.`가 아니라 **`global.anthropic.claude-sonnet-4-5-...` / `global.anthropic.claude-haiku-4-5-...`**
-> - `backend/.env.example` (8/20 12:58 최종 수정) — `AWS_REGION=us-east-1` · 모델 ID는 프리픽스 없이 **구버전** `anthropic.claude-sonnet-3-5-20240620-v1:0` / `anthropic.claude-3-haiku-20240307-v1:0`
+> **[정정 — 8/21 재검토, `feature/R2-core` 대조는 stale이었음]** 위 표는 TECH_STACK.md의 예시만 보고 쓴 것이다. 코드 대조를 처음 `feature/R2-core`로 했는데, 그 브랜치가 develop의 최신 수정을 안 당겨간 상태였다 — 대조를 `develop`/`main` 기준으로 다시 했다:
+> - 루트 `.env.example`(`main`·`develop`·전 feature 브랜치에 **동일하게 존재**, 마지막 수정 `d6e105a` 8/20 12:58) — `AWS_REGION=ap-northeast-2` · 모델 ID는 `us.`가 아니라 **`global.anthropic.claude-sonnet-4-5-...` / `global.anthropic.claude-haiku-4-5-...`**
+> - `backend/.env.example`(`develop` 기준, 마지막 수정 `daf43e0` 8/20 15:55, R1의 dotenv 수정 PR) — 이미 루트 파일과 **동일한 값**(`ap-northeast-2` + `global.`)으로 교체됐고, `global.` 프리픽스로 실호출 검증 완료했다는 주석(2026-08-20, R1)까지 남겨뒀다. 11장 16번(두 파일 값 불일치)은 **`develop` 기준으로는 이미 해소**다.
+> - 다만 **`feature/R2-core`는 아직 이 수정을 안 당겨간 구버전**(`us-east-1` + 프리픽스 없는 구모델 `claude-sonnet-3-5`)이다. R2 브랜치에서 배포 준비를 한다면 develop을 먼저 merge/rebase해야 한다 — 이번 v0.5에서 "16번 신규 발견"이라고 쓴 건 R2-core 기준으로는 맞는 관찰이었지만, develop 기준으로는 이미 닫힌 항목이었다는 걸 이번에 알았다.
 >
-> 즉 `us.` 프리픽스는 이미 어디에도 없다. **`global.`이 서울 리전 클라이언트에서 실제로 호출 가능한 크로스리전 프로필인지가 확인되지 않은 채로 남아 있다** — 확인 결과에 따라 아래 "전부 서울" 표의 `apac.` 교체가 여전히 필요할 수도, 이미 불필요할 수도 있다. 추측으로 채우지 않고 11장 8번에서 [확인 필요]로 열어둔다. 별개로, **두 `.env.example`이 서로 다른 리전·모델을 예시로 들고 있는 것 자체가 문제**다 — `backend/.env.example`을 따라 셋업하면 잘못된 리전에 구버전 모델로 연결된다(11장 16번).
+> **`global.`이 서울에서 실제로 되는지도 코드 주석에만 의존하지 않고 8/21 직접 재확인했다** — `aws bedrock list-inference-profiles --region ap-northeast-2`에 `global.anthropic.claude-sonnet-4-5-20250929-v1:0` / `global.anthropic.claude-haiku-4-5-20251001-v1:0`이 실제로 뜨고, `invoke-model`로 Haiku를 호출해 정상 응답(`"Pong! 👋"`)까지 받았다. **`apac.` 교체는 불필요하다.** 아래 "전부 서울" 표를 이 결과로 정정한다.
 
 **확정 — 전부 서울.**
 
 | 항목 | 값 |
 | --- | --- |
 | EC2 · RDS · S3 · CloudWatch · Bedrock | **`ap-northeast-2`** |
-| 모델 ID 프리픽스 | **`apac.`** (`us.` → `apac.` 교체) |
+| 모델 ID 프리픽스 | **`global.`** — 8/21 서울 리전 실호출 검증 완료(아래). `apac.` 교체는 불필요, **현재 값 유지** |
 | ACM 인증서 (B안 승격 시에만) | `us-east-1` — CloudFront 요구사항이라 **여기만 예외** |
 
 교차 리전 호출이 없어지면서 첫 토큰 지연에서 태평양 왕복(약 150~200ms)이 빠진다. NFR-PERF-002(2.0초/3.0초)·008의 예산이 그만큼 넉넉해졌다 — B-1 프롬프트가 완독 직전에 커지는 걸 고려하면 **적지 않은 여유**다.
 
-**남은 작업 — 모델 ID 교체 [8/21 오늘]**
+**모델 ID — 해소 (8/21, 실호출로 검증)**
 
-`.env`와 게이트웨이의 모델 ID가 `us.` 프리픽스인 채로 남아 있으면 서울에서 호출이 실패한다. 개발 중에는 각자 `.env`가 `us-east-1`이라 안 터졌을 가능성이 크고, **배포에서 처음 드러난다.**
+`us.` 프리픽스는 TECH_STACK.md 예시에만 있었고 실제 코드(`develop` 기준)엔 처음부터 없었다. `global.`이 실제로 서울에서 되는지가 유일하게 남은 불확실성이었는데, 직접 실행해서 확인했다:
 
 ```bash
-# 서울에 열린 프로필 ID 확인 (정확한 문자열을 여기서 얻는다)
-aws bedrock list-inference-profiles --region ap-northeast-2 \
-  --query 'inferenceProfileSummaries[].inferenceProfileId'
+$ aws bedrock list-inference-profiles --region ap-northeast-2 \
+  --query 'inferenceProfileSummaries[?contains(inferenceProfileId, `claude-sonnet-4-5`) || contains(inferenceProfileId, `claude-haiku-4-5`)].inferenceProfileId'
+[
+  "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+]
 
-# 실제 호출 성공까지 확인
-aws bedrock-runtime invoke-model --region ap-northeast-2 \
-  --model-id <위에서 얻은 Haiku 프로필 ID> \
+$ aws bedrock-runtime invoke-model --region ap-northeast-2 \
+  --model-id "global.anthropic.claude-haiku-4-5-20251001-v1:0" \
   --body '{"anthropic_version":"bedrock-2023-05-31","max_tokens":10,"messages":[{"role":"user","content":"ping"}]}' \
-  /dev/stdout
+  --cli-binary-format raw-in-base64-out /tmp/out.json
+# 응답: {"content":[{"type":"text","text":"Pong! 👋\n\nI'm"}], ...} — 정상 성공
 ```
+
+**해야 할 일은 모델 ID 교체가 아니라 `feature/R2-core`가 develop을 따라잡는 것뿐이다.**
 
 > **코드 영향 — 해소 확인 (8/21)** — 게이트웨이(⑥)가 모델 ID를 환경변수로 받는지 확인했다. `gateway.ts`는 `model-config.ts`의 `getModelForTask()`를 거치고, 그 안의 `MODEL_CONFIG`는 전부 `process.env.BEDROCK_CLAUDE_SONNET` / `BEDROCK_CLAUDE_HAIKU` 참조다 — 하드코딩된 모델 ID는 없다. 이 항목은 닫는다. 리전은 서울 단일로 확정됐으므로 `BEDROCK_REGION` 분리는 이제 불필요하다 — `AWS_REGION` 하나로 충분하다.
 
-> **NFR-AI-002(모델 버전 고정)** — `us.` → `apac.` 교체는 **모델 변경으로 간주**하고 가드레일 테스트를 재수행해야 한다. 교차 리전 프로필과 지역 프로필은 뒤에 붙는 실제 모델이 같더라도 라우팅되는 리전이 다르다. **CP5(8/25) 판정 이전에, 즉 오늘 끝내야 하는 이유다** — 8/25 이후에 바꾸면 판정을 다시 해야 한다.
+> **NFR-AI-002(모델 버전 고정)** — 이번엔 모델 ID를 바꾈 일이 없었으므로(원래도 `global.`이었다) 가드레일 재수행 트리거가 아니다. 이 조항은 **실제로 프리픽스를 교체하는 날**을 위해 남겨둔다 — 교차 리전 프로필과 지역 프로필은 뒤에 붙는 실제 모델이 같더라도 라우팅되는 리전이 다르므로, 그런 변경이 생기면 CP5(8/25) 이전에 가드레일을 재수행해야 한다.
 
 ### 2.2 스위퍼를 Lambda로 만들지 않는다 **[확정 제안 — TECH_STACK 변경]**
 
@@ -690,7 +697,7 @@ Freeze(8/22) 전후로 성격이 달라야 한다.
 | 5 | **스위퍼 원자적 선점 — (A) 수정 / (B) 단일 노드** | **🔴 [결정 필요 → 작업]** — 현재 코드는 SELECT/UPDATE 2단계라 경합 구간이 있다. **이중화를 켜는 순간 리캡 중복 생성 위험** (2.2절) | **8/22** |
 | 6 | ~~디바이스 식별자 — 헤더 계약 유지 확인~~ | **해소 (8/20 팀 결정, 8/21 코드 확인)** — `X-Device-Id`. 쿠키 전환안은 철회. **발급 주체 = 클라이언트, `ensureDeviceId()`에 구현·병합 완료** (4.4절) | — |
 | 7 | **`AWS_REGION` 기본값 `us-east-1` 폴백 제거** | **🔴 [작업 · 8/21 재확인 — 여전히 존재]** `config/aws.ts:12`·`chatbot/vector-search.ts:96`·`llm-gateway/gateway.ts:27` 세 곳 모두 `process.env.AWS_REGION \|\| 'us-east-1'` 폴백이 남아 있다. `AWS_REGION`을 빠뜨리면 **전 LLM 호출이 조용히 실패**한다 (2.1절) | **8/21** |
-| 8 | 모델 ID 프리픽스 재검증 | **🟡 [확인 필요 · 전제 정정]** 실제 코드엔 `us.`가 없다 — 루트 `.env.example`은 이미 `global.`, `backend/.env.example`은 프리픽스 없는 구버전 모델이다. **`global.`이 서울 클라이언트에서 실호출되는지 확인**하고, 안 되면 `apac.`로 교체. 되면 이 항목은 닫힌다 (2.1절) | 8/21 |
+| 8 | ~~모델 ID 프리픽스 재검증~~ | **해소 (8/21, 실호출 검증)** — `global.anthropic.claude-{sonnet-4-5,haiku-4-5}`가 서울 리전에 실제로 존재하고 `invoke-model` 호출도 성공했다. `apac.` 교체 불필요, 현재 값 유지 (2.1절) | — |
 | 9 | **ALB 유휴 타임아웃 300초 설정** | **[작업]** — 기본 60초면 SSE가 1분에 끊긴다 (2.7절) | 8/22 |
 | 10 | 배포 스크립트를 2대 순차 배포로 변경 | **[작업]** — 6.2절 | 8/22 |
 | 11 | 클라이언트 SSE 재연결·타임아웃 (R4) | **[확인 필요]** — 10.2절 | 8/22 |
@@ -698,9 +705,9 @@ Freeze(8/22) 전후로 성격이 달라야 한다.
 | 13 | 챗봇 난이도 판정 규칙의 Sonnet 비율 | **[결정 필요]** — 구현 시(D13 ②). 비용 영향 8.2절 | 8/22 |
 | 14 | AWS 계정 성격 — 프로그램 제공 계정인지, $500이 크레딧인지 | **[확인 필요]** | 8/21 |
 | 15 | B안(도메인) 승격 여부 | **[결정 필요]** | 8/26 |
-| 16 | **루트 `.env.example`과 `backend/.env.example`이 서로 다른 값** | **🔴 [신규 · 8/21 코드 대조에서 발견]** `backend/.env.example`이 `AWS_REGION=us-east-1` + 구버전 모델 ID(`claude-sonnet-3-5`, `claude-3-haiku`)를 예시로 들고 있어 루트 파일과 충돌한다. 이 파일을 보고 셋업하면 잘못된 리전·구버전 모델로 연결된다 — **어느 파일이 정본인지, 다른 하나는 폐기할지 R2/R3가 정리** (2.1절) | 8/22 |
+| 16 | ~~루트/`backend/.env.example` 값 불일치~~ | **`develop` 기준 해소됨 (R1, 8/20 dotenv PR)** — `backend/.env.example`이 이미 루트 파일과 동일한 값(`ap-northeast-2` + `global.`)으로 교체됐다. **단, `feature/R2-core`는 이 수정을 아직 안 당겨간 구버전** — R2가 이 브랜치에서 배포 준비를 하려면 develop을 먼저 merge/rebase해야 한다 (2.1절) | R2가 develop 반영 시 |
 
-> **5·7·16번이 배포를 막는 항목이다.** 5·7번은 각각 **리캡 중복 생성**과 **전 LLM 호출 실패**로 이어지고, 16번은 방치하면 다음에 이 예시를 보고 셋업하는 사람이 같은 실패를 반복하게 만든다.
+> **5·7번이 배포를 막는 항목이다.** 각각 **리캡 중복 생성**과 **전 LLM 호출 실패**로 이어진다. 16번은 develop 기준으로는 이미 닫혔고, R2-core가 develop을 반영하기 전까지만 유효한 주의사항이다.
 
 **TECH_STACK.md 개정 지점**
 
@@ -708,9 +715,9 @@ Freeze(8/22) 전후로 성격이 달라야 한다.
 | --- | --- | --- |
 | DevOps 컴퓨트 | 스위퍼 = EventBridge + Lambda | **EC2 내 PM2 프로세스** (2.2절) |
 | 프로덕션 `.env` 예시 | `AWS_ACCESS_KEY_ID` / `SECRET` 포함 | **삭제** — 인스턴스 역할 (4.1절) |
-| `backend/.env` 예시 | `AWS_REGION=us-east-1` + 구버전 모델 ID | **`ap-northeast-2`** + 루트 `.env.example`과 동일한 모델 ID로 통일 (2.1절, 11장 16번) |
-| 코드 내 기본값 | `AWS_REGION` 미설정 시 `us-east-1` 폴백 (`config/aws.ts`·`vector-search.ts`·`gateway.ts` 3곳) | **폴백 삭제** — 환경변수가 없으면 기동 실패가 낫다. 조용히 잘못된 리전으로 가는 것보다 낫다 |
-| 모델 ID | 실제로는 `us.`가 아니라 `global.`(루트) / 프리픽스 없음(backend) 혼재 | **확인 후** 필요 시 `apac.` 프리픽스로 통일 — 서울 실호출 검증 대기 (2.1절, 11장 8번) |
+| `backend/.env` 예시 | `develop`에서는 이미 수정됨(R1). `feature/R2-core`만 구버전(`us-east-1` + 구모델) | R2가 develop 반영 시 자동 해소 (2.1절, 11장 16번) |
+| 코드 내 기본값 | `AWS_REGION` 미설정 시 `us-east-1` 폴백 (`config/aws.ts`·`vector-search.ts`·`gateway.ts` 3곳, develop 포함 전 브랜치) | **폴백 삭제** — 환경변수가 없으면 기동 실패가 낫다. 조용히 잘못된 리전으로 가는 것보다 낫다 |
+| 모델 ID | `global.` 프리픽스 — **8/21 서울 실호출 검증 완료** | 변경 없음. TECH_STACK.md의 `us.` 예시만 `global.`로 정정 (2.1절, 11장 8번) |
 | AWS 리소스 목록 | Lambda / EventBridge 행 | 삭제, CloudFront·SSM 추가 |
 | 배포 가이드 4단계 | Nginx 설정 | `X-Accel-Buffering` · 압축 비활성 추가 (2.4절) |
 | 선택 리소스 | ElastiCache | 미채택 명시 (2.6절) |
@@ -772,5 +779,5 @@ Freeze(8/22) 전후로 성격이 달라야 한다.
 
 ---
 
-**최종 수정** 2026-08-21 · **문서 버전** v0.5
-**다음 갱신** 11장 5·7·8·16번 완료 후 · 8/26 (B안 승격 판단)
+**최종 수정** 2026-08-21 · **문서 버전** v0.6
+**다음 갱신** 11장 5·7번 완료 후(16번은 R2-core가 develop 반영 시 자동 해소) · 8/26 (B안 승격 판단)
