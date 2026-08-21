@@ -134,11 +134,17 @@ background_and_intro (book_id, kind CHECK IN ('background','intro'), content)
 
 ### Round 1 — `routes.ts` 상단. 반드시 이 순서로, 한 번에 한 명
 
-1. **R4 — 가드** (`api/book-ready.guard.ts` 신규 + import 1줄 + 4개 핸들러에 배선)
-   **가드를 가장 먼저 넣는 이유** — 4개 핸들러를 건드리는데 지금은 본문이 501 한 줄이라
+1. **R1 — content 조립** (import 1줄 + `createContentServices(pool)` 1줄)
+   Task 1 의 어댑터 + composition 이 끝나야 나올 수 있다. **Round 1 전체의 선행이다.**
+2. **R4 — 가드 배선** (import 1줄 + 4개 핸들러에 한 줄씩)
+   가드 파일 자체는 이미 있다(`42d6ff2`). 남은 것은 배선뿐이다.
+   **조립 바로 다음에 두는 이유** — 4개 핸들러를 건드리는데 지금은 본문이 501 한 줄이라
    가장 싸다. 구현이 끝난 뒤에 넣으면 완성된 핸들러 4개를 전부 다시 고쳐야 한다.
-2. **R1 — content 조립** (import 1줄 + `createContentServices(pool)` 1줄)
 3. **R3 — ssabi 조립** (import 1줄 + `createSsabiServices(pool)` 1줄)
+
+> **순서 정정 (2026-08-21).** 처음에는 가드를 1번에 뒀으나 성립하지 않는다. 가드 배선은
+> 핸들러에서 `ensureBookReady(content, ...)` 로 **런타임 인스턴스**를 넘겨야 하는데, 그
+> 인스턴스를 만드는 줄이 R1 의 조립이다. 타입만으로는 배선할 수 없다. R1 이 먼저다.
 
 각 커밋은 **`routes.ts` 변경만 담는다.** 다른 파일과 섞으면 충돌 해결이 어려워진다.
 앞사람 커밋이 올라간 것을 확인하고 시작한다.
