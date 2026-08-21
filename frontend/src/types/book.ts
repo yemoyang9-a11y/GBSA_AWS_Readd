@@ -9,9 +9,20 @@ export interface BookSummary {
   title: string;
   author: string;
   cover_url: string;
-  total_pages: number;
+  /**
+   * 카드 소개 2줄 (엔드포인트 계획 D-3 확정, 2026-08-21).
+   * 상한 예외 콘텐츠라 기준점과 무관하다 (R5). 준비되지 않았으면 null 이고 화면은 비운다.
+   */
+  intro_summary: string | null;
   /** 미완비 도서는 클릭 불가 + 서버도 거절 (FR-BRW-002 🚦) */
   ssabi_ready: boolean;
+
+  /*
+   * total_pages 를 두지 않는다 (엔드포인트 계획 D-1 확정, 2026-08-21, team-sync §4.5).
+   * progress.current_page 와 함께 있으면 프론트가 퍼센트를 재계산할 재료가 된다
+   * (절대 규칙 2번, FR-BRF-005 🚦). 읽기 화면의 "21 / 30" 은 GET /info 의 목차
+   * 마지막 장 end_page 에서 오는 별개 값이다 — 이 필드를 읽는 컴포넌트는 없었다.
+   */
   /** 읽던 도서만 내려온다. percent 는 서버 계산값 — 재계산 금지 (FR-BRF-005 🚦) */
   progress?: {
     current_page: number;

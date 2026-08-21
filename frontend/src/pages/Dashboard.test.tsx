@@ -6,11 +6,11 @@ import type { BookSummary } from '../types';
 
 const reading: BookSummary = {
   book_id: 'takryu', title: '탁류', author: '채만식', cover_url: '',
-  total_pages: 411, ssabi_ready: true, progress: { current_page: 80, percent: 64 },
+  intro_summary: null, ssabi_ready: true, progress: { current_page: 80, percent: 64 },
 };
 const unread: BookSummary = {
   book_id: 'other', title: '다른 책', author: '아무개', cover_url: '',
-  total_pages: 100, ssabi_ready: true,
+  intro_summary: null, ssabi_ready: true,
 };
 
 vi.mock('../services/bookService', () => ({

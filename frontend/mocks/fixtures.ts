@@ -22,7 +22,8 @@ export const mockCatalog: BookSummary[] = [
     title: '탁류',
     author: '채만식',
     cover_url: '',
-    total_pages: 30,
+    intro_summary:
+      '금강 하구 군산을 배경으로, 미두장에서 재산을 잃은 정주사 일가의 몰락을 그린다. (mock 소개)',
     ssabi_ready: true,
     progress: { current_page: 21, percent: 70 },
   },
@@ -31,7 +32,7 @@ export const mockCatalog: BookSummary[] = [
     title: '검수 전 도서',
     author: '미상',
     cover_url: '',
-    total_pages: 30,
+    intro_summary: null,
     ssabi_ready: false,
   },
 ];

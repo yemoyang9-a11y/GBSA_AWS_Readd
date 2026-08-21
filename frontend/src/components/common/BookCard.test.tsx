@@ -8,7 +8,7 @@ const book: BookSummary = {
   title: '탁류',
   author: '채만식',
   cover_url: '',
-  total_pages: 411,
+  intro_summary: null,
   ssabi_ready: true,
 };
 

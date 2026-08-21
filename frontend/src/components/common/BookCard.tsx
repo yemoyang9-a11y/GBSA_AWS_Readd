@@ -9,8 +9,8 @@ import TypographicCover from './TypographicCover';
  * 서버도 진입을 거절한다 — 둘 다 있어야 한다 (FR-BRW-002 🚦, R2 403 BOOK_NOT_READY).
  * 진도 percent 는 서버가 내려준 값을 그대로 넘긴다 (FR-BRF-005 🚦, 절대 규칙 2번).
  *
- * `intro_summary` 는 아직 계약에 없다(엔드포인트 계획 D-3). 필드가 오면 소개 2줄이
- * 그려지고, 없으면 그 영역을 통째로 비운다 — 자리표시 문구를 지어내지 않는다.
+ * `intro_summary` 가 null 이면 소개 영역을 통째로 비운다 — 자리표시 문구를 지어내지 않는다.
+ * (엔드포인트 계획 D-3 확정으로 계약에 들어왔다. 이전의 타입 캐스트를 걷어냈다.)
  */
 export default function BookCard({
   book,
@@ -19,7 +19,7 @@ export default function BookCard({
   book: BookSummary;
   onSelect: (book: BookSummary) => void;
 }) {
-  const intro = (book as BookSummary & { intro_summary?: string | null }).intro_summary;
+  const intro = book.intro_summary;
 
   return (
     <div className="w-book-card rounded-card bg-surface p-card shadow-card">
