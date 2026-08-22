@@ -62,8 +62,8 @@ export default function Dashboard() {
     <div className="min-h-full bg-canvas">
       <Header subtitle="오늘도 나만의 페이스로 활자를 마주합니다." />
 
-      <main className="px-7 py-6">
-        <div className="mb-6 flex gap-3">
+      <main className="mx-auto w-full max-w-page px-7 py-6">
+        <div className="mb-6 flex max-w-stats gap-3">
           <div data-testid="stat-reading" className="flex flex-1">
             <StatCard value={readingCount} label="읽는 중" />
           </div>

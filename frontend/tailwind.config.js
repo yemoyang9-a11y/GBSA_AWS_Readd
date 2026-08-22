@@ -30,6 +30,11 @@ export default {
       boxShadow: { card: '0 8px 8px rgba(28, 27, 26, 0.03)' },
       spacing: { card: '18px', gutter: '24px' },
       width: { 'book-card': '312px' },
+      // 페이지 폭. 시안은 고정 프레임이라 넓은 화면에서의 상한을 정하지 않았다.
+      // 책 카드 312px + 간격 24px 그리드에서 유도한다 —
+      // page  = 312×3 + 24×2 + px-7 좌우 28×2 = 1040 (책 카드 3열)
+      // stats = 312×2 + gap-3 12 = 636 (통계 카드를 1·2열에 맞춘다)
+      maxWidth: { page: '1040px', stats: '636px' },
       height: { cover: '240px', navbar: '80px' },
     },
   },
