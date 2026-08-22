@@ -63,3 +63,7 @@ CLAUDE.local.md
 # DB 덤프 — 파생 데이터이고 용량이 크다. 저장소에 넣지 않는다
 dump/
 *.dump
+
+# impeccable 탐지기용 디자인 컨텍스트 미러 (생성물, 정본은 루트)
+frontend/DESIGN.md
+frontend/.impeccable/

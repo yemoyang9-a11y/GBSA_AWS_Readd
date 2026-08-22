@@ -11,24 +11,32 @@ export default function TypographicCover({
   title,
   author,
   coverUrl,
+  dimmed = false,
 }: {
   title: string;
   author: string;
   coverUrl?: string | null;
+  /**
+   * 아직 열 수 없는 도서의 표지를 죽인다. 흐리게 하는 건 **표지뿐**이고 제목·저자 글자는
+   * 건드리지 않는다 — 카드 전체에 opacity 를 걸면 본문 글자의 명도 대비까지 같이 떨어진다.
+   */
+  dimmed?: boolean;
 }) {
+  const dim = dimmed ? ' opacity-60' : '';
+
   if (coverUrl) {
     return (
       <img
         src={coverUrl}
         alt={`${title} 표지`}
-        className="h-cover w-full rounded-cover object-cover"
+        className={`h-cover w-full rounded-cover object-cover${dim}`}
       />
     );
   }
 
   return (
     <div
-      className="flex h-cover w-full flex-col items-center justify-center gap-3 rounded-cover border border-line bg-canvas px-6 text-center"
+      className={`flex h-cover w-full flex-col items-center justify-center gap-3 rounded-cover border border-line bg-canvas px-6 text-center${dim}`}
       data-testid="typographic-cover"
       aria-hidden="true"
     >

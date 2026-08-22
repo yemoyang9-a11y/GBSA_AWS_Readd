@@ -36,11 +36,37 @@ describe('BookCard', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  /**
+   * 크리틱 후속 (2026-08-22): 미완비 도서는 흐릿해지기만 하고 **왜** 못 누르는지 한 글자도
+   * 없었다. 배포 카탈로그에 `ssabi_ready: false` 인 도서가 실제로 있어(test-book-2)
+   * 첫 화면에 이유 없이 죽은 카드가 뜬다.
+   */
+  it('미완비 도서는 왜 못 여는지 말한다', () => {
+    render(<BookCard book={{ ...book, ssabi_ready: false }} onSelect={() => {}} />);
+    expect(screen.getByText('아직 준비 중입니다')).toBeInTheDocument();
+  });
+
+  it('준비된 도서에는 준비 중 문구를 붙이지 않는다', () => {
+    render(<BookCard book={book} onSelect={() => {}} />);
+    expect(screen.queryByText('아직 준비 중입니다')).not.toBeInTheDocument();
+  });
+
   it('진도가 있으면 서버 percent 를 그대로 표시하고 "n% 완료" 라벨을 붙인다', () => {
     render(<BookCard book={{ ...book, progress: { current_page: 80, percent: 64 } }} onSelect={() => {}} />);
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '64');
     expect(screen.getByText('64% 완료')).toBeInTheDocument();
-    expect(screen.getByText('읽는 중')).toBeInTheDocument();
+    // "읽는 중" 라벨은 뺐다 — 같은 말이 통계 라벨·필터 탭·카드 세 곳에 쌓여 서로 다른
+    // 세 의미(개수·필터·상태)를 뭉뚱그렸다 (크리틱, 2026-08-22).
+    expect(screen.queryByText('읽는 중')).not.toBeInTheDocument();
+  });
+
+  it('다른 카드가 진입 왕복 중이면(busy) 버튼을 잠근다', async () => {
+    const onSelect = vi.fn();
+    render(<BookCard book={book} onSelect={onSelect} busy />);
+    const button = screen.getByRole('button', { name: /탁류/ });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('진도가 없으면 진도 영역을 그리지 않는다', () => {

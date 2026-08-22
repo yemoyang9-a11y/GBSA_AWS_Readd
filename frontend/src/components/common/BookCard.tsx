@@ -15,21 +15,30 @@ import TypographicCover from './TypographicCover';
 export default function BookCard({
   book,
   onSelect,
+  busy = false,
 }: {
   book: BookSummary;
   onSelect: (book: BookSummary) => void;
+  /** 다른 카드의 진입 왕복이 진행 중이면 잠근다 — 중복 진입을 막는다 */
+  busy?: boolean;
 }) {
   const intro = book.intro_summary;
+  const ready = book.ssabi_ready;
 
   return (
     <div className="w-book-card rounded-card bg-surface p-card shadow-card">
       <button
         type="button"
-        disabled={!book.ssabi_ready}
+        disabled={!ready || busy}
         onClick={() => onSelect(book)}
-        className="w-full text-left disabled:opacity-50"
+        className={`w-full text-left transition-opacity active:opacity-70${busy ? ' opacity-50' : ''}`}
       >
-        <TypographicCover title={book.title} author={book.author} coverUrl={book.cover_url} />
+        <TypographicCover
+          title={book.title}
+          author={book.author}
+          coverUrl={book.cover_url}
+          dimmed={!ready}
+        />
 
         <span className="mt-4 block truncate font-serif text-lg font-bold text-ink">
           {book.title}
@@ -43,13 +52,24 @@ export default function BookCard({
         ) : null}
       </button>
 
+      {/*
+        "읽는 중" 라벨을 뺐다 — 같은 말이 통계 라벨·필터 탭·이 자리 세 곳에 쌓여
+        서로 다른 세 의미(개수·필터·상태)를 하나로 뭉뚱그렸다. 여기서는 진도 수치만 남긴다.
+      */}
       {book.progress ? (
         <div className="mt-4 border-t border-line pt-4">
-          <div className="mb-1.5 flex items-center justify-between text-[11px]">
-            <span className="text-muted">읽는 중</span>
-            <span className="font-bold text-ink">{book.progress.percent}% 완료</span>
-          </div>
+          <div className="mb-1.5 text-[13px] text-muted">{book.progress.percent}% 완료</div>
           <ProgressBar percent={book.progress.percent} />
+        </div>
+      ) : null}
+
+      {/*
+        카드가 흐려지기만 하고 이유를 말하지 않으면, 이용자는 자기가 뭘 잘못했는지 알 수 없다.
+        카드 아래쪽 같은 자리에 진도 또는 이 문구 중 하나가 온다 (FR-BRW-002 🚦).
+      */}
+      {!ready ? (
+        <div className="mt-4 border-t border-line pt-4">
+          <span className="text-[13px] text-muted">아직 준비 중입니다</span>
         </div>
       ) : null}
     </div>
