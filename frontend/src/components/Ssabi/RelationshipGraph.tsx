@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphResponse } from '../../types';
 import {
   boundingBox,
-  centralNodeIndex,
   computeDegrees,
   estimateTextWidth,
   forceLayout,
@@ -89,10 +88,6 @@ export default function RelationshipGraph({
   const degree = useMemo(() => computeDegrees(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
   const positions = useMemo(() => forceLayout(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
   const base = useMemo(() => boundingBox(positions), [positions]);
-  const centerIndex = useMemo(
-    () => centralNodeIndex(graph.nodes, graph.edges),
-    [graph.nodes, graph.edges]
-  );
 
   const [viewBox, setViewBox] = useState<ViewBox>(() => ({
     x: base.x,
@@ -103,17 +98,15 @@ export default function RelationshipGraph({
 
   // 그래프가 바뀌면(되감기·페이지 진행) 그 그래프의 배치로 다시 fit — 이전 줌 위치를
   // 새 좌표계에 그대로 들고 있으면 화면 밖을 보게 된다.
+  //
+  // ⚠️ 처음엔 "중심 인물로 확대"를 시도했다(목업의 focusDefault()를 그대로 옮김) —
+  //    목업은 인물 30명 규모에 맞춘 고정 캔버스라 확대가 자연스러웠지만, 여기 base는
+  //    그래프 크기에 맞춰 매번 다시 계산되는 값이라 인물이 몇 명 안 될 때(예: 첫 진입
+  //    직후) 확대하면 나머지 인물이 통째로 화면 밖으로 잘려 나갔다(스크린샷으로 확인).
+  //    전체를 우선 보여주고, 확대는 사용자가 노드를 선택했을 때(아래 effect)만 한다.
   useEffect(() => {
-    if (centerIndex < 0) return;
-    const focus = positions[centerIndex];
-    const width = base.width / 1.9;
-    const height = width * (base.height / base.width);
-    setViewBox(
-      clampViewBox({ x: focus.x - width / 2, y: focus.y - height / 2, width, height }, base)
-    );
-    // graph identity(정확히는 positions/base) 가 바뀔 때만 재실행 — 매 렌더 재실행 방지
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positions, base]);
+    setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
+  }, [base]);
 
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
