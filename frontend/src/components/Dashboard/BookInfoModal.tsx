@@ -52,9 +52,11 @@ export default function BookInfoModal({
         <div>
           <TypographicCover size="hero" title={book.title} author={book.author} coverUrl={book.cover_url} />
           {book.progress ? (
-            <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-ssabi-soft px-3 py-1.5 font-dashSans text-xs text-ssabi">
-              <span aria-hidden="true" className="size-1.5 rounded-full bg-ssabi" />
-              이어 읽는 중 · {book.progress.percent}% 읽음
+            <div className="mt-3 flex justify-center">
+              <div className="flex items-center gap-1.5 rounded-full border border-dash-line bg-white px-3 py-1.5 font-dashSans text-xs text-dash-muted">
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-ssabi" />
+                이어 읽는 중 · {book.progress.percent}% 읽음
+              </div>
             </div>
           ) : null}
         </div>
@@ -90,14 +92,14 @@ export default function BookInfoModal({
           <hr className="my-5 border-dash-line" />
 
           <section>
-            <h3 className="font-dashMono text-[11px] font-bold uppercase tracking-[.06em] text-ssabi">
+            <h3 className="font-dashSans text-base font-bold text-ssabi">
               도서 소개
             </h3>
             <p className="mt-2 font-dashSans text-sm leading-relaxed text-dash-ink">{content.intro}</p>
           </section>
 
           <section className="mt-5">
-            <h3 className="font-dashMono text-[11px] font-bold uppercase tracking-[.06em] text-ssabi">
+            <h3 className="font-dashSans text-base font-bold text-ssabi">
               배경 지식
             </h3>
             <ul className="mt-2 space-y-2">
