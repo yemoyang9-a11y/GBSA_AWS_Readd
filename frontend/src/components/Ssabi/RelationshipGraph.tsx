@@ -19,15 +19,18 @@ import { centralNodeIndex, radialLayout, shouldShowEdgeLabels } from './graphLay
  *    구간이라, 값을 아래 한 곳에 모으고 어느 토큰의 값인지 이름으로 남긴다.
  *    tailwind.config.js 의 해당 토큰을 바꾸면 여기도 함께 고쳐야 한다.
  *
+ * 재설계(2026-08-23)로 brief-rule/brief-ink/brief-muted 값으로 갱신했다 — React Flow가
+ * Tailwind 클래스를 못 읽는 사정은 그대로라 hex를 계속 직접 쓴다.
+ *
  * 간선이 많으면(graphLayout.ts의 shouldShowEdgeLabels 기준 초과) 캔버스 라벨을 생략한다
  * (polish, 2026-08-21) — 실 데이터(100p 시점, 간선 51개)에서 라벨이 중심 근처에 뭉쳐
  * 읽을 수 없었다. 아래 "관계" 목록이 항상 텍스트로 병기하므로 NFR-USE-006은 그대로 지켜진다.
  */
 const TOKEN = {
   surface: '#ffffff',
-  line: '#ebe6e0',
-  ink: '#1c1b1a',
-  muted: '#6e6a66',
+  line: '#d3c6a8', // brief-rule
+  ink: '#2a2620', // brief-ink
+  muted: '#8c8473', // brief-muted
 } as const;
 
 export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
@@ -67,7 +70,7 @@ export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
   }));
 
   return (
-    <div className="h-[280px] w-full overflow-hidden rounded-card border border-line bg-canvas">
+    <div className="h-[280px] w-full overflow-hidden rounded-xl border border-brief-rule bg-brief-page">
       <ReactFlow
         nodes={nodes}
         edges={edges}

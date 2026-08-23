@@ -40,7 +40,7 @@ export default function RelationshipTab({
   const at = picked !== null && milestones.includes(picked) ? picked : latest;
   const shown = useMemo(() => (graph ? graphUpTo(graph, at) : null), [graph, at]);
 
-  if (failed) return <p role="alert">관계도를 불러오지 못했습니다</p>;
+  if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   const nameOf = (id: string) => shown.nodes.find((n) => n.id === id)?.name ?? id;
@@ -52,10 +52,10 @@ export default function RelationshipTab({
       {milestones.length > 1 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px]">
-            <label htmlFor="graph-scrub" className="text-faint">
+            <label htmlFor="graph-scrub" className="text-brief-muted">
               시점 되감기
             </label>
-            <span className="font-bold text-ink">
+            <span className="font-bold text-brief-ink">
               {at === latest ? '현재까지' : `${at}페이지 시점`}
             </span>
           </div>
@@ -67,20 +67,20 @@ export default function RelationshipTab({
             step={1}
             value={Math.max(0, milestones.indexOf(at))}
             onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-            className="w-full accent-ssabi"
+            className="w-full accent-brief-accent"
           />
         </div>
       ) : null}
 
       <section aria-label="인물" className="space-y-3">
-        <h3 className="text-xs font-bold text-faint">인물 {shown.nodes.length}</h3>
+        <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
         <ul className="space-y-3">
           {shown.nodes.map((node) => (
-            <li key={node.id} className="rounded-card border border-line bg-surface p-3.5">
+            <li key={node.id} className="rounded-xl border border-brief-rule bg-white p-3.5">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-serif text-sm font-bold text-ink">{node.name}</span>
+                <span className="font-dashSerif text-sm font-bold text-brief-ink">{node.name}</span>
                 {node.aliases.length > 0 ? (
-                  <span className="text-[11px] text-muted">{node.aliases.join(' · ')}</span>
+                  <span className="text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
                 ) : null}
               </div>
             </li>
@@ -89,12 +89,12 @@ export default function RelationshipTab({
       </section>
 
       <section aria-label="관계" className="space-y-2">
-        <h3 className="text-xs font-bold text-faint">관계 {shown.edges.length}</h3>
+        <h3 className="text-xs font-bold text-brief-muted">관계 {shown.edges.length}</h3>
         <ul className="space-y-1.5">
           {shown.edges.map((edge) => (
-            <li key={`${edge.source}-${edge.target}`} className="text-xs text-muted">
+            <li key={`${edge.source}-${edge.target}`} className="text-xs text-brief-muted">
               {nameOf(edge.source)} — {nameOf(edge.target)} :{' '}
-              <span className="font-bold text-ink">{edge.label}</span>
+              <span className="font-bold text-brief-ink">{edge.label}</span>
             </li>
           ))}
         </ul>
