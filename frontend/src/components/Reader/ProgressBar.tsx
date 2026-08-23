@@ -15,9 +15,11 @@ export default function ProgressBar({
   tone = 'ink',
 }: {
   percent: number;
-  tone?: 'ink' | 'accent';
+  tone?: 'ink' | 'accent' | 'dash';
 }) {
   const width = Math.min(Math.max(percent, 0), 100);
+  const fillClass = tone === 'accent' ? 'bg-accent' : tone === 'dash' ? 'bg-dash-ink' : 'bg-ink';
+  const trackClass = tone === 'dash' ? 'bg-dash-line' : 'bg-line';
 
   return (
     <div
@@ -25,11 +27,11 @@ export default function ProgressBar({
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      className="h-1 w-full overflow-hidden rounded-sm bg-line"
+      className={`h-1 w-full overflow-hidden rounded-sm ${trackClass}`}
     >
       <div
         data-testid="progress-fill"
-        className={`h-full ${tone === 'accent' ? 'bg-accent' : 'bg-ink'}`}
+        className={`h-full ${fillClass}`}
         style={{ width: `${width}%` }}
       />
     </div>
