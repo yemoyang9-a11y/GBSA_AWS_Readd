@@ -69,11 +69,31 @@ describe('Dashboard', () => {
     expect(screen.getByText('완독 여부를 판정할 데이터가 아직 없습니다')).toBeInTheDocument();
   });
 
-  it('책이 1권뿐이면 서재 목록 섹션이 아예 없다 (2026-08-22 크리틱 결론)', async () => {
+  it('실제 도서가 1권뿐이어도 데모 항목 덕분에 서재 목록이 보인다 (2026-08-23 사용자 요청)', async () => {
     fetchCatalogMock.mockResolvedValue({ books: [reading] });
     renderDashboard();
     await screen.findByRole('heading', { level: 2, name: '탁류' });
-    expect(screen.queryByText('내 서재')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '전체' })).not.toBeInTheDocument();
+    expect(screen.getByText('내 서재')).toBeInTheDocument();
+    expect(screen.getByText('(3)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /데미안 선택/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /파친코 선택/ })).toBeInTheDocument();
+  });
+
+  it('데모 항목을 미리보면 히어로는 바뀌지만 이어서 읽기는 막힌다 (2026-08-23 사용자 요청)', async () => {
+    fetchCatalogMock.mockResolvedValue({ books: [reading] });
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+
+    await userEvent.click(screen.getByRole('button', { name: /데미안 선택/ }));
+
+    expect(screen.getByRole('heading', { level: 2, name: '데미안' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeDisabled();
+  });
+
+  it('실제 도서(탁류)는 데모 항목과 함께 있어도 이어서 읽기가 된다', async () => {
+    fetchCatalogMock.mockResolvedValue({ books: [reading] });
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+    expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeEnabled();
   });
 });

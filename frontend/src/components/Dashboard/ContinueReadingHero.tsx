@@ -12,15 +12,22 @@ import type { BookSummary } from '../../types';
  *
  * 진도가 없는 책(아직 시작 안 함)과 미완비 도서(ssabi_ready=false, FR-BRW-002 🚦)는
  * 시안에 없는 상태지만 기존 BookCard 가 다루던 게이트라 여기서도 지킨다.
+ *
+ * `enterable=false` (2026-08-23 데모 요청 추가) — 서재 목록의 데모 항목(실제 카탈로그에
+ * 없는 정적 도서)을 미리볼 때 쓴다. ssabi_ready 와 달리 캡션·진도 문구는 그대로 두고
+ * 버튼만 막는다 — "이 책은 존재하지만 아직 준비 안 됐다"가 아니라 "이 책은 데모용이라
+ * 애초에 서버에 없다"는 다른 사정이라 문구를 바꾸지 않는다.
  */
 export default function ContinueReadingHero({
   book,
   onResume,
   busy = false,
+  enterable = true,
 }: {
   book: BookSummary;
   onResume: () => void;
   busy?: boolean;
+  enterable?: boolean;
 }) {
   const hasProgress = book.progress !== undefined;
   const ready = book.ssabi_ready;
@@ -72,7 +79,7 @@ export default function ContinueReadingHero({
       <button
         type="button"
         onClick={onResume}
-        disabled={!ready || busy}
+        disabled={!ready || busy || !enterable}
         className="justify-self-end self-end rounded-full border border-dash-ink bg-transparent px-[14px] py-2 text-xs font-bold text-dash-ink transition-opacity disabled:opacity-40"
       >
         {buttonLabel}

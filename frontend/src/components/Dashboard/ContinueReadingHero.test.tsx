@@ -54,4 +54,13 @@ describe('ContinueReadingHero', () => {
     expect(screen.getByText('준비 중')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '아직 준비 중입니다' })).toBeDisabled();
   });
+
+  it('enterable=false — 실제 도서가 아니면 캡션·문구는 그대로 두고 버튼만 막는다', () => {
+    const onResume = vi.fn();
+    render(<ContinueReadingHero book={reading} onResume={onResume} enterable={false} />);
+
+    expect(screen.getByText('CONTINUE READING')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: '이어서 읽기' });
+    expect(button).toBeDisabled();
+  });
 });
