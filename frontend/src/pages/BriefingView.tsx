@@ -66,9 +66,9 @@ export default function BriefingView({
         type="button"
         onClick={onBack}
         aria-label="돌아가기"
-        className="flex size-14 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
+        className="flex size-9 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
       >
-        <span aria-hidden="true" className="text-xl">
+        <span aria-hidden="true" className="text-base">
           ‹
         </span>
       </button>
