@@ -164,6 +164,11 @@ async function* generateAndPersist(
 /**
  * 상한은 조립 단계(recap-assembly.ts)에서 이미 절단됐다. 이 프롬프트는 **종합 지시만**
  * 담당한다 — "기준점 이후를 쓰지 마"류 지시를 넣지 않는다(NFR-AI-004 🚦, 절대 규칙 3번).
+ *
+ * 분량 지시 추가(2026-08-24, 이슈 대응) — 예전 프롬프트는 분량을 정하지 않아 K가 작을 때
+ * (자료 적음)와 클 때(완결 장 요약이 여러 개 누적)의 출력 길이가 크게 벌어졌다. 자료 양과
+ * 무관하게 목표 문장 수를 지정한다 — 이건 "무엇을 보여줄지"(상한)가 아니라 "얼마나 길게
+ * 말할지"(종합 방식)라 데이터 선택 단계의 책임을 침범하지 않는다.
  */
 function buildRecapPrompt(input: RecapInput): string {
   const summaries = input.chapter_summaries
@@ -173,6 +178,8 @@ function buildRecapPrompt(input: RecapInput): string {
 
   return [
     '아래 자료만으로 독자가 지금까지 읽은 줄거리를 이어서 요약해라.',
+    '분량은 자료의 양과 무관하게 항상 5~8문장으로 맞춰라 — 자료가 많으면 더 압축하고, ' +
+      '적으면 있는 것만 짧게 말해라. 분량을 채우려고 없는 내용을 늘리지 마라.',
     '완결된 장 요약:',
     summaries || '(없음)',
     '현재 장에서 읽은 부분:',
