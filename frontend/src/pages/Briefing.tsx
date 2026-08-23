@@ -6,6 +6,7 @@ import { fetchBriefing, streamRecap } from '../services/recapService';
 import { useSSE } from '../hooks/useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
+import { resolveCoverUrl } from '../utils/coverOverrides';
 import { BOOK_ROUTES } from '../utils/routes';
 import type { BriefingResponse, ChapterSummary, EntryResponse } from '../types';
 
@@ -64,6 +65,7 @@ export default function Briefing() {
       chapters={chapters}
       title={book?.title ?? ''}
       author={book?.author ?? ''}
+      coverUrl={resolveCoverUrl(bookId, null)}
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
       onBack={() => navigate('/')}

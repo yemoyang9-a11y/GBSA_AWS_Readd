@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BriefingView from './BriefingView';
 import type { BriefingResponse, ChapterSummary } from '../types';
@@ -89,7 +89,7 @@ describe('브리핑 화면', () => {
     expect(toc.querySelectorAll('a, button')).toHaveLength(0);
   });
 
-  it("자가 검증 22 / UC-28 E1: 리캡이 실패해도 '마저 읽기'는 동작한다", async () => {
+  it("자가 검증 22 / UC-28 E1: 리캡이 실패해도 '이어서 읽기'는 동작한다", async () => {
     const onContinue = vi.fn();
     render(
       <BriefingView
@@ -100,7 +100,7 @@ describe('브리핑 화면', () => {
       />
     );
 
-    const button = screen.getByRole('button', { name: '마저 읽기' });
+    const button = screen.getByRole('button', { name: '이어서 읽기' });
     expect(button).toBeEnabled();
 
     // 눌리는 것까지 확인한다 — 활성 상태만으로는 동작을 보장하지 못한다
@@ -169,5 +169,36 @@ describe('브리핑 화면', () => {
   it('FR-BRF-005 🚦: 진도는 서버가 준 percent 를 그대로 렌더한다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
+  });
+
+  it('목차는 기본이 접힘이다 — 펼치기 전에는 화면에서 안 보인다(max-h-0)', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+    const panel = screen.getByRole('list', { name: '목차' }).closest('div')!;
+    expect(panel.className).toContain('max-h-0');
+  });
+
+  it('목차 토글을 누르면 펼쳐지고, 다시 누르면 접힌다', async () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+
+    const toggle = screen.getByRole('button', { name: /목차/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const panel = screen.getByRole('list', { name: '목차' }).closest('div')!;
+    expect(panel.className).toContain('max-h-[1000px]');
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('현재 장 행만 강조된다', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+    // "제3장 신판 흥부전"은 진도 패널의 장 제목과 목차 항목 두 곳에 나오므로 목차로 좁힌다
+    const toc = screen.getByRole('list', { name: '목차' });
+    const current = within(toc).getByText('제3장 신판 흥부전').closest('li')!;
+    const other = within(toc).getByText('제1장 인간기념물').closest('li')!;
+    expect(current.className).toContain('bg-brief-accent-soft');
+    expect(other.className).not.toContain('bg-brief-accent-soft');
   });
 });
