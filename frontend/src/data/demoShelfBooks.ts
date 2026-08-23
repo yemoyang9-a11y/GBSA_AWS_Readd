@@ -8,14 +8,15 @@ import type { BookSummary } from '../types';
  * 항목이며, 서버에 존재하지 않으므로 진입(POST /entry)할 방법이 없다 — 클릭하면
  * 히어로 미리보기만 바뀌고 "이어서 읽기"는 막힌다(Dashboard.tsx 의 `enterable` 판정).
  *
- * cover_url 을 비워 TypographicCover 폴백을 쓴다 — 실제 표지 에셋이 없어 지어내지 않는다.
+ * cover_url 은 `frontend/public/covers/`에 둔 표지 이미지를 가리킨다(사용자가
+ * 2026-08-23 직접 제공). 실제 API 자산이 아니라 정적 파일이므로 지어낸 데이터는 아니다.
  */
 export const DEMO_SHELF_BOOKS: BookSummary[] = [
   {
     book_id: '__demo-demian',
     title: '데미안',
     author: '헤르만 헤세',
-    cover_url: '',
+    cover_url: '/covers/demian.jpg',
     intro_summary: null,
     ssabi_ready: true,
     progress: { current_page: 184, percent: 61.8 },
@@ -24,7 +25,7 @@ export const DEMO_SHELF_BOOKS: BookSummary[] = [
     book_id: '__demo-pachinko',
     title: '파친코',
     author: '이민진',
-    cover_url: '',
+    cover_url: '/covers/pachinko.jpg',
     intro_summary: null,
     ssabi_ready: true,
     progress: { current_page: 174, percent: 42.1 },
