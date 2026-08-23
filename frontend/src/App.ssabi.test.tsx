@@ -41,9 +41,12 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     expect(screen.queryByText(/고태수/)).not.toBeInTheDocument();
 
     // 페이지를 넘기면 K 가 올라가고, 열려 있는 탭이 재조회된다 (FR-SVB-003)
-    for (const expected of ['22 / 30', '23 / 30', '24 / 30']) {
+    for (const expected of ['22', '23', '24']) {
       await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
-      await screen.findByText(expected, undefined, { timeout: 5000 });
+      await waitFor(
+        () => expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue(expected),
+        { timeout: 5000 }
+      );
     }
 
     // 인물 목록과 관계 목록 양쪽에 나오므로 복수로 받는다

@@ -41,7 +41,10 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
     await screen.findByRole('article', undefined, { timeout: 5000 });
 
     await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
-    await screen.findByText('22 / 30', undefined, { timeout: 5000 });
+    await waitFor(
+      () => expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('22'),
+      { timeout: 5000 }
+    );
 
     // 브리핑 화면으로 다시 들어간다 (pushState 만으로는 라우터가 반응하지 않아 popstate 를 함께 보낸다)
     window.history.pushState({}, '', '/books/takryu/briefing');
