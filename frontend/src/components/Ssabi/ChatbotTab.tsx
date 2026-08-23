@@ -33,7 +33,7 @@ export default function ChatbotTab({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
         {asked ? (
           <p className="ml-auto max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
             {asked}

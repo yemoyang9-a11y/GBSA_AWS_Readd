@@ -49,7 +49,7 @@ export default function ReaderView({
     <main className="flex h-full flex-col bg-brief-page">
       <article
         role="article"
-        className="mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-[#332e22]"
+        className="brief-scroll mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-[#332e22]"
       >
         {content}
       </article>

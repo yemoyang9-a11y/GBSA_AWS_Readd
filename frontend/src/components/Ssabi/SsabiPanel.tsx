@@ -111,7 +111,7 @@ export default function SsabiPanel({
         ))}
       </div>
 
-      <div role="tabpanel" className="flex-1 overflow-y-auto px-6 pb-6 pt-5">
+      <div role="tabpanel" className="brief-scroll flex-1 overflow-y-auto px-6 pb-6 pt-5">
         {tab === 'recap' ? (
           <RecapTab text={recapText} streaming={recapStreaming} failed={recapFailed} />
         ) : null}
