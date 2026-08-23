@@ -7,9 +7,14 @@ import type { BookInfoContent } from '../../data/bookInfoContent';
  * 도서 소개 모달 — 서재 카드의 "i" 버튼이 연다 (2026-08-23 사용자 요청).
  *
  * 표지 + 진도 배지(왼쪽) · 제목·태그·저자·소개·배경 지식(오른쪽) 2단 레이아웃 —
- * 사용자가 준 참고 UI의 배치를 따르되, 색·서체·모서리는 대시보드 재설계 톤(dash-*)에
+ * 사용자가 준 참고 UI의 배치를 따르되, 서체·모서리는 대시보드 재설계 톤(dash-*)에
  * 맞췄다. `content`가 없으면(정적 데이터에 없는 book_id) 아무것도 그리지 않는다 —
  * 없는 소개를 지어내지 않는다.
+ *
+ * 강조색은 대시보드 전용 톤(무채색)이 아니라 기존 `ssabi` 테라코타를 재사용한다
+ * (2026-08-23, "텍스트만 있어 눈에 안 들어온다" 피드백). 새 색을 만드는 대신
+ * 이미 이 앱에 있는 강조색 하나를 그대로 가져다 썼다 — 대시보드 톤에 색을 새로
+ * 얹으면 서재 화면 전체가 흔들리지만, 이 모달은 자기 완결적인 오버레이라 영향이 없다.
  */
 export default function BookInfoModal({
   book,
@@ -47,8 +52,8 @@ export default function BookInfoModal({
         <div>
           <TypographicCover size="hero" title={book.title} author={book.author} coverUrl={book.cover_url} />
           {book.progress ? (
-            <div className="mt-3 flex items-center gap-1.5 font-dashSans text-xs text-dash-muted">
-              <span aria-hidden="true" className="size-1.5 rounded-full bg-dash-ink" />
+            <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-ssabi-soft px-3 py-1.5 font-dashSans text-xs text-ssabi">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-ssabi" />
               이어 읽는 중 · {book.progress.percent}% 읽음
             </div>
           ) : null}
@@ -73,7 +78,7 @@ export default function BookInfoModal({
             {content.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-[999px] bg-dash-paper px-3 py-1 font-dashSans text-xs text-dash-muted"
+                className="rounded-[999px] bg-ssabi-soft px-3 py-1 font-dashSans text-xs text-ssabi"
               >
                 {tag}
               </span>
@@ -85,21 +90,21 @@ export default function BookInfoModal({
           <hr className="my-5 border-dash-line" />
 
           <section>
-            <h3 className="font-dashMono text-[11px] font-medium uppercase tracking-[.06em] text-dash-muted">
+            <h3 className="font-dashMono text-[11px] font-bold uppercase tracking-[.06em] text-ssabi">
               도서 소개
             </h3>
             <p className="mt-2 font-dashSans text-sm leading-relaxed text-dash-ink">{content.intro}</p>
           </section>
 
           <section className="mt-5">
-            <h3 className="font-dashMono text-[11px] font-medium uppercase tracking-[.06em] text-dash-muted">
+            <h3 className="font-dashMono text-[11px] font-bold uppercase tracking-[.06em] text-ssabi">
               배경 지식
             </h3>
             <ul className="mt-2 space-y-2">
               {content.background.map((item) => (
                 <li
                   key={item}
-                  className="font-dashSans text-sm leading-relaxed text-dash-ink before:mr-2 before:content-['▪']"
+                  className="font-dashSans text-sm leading-relaxed text-dash-ink before:mr-2 before:text-ssabi before:content-['▪']"
                 >
                   {item}
                 </li>
