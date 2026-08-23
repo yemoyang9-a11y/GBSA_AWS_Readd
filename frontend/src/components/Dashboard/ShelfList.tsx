@@ -27,6 +27,7 @@ export default function ShelfList({
   filter,
   onFilterChange,
   emptyMessage,
+  onInfo,
 }: {
   books: BookSummary[];
   visibleBooks: BookSummary[];
@@ -35,6 +36,8 @@ export default function ShelfList({
   filter: DashFilter;
   onFilterChange: (filter: DashFilter) => void;
   emptyMessage?: string;
+  /** 행의 "i" 버튼 — 있을 때만 렌더한다. 미리보기(onPreview)와 별개 동작이다 */
+  onInfo?: (book: BookSummary) => void;
 }) {
   if (books.length <= 1) return null;
 
@@ -61,12 +64,12 @@ export default function ShelfList({
           {visibleBooks.map((book) => {
             const selected = book.book_id === selectedId;
             return (
-              <li key={book.book_id}>
+              <li key={book.book_id} className="relative">
                 <button
                   type="button"
                   aria-label={`${book.title} 선택`}
                   onClick={() => onPreview(book)}
-                  className={`flex h-[150px] w-full items-center gap-[17px] rounded-dash-card border bg-white p-4 text-left shadow-dash-soft transition-transform ${
+                  className={`flex h-[150px] w-full items-center gap-[17px] rounded-dash-card border bg-white p-4 pr-12 text-left shadow-dash-soft transition-transform ${
                     selected ? 'selected border-[#777] -translate-y-0.5' : 'border-dash-line'
                   }`}
                 >
@@ -88,6 +91,17 @@ export default function ShelfList({
                     ) : null}
                   </div>
                 </button>
+
+                {onInfo ? (
+                  <button
+                    type="button"
+                    aria-label={`${book.title} 정보 보기`}
+                    onClick={() => onInfo(book)}
+                    className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-full border border-dash-line bg-white font-dashSerif text-xs italic text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink"
+                  >
+                    i
+                  </button>
+                ) : null}
               </li>
             );
           })}

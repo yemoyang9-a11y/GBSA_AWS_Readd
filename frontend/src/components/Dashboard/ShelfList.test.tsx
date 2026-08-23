@@ -64,6 +64,26 @@ describe('ShelfList', () => {
     expect(screen.getByRole('button', { name: /탁류 선택/ }).className).not.toContain('selected');
   });
 
+  it('행마다 정보 버튼이 있고, 눌러도 미리보기(onPreview)는 안 부른다 (2026-08-23)', async () => {
+    const onPreview = vi.fn();
+    const onInfo = vi.fn();
+    render(
+      <ShelfList
+        books={[takryu, demian]}
+        visibleBooks={[takryu, demian]}
+        selectedId="takryu"
+        onPreview={onPreview}
+        filter="all"
+        onFilterChange={() => {}}
+        onInfo={onInfo}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '데미안 정보 보기' }));
+    expect(onInfo).toHaveBeenCalledWith(demian);
+    expect(onPreview).not.toHaveBeenCalled();
+  });
+
   it('빈 목록 문구를 전달받으면 보여준다', () => {
     render(
       <ShelfList

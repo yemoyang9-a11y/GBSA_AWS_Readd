@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/common/Button';
+import BookInfoModal from '../components/Dashboard/BookInfoModal';
 import ContinueReadingHero from '../components/Dashboard/ContinueReadingHero';
 import ShelfList, { type DashFilter } from '../components/Dashboard/ShelfList';
 import WelcomeBanner from '../components/Dashboard/WelcomeBanner';
 import Loading from '../components/common/Loading';
 import Header from '../components/Layout/Header';
+import { BOOK_INFO_CONTENT } from '../data/bookInfoContent';
 import { DEMO_SHELF_BOOKS } from '../data/demoShelfBooks';
 import { fetchCatalog } from '../services/bookService';
 import { enterBook } from '../services/progressService';
@@ -48,6 +50,7 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState(false);
   const [enteringId, setEnteringId] = useState<string | null>(null);
+  const [infoBook, setInfoBook] = useState<BookSummary | null>(null);
 
   const loadCatalog = useCallback(() => {
     setCatalogError(false);
@@ -167,8 +170,17 @@ export default function Dashboard() {
           filter={filter}
           onFilterChange={handleFilterChange}
           emptyMessage={emptyMessage}
+          onInfo={setInfoBook}
         />
       </main>
+
+      {infoBook ? (
+        <BookInfoModal
+          book={infoBook}
+          content={BOOK_INFO_CONTENT[infoBook.book_id]}
+          onClose={() => setInfoBook(null)}
+        />
+      ) : null}
     </div>
   );
 }

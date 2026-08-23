@@ -112,6 +112,21 @@ describe('Dashboard', () => {
     expect(screen.getByText('완독 여부를 판정할 데이터가 아직 없습니다')).toBeInTheDocument();
   });
 
+  it('서재 카드의 정보 버튼을 누르면 도서 소개 모달이 뜬다 (2026-08-23)', async () => {
+    fetchCatalogMock.mockResolvedValue({ books: [reading] });
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+
+    await userEvent.click(screen.getByRole('button', { name: '데미안 정보 보기' }));
+
+    expect(screen.getByRole('dialog', { name: '데미안' })).toBeInTheDocument();
+    expect(screen.getByText('도서 소개')).toBeInTheDocument();
+    expect(screen.getByText('배경 지식')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '닫기' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('선택된 책이 새 필터에서도 여전히 걸리면 히어로를 그대로 둔다', async () => {
     fetchCatalogMock.mockResolvedValue({ books: [reading] });
     renderDashboard();
