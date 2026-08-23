@@ -1,0 +1,83 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - feature/R4-query-endpoints
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Create deployment package
+        working-directory: backend
+        run: |
+          tar --exclude='node_modules' --exclude='.env*' --exclude='*.log' --exclude='.git' \
+            -czf backend-deploy.tar.gz \
+            dist/ scripts/ migrations/ package.json package-lock.json ecosystem.config.js
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Upload to S3
+        working-directory: backend
+        run: |
+          aws s3 cp backend-deploy.tar.gz \
+            s3://${{ secrets.S3_ASSETS_BUCKET }}/deploy/backend-deploy.tar.gz
+
+      - name: Deploy to EC2 instances
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids ${{ secrets.EC2_INSTANCE_1 }} ${{ secrets.EC2_INSTANCE_2 }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cd /opt/ssabi",
+              "rm -rf dist scripts migrations ecosystem.config.js",
+              "aws s3 cp s3://${{ secrets.S3_ASSETS_BUCKET }}/deploy/backend-deploy.tar.gz . --region ap-northeast-2",
+              "tar -xzf backend-deploy.tar.gz",
+              "npm install --production",
+              "sudo -u deploy pm2 restart ssabi-api || sudo -u deploy pm2 start ecosystem.config.js",
+              "sleep 3",
+              "curl -s http://localhost:3000/health"
+            ]' \
+            --region ap-northeast-2 \
+            --output json | jq -r '.Command.CommandId')
+
+          echo "SSM Command ID: $COMMAND_ID"
+          echo "Waiting for deployment to complete..."
+          sleep 30
+
+      - name: Deployment summary
+        run: |
+          echo "### 🚀 Backend Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** https://d2mqlo8j8xaid.cloudfront.net/api" >> $GITHUB_STEP_SUMMARY
+          echo "**Health Check:** https://d2mqlo8j8xaid.cloudfront.net/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
