@@ -65,10 +65,12 @@ export default function BriefingView({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 rounded-md p-1 font-dashSans text-[15px] font-semibold text-brief-ink transition-opacity hover:opacity-65"
+        aria-label="돌아가기"
+        className="flex size-14 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
       >
-        <span aria-hidden="true">‹</span>
-        돌아가기
+        <span aria-hidden="true" className="text-xl">
+          ‹
+        </span>
       </button>
 
       <div className="my-5 h-[2px] w-full rounded-[1px] bg-brief-rule" />
@@ -152,42 +154,50 @@ export default function BriefingView({
         aria-hidden 을 두지 않는다 — 목차는 인터랙티브 요소가 0개라(FR-BRF-004) 접혔을 때
         포커스가 걸리는 위험이 없다. aria-hidden 을 걸면 접힌 동안 스크린리더 접근성 트리
         전체에서 사라져 getByRole('list') 로도 못 찾게 된다(자가 검증 23 테스트가 그 사정을
-        모른 채 항상 찾을 수 있다고 가정한다). 시각적 숨김(max-h-0)만으로 충분하다.
+        모른 채 항상 찾을 수 있다고 가정한다). 시각적 숨김(grid-rows-[0fr])만으로 충분하다.
+
+        max-height 상한을 추측하는 방식(예: max-h-[1000px])은 쓰지 않는다 — 실제 장이 많은
+        책(탁류 19장)에서 목록 총높이가 상한을 넘어 마지막 항목이 잘렸다(2026-08-23 실측
+        발견). `grid-template-rows: 0fr ↔ 1fr` 트랜지션은 콘텐츠의 실제 높이에 항상 맞으므로
+        장 수와 무관하게 안전하다.
       */}
       <div
         id="tocPanel"
-        className={`flex flex-col gap-2.5 overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out ${
-          tocOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+        data-testid="toc-panel"
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          tocOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
         }`}
       >
-        {/* 표시 전용 목차 — 이동 요소(a·button)를 만들지 않는다 (FR-BRF-004, D12) */}
-        <ul aria-label="목차" className="flex flex-col gap-2.5">
-          {chapters.map((chapter) => {
-            const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
-            return (
-              <li
-                key={chapter.chapter_no}
-                aria-current={isNow ? 'true' : undefined}
-                className={`flex items-center gap-3.5 rounded-brief-card px-[18px] py-3.5 shadow-[0_1px_2px_rgba(42,38,32,0.05)] ${
-                  isNow ? 'bg-brief-accent-soft shadow-brief-soft-sm' : 'bg-white'
-                }`}
-              >
-                <span
-                  className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
-                    isNow ? 'bg-brief-accent text-white' : 'bg-brief-paper text-brief-muted'
+        <div className="overflow-hidden">
+          {/* 표시 전용 목차 — 이동 요소(a·button)를 만들지 않는다 (FR-BRF-004, D12) */}
+          <ul aria-label="목차" className="flex flex-col gap-2.5 pt-0.5">
+            {chapters.map((chapter) => {
+              const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
+              return (
+                <li
+                  key={chapter.chapter_no}
+                  aria-current={isNow ? 'true' : undefined}
+                  className={`flex items-center gap-3.5 rounded-brief-card px-[18px] py-3.5 shadow-[0_1px_2px_rgba(42,38,32,0.05)] ${
+                    isNow ? 'bg-brief-accent-soft shadow-brief-soft-sm' : 'bg-white'
                   }`}
                 >
-                  {chapter.chapter_no}
-                </span>
-                <span
-                  className={`font-dashSans text-[14.5px] ${isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'}`}
-                >
-                  {chapter.title}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                  <span
+                    className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
+                      isNow ? 'bg-brief-accent text-white' : 'bg-brief-paper text-brief-muted'
+                    }`}
+                  >
+                    {chapter.chapter_no}
+                  </span>
+                  <span
+                    className={`font-dashSans text-[14.5px] ${isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'}`}
+                  >
+                    {chapter.title}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </main>
   );

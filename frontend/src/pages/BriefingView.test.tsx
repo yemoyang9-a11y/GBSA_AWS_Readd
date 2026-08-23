@@ -171,10 +171,9 @@ describe('브리핑 화면', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
 
-  it('목차는 기본이 접힘이다 — 펼치기 전에는 화면에서 안 보인다(max-h-0)', () => {
+  it('목차는 기본이 접힘이다 — 펼치기 전에는 화면에서 안 보인다(grid-rows-[0fr])', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
-    const panel = screen.getByRole('list', { name: '목차' }).closest('div')!;
-    expect(panel.className).toContain('max-h-0');
+    expect(screen.getByTestId('toc-panel').className).toContain('grid-rows-[0fr]');
   });
 
   it('목차 토글을 누르면 펼쳐지고, 다시 누르면 접힌다', async () => {
@@ -185,11 +184,11 @@ describe('브리핑 화면', () => {
 
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    const panel = screen.getByRole('list', { name: '목차' }).closest('div')!;
-    expect(panel.className).toContain('max-h-[1000px]');
+    expect(screen.getByTestId('toc-panel').className).toContain('grid-rows-[1fr]');
 
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('toc-panel').className).toContain('grid-rows-[0fr]');
   });
 
   it('현재 장 행만 강조된다', () => {
