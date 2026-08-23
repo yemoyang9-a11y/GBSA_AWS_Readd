@@ -115,4 +115,16 @@ describe('싸비 사이드창', () => {
     // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
     expect(screen.getByText('싸비의 가이드북').parentElement).toHaveClass('pr-20');
   });
+
+  it('활성 탭은 brief-accent 테두리·배경을 쓴다', () => {
+    render(<SsabiPanel {...baseProps} />);
+    const activeTab = screen.getByRole('tab', { name: '인물 관계도' });
+    expect(activeTab.className).toContain('border-brief-accent');
+    expect(activeTab.className).toContain('bg-brief-accent-soft');
+  });
+
+  it('기준점 배지는 brief-accent 톤을 쓴다', () => {
+    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
+    expect(screen.getByText('79p까지 확인').className).toContain('text-brief-accent');
+  });
 });
