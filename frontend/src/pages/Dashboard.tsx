@@ -35,6 +35,12 @@ import type { BookSummary } from '../types';
 const COVER_OVERRIDES: Record<string, string> = {
   takryu: '/covers/takryu.jpg',
 };
+
+function applyDashFilter(list: BookSummary[], filter: DashFilter): BookSummary[] {
+  if (filter === 'reading') return list.filter((book) => book.progress);
+  if (filter === 'done') return []; // 완독 판정 데이터 없음 (스펙 §7 #1)
+  return list;
+}
 export default function Dashboard() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<BookSummary[] | null>(null);
@@ -78,11 +84,21 @@ export default function Dashboard() {
     [books, selectedBook]
   );
 
-  const visibleBooks = useMemo(() => {
-    if (filter === 'reading') return displayBooks.filter((book) => book.progress);
-    if (filter === 'done') return []; // 완독 판정 데이터 없음 (스펙 §7 #1)
-    return displayBooks;
-  }, [displayBooks, filter]);
+  const visibleBooks = useMemo(() => applyDashFilter(displayBooks, filter), [displayBooks, filter]);
+
+  /**
+   * 필터를 바꿨을 때 히어로가 걸러진 책을 계속 보여주면 안 된다 — "완독"을 눌렀는데
+   * 아직 다 안 읽은 책이 히어로에 남아 있는 게 그 증상이었다(2026-08-23 사용자 제보).
+   * 히어로는 필터 자체와는 무관하게 동작하지만(미리보기 목적), 선택된 책이 새 필터의
+   * 목록에서 사라지면 기본값(첫 번째 책)으로 되돌린다.
+   */
+  function handleFilterChange(next: DashFilter) {
+    setFilter(next);
+    const nextVisible = applyDashFilter(displayBooks, next);
+    if (selectedBook && !nextVisible.some((book) => book.book_id === selectedBook.book_id)) {
+      setSelectedId(null);
+    }
+  }
 
   const emptyMessage =
     filter === 'done'
@@ -149,7 +165,7 @@ export default function Dashboard() {
           selectedId={selectedBook.book_id}
           onPreview={(book) => setSelectedId(book.book_id)}
           filter={filter}
-          onFilterChange={setFilter}
+          onFilterChange={handleFilterChange}
           emptyMessage={emptyMessage}
         />
       </main>

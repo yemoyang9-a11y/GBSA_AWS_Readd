@@ -96,4 +96,31 @@ describe('Dashboard', () => {
     await screen.findByRole('heading', { level: 2, name: '탁류' });
     expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeEnabled();
   });
+
+  it('선택된 책이 새 필터에서 걸러지면 히어로도 기본값으로 돌아간다 (2026-08-23 사용자 제보)', async () => {
+    fetchCatalogMock.mockResolvedValue({ books: [reading] });
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+
+    // 데미안을 미리본다 — 완독 데이터는 아예 없으므로 어떤 필터에도 안 걸린다
+    await userEvent.click(screen.getByRole('button', { name: /데미안 선택/ }));
+    expect(screen.getByRole('heading', { level: 2, name: '데미안' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '완독' }));
+
+    expect(screen.getByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
+    expect(screen.getByText('완독 여부를 판정할 데이터가 아직 없습니다')).toBeInTheDocument();
+  });
+
+  it('선택된 책이 새 필터에서도 여전히 걸리면 히어로를 그대로 둔다', async () => {
+    fetchCatalogMock.mockResolvedValue({ books: [reading] });
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+
+    // 데미안은 진도가 있으므로 "읽는 중" 필터에도 그대로 걸린다
+    await userEvent.click(screen.getByRole('button', { name: /데미안 선택/ }));
+    await userEvent.click(screen.getByRole('button', { name: '읽는 중' }));
+
+    expect(screen.getByRole('heading', { level: 2, name: '데미안' })).toBeInTheDocument();
+  });
 });
