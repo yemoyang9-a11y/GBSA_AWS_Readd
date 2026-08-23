@@ -26,3 +26,35 @@ describe('TypographicCover', () => {
     expect(screen.getByText('탁류')).toBeInTheDocument();
   });
 });
+
+describe('size 변형 (대시보드 재설계, 2026-08-23)', () => {
+  it('size 기본값은 card — 기존 렌더와 동일하다', () => {
+    render(<TypographicCover title="탁류" author="채만식" coverUrl="" />);
+    const cover = screen.getByTestId('typographic-cover');
+    expect(cover.className).toContain('h-cover');
+    expect(cover.className).not.toContain('h-hero-cover');
+  });
+
+  it('size="hero"는 h-hero-cover를 쓰고 모서리를 두지 않는다', () => {
+    render(<TypographicCover title="탁류" author="채만식" coverUrl="" size="hero" />);
+    const cover = screen.getByTestId('typographic-cover');
+    expect(cover.className).toContain('h-hero-cover');
+    expect(cover.className).not.toContain('rounded-cover');
+    expect(screen.getByText('탁류').className).toContain('font-dashSerif');
+  });
+
+  it('size="row"는 w-row-cover·h-row-cover 고정폭이고 글자가 작다', () => {
+    render(<TypographicCover title="탁류" author="채만식" coverUrl="" size="row" />);
+    const cover = screen.getByTestId('typographic-cover');
+    expect(cover.className).toContain('w-row-cover');
+    expect(cover.className).toContain('h-row-cover');
+    expect(screen.getByText('탁류').className).toContain('text-xs');
+  });
+
+  it('size="hero"에 coverUrl이 있으면 이미지가 h-hero-cover를 쓴다', () => {
+    render(
+      <TypographicCover title="탁류" author="채만식" coverUrl="https://x/y.jpg" size="hero" />
+    );
+    expect(screen.getByRole('img').className).toContain('h-hero-cover');
+  });
+});
