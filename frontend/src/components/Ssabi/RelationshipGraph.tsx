@@ -162,10 +162,20 @@ export default function RelationshipGraph({
     });
   }
 
-  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
-    event.preventDefault();
-    zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 1.14 : 1 / 1.14);
-  }
+  // 네이티브 리스너로 직접 붙인다 — React 17+ 는 onWheel 합성 이벤트를 passive로
+  // 등록해서 그 안에서 preventDefault()를 불러도 실제로는 막히지 않는다(콘솔 경고만
+  // 뜨고 페이지가 같이 스크롤된다). 줌 도중 배경 스크롤을 막으려면 이 방법뿐이다.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    function handleWheel(event: WheelEvent) {
+      event.preventDefault();
+      zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 1.14 : 1 / 1.14);
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if ((event.target as HTMLElement).closest('[data-graph-zoom-control]')) return;
@@ -307,7 +317,6 @@ export default function RelationshipGraph({
     <div
       ref={wrapRef}
       className="relative h-[280px] w-full touch-none overflow-hidden rounded-card border border-line bg-canvas"
-      onWheel={handleWheel}
       onPointerDown={handlePointerDown}
     >
       <svg
@@ -397,21 +406,18 @@ export default function RelationshipGraph({
                   cx={p.x}
                   cy={p.y}
                   r={r}
-                  className={isSelected ? 'fill-ssabi' : 'fill-ink/45'}
-                  stroke={isSelected || isNeighbor ? undefined : undefined}
+                  className={`${isSelected ? 'fill-ssabi' : 'fill-ink/45'} ${isNeighbor ? 'stroke-ssabi' : ''}`}
                   strokeWidth={isNeighbor ? 2.8 * k : 0}
-                  style={{ stroke: isNeighbor ? 'rgb(200 107 61)' : undefined }}
                 />
                 {nameLabels.has(node.id) ? (
                   <text
                     x={p.x}
                     y={p.y + r + NAME_FONT_PX * k + 2 * k}
                     textAnchor="middle"
-                    className="fill-ink font-serif font-semibold"
+                    className="fill-ink stroke-canvas font-serif font-semibold"
                     style={{
                       fontSize: NAME_FONT_PX * k,
                       paintOrder: 'stroke',
-                      stroke: 'rgb(250 248 245)',
                       strokeWidth: 3 * k,
                       strokeLinejoin: 'round',
                     }}
