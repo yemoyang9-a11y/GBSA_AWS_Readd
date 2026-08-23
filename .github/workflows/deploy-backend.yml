@@ -23,6 +23,13 @@ jobs:
         with:
           node-version: '22'
 
+      # deploy-frontend.yml 과 같은 이유 — Node 22 기본 번들 npm 10.x 의 `npm ci` +
+      # optionalDependencies EBADPLATFORM 회귀를 피한다(2026-08-23). backend lockfile은
+      # 지금 당장은 문제되는 항목이 없어 안 터졌을 뿐, 같은 npm 버전을 쓰는 한 같은
+      # 위험을 안고 있어 예방 차원에서 같이 고친다.
+      - name: Update npm (npm 10.x npm-ci EBADPLATFORM 회귀 회피)
+        run: npm install -g npm@11
+
       - name: Install dependencies
         working-directory: backend
         run: npm ci

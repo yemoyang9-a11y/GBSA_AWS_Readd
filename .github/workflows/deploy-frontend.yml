@@ -23,6 +23,14 @@ jobs:
         with:
           node-version: '22'
 
+      # Node 22가 기본 번들하는 npm 10.x에는 `npm ci` + optionalDependencies(플랫폼별
+      # esbuild 바이너리 등) 조합에서 EBADPLATFORM 오탐이 나는 회귀가 있다 — 자기
+      # 플랫폼에 안 맞아 건너뛰어야 할 패키지를 설치하려다 실패한다. npm 11에서는
+      # 재현되지 않는다(로컬에서 npm 10.9.2/11.12.1로 동일 lockfile 재현·비교 확인,
+      # 2026-08-23). lockfile 문제가 아니라 npm 버전 문제라 lockfile은 건드리지 않는다.
+      - name: Update npm (npm 10.x npm-ci EBADPLATFORM 회귀 회피)
+        run: npm install -g npm@11
+
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
