@@ -11,6 +11,7 @@ import { BOOK_INFO_CONTENT } from '../data/bookInfoContent';
 import { DEMO_SHELF_BOOKS } from '../data/demoShelfBooks';
 import { fetchCatalog } from '../services/bookService';
 import { enterBook } from '../services/progressService';
+import { resolveCoverUrl } from '../utils/coverOverrides';
 import { routePathFor } from '../utils/routes';
 import type { BookSummary } from '../types';
 
@@ -28,15 +29,6 @@ import type { BookSummary } from '../types';
  * 미리보기(히어로 전환)는 되지만 실제 카탈로그에 없으므로 진입은 막는다 — 이 화면
  * 아래 `enterable` 판정이 그 경계선이다. 실제 도서가 늘면 데모 항목과 나란히 보인다.
  */
-
-/**
- * 표지 override(2026-08-23, 사용자 제공) — `GET /books`의 cover_url이 비어 있을 때만
- * 화면에서 대신 채운다. 서버 응답을 고치는 게 아니라 표시만 바꾸는 것이라 지어낸 데이터는
- * 아니다 — R1 파이프라인이 실제 cover_url을 채워주면 이 표는 지운다.
- */
-const COVER_OVERRIDES: Record<string, string> = {
-  takryu: '/covers/takryu.jpg',
-};
 
 function applyDashFilter(list: BookSummary[], filter: DashFilter): BookSummary[] {
   if (filter === 'reading') return list.filter((book) => book.progress);
@@ -67,11 +59,10 @@ export default function Dashboard() {
   // (빈 서재 화면 자체가 데모 항목 때문에 가려지면 안 된다)
   const displayBooks = useMemo(() => {
     if (!books || books.length === 0) return books ?? [];
-    const realBooksWithCover = books.map((book) =>
-      !book.cover_url && COVER_OVERRIDES[book.book_id]
-        ? { ...book, cover_url: COVER_OVERRIDES[book.book_id] }
-        : book
-    );
+    const realBooksWithCover = books.map((book) => ({
+      ...book,
+      cover_url: resolveCoverUrl(book.book_id, book.cover_url) ?? '',
+    }));
     return [...realBooksWithCover, ...DEMO_SHELF_BOOKS];
   }, [books]);
 

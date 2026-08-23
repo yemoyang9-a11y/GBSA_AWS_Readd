@@ -29,6 +29,17 @@ export default {
           line: '#dedede',
           paper: '#fbf9f7',
         },
+        brief: {
+          // 브리핑 재설계 전용(2026-08-23 시안 확정). 대시보드(dash-*, 무채색)와 달리
+          // 보라 액센트를 쓴다 — 화면마다 팔레트가 다르므로 섞지 않는다.
+          paper: '#fbf8f2',
+          ink: '#2a2620',
+          muted: '#8c8473',
+          line: '#ece6d8',
+          rule: '#d3c6a8',
+          accent: '#4b3fd6',
+          'accent-soft': '#f1effc',
+        },
       },
       fontFamily: {
         serif: ['"Nanum Myeongjo"', 'serif'],
@@ -48,19 +59,29 @@ export default {
         'dash-card': '14px',
         'dash-hero-cover': '10px',
         'dash-row-cover': '8px',
+        'brief-panel': '14px',
+        'brief-card': '10px',
       },
       boxShadow: {
         card: '0 8px 8px rgba(28, 27, 26, 0.03)',
         'dash-soft': '0 2px 10px rgba(31, 31, 31, 0.07)',
+        'brief-soft': '0 10px 24px rgba(42, 38, 32, 0.07), 0 2px 6px rgba(42, 38, 32, 0.05)',
+        'brief-soft-sm': '0 4px 10px rgba(42, 38, 32, 0.08)',
       },
       spacing: { card: '18px', gutter: '24px' },
-      width: { 'book-card': '312px', 'row-cover': '84px' },
+      width: { 'book-card': '312px', 'row-cover': '84px', 'brief-cover': '168px' },
       // 페이지 폭. 시안은 고정 프레임이라 넓은 화면에서의 상한을 정하지 않았다.
       // 책 카드 312px + 간격 24px 그리드에서 유도한다 —
       // page  = 312×3 + 24×2 + px-7 좌우 28×2 = 1040 (책 카드 3열)
       // stats = 312×2 + gap-3 12 = 636 (통계 카드를 1·2열에 맞춘다)
       maxWidth: { page: '1040px', stats: '636px' },
-      height: { cover: '240px', navbar: '80px', 'hero-cover': '219px', 'row-cover': '118px' },
+      height: {
+        cover: '240px',
+        navbar: '80px',
+        'hero-cover': '219px',
+        'row-cover': '118px',
+        'brief-cover': '230px',
+      },
     },
   },
   plugins: [],
