@@ -37,3 +37,19 @@ describe('ProgressBar', () => {
     expect(screen.getByTestId('progress-fill')).toHaveClass('bg-accent');
   });
 });
+
+describe('brief 톤·size (2026-08-23 브리핑 재설계)', () => {
+  it('tone="brief"는 brief-accent 채움·brief-line 트랙을 쓴다', () => {
+    render(<ProgressBar percent={50} tone="brief" />);
+    expect(screen.getByTestId('progress-fill').className).toContain('bg-brief-accent');
+    expect(screen.getByRole('progressbar').className).toContain('bg-brief-line');
+  });
+
+  it('size="md"는 6px 높이(h-1.5)를 쓴다 — 기본은 4px(h-1) 그대로', () => {
+    render(<ProgressBar percent={50} />);
+    expect(screen.getByRole('progressbar').className).toContain('h-1 ');
+
+    render(<ProgressBar percent={50} size="md" />);
+    expect(screen.getAllByRole('progressbar')[1].className).toContain('h-1.5');
+  });
+});

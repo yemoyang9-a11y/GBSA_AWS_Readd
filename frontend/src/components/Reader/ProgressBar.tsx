@@ -13,13 +13,23 @@
 export default function ProgressBar({
   percent,
   tone = 'ink',
+  size = 'sm',
 }: {
   percent: number;
-  tone?: 'ink' | 'accent' | 'dash';
+  tone?: 'ink' | 'accent' | 'dash' | 'brief';
+  size?: 'sm' | 'md';
 }) {
   const width = Math.min(Math.max(percent, 0), 100);
-  const fillClass = tone === 'accent' ? 'bg-accent' : tone === 'dash' ? 'bg-dash-ink' : 'bg-ink';
-  const trackClass = tone === 'dash' ? 'bg-dash-line' : 'bg-line';
+  const fillClass =
+    tone === 'accent'
+      ? 'bg-accent'
+      : tone === 'dash'
+        ? 'bg-dash-ink'
+        : tone === 'brief'
+          ? 'bg-brief-accent'
+          : 'bg-ink';
+  const trackClass = tone === 'dash' ? 'bg-dash-line' : tone === 'brief' ? 'bg-brief-line' : 'bg-line';
+  const heightClass = size === 'md' ? 'h-1.5' : 'h-1';
 
   return (
     <div
@@ -27,7 +37,7 @@ export default function ProgressBar({
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
-      className={`h-1 w-full overflow-hidden rounded-sm ${trackClass}`}
+      className={`${heightClass} w-full overflow-hidden rounded-full ${trackClass}`}
     >
       <div
         data-testid="progress-fill"
