@@ -26,37 +26,49 @@ export default function TypographicCover({
    * 건드리지 않는다 — 카드 전체에 opacity 를 걸면 본문 글자의 명도 대비까지 같이 떨어진다.
    */
   dimmed?: boolean;
-  size?: 'card' | 'hero' | 'row';
+  size?: 'card' | 'hero' | 'row' | 'brief';
 }) {
   const dim = dimmed ? ' opacity-60' : '';
-  const isDash = size !== 'card';
-  const heightClass = size === 'hero' ? 'h-hero-cover' : size === 'row' ? 'h-row-cover' : 'h-cover';
-  const widthClass = size === 'row' ? 'w-row-cover flex-none' : 'w-full';
+  const isDash = size === 'hero' || size === 'row';
+  const isBrief = size === 'brief';
+  const heightClass =
+    size === 'hero'
+      ? 'h-hero-cover'
+      : size === 'row'
+        ? 'h-row-cover'
+        : size === 'brief'
+          ? 'h-brief-cover'
+          : 'h-cover';
+  const widthClass =
+    size === 'row' ? 'w-row-cover flex-none' : size === 'brief' ? 'w-brief-cover flex-none' : 'w-full';
   const roundedClass =
     size === 'card'
       ? ' rounded-cover'
       : size === 'hero'
         ? ' rounded-dash-hero-cover'
-        : ' rounded-dash-row-cover';
-  const titleFont = isDash ? 'font-dashSerif' : 'font-serif';
-  const titleSize = size === 'row' ? 'text-xs' : size === 'hero' ? 'text-xl' : 'text-2xl';
-  const authorFont = isDash ? 'font-dashSans' : 'font-sans';
-  const borderColor = isDash ? 'border-dash-line' : 'border-line';
-  const bgColor = isDash ? 'bg-dash-paper' : 'bg-canvas';
+        : size === 'row'
+          ? ' rounded-dash-row-cover'
+          : ' rounded-brief-panel';
+  const shadowClass = isBrief ? ' shadow-brief-soft' : '';
+  const titleFont = isDash || isBrief ? 'font-dashSerif' : 'font-serif';
+  const titleSize = size === 'row' ? 'text-xs' : size === 'hero' || size === 'brief' ? 'text-xl' : 'text-2xl';
+  const authorFont = isDash || isBrief ? 'font-dashSans' : 'font-sans';
+  const borderColor = isBrief ? '' : isDash ? 'border-dash-line' : 'border-line';
+  const bgColor = isBrief ? 'bg-white' : isDash ? 'bg-dash-paper' : 'bg-canvas';
 
   if (coverUrl) {
     return (
       <img
         src={coverUrl}
         alt={`${title} 표지`}
-        className={`${heightClass} ${widthClass}${roundedClass} object-cover${dim}`}
+        className={`${heightClass} ${widthClass}${roundedClass}${shadowClass} object-cover${dim}`}
       />
     );
   }
 
   return (
     <div
-      className={`flex ${heightClass} ${widthClass} flex-col items-center justify-center gap-3${roundedClass} border ${borderColor} ${bgColor} px-6 text-center${dim}`}
+      className={`flex ${heightClass} ${widthClass} flex-col items-center justify-center gap-3${roundedClass}${shadowClass}${borderColor ? ` border ${borderColor}` : ''} ${bgColor} px-6 text-center${dim}`}
       data-testid="typographic-cover"
       aria-hidden="true"
     >

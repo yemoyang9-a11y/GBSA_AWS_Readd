@@ -59,4 +59,25 @@ describe('size 변형 (대시보드 재설계, 2026-08-23)', () => {
     );
     expect(screen.getByRole('img').className).toContain('h-hero-cover');
   });
+
+  it('size="brief"는 168×230 고정 크기에 14px 라운드와 그림자를 쓴다', () => {
+    render(<TypographicCover title="탁류" author="채만식" coverUrl="" size="brief" />);
+    const cover = screen.getByTestId('typographic-cover');
+    expect(cover.className).toContain('w-brief-cover');
+    expect(cover.className).toContain('h-brief-cover');
+    expect(cover.className).toContain('rounded-brief-panel');
+    expect(cover.className).toContain('shadow-brief-soft');
+    expect(screen.getByText('탁류').className).toContain('font-dashSerif');
+  });
+
+  it('size="brief"에 coverUrl이 있으면 이미지가 같은 크기·라운드·그림자를 쓴다', () => {
+    render(
+      <TypographicCover title="탁류" author="채만식" coverUrl="/covers/takryu.jpg" size="brief" />
+    );
+    const img = screen.getByRole('img');
+    expect(img.className).toContain('w-brief-cover');
+    expect(img.className).toContain('h-brief-cover');
+    expect(img.className).toContain('rounded-brief-panel');
+    expect(img.className).toContain('shadow-brief-soft');
+  });
 });
