@@ -52,7 +52,10 @@ describe('Dashboard — 카탈로그 조회 실패', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
 
-    expect(await screen.findByRole('button', { name: /탁류/ })).toBeInTheDocument();
+    // 재설계 후 책 제목은 버튼이 아니라 히어로 h2 로 뜬다(단일 도서라 서재 목록도 숨는다)
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '탁류' })
+    ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

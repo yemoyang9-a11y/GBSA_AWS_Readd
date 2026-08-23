@@ -19,8 +19,9 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
   }, async () => {
     render(<App />);
 
-    await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
-    await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
+    // 대시보드 재설계(2026-08-23) — 탁류는 기본 히어로라 미리보기 없이 바로 진입한다
+    await screen.findByRole('heading', { level: 2, name: '탁류' }, { timeout: 5000 });
+    await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
     // 21페이지 진입 → K = 20, 저장분도 K = 20 이라 일치 → 저장 리캡 표시
     expect(await screen.findByText(/mock 저장 리캡/, undefined, { timeout: 5000 })).toBeInTheDocument();
@@ -32,8 +33,9 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
     render(<App />);
 
     // 먼저 읽기 화면에서 페이지를 넘겨 진도를 움직인다 (저장분 K = 20 과 어긋나게)
-    await screen.findByRole('button', { name: /탁류/ }, { timeout: 5000 });
-    await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
+    // 대시보드 재설계(2026-08-23) — 탁류는 기본 히어로라 미리보기 없이 바로 진입한다
+    await screen.findByRole('heading', { level: 2, name: '탁류' }, { timeout: 5000 });
+    await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
     await screen.findByRole('button', { name: '마저 읽기' }, { timeout: 5000 });
     await userEvent.click(screen.getByRole('button', { name: '마저 읽기' }));
     await screen.findByRole('article', undefined, { timeout: 5000 });

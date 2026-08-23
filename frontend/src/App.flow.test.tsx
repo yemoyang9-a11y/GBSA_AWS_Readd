@@ -18,14 +18,16 @@ describe('관통 흐름 (mock 기준)', () => {
   it('대시보드에서 도서를 고르면 브리핑을 거쳐 읽기 화면까지 이어진다', async () => {
     render(<App />);
 
-    // 대시보드 — 카탈로그가 뜬다
-    expect(await screen.findByRole('button', { name: /탁류/ })).toBeInTheDocument();
+    // 대시보드 — 카탈로그가 뜨고 탁류가 기본 히어로다(2026-08-23 재설계)
+    expect(await screen.findByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
 
-    // 미완비 도서는 클릭 자체가 막혀 있다 (FR-BRW-002 🚦)
-    expect(screen.getByRole('button', { name: /검수 전 도서/ })).toBeDisabled();
+    // 미완비 도서를 미리보면 히어로가 바뀌고, 진입 버튼이 막혀 있다 (FR-BRW-002 🚦)
+    await userEvent.click(screen.getByRole('button', { name: /검수 전 도서 선택/ }));
+    expect(screen.getByRole('button', { name: '아직 준비 중입니다' })).toBeDisabled();
 
-    // 도서 선택 → 서버(mock)가 briefing 으로 라우팅한다
-    await userEvent.click(screen.getByRole('button', { name: /탁류/ }));
+    // 다시 탁류를 미리보고 진입한다 → 서버(mock)가 briefing 으로 라우팅한다
+    await userEvent.click(screen.getByRole('button', { name: /탁류 선택/ }));
+    await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
     await waitFor(() => {
       expect(screen.getByRole('list', { name: '목차' })).toBeInTheDocument();
