@@ -37,8 +37,22 @@ export default {
         dashSans: ['Pretendard', 'system-ui', 'sans-serif'],
         dashMono: ['"DM Mono"', 'monospace'],
       },
-      borderRadius: { card: '16px', cover: '8px', pill: '20px' },
-      boxShadow: { card: '0 8px 8px rgba(28, 27, 26, 0.03)' },
+      borderRadius: {
+        card: '16px',
+        cover: '8px',
+        pill: '20px',
+        // 대시보드 재설계 다듬기(2026-08-23) — 각진 패널·카드·표지를 부드럽게.
+        // 브리핑 화면 critique 때 쓴 "14px 모서리 + 부드러운 그림자"(hairline+각짐 회피)와
+        // 같은 처방을 대시보드에도 적용해 화면 간 톤을 맞춘다.
+        'dash-panel': '18px',
+        'dash-card': '14px',
+        'dash-hero-cover': '10px',
+        'dash-row-cover': '8px',
+      },
+      boxShadow: {
+        card: '0 8px 8px rgba(28, 27, 26, 0.03)',
+        'dash-soft': '0 2px 10px rgba(31, 31, 31, 0.07)',
+      },
       spacing: { card: '18px', gutter: '24px' },
       width: { 'book-card': '312px', 'row-cover': '84px' },
       // 페이지 폭. 시안은 고정 프레임이라 넓은 화면에서의 상한을 정하지 않았다.

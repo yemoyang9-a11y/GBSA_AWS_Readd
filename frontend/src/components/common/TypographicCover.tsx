@@ -32,7 +32,12 @@ export default function TypographicCover({
   const isDash = size !== 'card';
   const heightClass = size === 'hero' ? 'h-hero-cover' : size === 'row' ? 'h-row-cover' : 'h-cover';
   const widthClass = size === 'row' ? 'w-row-cover flex-none' : 'w-full';
-  const roundedClass = size === 'card' ? ' rounded-cover' : '';
+  const roundedClass =
+    size === 'card'
+      ? ' rounded-cover'
+      : size === 'hero'
+        ? ' rounded-dash-hero-cover'
+        : ' rounded-dash-row-cover';
   const titleFont = isDash ? 'font-dashSerif' : 'font-serif';
   const titleSize = size === 'row' ? 'text-xs' : size === 'hero' ? 'text-xl' : 'text-2xl';
   const authorFont = isDash ? 'font-dashSans' : 'font-sans';

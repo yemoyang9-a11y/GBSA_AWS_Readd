@@ -44,7 +44,7 @@ export default function ContinueReadingHero({
   return (
     <section
       aria-live="polite"
-      className="grid min-h-[265px] grid-cols-[182px_1fr_180px] items-center gap-[34px] border border-dash-line bg-white p-[23px]"
+      className="grid min-h-[265px] grid-cols-[182px_1fr_180px] items-center gap-[34px] rounded-dash-panel border border-dash-line bg-white p-[23px] shadow-dash-soft"
     >
       <TypographicCover
         size="hero"

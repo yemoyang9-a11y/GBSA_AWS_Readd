@@ -66,7 +66,7 @@ export default function ShelfList({
                   type="button"
                   aria-label={`${book.title} 선택`}
                   onClick={() => onPreview(book)}
-                  className={`flex h-[150px] w-full items-center gap-[17px] border bg-white p-4 text-left transition-transform ${
+                  className={`flex h-[150px] w-full items-center gap-[17px] rounded-dash-card border bg-white p-4 text-left shadow-dash-soft transition-transform ${
                     selected ? 'selected border-[#777] -translate-y-0.5' : 'border-dash-line'
                   }`}
                 >
