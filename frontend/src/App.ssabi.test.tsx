@@ -16,8 +16,8 @@ async function goToReader() {
   // 대시보드 재설계(2026-08-23) — 탁류는 기본 히어로라 미리보기 없이 바로 진입한다
   await screen.findByRole('heading', { level: 2, name: '탁류' }, { timeout: 5000 });
   await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
-  await screen.findByRole('button', { name: '마저 읽기' }, { timeout: 5000 });
-  await userEvent.click(screen.getByRole('button', { name: '마저 읽기' }));
+  await screen.findByRole('button', { name: '이어서 읽기' }, { timeout: 5000 });
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
   await screen.findByRole('article', undefined, { timeout: 5000 });
 }
 

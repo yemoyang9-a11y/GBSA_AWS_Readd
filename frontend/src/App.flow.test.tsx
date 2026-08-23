@@ -37,8 +37,8 @@ describe('관통 흐름 (mock 기준)', () => {
       0
     );
 
-    // '마저 읽기' → 읽기 화면
-    await userEvent.click(screen.getByRole('button', { name: '마저 읽기' }));
+    // '이어서 읽기' → 읽기 화면
+    await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
     expect(await screen.findByRole('article')).toHaveTextContent('미두장');
 
