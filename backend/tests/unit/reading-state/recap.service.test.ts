@@ -65,6 +65,27 @@ function makeFakeLlmOverLength() {
   return { llmStream, chunksYielded: () => yielded, sentence };
 }
 
+/**
+ * 프로덕션 재현 — 실제 gateway.ts의 `for await (const event of response.body)`는
+ * `.return()`으로 강제 취소되면(하드 상한 조기 종료 시도) AWS SDK 스트림 쪽에서 에러를
+ * 던지는 경우가 있고, 그게 그대로 gateway.ts의 try/catch에 잡혀
+ * "LLM stream failed" 에러로 재던져진다 — 배포 후 실제 500으로 재현됨.
+ * 이 페이크는 `.return()` 호출 시 던지는 async generator로 그 상황을 흉내낸다.
+ */
+function makeFakeLlmThrowsOnCancel() {
+  const sentence = '이것은 취소 시 예외를 던지는 게이트웨이를 흉내내는 테스트용 문장입니다.'; // 40자
+  const llmStream = async function* (_task: string, _prompt: string) {
+    try {
+      for (let i = 0; i < 20; i++) {
+        yield sentence;
+      }
+    } finally {
+      throw new Error('LLM stream failed for task "recap": stream aborted');
+    }
+  };
+  return { llmStream, sentence };
+}
+
 function build() {
   const { books } = makeSeededFakes();
   const savedRecap = new FakeSavedRecapRepository();
@@ -172,6 +193,34 @@ describe('리캡 재사용 판정 — getRecap', () => {
     const cached = await sessionCache.findCached(SEED_DEVICE_ID, SEED_BOOK_ID, 15);
     expect(cached).toBe(text);
     expect(recapLog.records[0].output_ref).toBe(text);
+  });
+
+  test('프로덕션 재현: 하드 상한 도달 시 취소(gen.return())가 실패해도 500으로 안 죽고 잘린 텍스트로 정상 완료된다', async () => {
+    const { books, savedRecap, sessionCache, recapLog } = build();
+    const { llmStream, sentence } = makeFakeLlmThrowsOnCancel();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap,
+      sessionCache,
+      recapLog,
+      llmStream,
+    });
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    expect(result.kind).toBe('generated');
+    // negative — 캡이 없다면(또는 취소 실패가 그대로 전파되면) 여기서 reject돼야 정상인데,
+    // 취소 실패를 삼키므로 정상적으로 끝까지 드레인된다
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+
+    expect(text.length).toBeLessThanOrEqual(500);
+    expect(text.endsWith('.')).toBe(true);
+    const maxWholeSentences = Math.floor(500 / sentence.length);
+    expect(text).toBe(sentence.repeat(maxWholeSentences));
+    // 취소 실패에도 불구하고 저장·로그까지 정상 완료돼야 한다
+    expect(recapLog.records).toHaveLength(1);
+    const cached = await sessionCache.findCached(SEED_DEVICE_ID, SEED_BOOK_ID, 15);
+    expect(cached).toBe(text);
   });
 
   test('UC-09 A7: 세션 캐시(K) 적중 → 그대로 반환, 호출 0회', async () => {
