@@ -33,19 +33,11 @@ export interface ModelSelection {
  * // selection = { model: 'sonnet', reason: '복잡한 동기 추론' }
  */
 export function selectModel(query: string): ModelSelection {
-  // 규칙 기반 판정 (예시)
+  // 규칙 기반 판정 — 길이가 아닌 질문 의도로 분기 (R3, 2026-08-24 조정)
 
-  // 1. 길이 기반: 긴 질문은 복잡할 가능성
-  if (query.length > 100) {
-    return {
-      model: 'sonnet',
-      modelId: process.env.BEDROCK_CLAUDE_SONNET || '',
-      reason: '긴 질문 (>100자)',
-    };
-  }
-
-  // 2. 복잡성 키워드: "왜", "어떻게", "비교", "차이"
-  const complexKeywords = ['왜', '어떻게', '이유', '비교', '차이', '관계', '영향'];
+  // 1. 복잡성 키워드: 인과·비교·분석은 Sonnet. 요약 의도와 겹쳐도 이 규칙이 우선
+  //    (예: "왜 이런 흐름인지 요약해줘" → 추론이 필요하므로 Sonnet)
+  const complexKeywords = ['왜', '어떻게', '이유', '비교', '차이', '관계', '영향', '분석'];
   const hasComplexKeyword = complexKeywords.some((kw) => query.includes(kw));
 
   if (hasComplexKeyword) {
@@ -56,7 +48,7 @@ export function selectModel(query: string): ModelSelection {
     };
   }
 
-  // 3. 여러 인물 언급: 2명 이상
+  // 2. 여러 인물 언급: 2명 이상
   // TODO: 실제로는 인물 사전으로 검증
   // 임시: 물음표가 여러 개면 복잡한 질문으로 간주
   if ((query.match(/\?/g) || []).length >= 2) {
@@ -64,6 +56,18 @@ export function selectModel(query: string): ModelSelection {
       model: 'sonnet',
       modelId: process.env.BEDROCK_CLAUDE_SONNET || '',
       reason: '다중 질의',
+    };
+  }
+
+  // 3. 요약·단순 조회 의도: 이미 축약된 근거(장 요약 등)를 재구성하는 수준이라
+  //    깊은 추론이 필요 없음. 전량 주입(B-1)으로 컨텍스트 자체는 이미 크므로
+  //    속도가 더 중요 → Haiku
+  const simpleIntentKeywords = ['요약', '정리', '간단히', '누구', '뭐야', '언제', '어디'];
+  if (simpleIntentKeywords.some((kw) => query.includes(kw))) {
+    return {
+      model: 'haiku',
+      modelId: process.env.BEDROCK_CLAUDE_HAIKU || '',
+      reason: '단순 조회/요약 의도',
     };
   }
 
