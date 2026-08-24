@@ -29,6 +29,9 @@ export interface BoundingBox {
  *  자신의 viewBox 로 옮겨 그린다. */
 const CANVAS_SIZE = 640;
 
+/** forceLayout이 노드를 이 반경(중심 기준) 밖으로 내보내지 않는다. */
+const LAYOUT_RADIUS = CANVAS_SIZE * 0.42;
+
 /**
  * 인물별 연결 수(간선 수). 노드에 없는 id 를 가리키는 간선은 세지 않는다 — 유령 id 가
  * 연결 수를 부풀리면 안 된다.
@@ -181,6 +184,18 @@ export function forceLayout(
         points[i].x += (dx[i] / disp) * capped;
         points[i].y += (dy[i] / disp) * capped;
       }
+      // 캔버스 밖으로 못 나가게 원형 경계에 붙잡아 둔다. 반발력만 있고 간선(인력)이
+      // 없는 인물 쌍은 이 경계가 없으면 서로를 계속 밀어내기만 해서 몇 천 단위까지
+      // 벌어진다 — 그러면 노드 수가 조금만 바뀌어도 배치 전체 크기가 요동쳐,
+      // 고정 크기인 노드·글자가 매번 다른 비율로 보였다(실기기 확인, 2026-08-24).
+      const cdx = points[i].x - CANVAS_SIZE / 2;
+      const cdy = points[i].y - CANVAS_SIZE / 2;
+      const cdist = Math.hypot(cdx, cdy);
+      if (cdist > LAYOUT_RADIUS) {
+        const scale = LAYOUT_RADIUS / cdist;
+        points[i].x = CANVAS_SIZE / 2 + cdx * scale;
+        points[i].y = CANVAS_SIZE / 2 + cdy * scale;
+      }
     }
     temperature = Math.max(0, temperature - cooling);
   }
@@ -188,16 +203,38 @@ export function forceLayout(
   return points;
 }
 
-/** 배치 결과를 감싸는 사각형 — viewBox 초기값(fit) 계산용 */
+/** 인물이 1~2명뿐일 때도 뷰박스가 너무 좁아지지 않게 두는 하한선. */
+const MIN_BOX_SIZE = CANVAS_SIZE * 0.5;
+
+/**
+ * 배치 결과를 감싸는 사각형 — viewBox 초기값(fit) 계산용.
+ *
+ * 하한선(MIN_BOX_SIZE)을 둔다 — 안 그러면 인물이 1~2명일 때 점 주위 패딩만큼만
+ * 뷰박스가 잡혀서, 크기가 고정값인 노드·글자가 실제보다 훨씬 크게 보였다(실기기
+ * 확인, 2026-08-24). forceLayout의 LAYOUT_RADIUS 경계와 함께, 인물 수와 무관하게
+ * 뷰박스 크기가 대략 일정한 범위(MIN_BOX_SIZE ~ 캔버스 전체)를 유지하게 한다.
+ */
 export function boundingBox(points: readonly Point[], padding = 48): BoundingBox {
   if (points.length === 0) return { x: 0, y: 0, width: CANVAS_SIZE, height: CANVAS_SIZE };
 
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs) - padding;
-  const minY = Math.min(...ys) - padding;
-  const maxX = Math.max(...xs) + padding;
-  const maxY = Math.max(...ys) + padding;
+  let minX = Math.min(...xs) - padding;
+  let minY = Math.min(...ys) - padding;
+  let maxX = Math.max(...xs) + padding;
+  let maxY = Math.max(...ys) + padding;
+
+  if (maxX - minX < MIN_BOX_SIZE) {
+    const cx = (minX + maxX) / 2;
+    minX = cx - MIN_BOX_SIZE / 2;
+    maxX = cx + MIN_BOX_SIZE / 2;
+  }
+  if (maxY - minY < MIN_BOX_SIZE) {
+    const cy = (minY + maxY) / 2;
+    minY = cy - MIN_BOX_SIZE / 2;
+    maxY = cy + MIN_BOX_SIZE / 2;
+  }
+
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 

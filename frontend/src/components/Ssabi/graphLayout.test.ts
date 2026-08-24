@@ -101,12 +101,42 @@ describe('forceLayout — 힘-분산 배치', () => {
     const distAC = Math.hypot(points[0].x - points[2].x, points[0].y - points[2].y);
     expect(distAB).toBeLessThan(distAC);
   });
+
+  /**
+   * 이슈 대응(2026-08-24, 실기기 확인) — "인물 1명일 땐 노드가 너무 크고, 2명이 되자마자
+   * 화면이 확 작아지고, 12페이지에서 다시 깨진다"는 보고. 원인은 이 배치가 경계 없이
+   * 퍼져서, 서로 안 이어진 인물 쌍(반발력만 있고 당기는 간선이 없음)이 몇 천 단위까지
+   * 벌어질 수 있었던 것 — 노드 수가 하나만 바뀌어도 전체 배치 크기가 요동쳤다.
+   */
+  it('간선이 하나도 없어도(전부 서로 무관) 배치가 고정된 반경 안에 머문다', () => {
+    const nodes = Array.from({ length: 6 }, (_, i) => node(`n${i}`, i));
+    const points = forceLayout(nodes, [], { iterations: 300 });
+    const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+    for (const p of points) {
+      expect(Math.hypot(p.x - cx, p.y - cy)).toBeLessThan(500);
+    }
+  });
 });
 
 describe('boundingBox — 배치를 감싸는 사각형', () => {
-  it('패딩만큼 여유를 둔다', () => {
+  it('패딩만큼 여유를 둔다 (하한선보다 큰 배치)', () => {
+    const box = boundingBox([{ x: 0, y: 0 }, { x: 400, y: 400 }], 5);
+    expect(box).toEqual({ x: -5, y: -5, width: 410, height: 410 });
+  });
+
+  /**
+   * 이슈 대응(2026-08-24) — 인물이 1~2명뿐이면 점들이 서로 가까워 패딩만 준 뷰박스가
+   * 아주 좁아진다. 그 좁은 뷰박스에 고정 크기 노드·글자를 그리면 실제보다 훨씬 크게
+   * 보였다 — 하한선 밑으로는 안 줄어들게 한다.
+   */
+  it('점들이 아주 가까이 있어도 최소 크기보다 작아지지 않는다', () => {
     const box = boundingBox([{ x: 0, y: 0 }, { x: 10, y: 10 }], 5);
-    expect(box).toEqual({ x: -5, y: -5, width: 20, height: 20 });
+    expect(box.width).toBeGreaterThanOrEqual(300);
+    expect(box.height).toBeGreaterThanOrEqual(300);
+    // 그래도 중심은 점들 쪽에 그대로 맞춰져 있다
+    expect(box.x + box.width / 2).toBeCloseTo(5, 0);
+    expect(box.y + box.height / 2).toBeCloseTo(5, 0);
   });
 
   it('점이 없으면 기본 크기를 반환한다', () => {
