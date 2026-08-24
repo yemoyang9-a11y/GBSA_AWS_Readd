@@ -40,7 +40,7 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * 충돌하지 않는다. "추천 질문 칩"은 여전히 만들지 않았다 — CLAUDE.md 9장이
  * **미결(데모 시연 시나리오)** 로 둔 항목이라 지어내면 잘못된 결정이 코드에 굳는다.
  */
-const DEFAULT_GREETING = '안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.';
+const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
 
 export default function ChatbotTab({
   answer = '',

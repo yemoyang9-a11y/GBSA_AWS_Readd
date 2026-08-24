@@ -16,7 +16,7 @@ describe('ChatbotTab', () => {
   it('2026-08-24: 대화가 없으면(질문 전) 기본 인사 멘트를 보여준다 — 빈 말풍선은 아니다', () => {
     render(<ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />);
     expect(
-      screen.getByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+      screen.getByText('안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.')
     ).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe('ChatbotTab', () => {
       />
     );
     expect(
-      screen.getByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+      screen.getByText('안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.')
     ).toBeInTheDocument();
   });
 
@@ -50,7 +50,7 @@ describe('ChatbotTab', () => {
       />
     );
     expect(
-      screen.queryByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+      screen.queryByText('안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.')
     ).not.toBeInTheDocument();
   });
 
