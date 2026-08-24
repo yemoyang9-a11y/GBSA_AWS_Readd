@@ -64,8 +64,12 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '싸비 닫기' }));
     // 숨기는 게 아니라 언마운트한다 — 닫힌 패널이 리캡 스트리밍을 계속 내보내면
-    // 그대로 LLM 재호출이고 분당 3회 상한에 걸린다 (NFR-AI-017)
-    expect(screen.queryByRole('tab', { name: '인물 관계도' })).not.toBeInTheDocument();
+    // 그대로 LLM 재호출이고 분당 3회 상한에 걸린다 (NFR-AI-017). 다만 슬라이드
+    // 애니메이션(usePanelOpenTransition, 260ms) 동안은 잠깐 더 마운트돼 있다가
+    // 사라지므로 즉시가 아니라 waitFor로 확인한다.
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: '인물 관계도' })).not.toBeInTheDocument()
+    );
   });
 
   it('챗봇 탭에서 질문하면 답변이 스트리밍으로 들어온다', { timeout: 20000 }, async () => {

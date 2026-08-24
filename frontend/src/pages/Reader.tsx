@@ -11,6 +11,7 @@ import { streamRecap } from '../services/recapService';
 import { useSsabiData } from '../hooks/useSsabiData';
 import { useHeartbeat } from '../hooks/useHeartbeat';
 import { usePanelResize } from '../hooks/usePanelResize';
+import { usePanelOpenTransition } from '../hooks/usePanelOpenTransition';
 import { useSSE } from '../hooks/useSSE';
 import { useChatConversation } from '../hooks/useChatConversation';
 import { nextSeq } from '../utils/seq';
@@ -50,6 +51,18 @@ export default function Reader() {
    *   만족시키려면 조회 effect 들의 조건에 이 상태를 넣어야 한다 — 추가 기능 작업에서 처리.
    */
   const [panelOpen, setPanelOpen] = useState(false);
+  const togglePanel = useCallback(() => setPanelOpen((open) => !open), []);
+
+  /**
+   * 닫는 즉시 언마운트하던 걸(위 주석) 260ms 슬라이드 애니메이션 동안만 유예한다
+   * (2026-08-24, 사용자 피드백 — 지피티 워크 모드 사이드 채팅 같은 느낌을 원함).
+   * panelRendered가 true인 동안만 `<aside>`를 그리고, 실제 폭은 panelOpen을 기준으로
+   * 0↔panelWidth를 오간다 — usePanelResize가 이미 드래그용으로 쓰던 transition-[width]
+   * 클래스를 그대로 재사용해 열기/닫기도 같은 방식으로 부드럽게 움직인다. 애니메이션이
+   * 끝나면(260ms) panelRendered가 false로 떨어져 실제로 언마운트되므로, 리캡 재스트리밍
+   * 위험(위 주석)은 "닫힌 채로 오래 마운트"가 아니라 "애니메이션 한 번"으로만 남는다.
+   */
+  const panelRendered = usePanelOpenTransition(panelOpen, 260);
 
   const appRef = useRef<HTMLDivElement>(null);
   const { width: panelWidth, isDragging, handleProps } = usePanelResize({
@@ -231,7 +244,7 @@ export default function Reader() {
        * top-bar 안에 두면 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
        */}
       <div className="absolute right-6 top-20 z-10">
-        <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
+        <SsabiToggleButton open={panelOpen} onToggle={togglePanel} />
       </div>
 
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
@@ -260,41 +273,50 @@ export default function Reader() {
           />
         </div>
 
-        {panelOpen ? (
+        {panelRendered ? (
           <aside
             id="ssabi-panel"
-            style={{ width: panelWidth, flexBasis: panelWidth }}
-            className={`relative shrink-0 border-l border-brief-rule ${isDragging ? '' : 'transition-[width]'}`}
+            style={{ width: panelOpen ? panelWidth : 0, flexBasis: panelOpen ? panelWidth : 0 }}
+            className={`relative shrink-0 overflow-hidden border-l border-brief-rule ${
+              isDragging ? '' : 'transition-[width] duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)]'
+            }`}
           >
+            {panelOpen ? (
+              <div
+                {...handleProps}
+                className={`absolute -left-[5px] top-0 z-10 flex h-full w-[10px] cursor-col-resize items-center justify-center ${isDragging ? 'select-none' : ''}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`w-[3px] rounded-full bg-brief-rule transition-all ${isDragging ? 'h-[52px] bg-brief-ink' : 'h-9'}`}
+                />
+              </div>
+            ) : null}
             <div
-              {...handleProps}
-              className={`absolute -left-[5px] top-0 z-10 flex h-full w-[10px] cursor-col-resize items-center justify-center ${isDragging ? 'select-none' : ''}`}
+              className={`h-full transition-opacity duration-[220ms] ${panelOpen ? 'opacity-100' : 'opacity-0'}`}
+              style={{ width: panelWidth }}
             >
-              <span
-                aria-hidden="true"
-                className={`w-[3px] rounded-full bg-brief-rule transition-all ${isDragging ? 'h-[52px] bg-brief-ink' : 'h-9'}`}
+              <SsabiPanel
+                sessionEpoch={session?.session_epoch ?? 0}
+                appliedCutoff={panelAppliedCutoff}
+                onTabChange={setTab}
+                graph={graph}
+                graphFailed={graphFailed}
+                recapText={recapText}
+                recapStreaming={recapStreaming}
+                recapFailed={recapError !== null}
+                chatTurns={chatTurns}
+                chatStreaming={chatStreaming}
+                chatError={chatError}
+                chatConversations={chatConversations}
+                chatHistoryOpen={chatHistoryOpen}
+                pendingQuote={pendingQuote}
+                onAsk={handleAsk}
+                onNewChat={startNewChat}
+                onToggleChatHistory={toggleChatHistory}
+                onSelectChatConversation={selectChatConversation}
               />
             </div>
-            <SsabiPanel
-              sessionEpoch={session?.session_epoch ?? 0}
-              appliedCutoff={panelAppliedCutoff}
-              onTabChange={setTab}
-              graph={graph}
-              graphFailed={graphFailed}
-              recapText={recapText}
-              recapStreaming={recapStreaming}
-              recapFailed={recapError !== null}
-              chatTurns={chatTurns}
-              chatStreaming={chatStreaming}
-              chatError={chatError}
-              chatConversations={chatConversations}
-              chatHistoryOpen={chatHistoryOpen}
-              pendingQuote={pendingQuote}
-              onAsk={handleAsk}
-              onNewChat={startNewChat}
-              onToggleChatHistory={toggleChatHistory}
-              onSelectChatConversation={selectChatConversation}
-            />
           </aside>
         ) : null}
       </div>
