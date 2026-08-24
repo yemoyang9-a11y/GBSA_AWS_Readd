@@ -121,10 +121,13 @@ export function centralNodeIndex(
  * 2026-08-25 (2차) — 화면상 크기를 100% 기준으로 고정(RelationshipGraph.tsx의
  * nodeScale)한 뒤로 "노드가 전반적으로 작아 보여서 크기 비교가 어렵고 글씨만 혼자
  * 떠다니는 느낌"이라는 피드백. 전체적으로 한 단계 키운다.
+ *
+ * 2026-08-25 (3차) — "노드 크기 전반적으로 조금만 더 컸으면"이라는 재요청으로
+ * 한 단계 더 키운다.
  */
-const MIN_RADIUS = 17;
-const MAX_RADIUS = 32;
-const RADIUS_STEP = 2.2;
+const MIN_RADIUS = 19;
+const MAX_RADIUS = 35;
+const RADIUS_STEP = 2.4;
 
 /** 연결 수가 많을수록 큰 원 — 상한을 둔다(주인공이라고 화면을 절반 잡아먹지 않는다). */
 export function nodeRadius(degree: number): number {
