@@ -47,8 +47,9 @@ export default function Reader() {
    * 탭만 보고 패널 가시성은 보지 않기 때문이다. 그건 그대로 LLM 재호출이고 분당 3회 상한에
    * 걸린다 (NFR-AI-017).
    *
-   * TODO 대가로 닫았다 열면 탭이 기본값으로 돌아간다. 탭 기억과 무의미한 호출 차단을 함께
-   *   만족시키려면 조회 effect 들의 조건에 이 상태를 넣어야 한다 — 추가 기능 작업에서 처리.
+   * 대가로 닫았다 열면 탭이 기본값으로 돌아갔었다 — 무의미한 조회 차단(이 언마운트 정책)과
+   * 탭 기억(2026-08-24, 아래 tabMemory)을 함께 만족시켰다: 조회는 여전히 언마운트로
+   * 차단하고, 탭은 Reader가 별도로 기억했다 되돌려주는 방식으로 풀었다.
    */
   const [panelOpen, setPanelOpen] = useState(false);
   const togglePanel = useCallback(() => setPanelOpen((open) => !open), []);
@@ -114,6 +115,24 @@ export default function Reader() {
    */
   const [session, setSession] = useState<EntryResponse | null>(entry ?? null);
   const [currentPage, setCurrentPage] = useState<number | null>(entry?.page ?? null);
+
+  /**
+   * 마지막으로 활성이던 싸비 탭 기억 — 어느 session_epoch에서 기록됐는지와 함께 보관한다.
+   * 패널을 닫으면 SsabiPanel이 통째로 언마운트되어(위 panelOpen 주석) 그 안의 탭 상태가
+   * 사라지므로, 언마운트되지 않는 이 컨테이너가 대신 들고 있다가 재마운트 시 SsabiPanel에
+   * 초기값으로 되돌려준다 (2026-08-24, 사용자 요청 — 닫았다 다시 열면 항상 인물 관계도로
+   * 리셋되던 것을 마지막 이용 탭 유지로 바꿈). epoch을 함께 저장해 두는 이유는 세션이
+   * 바뀐 채로 닫혀 있었으면(FR-SVB-004) 옛 탭 기억을 쓰면 안 되기 때문 — SsabiPanel의
+   * resolveSsabiTab이 이 짝을 그대로 보고 sameSession을 판정하므로 별도 분기가 필요 없다.
+   */
+  const [tabMemory, setTabMemory] = useState<{ tab: SsabiTab; epoch: number } | null>(null);
+  const handleTabChange = useCallback(
+    (nextTab: SsabiTab) => {
+      setTab(nextTab);
+      setTabMemory({ tab: nextTab, epoch: session?.session_epoch ?? 0 });
+    },
+    [session?.session_epoch]
+  );
 
   /**
    * 진입 판정 실패 상태. 실패 시 무한 로딩 대신 재시도 UI를 보여준다 —
@@ -327,7 +346,9 @@ export default function Reader() {
               <SsabiPanel
                 sessionEpoch={session?.session_epoch ?? 0}
                 appliedCutoff={panelAppliedCutoff}
-                onTabChange={setTab}
+                initialTab={tabMemory?.tab ?? null}
+                initialTabEpoch={tabMemory?.epoch ?? null}
+                onTabChange={handleTabChange}
                 graph={graph}
                 graphFailed={graphFailed}
                 recapText={recapText}

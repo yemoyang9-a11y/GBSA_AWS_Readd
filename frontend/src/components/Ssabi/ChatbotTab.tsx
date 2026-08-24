@@ -30,12 +30,18 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * 답변 말풍선은 `answer`가 있을 때만 그린다(polish, 2026-08-21) — 예전엔 무조건 그려서
  * 질문을 하기도 전에(챗봇 탭을 열자마자) 속이 빈 말풍선이 떠 있었다.
  *
+ * 대화가 하나도 없을 때(새 채팅 직후 · 최초 진입)는 빈 화면 대신 기본 인사 멘트를
+ * 보여준다(2026-08-24, 사용자 요청). 위 P2 polish 결정("빈 말풍선 안 그림")과 다른 것은
+ * — 그때 없앤 건 텍스트 없는 빈 말풍선이고, 이건 실제 문구가 있는 안내 멘트다.
+ *
  * 선택 문장 인용 (2026-08-24) — 본문 드래그로 고른 문장이 `quote` prop 으로 오면 입력창에
  * 그대로 채운다. 인용문은 챗봇의 자유 텍스트 질문(query)의 일부일 뿐이라 cutoff 필터링
  * 대상이 아니고(기존에도 query는 필터링하지 않았다), 이미 화면에 떠 있는 본문이라 R3와도
  * 충돌하지 않는다. "추천 질문 칩"은 여전히 만들지 않았다 — CLAUDE.md 9장이
  * **미결(데모 시연 시나리오)** 로 둔 항목이라 지어내면 잘못된 결정이 코드에 굳는다.
  */
+const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
+
 export default function ChatbotTab({
   answer = '',
   streaming,
@@ -143,26 +149,40 @@ export default function ChatbotTab({
       ) : (
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
-            {bubbles.map((turn, i) =>
-              turn.role === 'user' ? (
-                <p
-                  key={i}
-                  className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
-                >
-                  {turn.text}
+            {bubbles.length === 0 ? (
+              <div className="flex items-end gap-2">
+                <img
+                  src={ssabiFace}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-9 w-auto shrink-0 translate-y-3 object-contain"
+                />
+                <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                  {DEFAULT_GREETING}
                 </p>
-              ) : (
-                <div key={i} className="flex items-end gap-2">
-                  <img
-                    src={ssabiFace}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-9 w-auto shrink-0 translate-y-3 object-contain"
-                  />
-                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+              </div>
+            ) : (
+              bubbles.map((turn, i) =>
+                turn.role === 'user' ? (
+                  <p
+                    key={i}
+                    className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
+                  >
                     {turn.text}
                   </p>
-                </div>
+                ) : (
+                  <div key={i} className="flex items-end gap-2">
+                    <img
+                      src={ssabiFace}
+                      alt=""
+                      aria-hidden="true"
+                      className="h-9 w-auto shrink-0 translate-y-3 object-contain"
+                    />
+                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                      {turn.text}
+                    </p>
+                  </div>
+                )
               )
             )}
 
