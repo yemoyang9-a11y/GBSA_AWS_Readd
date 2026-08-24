@@ -39,13 +39,13 @@ import {
  * 보여주는 쪽이 더 낫다. 항상 보이는 "관계" 텍스트 목록은 RelationshipTab이 맡는다.
  */
 
-// 2026-08-25 — "글씨가 작다" 피드백으로 이름·관계 라벨 폰트를 키운다. CHAR_PX(글자당
-// 너비 어림)도 같이 올려야 라벨 충돌회피(pickNonOverlapping)가 실제 렌더 너비와
-// 어긋나지 않는다 — 어긋나면 겹치는데 안 숨기거나, 안 겹치는데 숨기는 쪽으로 튄다.
-const NAME_FONT_PX = 14;
-const NAME_CHAR_PX = 7.6;
-const EDGE_LABEL_FONT_PX = 12;
-const EDGE_LABEL_CHAR_PX = 7.6;
+// 2026-08-25 — "글씨가 작다"(1차) → 14/12로 올렸는데 "꽤 더 키워야" 재요청. CHAR_PX
+// (글자당 너비 어림)도 같이 올려야 라벨 충돌회피(pickNonOverlapping)가 실제 렌더
+// 너비와 어긋나지 않는다 — 어긋나면 겹치는데 안 숨기거나, 안 겹치는데 숨기는 쪽으로 튄다.
+const NAME_FONT_PX = 17;
+const NAME_CHAR_PX = 9.4;
+const EDGE_LABEL_FONT_PX = 14;
+const EDGE_LABEL_CHAR_PX = 9;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
 // clampViewBox 의 팬 여유는 (1 + 2*PAN_MARGIN_RATIO)*base.width 까지만 뷰박스를 허용한다.
@@ -144,10 +144,14 @@ export default function RelationshipGraph({
     const pts = [p, ...neighborPositions];
     const spanX = Math.max(...pts.map((q) => q.x)) - Math.min(...pts.map((q) => q.x));
     const spanY = Math.max(...pts.map((q) => q.y)) - Math.min(...pts.map((q) => q.y));
-    const width = Math.max(spanX, spanY) + FOCUS_PADDING * 2;
-    setViewBox(
-      clampViewBox({ x: p.x - width / 2, y: p.y - width / 2, width, height: width }, base)
-    );
+    const rawWidth = Math.max(spanX, spanY) + FOCUS_PADDING * 2;
+    // clampViewBox가 height를 base의 가로세로비로 다시 계산하므로, 여기서 미리 같은
+    // 비율로 height를 잡아야 p가 진짜 정중앙에 온다 — width만 정사각으로 잡고 넘기면
+    // clampViewBox가 그 height를 base 비율에 맞게 늘리거나 줄이면서 y축 중심이
+    // p.y에서 벗어난다(2026-08-25, "포커싱이 정중앙이 아니라 치우쳐 있다" 버그).
+    const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
+    const height = width * (base.height / base.width);
+    setViewBox(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
   const unit = () => {
@@ -273,9 +277,11 @@ export default function RelationshipGraph({
 
   const k = unit();
 
-  // 인물명 라벨 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
-  const nameLabels = useMemo(() => {
-    const boxes: (LabelBox & { id: string; label: Point })[] = graph.nodes.map((node, i) => {
+  // 인물명 라벨 박스 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
+  // 관계 라벨(아래)이 이 중 실제로 보이는 라벨과 안 겹치게 하려면 살아남은 박스
+  // 자체가 필요하다 — id 집합만으론 위치·크기를 다시 못 얻는다.
+  const nameLabelBoxes = useMemo(() => {
+    const boxes: (LabelBox & { id: string })[] = graph.nodes.map((node, i) => {
       const p = positions[i];
       const r = nodeRadius(degree.get(node.id) ?? 0);
       const width = estimateTextWidth(node.name, NAME_CHAR_PX * k) + 4 * k;
@@ -284,7 +290,6 @@ export default function RelationshipGraph({
       const isNeighbor = neighborIds.has(node.id);
       return {
         id: node.id,
-        label: { x: p.x, y: p.y + r + NAME_FONT_PX * k + 2 * k },
         x: p.x - width / 2,
         y: p.y + r,
         width,
@@ -292,15 +297,26 @@ export default function RelationshipGraph({
         priority: (degree.get(node.id) ?? 0) + (isSelected ? 9999 : 0) + (isNeighbor ? 500 : 0),
       };
     });
-    return new Set(pickNonOverlapping(boxes).map((b) => b.id));
+    return pickNonOverlapping(boxes);
     // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
   }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k]);
 
-  // 관계 라벨 — 선택된 인물과 닿은 간선에서만
+  const nameLabels = useMemo(
+    () => new Set(nameLabelBoxes.map((b) => b.id)),
+    [nameLabelBoxes]
+  );
+
+  /**
+   * 관계 라벨 — 선택된 인물과 닿은 간선에서만. 참고 시안(reader-map-graph.html
+   * relayout())과 같은 규칙: 실제로 보이는 인물명 라벨은 항상 이긴다(우선순위
+   * 무한대로 블로커 취급), 관계 라벨끼리는 간선이 긴 쪽이 우선(짧은 간선끼리
+   * 몰린 라벨이 더 잘 겹치므로). 예전엔 이 겹침 회피가 전혀 없어서 연결이 많은
+   * 인물을 선택하면 라벨이 죄다 겹쳐 보였다(2026-08-25 피드백).
+   */
   const edgeLabels = useMemo(() => {
     if (!validSelectedId) return [];
     const indexOf = new Map(graph.nodes.map((n, i) => [n.id, i]));
-    return graph.edges
+    const candidates = graph.edges
       .filter((edge) => edge.source === validSelectedId || edge.target === validSelectedId)
       .map((edge) => {
         const fromSelected = edge.source === validSelectedId;
@@ -317,10 +333,22 @@ export default function RelationshipGraph({
         const dist = Math.max(26 * k, Math.min(len * 0.62, len - 22 * k));
         const cx = near.x + (dx / len) * dist;
         const cy = near.y + (dy / len) * dist;
-        return { key: `${edge.source}-${edge.target}`, label: edge.label, cx, cy, width, height };
+        return { key: `${edge.source}-${edge.target}`, label: edge.label, cx, cy, width, height, len };
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
-  }, [validSelectedId, graph.nodes, graph.edges, positions, k]);
+
+    const blockerBoxes = nameLabelBoxes.map((b) => ({ ...b, key: `name:${b.id}`, priority: Infinity }));
+    const edgeBoxes = candidates.map((c) => ({
+      key: c.key,
+      x: c.cx - c.width / 2,
+      y: c.cy - c.height / 2,
+      width: c.width,
+      height: c.height,
+      priority: c.len,
+    }));
+    const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
+    return candidates.filter((c) => kept.has(c.key));
+  }, [validSelectedId, graph.nodes, graph.edges, positions, k, nameLabelBoxes]);
 
   return (
     <div

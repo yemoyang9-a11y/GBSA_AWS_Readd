@@ -49,8 +49,13 @@ const LAYOUT_RADIUS = CANVAS_SIZE * 1.6;
  * 노드가 줄지어 서는 인공적인 형태(도넛)를 만들지 않는다. 노드가 많을수록 반발력 총합이
  * 커져 자연히 더 넓게 퍼지고, 중력과 만나는 지점에서 균형을 이룬다 — 인물 수에 맞춰 손으로
  * 반경 공식을 다시 잡을 필요가 없다.
+ *
+ * 2026-08-25 — 1.5는 여전히 너무 촘촘하다는 피드백("아직도 겹치는 부분이 많다")으로
+ * 0.8로 낮춰 전체적으로 더 넓게 퍼지게 한다. 참고 시안(reader-map-graph.html)도 실제
+ * 렌더 크기 대비 노드 사이 거리가 훨씬 여유로웠다 — 화면이 줌/팬 가능하니 첫 화면에
+ * 다 담기는 것보다 안 겹치는 쪽을 우선한다.
  */
-const GRAVITY_STRENGTH = 1.5;
+const GRAVITY_STRENGTH = 0.8;
 
 /**
  * 인물별 연결 수(간선 수). 노드에 없는 id 를 가리키는 간선은 세지 않는다 — 유령 id 가
@@ -104,19 +109,26 @@ export function centralNodeIndex(
 }
 
 /**
- * 2026-08-25 — 최소·최대 차이가 너무 커서(14~26, 약 1.9배) 연결 수 적은 인물이 눈에
- * 잘 안 띄고 화면이 들쭉날쭉해 보인다는 피드백. 범위를 좁히고(16~20) 완만하게 키워
- * "중요도가 크기에 드러나긴 하지만 튀지는 않는" 정도로 낮춘다.
+ * 2026-08-25 — 처음엔 범위를 좁혔더니(16~20) 이번엔 "차이가 더 나도 된다"는 반대
+ * 피드백. 겹침은 nodeRadius 범위가 아니라 전체 배치 여유(중력·겹침 제거 패스)로
+ * 해결하는 쪽으로 방향을 바꿔서, 크기 차이는 원래보다 더 크게 되돌린다.
  */
-const MIN_RADIUS = 16;
-const MAX_RADIUS = 20;
-const RADIUS_STEP = 0.5;
+const MIN_RADIUS = 14;
+const MAX_RADIUS = 28;
+const RADIUS_STEP = 2;
 
 /** 연결 수가 많을수록 큰 원 — 상한을 둔다(주인공이라고 화면을 절반 잡아먹지 않는다). */
 export function nodeRadius(degree: number): number {
   return Math.min(MAX_RADIUS, MIN_RADIUS + RADIUS_STEP * Math.max(0, degree - 1));
 }
 
+/**
+ * 초기 각도를 0(오른쪽)에서 시작한다 — 예전엔 -π/2(위쪽)에서 시작해서, 인물이 2명뿐일
+ * 때 정확히 위/아래로 마주 서는 배치가 나왔다(2026-08-25 피드백: "위·아래 끝에
+ * 있는 게 별로다, 가깝게 수평으로"). 2명일 땐 서로 밀어내는 힘·당기는 힘이 모두
+ * 시작 축을 따라서만 작용해 회전할 방법이 없으므로(회전시킬 토크가 없다), 이 시작
+ * 각도가 그대로 최종 배치의 축이 된다 — 0에서 시작하면 그 축이 수평이 된다.
+ */
 function seedPositions(count: number): Point[] {
   if (count <= 0) return [];
   if (count === 1) return [{ x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2 }];
@@ -124,7 +136,7 @@ function seedPositions(count: number): Point[] {
   const radius = CANVAS_SIZE * 0.32;
   const center = CANVAS_SIZE / 2;
   return Array.from({ length: count }, (_, i) => {
-    const theta = (2 * Math.PI * i) / count - Math.PI / 2;
+    const theta = (2 * Math.PI * i) / count;
     return { x: center + radius * Math.cos(theta), y: center + radius * Math.sin(theta) };
   });
 }
@@ -190,13 +202,19 @@ export function forceLayout(
       }
     }
 
-    // 인력 — 간선으로 이어진 쌍만 서로 당긴다
+    // 인력 — 간선으로 이어진 쌍만 서로 당긴다.
+    // 2026-08-25 — 고전 Fruchterman-Reingold는 인력이 거리의 제곱(dist²/k)이라, 간선이
+    // 많은 인물(허브) 하나에 여러 인물이 물려 있으면 멀어질수록 인력이 급격히 커져서
+    // 전부 허브 바로 옆 좁은 반지름 안으로 되돌아온다 — 허브 하나에 매달린 인물이
+    // 많을수록 그 반지름 위가 더 빽빽해진다("아직도 겹치는 부분이 많다" 피드백의
+    // 실제 원인). 거리에 비례하는(dist/k) 스프링형 인력으로 바꾸면 같은 간선이라도
+    // 멀어질 때 당기는 힘이 완만하게만 커져, 반발력이 이긴 만큼 더 퍼질 수 있다.
     for (const { a, b } of pairs) {
       let ddx = points[a].x - points[b].x;
       let ddy = points[a].y - points[b].y;
       let dist = Math.hypot(ddx, ddy);
       if (dist < 0.01) dist = 0.01;
-      const force = (dist * dist) / k;
+      const force = dist / k;
       const fx = (ddx / dist) * force;
       const fy = (ddy / dist) * force;
       dx[a] -= fx;
@@ -244,8 +262,10 @@ export function forceLayout(
   return points;
 }
 
-const OVERLAP_PADDING = 6;
-const OVERLAP_ITERATIONS = 80;
+/** 2026-08-25 — 6은 원끼리만 겨우 안 닿는 정도라 이름 라벨이 바로 아래에서 서로
+ *  붙었다. 라벨이 들어갈 자리까지 감안해 여유를 늘린다. */
+const OVERLAP_PADDING = 16;
+const OVERLAP_ITERATIONS = 120;
 
 /** 원끼리 반경 합(+여유)보다 가까우면 그만큼 서로 밀어낸다 — 결정적, 무작위 없음. */
 function resolveOverlaps(points: Point[], radii: number[]): void {
