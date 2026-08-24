@@ -158,6 +158,25 @@ describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => 
 
     expect(state.relationships).toHaveLength(2); // 라벨이 바뀌었으니 새 행 — 순서 뒤바뀜과 무관하게 같은 쌍으로 식별
   });
+
+  test('FR-CHR-001: 순서가 뒤바뀌어 보고돼도 저장되는 character_a_id/character_b_id 순서는 항상 같다', () => {
+    // DISTINCT ON (character_a_id, character_b_id)로 최신 라벨만 남기는 조회 쿼리는
+    // 같은 쌍의 모든 행이 동일한 컬럼 순서로 저장돼 있다고 가정한다. pairKey()는 순서를
+    // 정규화해 "같은 쌍"으로 인식하지만, 저장되는 값도 그 정규화된 순서를 따라야 한다.
+    const state = createEmptyState();
+    mergeRelationships(state, [
+      { character_a_id: 'b', character_b_id: 'a', label: '약혼', established_page: 30 },
+    ]);
+    mergeRelationships(state, [
+      { character_a_id: 'a', character_b_id: 'b', label: '부부', established_page: 90 },
+    ]);
+
+    expect(state.relationships).toHaveLength(2);
+    const orders = new Set(
+      state.relationships.map((r) => `${r.character_a_id}|${r.character_b_id}`)
+    );
+    expect(orders.size).toBe(1); // 0건이 아니라 "항상 1개 순서"가 기준
+  });
 });
 
 describe('mergeTerms — 최초 등장 유일성 (DDL UNIQUE(book_id, term))', () => {

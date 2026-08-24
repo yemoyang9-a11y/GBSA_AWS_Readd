@@ -151,13 +151,19 @@ interface ChapterRelationshipInput {
  * 이 장의 관계 생성 결과를 상태에 병합한다 (A6 이력형, FR-CHR-001 🚦).
  * 같은 쌍의 가장 최근 행과 라벨이 같으면 재서술로 보고 건너뛴다.
  * 라벨이 다르면 새 행을 추가한다 — 기존 행은 절대 수정·삭제하지 않는다.
+ *
+ * character_a_id/character_b_id는 항상 pairKey()와 같은 정렬 순서로 저장한다 —
+ * 조회 쿼리(findLatestRelationships)의 DISTINCT ON (character_a_id, character_b_id)가
+ * 같은 쌍의 모든 행이 동일한 컬럼 순서라고 가정하기 때문. 라벨은 방향성 없이 화면에
+ * "A — B : 라벨"로만 표시되므로(RelationshipGraph.tsx) 저장 순서를 바꿔도 의미는 그대로다.
  */
 export function mergeRelationships(
   state: GenerationState,
   chapterRelationships: ChapterRelationshipInput[]
 ): void {
   for (const r of chapterRelationships) {
-    const key = pairKey(r.character_a_id, r.character_b_id);
+    const [character_a_id, character_b_id] = [r.character_a_id, r.character_b_id].sort();
+    const key = pairKey(character_a_id, character_b_id);
     const history = state.relationships.filter(
       (x) => pairKey(x.character_a_id, x.character_b_id) === key
     );
@@ -169,8 +175,8 @@ export function mergeRelationships(
 
     state.relationships.push({
       id: uuidv4(),
-      character_a_id: r.character_a_id,
-      character_b_id: r.character_b_id,
+      character_a_id,
+      character_b_id,
       label: normalize(r.label),
       established_page: r.established_page,
     });
