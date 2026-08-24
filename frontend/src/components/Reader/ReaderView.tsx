@@ -106,13 +106,22 @@ export default function ReaderView({
         </button>
       ) : null}
 
-      <article
-        ref={articleRef}
-        role="article"
-        className="brief-scroll mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-[#332e22]"
-      >
-        {content}
-      </article>
+      {/*
+       * 스크롤은 이 바깥 div가 맡는다(2026-08-24, 사용자 피드백) — article 자체에
+       * overflow를 걸면 스크롤바가 글줄(max-w-[560px])의 오른쪽 끝, 즉 화면 가운데
+       * 애매한 위치에 뜬다. 읽기 영역 전체 폭에 스크롤을 걸어야 스크롤바가 싸비
+       * 패널의 왼쪽 경계와 같은 자리(오른쪽 끝)에 붙는다. 글줄 너비 제한은 안쪽
+       * article에 그대로 둬서 가독성엔 영향이 없다.
+       */}
+      <div className="brief-scroll flex-1 overflow-y-auto">
+        <article
+          ref={articleRef}
+          role="article"
+          className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-brief-ink"
+        >
+          {content}
+        </article>
+      </div>
 
       <nav className="flex items-center justify-between border-t border-brief-rule px-8 py-3.5 font-dashSans text-[13px] text-brief-muted">
         <button

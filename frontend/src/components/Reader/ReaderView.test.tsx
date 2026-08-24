@@ -108,7 +108,7 @@ describe('읽기 화면', () => {
     render(
       <ReaderView content="본문" currentPage={1} totalPages={30} prevPage={null} nextPage={2} onMove={() => {}} />
     );
-    expect(screen.getByRole('article').className).toMatch(/overflow-y-auto/);
+    expect(screen.getByRole('article').parentElement?.className).toMatch(/overflow-y-auto/);
   });
 
   describe('본문 드래그 → 챗봇 인용', () => {
