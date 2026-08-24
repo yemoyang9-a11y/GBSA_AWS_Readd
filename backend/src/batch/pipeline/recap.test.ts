@@ -173,4 +173,34 @@ describe('injectDemoRecap — S8: saved_recap upsert', () => {
       '지금까지의 줄거리',
     ]);
   });
+
+  test('이슈 대응(800자+ 실측): 모델이 500자 지시를 어겨도 저장 전에 문장 경계에서 잘라낸다', async () => {
+    const { client, inserts } = fakeClient(buildFixtureDb());
+    const sentence = '이것은 분량 제한을 초과하도록 일부러 길게 만든 테스트용 문장입니다.'; // 40자
+    const overLength = sentence.repeat(20); // 800자 — 캡이 없다면 그대로 저장됐을 것
+
+    const recap = await injectDemoRecap(
+      client,
+      async () => JSON.stringify({ recap: overLength }),
+      (raw) => JSON.parse(raw),
+      {
+        deviceId: '11111111-1111-4111-8111-111111111111',
+        bookId: 'takryu',
+        cutoff: 25,
+        title: '탁류',
+        author: '채만식',
+      }
+    );
+
+    expect(recap.length).toBeLessThanOrEqual(500);
+    expect(recap.endsWith('.')).toBe(true); // 문장 경계에서 잘림, 중간에 뚝 끊기지 않음
+    const maxWholeSentences = Math.floor(500 / sentence.length);
+    expect(recap).toBe(sentence.repeat(maxWholeSentences));
+    expect(inserts[0].params).toEqual([
+      '11111111-1111-4111-8111-111111111111',
+      'takryu',
+      25,
+      recap,
+    ]); // DB에 저장되는 값도 동일하게 잘려야 한다
+  });
 });

@@ -48,6 +48,23 @@ function makeFakeLlmCapturingPrompt() {
   return { llmStream, prompts };
 }
 
+/**
+ * 모델이 분량 지시를 무시하고 500자를 훌쩍 넘겨 계속 생성하는 상황을 재현하는 페이크.
+ * 문장 부호로 끝나는 40자짜리 문장을 반복해서 낸다 — 경계 탐색이 마침표에서 멈추는지,
+ * 상한에 걸린 뒤 남은 청크를 더 이상 끌어오지 않는지(조기 취소) 둘 다 검증하기 위함.
+ */
+function makeFakeLlmOverLength() {
+  let yielded = 0;
+  const sentence = '이것은 분량 제한을 초과하도록 일부러 길게 만든 테스트용 문장입니다.'; // 40자
+  const llmStream = async function* (_task: string, _prompt: string) {
+    for (let i = 0; i < 20; i++) {
+      yielded++;
+      yield sentence; // 20 * 40 = 800자 — 조기 취소가 없으면 800자를 넘긴다
+    }
+  };
+  return { llmStream, chunksYielded: () => yielded, sentence };
+}
+
 function build() {
   const { books } = makeSeededFakes();
   const savedRecap = new FakeSavedRecapRepository();
@@ -124,6 +141,37 @@ describe('리캡 재사용 판정 — getRecap', () => {
     // NFR-AI-004 🚦 회귀 방지 — 분량 지시를 추가해도 "기준점 이후를 쓰지 마"류 상한
     // 지시는 절대 들어가면 안 된다. 상한은 조립 단계(입력 절단)에서만 강제한다.
     expect(captured.prompts[0]).not.toMatch(/기준점|cutoff|이후.*(쓰지|말)/i);
+  });
+
+  test('이슈 대응(800자+ 실측): 모델이 분량 지시를 어기면 코드가 500자에서 강제로 자른다', async () => {
+    const { books, savedRecap, sessionCache, recapLog } = build();
+    const { llmStream, chunksYielded, sentence } = makeFakeLlmOverLength();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap,
+      sessionCache,
+      recapLog,
+      llmStream,
+    });
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    expect(result.kind).toBe('generated');
+    const text = result.kind === 'generated' ? await drain(result.chunks) : '';
+
+    // negative — 캡이 없다면 800자(20 * 40자)가 그대로 나왔을 것
+    expect(text.length).toBeLessThanOrEqual(500);
+    // positive — 잘리긴 하되 문장 경계(마침표)에서 끊겨야 한다(중간에 뚝 끊기지 않음)
+    expect(text.endsWith('.')).toBe(true);
+    const maxWholeSentences = Math.floor(500 / sentence.length);
+    expect(text).toBe(sentence.repeat(maxWholeSentences));
+    // 상한을 넘는 순간 남은 생성을 더 받지 않는다 — 20개 청크를 다 소비하지 않는다
+    expect(chunksYielded()).toBeLessThan(20);
+
+    // 저장·캐시·로그 전부 잘린 텍스트를 써야 한다 — 스트림으로 이미 나간 것과 일치해야 함
+    const cached = await sessionCache.findCached(SEED_DEVICE_ID, SEED_BOOK_ID, 15);
+    expect(cached).toBe(text);
+    expect(recapLog.records[0].output_ref).toBe(text);
   });
 
   test('UC-09 A7: 세션 캐시(K) 적중 → 그대로 반환, 호출 0회', async () => {
