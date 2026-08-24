@@ -325,7 +325,7 @@ export default function RelationshipGraph({
   return (
     <div
       ref={wrapRef}
-      className="relative h-[280px] w-full touch-none overflow-hidden rounded-card border border-line bg-canvas"
+      className="relative h-[280px] w-full touch-none overflow-hidden rounded-xl border border-brief-rule bg-white"
       onPointerDown={handlePointerDown}
     >
       <svg
@@ -350,7 +350,7 @@ export default function RelationshipGraph({
                 y1={positions[sIdx].y}
                 x2={positions[tIdx].x}
                 y2={positions[tIdx].y}
-                className={touches ? 'stroke-ssabi' : 'stroke-line'}
+                className={touches ? 'stroke-brief-accent' : 'stroke-brief-rule'}
                 strokeWidth={(touches ? 2.4 : 1.2) * k}
                 opacity={dimmed ? 0.15 : 1}
               />
@@ -367,13 +367,13 @@ export default function RelationshipGraph({
                 width={label.width}
                 height={label.height}
                 rx={label.height / 2}
-                className="fill-canvas stroke-ssabi/40"
+                className="fill-white stroke-brief-accent/40"
               />
               <text
                 x={label.cx}
                 y={label.cy + label.height / 2 - 2.6 * k}
                 textAnchor="middle"
-                className="fill-ssabi font-sans"
+                className="fill-brief-accent font-dashSans"
                 style={{ fontSize: EDGE_LABEL_FONT_PX * k }}
               >
                 {label.label}
@@ -415,7 +415,7 @@ export default function RelationshipGraph({
                   cx={p.x}
                   cy={p.y}
                   r={r}
-                  className={`${isSelected ? 'fill-ssabi' : 'fill-ink/45'} ${isNeighbor ? 'stroke-ssabi' : ''}`}
+                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-ink/45'} ${isNeighbor ? 'stroke-brief-accent' : ''}`}
                   strokeWidth={isNeighbor ? 2.8 * k : 0}
                 />
                 {nameLabels.has(node.id) ? (
@@ -423,7 +423,7 @@ export default function RelationshipGraph({
                     x={p.x}
                     y={p.y + r + NAME_FONT_PX * k + 2 * k}
                     textAnchor="middle"
-                    className="fill-ink stroke-canvas font-serif font-semibold"
+                    className="fill-brief-ink stroke-white font-dashSerif font-semibold"
                     style={{
                       fontSize: NAME_FONT_PX * k,
                       paintOrder: 'stroke',
@@ -444,7 +444,7 @@ export default function RelationshipGraph({
         <button
           type="button"
           aria-label="확대"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface/95 text-muted"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
           onClick={() => {
             const rect = wrapRef.current?.getBoundingClientRect();
             if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35);
@@ -455,7 +455,7 @@ export default function RelationshipGraph({
         <button
           type="button"
           aria-label="축소"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface/95 text-muted"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
           onClick={() => {
             const rect = wrapRef.current?.getBoundingClientRect();
             if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35);
@@ -466,7 +466,7 @@ export default function RelationshipGraph({
         <button
           type="button"
           aria-label="전체 보기"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-surface/95 text-[11px] text-muted"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-[11px] text-brief-muted"
           onClick={fitView}
         >
           ⤢
@@ -474,7 +474,7 @@ export default function RelationshipGraph({
       </div>
 
       {/* 시안(reader-map-graph.html)의 .scalebar 그대로 — 확대율 표시. base/viewBox 비율만 쓰므로 새 데이터 없이 되는 순수 표시값 */}
-      <span className="absolute bottom-2 left-2 rounded-pill border border-line bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
+      <span className="absolute bottom-2 left-2 rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
         {Math.round((base.width / viewBox.width) * 100)}%
       </span>
     </div>

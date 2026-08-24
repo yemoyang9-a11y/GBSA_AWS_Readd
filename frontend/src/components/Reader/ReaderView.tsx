@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatPageIndicator } from '../../utils/format';
 
 /**
- * 읽기 화면 — S3
+ * 읽기 화면 — S3, 재설계 2026-08-23
  *
  * 고정 페이지 + 페이지 내 스크롤. 폰트·화면 크기가 바뀌어도 페이지를 다시 나누지 않는다
  * (FR-PRG-001, 절대 규칙 10번) — 본문 영역은 스크롤 길이만 늘어난다.
- * 페이지 번호만 표시하고 진도 바를 두지 않는다 (FR-PRG-004).
+ * 진도 바를 두지 않는다(FR-PRG-004) — 페이지 번호는 이제 **입력 가능한 필드**로 보여준다.
  * 이동 확정 시에만 onMove 로 알린다 — 스크롤은 이벤트를 만들지 않는다 (절대 규칙 9번).
  *
- * 이동할 페이지 번호는 서버가 내려준 값(prev_page·next_page)을 그대로 쓴다. 프론트에서
- * 페이지 산술을 하지 않으므로 파생값 단일 원천 규칙과 충돌할 여지가 없다 (절대 규칙 2번).
+ * 이전/다음은 서버가 내려준 값(prev_page·next_page)을 그대로 쓴다. 직접 입력은 사용자가
+ * 타이핑한 목표 페이지를 1~totalPages로 자른 뒤 그대로 onMove 로 넘긴다 — `fetchPage`는
+ * 임의 페이지를 받는 R4 소유 엔드포인트이고 상한 대상이 아니라, 이 값을 서버 파생값으로
+ * 취급할 필요가 없다.
  *
  * 문장 드래그 → 챗봇 인용. 선택 자체는 이미 화면에 떠 있는(=이미 열람 가능한) 본문
  * 텍스트라 R3(본문 접근은 제한하지 않는다)와 충돌하지 않는다 — 챗봇 질문(query)은 원래도
@@ -34,6 +35,23 @@ export default function ReaderView({
   onMove: (page: number) => void;
   onQuote?: (text: string) => void;
 }) {
+  const [inputValue, setInputValue] = useState(String(currentPage));
+
+  if (String(currentPage) !== inputValue && document.activeElement?.tagName !== 'INPUT') {
+    setInputValue(String(currentPage));
+  }
+
+  function commit() {
+    const n = parseInt(inputValue, 10);
+    if (isNaN(n)) {
+      setInputValue(String(currentPage));
+      return;
+    }
+    const clamped = Math.max(1, Math.min(totalPages, n));
+    setInputValue(String(clamped));
+    if (clamped !== currentPage) onMove(clamped);
+  }
+
   const articleRef = useRef<HTMLElement>(null);
   const [selectionPopover, setSelectionPopover] = useState<{ text: string; top: number; left: number } | null>(
     null
@@ -68,12 +86,12 @@ export default function ReaderView({
   }, []);
 
   return (
-    <main className="flex h-full flex-col bg-canvas">
+    <main className="flex h-full flex-col bg-brief-page">
       {selectionPopover && onQuote ? (
         <button
           type="button"
           style={{ top: selectionPopover.top - 44, left: selectionPopover.left }}
-          className="fixed z-20 -translate-x-1/2 whitespace-nowrap rounded-pill border border-ssabi bg-ssabi-soft px-3 py-1.5 text-[11px] font-bold text-ssabi shadow-sm"
+          className="fixed z-20 -translate-x-1/2 whitespace-nowrap rounded-pill border border-brief-accent bg-brief-accent-soft px-3 py-1.5 text-[11px] font-bold text-brief-accent shadow-sm"
           onMouseDown={(event) => {
             // mousedown 이 먼저 발생해 포커스가 옮겨가면 클릭 전에 선택이 풀린다 — 막는다.
             event.preventDefault();
@@ -91,12 +109,12 @@ export default function ReaderView({
       <article
         ref={articleRef}
         role="article"
-        className="mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-serif text-[18px] leading-[2] text-ink"
+        className="brief-scroll mx-auto w-full max-w-[560px] flex-1 overflow-y-auto whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-[#332e22]"
       >
         {content}
       </article>
 
-      <nav className="flex items-center justify-between border-t border-line px-8 py-4 text-[13px] text-muted">
+      <nav className="flex items-center justify-between border-t border-brief-rule px-8 py-3.5 font-dashSans text-[13px] text-brief-muted">
         <button
           type="button"
           disabled={prevPage === null}
@@ -106,7 +124,22 @@ export default function ReaderView({
           이전 페이지
         </button>
 
-        <span className="font-sans text-ink">{formatPageIndicator(currentPage, totalPages)}</span>
+        <div className="flex items-baseline gap-1.5 font-dashMono text-[13px] font-medium text-brief-ink">
+          <input
+            type="text"
+            inputMode="numeric"
+            aria-label="페이지로 이동"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))}
+            onFocus={(e) => e.currentTarget.select()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+            }}
+            onBlur={commit}
+            className="w-[3ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center font-inherit text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
+          />
+          <span className="text-brief-muted">/ {totalPages}</span>
+        </div>
 
         <button
           type="button"

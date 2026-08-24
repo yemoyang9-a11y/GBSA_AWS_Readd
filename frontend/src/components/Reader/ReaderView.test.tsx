@@ -24,11 +24,46 @@ describe('읽기 화면', () => {
     expect(screen.getByText(/미두장 앞을 서성이고/)).toBeInTheDocument();
   });
 
-  it('FR-PRG-004: 페이지 번호만 표시하고 진도 바를 두지 않는다', () => {
+  it('FR-PRG-004: 페이지 번호를 입력창으로 표시하고 진도 바를 두지 않는다', () => {
     render(<ReaderView {...baseProps} />);
 
-    expect(screen.getByText('21 / 30')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('21');
+    expect(screen.getByText('/ 30')).toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('페이지 입력창에 숫자를 넣고 Enter를 누르면 그 페이지로 이동한다', async () => {
+    const onMove = vi.fn();
+    render(<ReaderView {...baseProps} onMove={onMove} />);
+
+    const input = screen.getByRole('textbox', { name: '페이지로 이동' });
+    await userEvent.clear(input);
+    await userEvent.type(input, '9{Enter}');
+
+    expect(onMove).toHaveBeenCalledWith(9);
+  });
+
+  it('입력값을 1~totalPages 범위로 자른다', async () => {
+    const onMove = vi.fn();
+    render(<ReaderView {...baseProps} onMove={onMove} />);
+
+    const input = screen.getByRole('textbox', { name: '페이지로 이동' });
+    await userEvent.clear(input);
+    await userEvent.type(input, '999{Enter}');
+
+    expect(onMove).toHaveBeenCalledWith(30); // totalPages
+  });
+
+  it('숫자가 아닌 값을 넣고 포커스를 벗어나면 원래 페이지로 되돌린다', async () => {
+    const onMove = vi.fn();
+    render(<ReaderView {...baseProps} onMove={onMove} />);
+
+    const input = screen.getByRole('textbox', { name: '페이지로 이동' });
+    await userEvent.clear(input);
+    await userEvent.tab(); // blur, 빈 값
+
+    expect(input).toHaveValue('21');
+    expect(onMove).not.toHaveBeenCalled();
   });
 
   it('FR-PRG-002: 다음 페이지로 이동하면 서버가 준 next_page 를 그대로 알린다', async () => {

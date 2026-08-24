@@ -192,8 +192,8 @@ export function forceLayout(
 
     // 인력 — 간선으로 이어진 쌍만 서로 당긴다
     for (const { a, b } of pairs) {
-      let ddx = points[a].x - points[b].x;
-      let ddy = points[a].y - points[b].y;
+      const ddx = points[a].x - points[b].x;
+      const ddy = points[a].y - points[b].y;
       let dist = Math.hypot(ddx, ddy);
       if (dist < 0.01) dist = 0.01;
       const force = (dist * dist) / k;

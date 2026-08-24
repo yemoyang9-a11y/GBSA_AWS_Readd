@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -10,6 +10,7 @@ import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
 import { useSsabiData } from '../hooks/useSsabiData';
 import { useHeartbeat } from '../hooks/useHeartbeat';
+import { usePanelResize } from '../hooks/usePanelResize';
 import { useSSE } from '../hooks/useSSE';
 import { useChatConversation } from '../hooks/useChatConversation';
 import { nextSeq } from '../utils/seq';
@@ -49,6 +50,12 @@ export default function Reader() {
    *   만족시키려면 조회 effect 들의 조건에 이 상태를 넣어야 한다 — 추가 기능 작업에서 처리.
    */
   const [panelOpen, setPanelOpen] = useState(false);
+
+  const appRef = useRef<HTMLDivElement>(null);
+  const { width: panelWidth, isDragging, handleProps } = usePanelResize({
+    minWidth: 380,
+    getMaxWidth: () => (appRef.current ? Math.round(appRef.current.clientWidth * 0.5) : 380),
+  });
 
   /**
    * 본문 드래그 선택 → 챗봇 인용. token 은 같은 문장을 연달아 다시 선택해도 SsabiPanel의
@@ -193,8 +200,8 @@ export default function Reader() {
 
   if (entryError) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-        <p role="alert" className="text-[13px] text-muted">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
+        <p role="alert" className="text-[13px] text-brief-muted">
           읽기를 시작하지 못했습니다
         </p>
         <Button onClick={loadEntry}>다시 시도</Button>
@@ -205,8 +212,8 @@ export default function Reader() {
   if (!page) {
     if (pageError) {
       return (
-        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-          <p role="alert" className="text-[13px] text-muted">
+        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
+          <p role="alert" className="text-[13px] text-brief-muted">
             페이지를 불러오지 못했습니다
           </p>
           <Button onClick={() => currentPage !== null && loadPage(currentPage)}>다시 시도</Button>
@@ -217,33 +224,27 @@ export default function Reader() {
   }
 
   return (
-    <div className="relative flex h-screen flex-col bg-canvas">
+    <div ref={appRef} className="relative flex h-screen flex-col bg-brief-page">
       {/*
-       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(72px)
-       * 아래, 패널 헤더의 "싸비의 가이드북"과 같은 줄, 화면 우측에서 24px.
-       * 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고, top-bar 안에 두면
-       * 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
+       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(64px)
+       * 아래, 화면 우측에서 24px. 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고,
+       * top-bar 안에 두면 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
        */}
-      <div className="absolute right-6 top-24 z-10">
+      <div className="absolute right-6 top-20 z-10">
         <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
       </div>
 
-      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="뒤로 가기"
-            className="flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink transition-opacity hover:opacity-60"
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-          <div className="flex flex-col gap-0.5">
-            <span className="font-serif text-lg font-bold tracking-widest text-ink">RE:ADD</span>
-            <span className="text-xs text-muted">탁류</span>
-          </div>
-        </div>
-
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="뒤로 가기"
+          className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+        >
+          <span aria-hidden="true" className="text-base">
+            ‹
+          </span>
+        </button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -260,7 +261,20 @@ export default function Reader() {
         </div>
 
         {panelOpen ? (
-          <aside id="ssabi-panel" className="w-[420px] shrink-0">
+          <aside
+            id="ssabi-panel"
+            style={{ width: panelWidth, flexBasis: panelWidth }}
+            className={`relative shrink-0 border-l border-brief-rule ${isDragging ? '' : 'transition-[width]'}`}
+          >
+            <div
+              {...handleProps}
+              className={`absolute -left-[5px] top-0 z-10 flex h-full w-[10px] cursor-col-resize items-center justify-center ${isDragging ? 'select-none' : ''}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`w-[3px] rounded-full bg-brief-rule transition-all ${isDragging ? 'h-[52px] bg-brief-ink' : 'h-9'}`}
+              />
+            </div>
             <SsabiPanel
               sessionEpoch={session?.session_epoch ?? 0}
               appliedCutoff={panelAppliedCutoff}

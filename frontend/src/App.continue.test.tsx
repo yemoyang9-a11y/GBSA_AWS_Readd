@@ -26,7 +26,7 @@ describe("'이어서 읽기'로 읽기 화면에 들어갈 때", () => {
     await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
     await screen.findByRole('article', undefined, { timeout: 5000 });
-    expect(screen.getByText('21 / 30')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('21');
   });
 
   it('URL 로 바로 읽기 화면에 들어와도 서버 진입 판정이 알려준 페이지에서 시작한다', {
@@ -38,6 +38,6 @@ describe("'이어서 읽기'로 읽기 화면에 들어갈 때", () => {
 
     await screen.findByRole('article', undefined, { timeout: 5000 });
     // 클라이언트가 1페이지로 가정하지 않는다 — 판정은 서버 몫이다 (절대 규칙 8번)
-    expect(screen.getByText('21 / 30')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('21');
   });
 });

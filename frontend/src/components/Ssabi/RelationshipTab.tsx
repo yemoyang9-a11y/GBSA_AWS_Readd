@@ -54,7 +54,7 @@ export default function RelationshipTab({
   const activeSelected =
     selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
 
-  if (failed) return <p role="alert">관계도를 불러오지 못했습니다</p>;
+  if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   const relationsOf = (id: string) =>
@@ -83,10 +83,10 @@ export default function RelationshipTab({
       {milestones.length > 1 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px]">
-            <label htmlFor="graph-scrub" className="text-faint">
+            <label htmlFor="graph-scrub" className="text-brief-muted">
               시점 되감기
             </label>
-            <span className="font-bold text-ink">
+            <span className="font-bold text-brief-ink">
               {at === latest ? '현재까지' : `${at}페이지 시점`}
             </span>
           </div>
@@ -98,13 +98,13 @@ export default function RelationshipTab({
             step={1}
             value={Math.max(0, milestones.indexOf(at))}
             onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-            className="w-full accent-ssabi"
+            className="w-full accent-brief-accent"
           />
         </div>
       ) : null}
 
       <section aria-label="인물" className="space-y-3">
-        <h3 className="text-xs font-bold text-faint">등장인물 {shown.nodes.length}</h3>
+        <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
         <ul className="space-y-3">
           {shown.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
@@ -115,22 +115,22 @@ export default function RelationshipTab({
                   type="button"
                   aria-expanded={isOpen}
                   onClick={() => setSelected(isOpen ? null : node.id)}
-                  className={`w-full rounded-card border p-3.5 text-left transition-colors ${
-                    isOpen ? 'border-ssabi bg-ssabi-soft' : 'border-line bg-surface'
+                  className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
+                    isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
                   }`}
                 >
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-serif text-sm font-bold text-ink">{node.name}</span>
+                    <span className="font-dashSerif text-sm font-bold text-brief-ink">{node.name}</span>
                     {node.aliases.length > 0 ? (
-                      <span className="text-[11px] text-muted">{node.aliases.join(' · ')}</span>
+                      <span className="text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
                     ) : null}
                   </div>
                   {isOpen && relations.length > 0 ? (
-                    <ul aria-label="관계" className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-line pt-2.5">
+                    <ul aria-label="관계" className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-brief-rule pt-2.5">
                       {relations.map((rel) => (
                         <li
                           key={rel.key}
-                          className="rounded-pill bg-ssabi/10 px-2 py-1 text-[11px] text-ssabi"
+                          className="rounded-full bg-brief-accent-soft px-2 py-1 text-[11px] text-brief-accent"
                         >
                           {rel.name} · {rel.label}
                         </li>
