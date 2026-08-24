@@ -13,12 +13,45 @@ describe('ChatbotTab', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
   });
 
-  it('polish: 답변이 없으면(질문 전) 빈 말풍선을 그리지 않는다', () => {
-    const { container } = render(
-      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />
+  it('2026-08-24: 대화가 없으면(질문 전) 기본 인사 멘트를 보여준다 — 빈 말풍선은 아니다', () => {
+    render(<ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />);
+    expect(
+      screen.getByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+    ).toBeInTheDocument();
+  });
+
+  it('turns가 빈 배열이면(새 채팅 직후) 기본 인사 멘트를 보여준다', () => {
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[]}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
     );
-    expect(container.querySelector('p')).toBeNull();
-    expect(container.querySelector('img')).toBeNull();
+    expect(
+      screen.getByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+    ).toBeInTheDocument();
+  });
+
+  it('대화가 시작되면(turns 존재) 기본 인사 멘트는 사라진다', () => {
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[{ role: 'user', text: '정주사가 누구야' }]}
+        conversations={[]}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+    expect(
+      screen.queryByText('안녕하세요 아모입니다! 궁금한 걸 물어봐주세요.')
+    ).not.toBeInTheDocument();
   });
 
   it('사용자 질문 말풍선은 paper 배경 + rule 테두리를 쓴다 — 액센트가 사용자 쪽으로 번지지 않는다', async () => {
