@@ -102,37 +102,29 @@ export default function Reader() {
     text: recapText,
     streaming: recapStreaming,
     error: recapError,
-    appliedCutoff: recapAppliedCutoff,
     consume: consumeRecap,
-    resetAppliedCutoff: resetRecapAppliedCutoff,
   } = useSSE();
   const {
     turns: chatTurns,
     streaming: chatStreaming,
     error: chatError,
-    appliedCutoff: chatAppliedCutoff,
     conversations: chatConversations,
     historyOpen: chatHistoryOpen,
     ask: askChat,
     newChat: startNewChat,
     toggleHistory: toggleChatHistory,
     selectConversation: selectChatConversation,
-    resetAppliedCutoff: resetChatAppliedCutoff,
   } = useChatConversation(bookId);
   /**
-   * progress 응답이 실어 온 확인된 기준점 (2026-08-24, 사용자 요청 — 리캡·챗봇을 안 열어도
-   * 페이지 넘길 때마다 배지가 최신으로 갱신되길 원함). sendProgress는 이미 페이지가 열릴
-   * 때마다 무조건 나가므로(FR-PRG-002), 리캡·챗봇보다 갱신이 훨씬 잦다.
+   * 패널 헤더에 보여줄 "Np까지 확인" 배지 (2026-08-24, 사용자 결정 — 리캡·챗봇이 실제로
+   * 어디까지 근거로 썼는지가 아니라 "지금 보고 있는 페이지"를 그대로 보여주는 쪽을
+   * 선택함). 챗봇은 이미 지금 페이지 본문을 매 질문마다 자동으로 근거에 포함하므로
+   * (service.ts "지금 보고 있는 페이지 본문" 섹션) 이 표시가 챗봇 기준으로는 정확하다 —
+   * 다만 리캡·관계도 조회 자체는 여전히 K(현재 페이지 − 1)까지만 본다(R1 불변). 여기
+   * 쓰는 값은 서버가 응답으로 확인해 준 현재 페이지 번호 그대로다 — 프론트가 page−1 같은
+   * 산술을 하지 않는다(절대 규칙 2번).
    */
-  const [progressAppliedCutoff, setProgressAppliedCutoff] = useState<number | null>(null);
-
-  /**
-   * 패널 헤더에 보여줄 "확인된 기준점". 리캡·챗봇(그 탭을 실제로 열어 확인한 값)을
-   * 우선하고, 아직 둘 다 없으면 progress 응답값으로 채운다. 관계도 탭은 계약에 이 값이
-   * 아직 없어(GraphResponse TODO) 셋 다 없으면 표시할 수 없다 — 어느 경우든 프론트가
-   * K를 계산해서 채우지 않는다(절대 규칙 2번) — 셋 다 서버가 확인해 준 값 그대로다.
-   */
-  const panelAppliedCutoff = recapAppliedCutoff ?? chatAppliedCutoff ?? progressAppliedCutoff;
+  const panelAppliedCutoff = currentPage;
   const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
 
   /**
@@ -158,30 +150,11 @@ export default function Reader() {
     [bookId]
   );
 
-  /**
-   * "Np까지 확인" 배지는 리캡·챗봇이 확인해 준 값을 유지만 하고 스스로 지우지 않는다
-   * (useSSE·useChatConversation 주석) — 그래서 예전 페이지에서 리캡을 한 번 열어 두고
-   * 관계도 탭으로 옮긴 채 계속 다음 페이지로 넘기면, 리캡·챗봇을 다시 열기 전까지 배지가
-   * 옛 페이지의 숫자를 그대로 붙들고 있었다. 페이지가 바뀌면 그 값부터 비운다 — 프론트가
-   * 새 숫자를 계산해서 채우는 게 아니라(절대 규칙 2번), 다음에 리캡·챗봇이 확인해 줄
-   * 때까지 배지를 안 보여주는 쪽으로 처리한다(critique P1 정책 그대로).
-   */
-  useEffect(() => {
-    resetRecapAppliedCutoff();
-    resetChatAppliedCutoff();
-    setProgressAppliedCutoff(null);
-  }, [currentPage, resetRecapAppliedCutoff, resetChatAppliedCutoff]);
-
   useEffect(() => {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     loadPage(currentPage);
-    // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005) — 응답은
-    // 기다리지 않는다(넘김을 막지 않음). 배지 갱신은 응답이 오면 뒤늦게 반영될 뿐이다.
-    // 서버가 매번 "현재 저장된 위치" 기준으로 다시 조회해 응답하므로, 여러 요청이 뒤섞여
-    // 순서가 바뀌어 도착해도 항상 최신 진실을 반환한다 — 프론트가 순서를 맞출 필요가 없다.
-    void sendProgress(bookId, currentPage).then((cutoff) => {
-      if (cutoff !== null) setProgressAppliedCutoff(cutoff);
-    });
+    // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
+    void sendProgress(bookId, currentPage);
   }, [bookId, currentPage, loadPage]);
 
   // 리캡 탭을 열면 그 시점 기준점으로 받는다. 페이지가 바뀌면 다시 받는다 (FR-SVB-003)
