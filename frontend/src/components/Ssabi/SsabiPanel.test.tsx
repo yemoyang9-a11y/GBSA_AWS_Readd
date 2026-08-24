@@ -16,10 +16,15 @@ const baseProps = {
   recapText: '',
   recapStreaming: false,
   recapFailed: false,
-  chatAnswer: '',
+  chatTurns: [],
   chatStreaming: false,
   chatError: null,
+  chatConversations: [],
+  chatHistoryOpen: false,
   onAsk: () => {},
+  onNewChat: () => {},
+  onToggleChatHistory: () => {},
+  onSelectChatConversation: () => {},
 };
 
 /**
@@ -114,5 +119,27 @@ describe('싸비 사이드창', () => {
     render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
     // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
     expect(screen.getByText('싸비의 가이드북').parentElement).toHaveClass('pr-20');
+  });
+
+  it('본문에서 인용 요청이 오면(pendingQuote) 다른 탭을 보고 있어도 챗봇 탭으로 전환한다', () => {
+    const { rerender } = render(<SsabiPanel {...baseProps} />);
+    // 기본은 인물 관계도 탭
+    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />);
+
+    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('같은 문장을 연달아 다시 인용해도(token 증가) 챗봇 탭으로 매번 전환한다', async () => {
+    const { rerender } = render(
+      <SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />
+    );
+    await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
+    expect(screen.getByRole('tab', { name: '리캡' })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 2 }} />);
+
+    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 });

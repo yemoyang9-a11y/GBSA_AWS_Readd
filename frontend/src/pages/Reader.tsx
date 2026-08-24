@@ -8,10 +8,10 @@ import SsabiToggleButton from '../components/common/SsabiToggleButton';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
 import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
-import { askChatbot } from '../services/chatbotService';
 import { useSsabiData } from '../hooks/useSsabiData';
 import { useHeartbeat } from '../hooks/useHeartbeat';
 import { useSSE } from '../hooks/useSSE';
+import { useChatConversation } from '../hooks/useChatConversation';
 import { nextSeq } from '../utils/seq';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
 import type { EntryResponse, PageResponse, SsabiTab } from '../types';
@@ -51,6 +51,17 @@ export default function Reader() {
   const [panelOpen, setPanelOpen] = useState(false);
 
   /**
+   * 본문 드래그 선택 → 챗봇 인용. token 은 같은 문장을 연달아 다시 선택해도 SsabiPanel의
+   * 탭 강제 전환 effect 가 매번 반응하도록 하는 1회성 신호다 (문자열만 같으면 effect가
+   * 재실행되지 않는 문제 방지).
+   */
+  const [pendingQuote, setPendingQuote] = useState<{ text: string; token: number } | null>(null);
+  const handleQuote = useCallback((text: string) => {
+    setPanelOpen(true);
+    setPendingQuote((prev) => ({ text, token: (prev?.token ?? 0) + 1 }));
+  }, []);
+
+  /**
    * 시작 페이지·세션은 **서버 진입 판정**이 정한다 (FR-BRF-001, 절대 규칙 8번).
    * 브리핑을 거쳐 왔으면 그 결과를 그대로 받고, URL 로 바로 들어왔으면 여기서 판정을 받는다.
    * 클라이언트가 1페이지라고 가정하면 그 값으로 진도가 발신되어 기준점이 되감긴다.
@@ -88,12 +99,17 @@ export default function Reader() {
     consume: consumeRecap,
   } = useSSE();
   const {
-    text: chatAnswer,
+    turns: chatTurns,
     streaming: chatStreaming,
     error: chatError,
     appliedCutoff: chatAppliedCutoff,
-    consume: consumeChat,
-  } = useSSE();
+    conversations: chatConversations,
+    historyOpen: chatHistoryOpen,
+    ask: askChat,
+    newChat: startNewChat,
+    toggleHistory: toggleChatHistory,
+    selectConversation: selectChatConversation,
+  } = useChatConversation(bookId);
   /**
    * 패널 헤더에 보여줄 "확인된 기준점". 리캡(R2 확정 필드)을 우선하고, 아직 리캡을 열지
    * 않았다면 챗봇 쪽 값을 쓴다. 관계도 탭은 계약에 이 값이 아직 없어(GraphResponse TODO)
@@ -141,9 +157,9 @@ export default function Reader() {
   const handleAsk = useCallback(
     (query: string) => {
       if (currentPage === null) return;
-      void consumeChat(askChatbot(bookId, query, currentPage, nextSeq()));
+      void askChat(query, currentPage, nextSeq());
     },
-    [consumeChat, bookId, currentPage]
+    [askChat, currentPage]
   );
 
   if (entryError) {
@@ -210,6 +226,7 @@ export default function Reader() {
             prevPage={page.prev_page}
             nextPage={page.next_page}
             onMove={setCurrentPage}
+            onQuote={handleQuote}
           />
         </div>
 
@@ -224,10 +241,16 @@ export default function Reader() {
               recapText={recapText}
               recapStreaming={recapStreaming}
               recapFailed={recapError !== null}
-              chatAnswer={chatAnswer}
+              chatTurns={chatTurns}
               chatStreaming={chatStreaming}
               chatError={chatError}
+              chatConversations={chatConversations}
+              chatHistoryOpen={chatHistoryOpen}
+              pendingQuote={pendingQuote}
               onAsk={handleAsk}
+              onNewChat={startNewChat}
+              onToggleChatHistory={toggleChatHistory}
+              onSelectChatConversation={selectChatConversation}
             />
           </aside>
         ) : null}

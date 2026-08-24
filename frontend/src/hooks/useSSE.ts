@@ -20,6 +20,11 @@ export function useSSE() {
    * 다음 요청이 시작돼도(consume 재호출) 새 done 이 올 때까지는 지우지 않는다.
    */
   const [appliedCutoff, setAppliedCutoff] = useState<number | null>(null);
+  /**
+   * done 프레임이 실어 온 대화 ID (챗봇 전용, 2026-08-24 대화 이력 기능). 다음 질문을
+   * 이 값과 함께 보내면 같은 대화로 이어진다 — "새 채팅"은 reset()으로 이 값을 비운다.
+   */
+  const [conversationId, setConversationId] = useState<number | null>(null);
 
   const consume = useCallback(async (frames: AsyncGenerator<SseFrame>) => {
     setText('');
@@ -42,6 +47,9 @@ export function useSSE() {
         if (typeof frame.applied_cutoff === 'number') {
           setAppliedCutoff(frame.applied_cutoff);
         }
+        if (typeof frame.conversation_id === 'number') {
+          setConversationId(frame.conversation_id);
+        }
         return;
       }
     } finally {
@@ -52,7 +60,8 @@ export function useSSE() {
   const reset = useCallback(() => {
     setText('');
     setError(null);
+    setConversationId(null);
   }, []);
 
-  return { text, streaming, error, appliedCutoff, consume, reset };
+  return { text, streaming, error, appliedCutoff, conversationId, consume, reset };
 }

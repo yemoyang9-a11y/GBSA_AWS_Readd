@@ -9,6 +9,11 @@
 import express, { Request, Response } from 'express';
 import { checkRateLimit } from '../modules/llm-gateway/rate-limiter';
 import { handleQuery as handleChatbotQuery } from '../modules/chatbot/service';
+import {
+  resolveConversation,
+  listConversations as listChatConversations,
+  getConversationDetail as getChatConversationDetail,
+} from '../modules/chatbot/conversation-service';
 import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
 import { BookNotReadyError } from '../modules/reading-state/session.service';
@@ -61,7 +66,7 @@ router.get('/health', (_req: Request, res: Response) => {
  */
 router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   const { bookId } = req.params;
-  const { query, page, seq } = req.body;
+  const { query, page, seq, conversationId: requestedConversationId } = req.body;
   const deviceId = req.headers['x-device-id'] as string;
 
   // 입력 검증
@@ -93,6 +98,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 기준점 스냅샷 가져오기
     let K: number;
+    // 대화 이력 기록 대상 — MOCK_MODE는 DB 없이 도는 화면 개발 경로라 이력 기록을 생략한다
+    let conversationId: number | undefined;
 
     if (MOCK_MODE) {
       // Mock 모드: 테스트용 고정 K 값
@@ -113,6 +120,15 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // FR-PRG-003 🚦: 기준점 = current_page - 1
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
+
+      // 대화 이력 — 이어갈지/새로 열지는 여기서 정한다 (하루 롤오버·"새 채팅" 모두 이 경로)
+      const resolved = await resolveConversation(
+        deviceId,
+        bookId,
+        K,
+        typeof requestedConversationId === 'number' ? requestedConversationId : undefined
+      );
+      conversationId = resolved.conversationId;
     }
 
     // SSE 스트리밍 설정 (NFR-PERF-008)
@@ -123,14 +139,17 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 챗봇 처리 (스트리밍)
     try {
-      for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId)) {
+      for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId, conversationId)) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 근거 부재 거절도 일반 delta로 흘려보냄
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
       // 스트림 정상 종료 (applied_cutoff 포함 - R4 요청, NFR-OBS-003 🚦)
-      res.write(`data: ${JSON.stringify({ type: 'done', applied_cutoff: K })}\n\n`);
+      // conversation_id — 프론트가 다음 질문부터 이 대화에 이어붙이도록 돌려준다
+      res.write(
+        `data: ${JSON.stringify({ type: 'done', applied_cutoff: K, conversation_id: conversationId })}\n\n`
+      );
       return res.end();
     } catch (streamError) {
       console.error('[API] Chatbot stream error', { bookId, query, error: streamError });
@@ -152,6 +171,59 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * GET /books/:bookId/chat/conversations
+ *
+ * 대화 이력 목록. 봉인 기준점이 현재 K를 넘는 대화(뒤로 페이지 이동 후)는 빠진다
+ * (005 마이그레이션 헤더의 결정, 2026-08-24 사용자·R2 조율).
+ */
+router.get('/books/:bookId/chat/conversations', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    const conversations = await listChatConversations(deviceId, bookId, snapshot.cutoff);
+    return res.json(conversations);
+  } catch (error) {
+    console.error('[API] Conversation list error', { bookId, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /books/:bookId/chat/conversations/:conversationId
+ *
+ * 대화 상세(전체 문답). 존재하지 않는 것과 봉인되어 숨겨진 것을 구분하지 않고
+ * 둘 다 404로 응답한다 — 어느 쪽이었는지 알려주는 것 자체가 우회 신호가 될 수 있어서다.
+ */
+router.get(
+  '/books/:bookId/chat/conversations/:conversationId',
+  async (req: Request, res: Response) => {
+    const { bookId, conversationId } = req.params;
+    const deviceId = requireDeviceId(req, res);
+    if (!deviceId) return;
+
+    const numericId = Number(conversationId);
+    if (!Number.isInteger(numericId)) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid conversationId' });
+    }
+
+    try {
+      const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+      const detail = await getChatConversationDetail(deviceId, bookId, numericId, snapshot.cutoff);
+      if (!detail) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'conversation not found' });
+      }
+      return res.json(detail);
+    } catch (error) {
+      console.error('[API] Conversation detail error', { bookId, conversationId, error });
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  }
+);
 
 // ============================================================================
 // R2 제공 API - 독서 상태 + 리캡
