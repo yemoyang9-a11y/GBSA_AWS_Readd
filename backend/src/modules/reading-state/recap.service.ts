@@ -54,8 +54,14 @@ export interface RecapServiceDeps extends RecapAssemblyDeps {
    * LLM 게이트웨이 스트리밍 호출 (⑥ 경유는 이 함수를 주입하는 쪽의 책임).
    * 스트림이 끝날 때(`return`) 실제 토큰 사용량을 낼 수 있다 — `for await`는 그 반환값을
    * 버리므로 아래 `generateAndPersist`는 제너레이터를 수동으로 `.next()`해 받는다.
+   * `options.maxTokens`는 분량 상한의 안전망이다(RECAP_MAX_TOKENS_SAFETY) — 실제 분량
+   * 지시는 프롬프트가 담당하고, 이건 모델이 지시를 어겼을 때의 하드 캡일 뿐이다.
    */
-  llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>;
+  llmStream: (
+    task: string,
+    prompt: string,
+    options?: { maxTokens?: number }
+  ) => AsyncGenerator<string, LLMUsage | void>;
   /** 세션 캐시 만료 시각 계산용. 주입하지 않으면 24시간 뒤로 둔다(세션 종료 전 소멸 목적일 뿐 — TTL 자체는 스펙 미지정). */
   cacheTtlMs?: number;
 }
@@ -78,6 +84,17 @@ export interface RecapService {
 }
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60_000;
+
+/** 리캡 목표 분량 — 사용자 확정(2026-08-24): 500자 / 5문장 내외. 프롬프트 지시로 유도한다. */
+const RECAP_TARGET_CHARS = 500;
+const RECAP_TARGET_SENTENCES = 5;
+
+/**
+ * 목표 분량을 넘겨도 스트림이 끝없이 늘어나지 않게 하는 안전망. 한글은 토큰당 글자수가
+ * 낮아(자모 단위 분절) 500자가 토큰 수로는 더 크게 잡힌다 — 목표 준수 시엔 걸리지 않고,
+ * 모델이 지시를 무시했을 때만 강제로 끊는 하드 캡이다. 상한 강제(cutoff)와는 무관하다.
+ */
+const RECAP_MAX_TOKENS_SAFETY = 2048;
 
 export function createRecapService(deps: RecapServiceDeps): RecapService {
   const { savedRecap, sessionCache, recapLog, llmStream, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = deps;
@@ -129,7 +146,11 @@ async function* generateAndPersist(
     savedRecap: SavedRecapRepository;
     sessionCache: SessionRecapCacheRepository;
     recapLog: RecapCallLogger;
-    llmStream: (task: string, prompt: string) => AsyncGenerator<string, LLMUsage | void>;
+    llmStream: (
+      task: string,
+      prompt: string,
+      options?: { maxTokens?: number }
+    ) => AsyncGenerator<string, LLMUsage | void>;
     cacheTtlMs: number;
   }
 ): AsyncGenerator<string> {
@@ -137,7 +158,7 @@ async function* generateAndPersist(
   const prompt = buildRecapPrompt(input);
 
   let fullText = '';
-  const gen = io.llmStream('recap', prompt);
+  const gen = io.llmStream('recap', prompt, { maxTokens: RECAP_MAX_TOKENS_SAFETY });
   let step = await gen.next();
   while (!step.done) {
     fullText += step.value;
@@ -173,6 +194,9 @@ function buildRecapPrompt(input: RecapInput): string {
 
   return [
     '아래 자료만으로 독자가 지금까지 읽은 줄거리를 이어서 요약해라.',
+    `${RECAP_TARGET_SENTENCES}문장 내외, ${RECAP_TARGET_CHARS}자 이내로 간결하게 써라.`,
+    '한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.',
+    '제목이나 "#" 같은 마크다운 기호를 붙이지 말고 본문 문단만 써라.',
     '완결된 장 요약:',
     summaries || '(없음)',
     '현재 장에서 읽은 부분:',
