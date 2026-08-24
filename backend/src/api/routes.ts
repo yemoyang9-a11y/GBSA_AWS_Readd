@@ -269,6 +269,12 @@ router.post('/books/:bookId/entry', async (req: Request, res: Response) => {
  * 진도 이벤트 — 더 새로운 seq일 때만 수용한다(FR-PRG-002). 수신 즉시 동기 커밋하고
  * (NFR-REL-007), 세션 활성 시각을 함께 갱신한다(A2 — 조작 이벤트 4종 중 하나).
  *
+ * applied_cutoff — 커밋 직후의 기준점 결정기 값을 그대로 실어 준다(2026-08-24, 사용자
+ * 요청: "Np까지 확인" 배지를 리캡·챗봇을 열지 않아도 페이지 넘길 때마다 갱신하고 싶음).
+ * 프론트는 이 값을 계산하지 않고 받은 그대로 쓴다 — 절대 규칙 2번은 그대로 지킨다.
+ * fire-and-forget 성격(NFR-PERF-005)은 그대로 유지된다 — 프론트가 이 응답을 기다려야
+ * 페이지가 넘어가는 게 아니라, 넘어간 뒤 배지만 뒤늦게 갱신하는 용도로 쓴다.
+ *
  * @see dev-spec-R2-core.md S2
  */
 router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
@@ -285,7 +291,8 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
   try {
     await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
     await readingState.sessionService.touchActivity(deviceId, bookId);
-    res.json({ success: true });
+    const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    res.json({ success: true, applied_cutoff: snapshot.cutoff });
   } catch (error) {
     console.error('[API] progress error', { bookId, error });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
