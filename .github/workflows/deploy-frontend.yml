@@ -38,6 +38,8 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+        env:
+          VITE_API_URL: https://d2mqlo8j8xaid.cloudfront.net/api
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
