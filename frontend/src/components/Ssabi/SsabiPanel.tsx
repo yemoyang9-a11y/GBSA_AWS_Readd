@@ -46,7 +46,7 @@ export default function SsabiPanel({
 }: {
   sessionEpoch: number;
   /**
-   * "Np까지 확인" 배지에 그대로 찍는 페이지 번호(2026-08-24, 사용자 결정 — 지금 보고
+   * "Np까지 읽음" 배지에 그대로 찍는 페이지 번호(2026-08-24, 사용자 결정 — 지금 보고
    * 있는 페이지를 그대로 보여주는 쪽을 선택함). 컨테이너(Reader)가 서버가 확인해 준
    * 현재 페이지를 그대로 내려준다 — 여기서 계산하지 않는다. 아직 페이지가 없으면 null.
    */
@@ -119,7 +119,7 @@ export default function SsabiPanel({
         <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         {appliedCutoff !== null ? (
           <span className="shrink-0 rounded-full bg-brief-accent-soft px-2.5 py-1 font-dashMono text-[11px] font-bold text-brief-accent">
-            {appliedCutoff}p까지 확인
+            {appliedCutoff}p까지 읽음
           </span>
         ) : null}
       </div>

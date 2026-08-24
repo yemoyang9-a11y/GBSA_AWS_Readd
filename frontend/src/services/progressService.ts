@@ -32,7 +32,7 @@ export async function enterBook(bookId: string): Promise<EntryResponse> {
  * 페이지 열림이 확정될 때 호출한다. 응답을 기다리지 않는다 — 넘김을 막지 않는다.
  *
  * 반환하는 Promise는 페이지 넘김을 막는 용도가 아니다 — 호출부가 원하면 나중에(응답이
- * 오면) "Np까지 확인" 배지를 서버가 확인해 준 값으로 갱신하는 용도로만 쓴다. 실패하거나
+ * 오면) "Np까지 읽음" 배지를 서버가 확인해 준 값으로 갱신하는 용도로만 쓴다. 실패하거나
  * 값이 없으면 null — 그때는 배지를 갱신하지 않는다(계산해서 채우지 않는다, 절대 규칙 2번).
  */
 export function sendProgress(bookId: string, page: number): Promise<number | null> {

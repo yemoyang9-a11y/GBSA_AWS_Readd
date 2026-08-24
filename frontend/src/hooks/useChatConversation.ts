@@ -71,7 +71,7 @@ export function useChatConversation(bookId: string) {
   );
 
   /**
-   * "Np까지 확인" 배지 전용 초기화. useSSE.resetAppliedCutoff와 같은 이유 — 페이지를
+   * "Np까지 읽음" 배지 전용 초기화. useSSE.resetAppliedCutoff와 같은 이유 — 페이지를
    * 넘기면 이전에 확인된 숫자가 지금 페이지를 더 이상 설명하지 못한다. turns·conversationId는
    * 그대로 둔다 — 대화 이어가기는 페이지 이동과 무관하다.
    */
