@@ -175,11 +175,11 @@ export default function ChatbotTab({
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
-              <div className="border-l-2 border-brief-accent py-0.5 pl-3">
+              <div className="border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-[14px]">
                 <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
                   선택한 문장
                 </p>
-                <p className="whitespace-pre-wrap font-serif text-xs italic leading-[1.6] text-brief-ink">
+                <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
                   “{pinnedQuote}”
                 </p>
               </div>
