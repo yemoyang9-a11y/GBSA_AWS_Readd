@@ -45,7 +45,11 @@ const EDGE_LABEL_FONT_PX = 10.5;
 const EDGE_LABEL_CHAR_PX = 6.6;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
-const PAN_MARGIN_RATIO = 0.35;
+// clampViewBox 의 팬 여유는 (1 + 2*PAN_MARGIN_RATIO)*base.width 까지만 뷰박스를 허용한다.
+// 이 값이 MAX_ZOOM_RATIO 보다 작으면 최대 축소 근처에서 팬 가능 범위가 한 점으로
+// 쪼그라들어 드래그가 전혀 안 먹는다(실기기 확인, 2026-08-24) — 0.35였을 때 한계가
+// 1.7이라 2.4까지 축소가 가능한 것과 충돌했다. 축소 한계(2.4)를 넉넉히 덮도록 올린다.
+const PAN_MARGIN_RATIO = 0.9;
 
 interface ViewBox {
   x: number;
@@ -456,6 +460,11 @@ export default function RelationshipGraph({
           ⤢
         </button>
       </div>
+
+      {/* 시안(reader-map-graph.html)의 .scalebar 그대로 — 확대율 표시. base/viewBox 비율만 쓰므로 새 데이터 없이 되는 순수 표시값 */}
+      <span className="absolute bottom-2 left-2 rounded-pill border border-line bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
+        {Math.round((base.width / viewBox.width) * 100)}%
+      </span>
     </div>
   );
 }

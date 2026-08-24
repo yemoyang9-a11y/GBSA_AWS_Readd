@@ -70,6 +70,16 @@ export default function RelationshipTab({
     <div className="space-y-5">
       <RelationshipGraph graph={shown} selectedId={activeSelected} onSelect={setSelected} />
 
+      {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
+          예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
+          그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
+      <div className="flex items-center justify-between text-[11px] text-faint">
+        <span>두 손가락으로 확대 · 끌어서 이동</span>
+        <button type="button" onClick={() => setSelected(null)} className="font-bold text-ssabi underline">
+          선택 해제
+        </button>
+      </div>
+
       {milestones.length > 1 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px]">
@@ -94,7 +104,7 @@ export default function RelationshipTab({
       ) : null}
 
       <section aria-label="인물" className="space-y-3">
-        <h3 className="text-xs font-bold text-faint">인물 {shown.nodes.length}</h3>
+        <h3 className="text-xs font-bold text-faint">등장인물 {shown.nodes.length}</h3>
         <ul className="space-y-3">
           {shown.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
