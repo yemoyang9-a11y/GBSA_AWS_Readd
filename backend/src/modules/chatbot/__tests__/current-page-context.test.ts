@@ -56,7 +56,7 @@ describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => 
       // 소비만 한다
     }
 
-    expect(capturedPrompt).toContain('## 지금 보고 있는 페이지 본문 (p.13)');
+    expect(capturedPrompt).toContain('## ⚠️ 지금 보고 있는 페이지 본문 (p.13)');
     expect(capturedPrompt).toContain(CURRENT_PAGE.content);
   });
 
@@ -65,7 +65,7 @@ describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => 
       // 소비만 한다
     }
 
-    expect(capturedPrompt).not.toContain('## 지금 보고 있는 페이지 본문');
+    expect(capturedPrompt).not.toContain('## ⚠️ 지금 보고 있는 페이지 본문');
   });
 
   test('현재 페이지 본문은 K로 자르는 근거 조립·검색 경로를 거치지 않는다', async () => {

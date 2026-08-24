@@ -87,12 +87,28 @@ export const mockCharacterNotes = [
   { character_id: 'taesu', note: '은행원이며 돈 씀씀이가 헤프다.', source_page: 23 },
 ];
 
+/**
+ * 문장 하나짜리였던 예전 mock 본문은 리더 화면(article)이 넘칠 만큼 길지 않아
+ * 스크롤바가 아예 안 나타났다(2026-08-24, 사용자 제보) — 아무 텍스트나 한 줄을
+ * 여러 번 반복해서 길이만 채운다(사용자 지시 — 실제 내용처럼 채우지 말 것).
+ * 인물 이름은 넣지 않는다 — 넣으면 first_appearance_page보다 앞 페이지 본문에
+ * 이름이 섞여, 본문을 전역 텍스트로 검색하는 스포일러 게이트 테스트가 깨진다.
+ */
+const MOCK_LINE = '자리를 채우기 위한 mock 본문 줄입니다. '.repeat(3).trim();
+
 export const mockPages: Record<number, string> = Object.fromEntries(
   Array.from({ length: 30 }, (_, i) => {
     const pageNo = i + 1;
-    return [pageNo, `[${pageNo}페이지] 정 주사는 여전히 미두장 앞을 서성이고 있었다. (mock 본문)`];
+    const body = Array.from({ length: 20 }, () => MOCK_LINE).join('\n');
+    return [pageNo, `[${pageNo}페이지]\n${body}\n(mock 본문)`];
   })
 );
+
+/** 범위 밖 페이지 번호가 들어와도 빈 화면 대신 1~30 안으로 접어 보여준다. */
+export function mockPageContent(pageNo: number): string {
+  const clamped = Math.min(30, Math.max(1, pageNo));
+  return mockPages[clamped];
+}
 
 export const mockBookInfo = {
   basic_info: {

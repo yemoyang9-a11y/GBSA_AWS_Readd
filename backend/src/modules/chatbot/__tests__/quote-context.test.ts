@@ -60,7 +60,7 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
       // 소비만 한다
     }
 
-    expect(capturedPrompt).toContain('## 사용자가 지금 보고 있는 본문 인용');
+    expect(capturedPrompt).toContain('## ⚠️ 사용자가 지금 보고 있는 본문 인용');
     expect(capturedPrompt).toContain(QUOTE);
   });
 
@@ -69,7 +69,7 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
       // 소비만 한다
     }
 
-    expect(capturedPrompt).not.toContain('## 사용자가 지금 보고 있는 본문 인용');
+    expect(capturedPrompt).not.toContain('## ⚠️ 사용자가 지금 보고 있는 본문 인용');
   });
 
   test('인용문은 K로 자르는 근거 조립·검색 경로를 거치지 않는다 — vectorSearch에 인용문이 아닌 사용자 질의만 전달된다', async () => {
