@@ -109,7 +109,15 @@ describe('진입 판정 — decideEntry', () => {
     expect(stored?.current_page).toBe(12); // 페이지는 그대로 — seq만 리셋
   });
 
-  test('같은 세션 진입은 event_seq를 리셋하지 않는다', async () => {
+  test('같은 세션 안에서 다시 진입해도(새로고침 등) event_seq는 똑같이 리셋된다', async () => {
+    // 버그 수정(2026-08-24, 실사용 중 발견): 프론트(utils/seq.ts)는 "POST /entry를
+    // 받으면 서버가 event_seq를 0으로 리셋한다"(R2 8/20 확정, 새 세션 여부와 무관)고
+    // 가정하고 로컬 seq를 매번 0부터 다시 센다. 예전엔 여기서 isNewSession일 때만
+    // 리셋해서, 같은 세션 안에서 새로고침 등으로 /entry가 다시 불리면 프론트의(0부터
+    // 재시작한) seq가 서버에 남은 더 큰 event_seq보다 항상 작아져 이후 모든 진도·챗봇·
+    // 리캡 요청이 FR-PRG-002의 "더 새로운 seq만 수용" 규칙에 막혀 조용히 버려졌다 —
+    // 화면은 페이지가 넘어가는데 저장된 위치·기준점(K)은 그 시점에 영원히 멈추는
+    // 증상으로 나타났다.
     const { positions, sessions, service } = build();
     positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 12, event_seq: 99 });
     sessions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
@@ -121,7 +129,8 @@ describe('진입 판정 — decideEntry', () => {
     await service.decideEntry(SEED_DEVICE_ID, SEED_BOOK_ID);
 
     const stored = await positions.findPosition(SEED_DEVICE_ID, SEED_BOOK_ID);
-    expect(stored?.event_seq).toBe(99);
+    expect(stored?.event_seq).toBe(0);
+    expect(stored?.current_page).toBe(12); // 페이지는 그대로 — seq만 리셋
   });
 
   test('진입 판정 후 last_activity_at이 갱신된다 (4.4.1절 조작 4종 중 하나)', async () => {

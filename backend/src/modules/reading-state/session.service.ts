@@ -106,9 +106,17 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
         session === null ||
         clock.now().getTime() - session.last_activity_at.getTime() >= SESSION_TIMEOUT_MS; // R6
 
+      // R4 CP0 회신 항목 2 — "POST /entry를 받으면 항상 event_seq를 0으로 리셋한다"
+      // (frontend/src/utils/seq.ts 주석, 8/20 확정). 새 세션 여부와 무관하게 매번 리셋해야
+      // 한다 — 예전엔 isNewSession 일 때만 리셋해서, 같은 세션 안에서 새로고침 등으로
+      // /entry가 다시 불리면 프론트 로컬 seq(0부터 재시작)가 서버에 남아 있던 더 큰
+      // event_seq보다 항상 작아져 이후 모든 진도·챗봇·리캡 요청이 FR-PRG-002의 "더 새로운
+      // seq만 수용" 규칙에 막혀 조용히 버려졌다 — 화면은 페이지가 넘어가는데 저장된 위치·
+      // 기준점(K)은 버그가 터진 시점에 영원히 멈추는 증상으로 나타났다.
+      await positions.resetEventSeq(deviceId, bookId);
+
       let sessionEpoch: number;
       if (isNewSession) {
-        await positions.resetEventSeq(deviceId, bookId); // R4 CP0 회신 항목 2
         const result = await sessions.startNewSession(deviceId, bookId);
         sessionEpoch = result.session_epoch;
       } else {
