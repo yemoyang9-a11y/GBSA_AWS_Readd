@@ -78,6 +78,9 @@ export function buildRecapPrompt(input: RecapInput, title: string, author: strin
 
   return `${author}의 장편소설 「${title}」을 읽고 있는 독자에게, 지금까지 읽은 부분(${input.cutoff}페이지까지)의 줄거리를 자연스러운 리캡으로 종합하라.
 아래 자료가 독자가 아는 것 전부다 — 여기 없는 사건은 지어내지 마라.
+5문장 내외, 500자 이내로 간결하게 써라(recap.service.ts와 동일한 목표 분량, 2026-08-24 확정).
+한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.
+제목이나 "#" 같은 마크다운 기호를 붙이지 말고 본문 문단만 써라.
 
 --- 완결된 장 요약 ---
 ${summaryBlock}${currentBlock}
