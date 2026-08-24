@@ -171,7 +171,13 @@ export function forceLayout(
     if (a !== undefined && b !== undefined && a !== b) pairs.push({ a, b });
   }
 
-  const k = Math.sqrt((CANVAS_SIZE * CANVAS_SIZE) / n); // 이상적인 간선 길이
+  // 이상적인 간선 길이. n이 아주 작으면(1/sqrt(n)) k가 지나치게 커져 반발력이 과해진다 —
+  // 인물 2명이 정확히 좌우 양 끝(약 710 떨어짐, 캔버스는 640)까지 밀려나던 원인이었다
+  // (2026-08-25, "범위를 넓혀야 할 것 같아, 아직도 양 끝에 있어"). n을 최소 K_FLOOR로
+  // 내려 계산해 작은 그래프에서도 k가 적당한 범위에 머물게 한다 — K_FLOOR 이상인
+  // 그래프(대부분의 실사용 규모)는 이 바닥값의 영향을 받지 않는다.
+  const K_FLOOR = 15;
+  const k = Math.sqrt((CANVAS_SIZE * CANVAS_SIZE) / Math.max(n, K_FLOOR)); // 이상적인 간선 길이
   const points = seedPositions(n);
   let temperature = CANVAS_SIZE / 10;
   const cooling = temperature / iterations;
@@ -310,7 +316,7 @@ const MIN_BOX_SIZE = CANVAS_SIZE * 0.5;
  * 확인, 2026-08-24). forceLayout의 LAYOUT_RADIUS 경계와 함께, 인물 수와 무관하게
  * 뷰박스 크기가 대략 일정한 범위(MIN_BOX_SIZE ~ 캔버스 전체)를 유지하게 한다.
  */
-export function boundingBox(points: readonly Point[], padding = 48): BoundingBox {
+export function boundingBox(points: readonly Point[], padding = 70): BoundingBox {
   if (points.length === 0) return { x: 0, y: 0, width: CANVAS_SIZE, height: CANVAS_SIZE };
 
   const xs = points.map((p) => p.x);

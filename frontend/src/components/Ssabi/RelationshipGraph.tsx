@@ -141,16 +141,24 @@ export default function RelationshipGraph({
     const neighborPositions = graph.nodes
       .map((n, i) => (neighborIds.has(n.id) ? positions[i] : null))
       .filter((q): q is Point => q !== null);
-    const pts = [p, ...neighborPositions];
-    const spanX = Math.max(...pts.map((q) => q.x)) - Math.min(...pts.map((q) => q.x));
-    const spanY = Math.max(...pts.map((q) => q.y)) - Math.min(...pts.map((q) => q.y));
-    const rawWidth = Math.max(spanX, spanY) + FOCUS_PADDING * 2;
-    // clampViewBox가 height를 base의 가로세로비로 다시 계산하므로, 여기서 미리 같은
-    // 비율로 height를 잡아야 p가 진짜 정중앙에 온다 — width만 정사각으로 잡고 넘기면
-    // clampViewBox가 그 height를 base 비율에 맞게 늘리거나 줄이면서 y축 중심이
-    // p.y에서 벗어난다(2026-08-25, "포커싱이 정중앙이 아니라 치우쳐 있다" 버그).
+    // 뷰박스 중심은 p(선택 인물) 고정이다 — "해당 인물을 중심으로" 요청 그대로. 그래서
+    // 필요한 반너비는 "인접 인물들 사이의 전체 span"이 아니라 **p로부터 가장 먼 인접
+    // 인물까지의 거리**여야 한다. p가 인접 인물 무리의 한쪽으로 치우쳐 있으면(흔한 경우 —
+    // 인접 인물들이 p 기준 한 방향에 몰려 있을 수 있다) 전체 span의 절반만큼만 반너비를
+    // 잡으면 반대쪽 먼 인접 인물이 화면 밖으로 잘린다(2026-08-25, "주변 인물이 잘린다"
+    // 피드백의 실제 원인 — p를 중심으로 대칭 확장하는데 필요한 반경을 잘못 구했었다).
+    const maxDx = Math.max(0, ...neighborPositions.map((q) => Math.abs(q.x - p.x)));
+    const maxDy = Math.max(0, ...neighborPositions.map((q) => Math.abs(q.y - p.y)));
+    const aspect = base.height / base.width;
+    // clampViewBox가 height를 base의 가로세로비로 다시 계산한다. width 하나만 두 축 중
+    // 큰 쪽으로 잡으면, 작은 쪽 축은 그 비율로 다시 계산된 height가 실제로 필요한 반경보다
+    // 작아질 수 있다 — width를 두 축 모두를 여유 있게 덮는 값으로 따로 계산한다.
+    const rawWidth = Math.max(
+      maxDx * 2 + FOCUS_PADDING * 2,
+      (maxDy * 2 + FOCUS_PADDING * 2) / aspect
+    );
     const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
-    const height = width * (base.height / base.width);
+    const height = width * aspect;
     setViewBox(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
