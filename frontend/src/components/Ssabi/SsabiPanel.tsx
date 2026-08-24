@@ -44,8 +44,9 @@ export default function SsabiPanel({
 }: {
   sessionEpoch: number;
   /**
-   * 리캡·챗봇 스트림의 done 프레임이 확인해 준 기준점(FR-SPL-002 관련 NFR-OBS-003).
-   * 둘 다 아직 안 받았으면 null — 이땐 배지를 그리지 않는다. 프론트가 스스로 계산하지 않는다.
+   * "Np까지 확인" 배지에 그대로 찍는 페이지 번호(2026-08-24, 사용자 결정 — 지금 보고
+   * 있는 페이지를 그대로 보여주는 쪽을 선택함). 컨테이너(Reader)가 서버가 확인해 준
+   * 현재 페이지를 그대로 내려준다 — 여기서 계산하지 않는다. 아직 페이지가 없으면 null.
    */
   appliedCutoff?: number | null;
   onTabChange: (tab: SsabiTab) => void;

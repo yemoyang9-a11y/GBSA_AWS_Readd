@@ -49,10 +49,10 @@ const SYSTEM_RULES = `
 ## 중요 제약사항
 
 1. **근거 외 생성 금지** (NFR-AI-005):
-   - 오직 아래 "근거 데이터"·"검색 결과"·"사용자가 지금 보고 있는 본문 인용"(있는 경우)에
-     포함된 정보만 사용하세요
+   - 오직 아래 "근거 데이터"·"검색 결과"·"지금 보고 있는 페이지 본문"·"사용자가 지금
+     보고 있는 본문 인용"(각각 있는 경우)에 포함된 정보만 사용하세요
    - 당신의 사전 지식을 사용하지 마세요
-   - 그 세 곳에 없는 내용은 절대 추론하거나 생성하지 마세요
+   - 그 네 곳에 없는 내용은 절대 추론하거나 생성하지 마세요
 
 2. **근거 부재 처리**:
    - 질문에 답할 근거가 충분하지 않으면 "${NO_EVIDENCE_TOKEN}" 토큰을 응답하세요
@@ -97,6 +97,11 @@ const SYSTEM_RULES = `
  *   이미 화면에 떠 있는(R3: 본문 접근 무제한) 텍스트라 K 상한과 무관하게 프롬프트에
  *   "본문 인용" 섹션으로 별도 주입한다. K로 강제하는 근거 조립(assembleContext)·검색
  *   (vectorSearch) 범위는 그대로 두고 건드리지 않는다 — R1/FR-PRG-003 🚦은 불변.
+ * @param currentPageText - 지금 보고 있는 페이지 전체 본문(2026-08-24, 사용자 요청 — "다음
+ *   페이지도 근거로 써라"). quote와 같은 이유로 K와 무관하게 매 질문마다 자동으로 별도
+ *   섹션에 얹는다 — R3(본문 접근 무제한)라 새 노출이 아니며, R1(K = current_page - 1)은
+ *   손대지 않는다. 호출부(routes.ts)가 기준점 결정기가 확인한 current_page로 조회해
+ *   넘긴다 — 클라이언트가 보낸 page를 쓰지 않는다.
  * @yields 텍스트 청크
  *
  * @example
@@ -110,7 +115,8 @@ export async function* handleQuery(
   K: number,
   deviceId: string,
   conversationId?: number,
-  quote?: string
+  quote?: string,
+  currentPageText?: { pageNo: number; content: string }
 ): AsyncGenerator<string> {
   let noEvidence = false;
 
@@ -133,6 +139,15 @@ export async function* handleQuery(
       searchResults.forEach((result) => {
         fullPrompt += `### p.${result.page_no}\n${result.content}\n\n`;
       });
+    }
+
+    // 2-1. 지금 보고 있는 페이지 본문 — 매 질문마다 자동으로 얹는다(2026-08-24, 사용자
+    // 요청: "다음 페이지도 근거로 써라"). K는 그대로 두고(R1 불변), 이미 화면에 떠 있는
+    // (R3: 본문 접근 무제한) 현재 페이지 전체만 별도 섹션으로 추가한다 — assembleContext·
+    // vectorSearch가 강제하는 K 상한과는 완전히 무관한 경로다. 페이지 번호는 라우트가
+    // 기준점 결정기로 확인한 값이라 프론트가 보낸 값을 믿지 않는다.
+    if (currentPageText) {
+      fullPrompt += `\n\n## 지금 보고 있는 페이지 본문 (p.${currentPageText.pageNo})\n\n${currentPageText.content}`;
     }
 
     // 3-0. 본문 드래그 인용 — 사용자가 지금 화면에서 직접 고른 문장. K로 자르지 않는다

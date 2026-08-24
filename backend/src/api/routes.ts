@@ -100,6 +100,11 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     let K: number;
     // 대화 이력 기록 대상 — MOCK_MODE는 DB 없이 도는 화면 개발 경로라 이력 기록을 생략한다
     let conversationId: number | undefined;
+    // 지금 보고 있는 페이지 본문 (2026-08-24, 사용자 요청) — K로 자르는 근거 조립과
+    // 무관하게, 화면에 이미 떠 있는(R3: 본문 접근 무제한) 현재 페이지 전체를 매 질문마다
+    // 자동으로 근거에 얹는다. 페이지 번호는 snapshot.current_page — 기준점 결정기가 확인한
+    // 값이지 클라이언트가 보낸 page를 쓰지 않는다(절대 규칙 8번, 파생값 단일 원천).
+    let currentPageText: { pageNo: number; content: string } | undefined;
 
     if (MOCK_MODE) {
       // Mock 모드: 테스트용 고정 K 값
@@ -121,6 +126,14 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
 
+      try {
+        const pageRow = await contentServices.pageService.getPage(bookId, snapshot.current_page);
+        if (pageRow) currentPageText = { pageNo: pageRow.page_no, content: pageRow.content };
+      } catch (error) {
+        // 실패해도 챗봇 응답 자체는 막지 않는다 — 이 섹션 없이 기존 K-bounded 근거로만 답한다
+        console.error('[API] current page fetch for chat context failed', { bookId, error });
+      }
+
       // 대화 이력 — 이어갈지/새로 열지는 여기서 정한다 (하루 롤오버·"새 채팅" 모두 이 경로)
       const resolved = await resolveConversation(
         deviceId,
@@ -140,7 +153,15 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 챗봇 처리 (스트리밍)
     try {
       const quoteText = typeof quote === 'string' && quote.trim() ? quote : undefined;
-      for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId, conversationId, quoteText)) {
+      for await (const chunk of handleChatbotQuery(
+        bookId,
+        query,
+        K,
+        deviceId,
+        conversationId,
+        quoteText,
+        currentPageText
+      )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 근거 부재 거절도 일반 delta로 흘려보냄
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
