@@ -143,6 +143,19 @@ describe('싸비 사이드창', () => {
     expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('2026-08-24: initialTab이 같은 세션(epoch 일치)이면 그 탭에서 바로 시작한다 — 패널 재마운트(닫았다 열기) 대역', () => {
+    render(<SsabiPanel {...baseProps} initialTab="chatbot" initialTabEpoch={7} />);
+    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('2026-08-24: initialTab이 있어도 epoch이 다르면(닫혀 있는 동안 세션이 바뀜, FR-SVB-004) 기본 탭으로 시작한다', () => {
+    render(<SsabiPanel {...baseProps} sessionEpoch={7} initialTab="chatbot" initialTabEpoch={6} />);
+    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+  });
+
   it('같은 문장을 연달아 다시 인용해도(token 증가) 챗봇 탭으로 매번 전환한다', async () => {
     const { rerender } = render(
       <SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />

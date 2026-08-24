@@ -25,6 +25,8 @@ const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
 export default function SsabiPanel({
   sessionEpoch,
   appliedCutoff = null,
+  initialTab = null,
+  initialTabEpoch = null,
   onTabChange,
   graph,
   graphFailed,
@@ -49,6 +51,18 @@ export default function SsabiPanel({
    * 현재 페이지를 그대로 내려준다 — 여기서 계산하지 않는다. 아직 페이지가 없으면 null.
    */
   appliedCutoff?: number | null;
+  /**
+   * 재마운트 시 이어서 쓸 "마지막 탭" 기억과, 그 값을 기록한 시점의 sessionEpoch
+   * (2026-08-24, 사용자 요청 — 패널을 닫았다 열면 항상 기본 탭으로 리셋되던 것을 마지막
+   * 이용 탭 유지로 바꿈). 이 컴포넌트는 닫힐 때 Reader가 통째로 언마운트하므로(패널
+   * 언마운트 정책 참조, Reader.tsx) 내부 상태만으로는 기억할 수 없다 — 언마운트되지 않는
+   * Reader가 대신 들고 있다가 재마운트 시 이 두 값으로 되돌려준다. 아래 sameSession
+   * 판정(resolveSsabiTab)에 그대로 흘러 들어가므로, epoch이 안 맞으면(세션이 바뀐 채로
+   * 닫혀 있었으면, FR-SVB-004) 자동으로 기본 탭으로 돌아간다 — 별도 분기 없이 기존 로직이
+   * 그대로 처리한다. 둘 다 없으면(최초 진입) 기존과 동일하게 기본 탭에서 시작한다.
+   */
+  initialTab?: SsabiTab | null;
+  initialTabEpoch?: number | null;
   onTabChange: (tab: SsabiTab) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
@@ -67,8 +81,8 @@ export default function SsabiPanel({
   onToggleChatHistory: () => void;
   onSelectChatConversation: (conversationId: number) => void;
 }) {
-  const [lastTab, setLastTab] = useState<SsabiTab | null>(null);
-  const previousEpoch = useRef<number | null>(null);
+  const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
+  const previousEpoch = useRef<number | null>(initialTabEpoch);
 
   const tab = resolveSsabiTab({
     previousEpoch: previousEpoch.current,
