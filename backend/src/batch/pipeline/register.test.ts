@@ -158,6 +158,36 @@ describe('registerGeneratedContent — S4/S5 산출물 적재 (FR-DAT-003~008)',
     expect(calls.filter((c) => c.sql.includes('INSERT INTO events'))).toHaveLength(1);
   });
 
+  test('FR-CHR-001: 입력 순서와 무관하게 character_a_id/character_b_id를 정렬된 순서로 저장한다', async () => {
+    const flipped: ResolvedBookData = {
+      ...data,
+      relationships: [
+        {
+          id: 'rel-1',
+          character_a_id: 'char-2', // 정렬 시 char-1보다 뒤
+          character_b_id: 'char-1',
+          label: '싸움 중재',
+          established_page: 2,
+        },
+      ],
+    };
+    const { client, calls } = mockClient();
+    await registerGeneratedContent(client, flipped);
+
+    const call = calls.find((c) => c.sql.includes('INSERT INTO relationships'));
+    expect(call?.params?.[2]).toBe('char-1'); // character_a_id
+    expect(call?.params?.[3]).toBe('char-2'); // character_b_id
+  });
+
+  test('FR-CHR-001: ON CONFLICT가 character_a_id/character_b_id도 갱신 대상에 포함한다(재실행으로 기존 행 순서 교정)', async () => {
+    const { client, calls } = mockClient();
+    await registerGeneratedContent(client, data);
+
+    const call = calls.find((c) => c.sql.includes('INSERT INTO relationships'));
+    expect(call?.sql).toMatch(/ON CONFLICT[\s\S]*character_a_id\s*=/);
+    expect(call?.sql).toMatch(/ON CONFLICT[\s\S]*character_b_id\s*=/);
+  });
+
   test('배경지식·소개를 kind별 2행으로 분리해 적재한다(정보 분리, FR-ADM-005)', async () => {
     const { client, calls } = mockClient();
     await registerGeneratedContent(client, data);
