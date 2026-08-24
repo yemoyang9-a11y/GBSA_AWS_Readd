@@ -17,7 +17,7 @@ import {
   mockChapters,
   mockCharacterNotes,
   mockCharacters,
-  mockPages,
+  mockPageContent,
   mockRelationships,
 } from './fixtures';
 import type {
@@ -97,11 +97,15 @@ export function mockInfoResponse() {
 }
 
 export function mockPageResponse(pageNo: number): PageResponse {
+  // 범위 밖 pageNo(예: 0)가 들어와도 page_no·content·prev/next_page가 서로 어긋나지
+  // 않게, 한 번 접은 값에서 전부 파생한다(2026-08-24 — 접은 content만 쓰고 page_no는
+  // 안 접었더니 "0페이지인데 1페이지 본문"처럼 필드끼리 모순되던 버그를 고침).
+  const page = Math.min(30, Math.max(1, pageNo));
   return {
-    page_no: pageNo,
-    content: mockPages[pageNo] ?? '',
-    prev_page: pageNo > 1 ? pageNo - 1 : null,
-    next_page: pageNo < 30 ? pageNo + 1 : null,
+    page_no: page,
+    content: mockPageContent(page),
+    prev_page: page > 1 ? page - 1 : null,
+    next_page: page < 30 ? page + 1 : null,
   };
 }
 

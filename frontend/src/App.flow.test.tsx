@@ -40,7 +40,7 @@ describe('관통 흐름 (mock 기준)', () => {
     // '이어서 읽기' → 읽기 화면
     await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
-    expect(await screen.findByRole('article')).toHaveTextContent('미두장');
+    expect(await screen.findByRole('article')).toHaveTextContent('mock 본문');
 
     // 읽기 화면에는 진도 바가 없고 페이지 번호만 있다 (FR-PRG-004)
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
