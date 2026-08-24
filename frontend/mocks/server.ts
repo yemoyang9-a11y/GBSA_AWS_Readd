@@ -196,7 +196,9 @@ export function mockCharacterResponse(
  */
 export async function* mockStreamFrames(text: string): AsyncGenerator<SseFrame> {
   const { cutoff } = snapshot();
-  for (const piece of text.match(/.{1,8}/gu) ?? []) {
+  // s(dotAll) 플래그 필수 — 기본 `.`은 개행을 안 잡아서 문단 구분(\n\n)이 청크 분할 중에
+  // 통째로 사라진다(2026-08-24 확인, RecapTab 문단 분리 검증 중 발견).
+  for (const piece of text.match(/.{1,8}/gsu) ?? []) {
     await new Promise((resolve) => setTimeout(resolve, 30));
     yield { type: 'delta', text: piece };
   }
@@ -206,7 +208,14 @@ export async function* mockStreamFrames(text: string): AsyncGenerator<SseFrame> 
 /** 저장 리캡이 없을 때의 실시간 생성분 (FR-DAT-010 — 영구 저장하지 않는다) */
 export function mockRecapText(): string {
   const { cutoff } = snapshot();
-  return `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었고, 딸 초봉은 제중당 약국에서 일하기 시작했습니다. (mock 실시간 리캡)`;
+  // 문단 분리·인물명 강조 UI를 mock 모드에서도 확인할 수 있게 두 문단 + 실제 mockAliases
+  // 이름으로 구성한다(2026-08-24).
+  return (
+    `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장을 드나들며 재산을 잃고, ` +
+    `딸 초봉을 시집보내 형편을 펴 보려 한다.\n\n` +
+    `초봉은 제중당 약국에서 일하며 이웃 남승재와 가깝게 지내 왔지만, 은행원 고태수와 ` +
+    `약혼하며 상황이 달라졌다. (mock 실시간 리캡)`
+  );
 }
 
 /**

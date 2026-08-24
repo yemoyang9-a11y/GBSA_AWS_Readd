@@ -113,7 +113,14 @@ export default function SsabiPanel({
 
       <div role="tabpanel" className="brief-scroll flex-1 overflow-y-auto px-6 pb-6 pt-5">
         {tab === 'recap' ? (
-          <RecapTab text={recapText} streaming={recapStreaming} failed={recapFailed} />
+          <RecapTab
+            text={recapText}
+            streaming={recapStreaming}
+            failed={recapFailed}
+            // graph는 이미 기준점 K 이하로 필터된 응답이다(types/ssabi.ts:3) — 리캡 강조가
+            // 쓰는 이름 목록도 그 범위를 벗어나지 않는다.
+            characterNames={graph ? graph.nodes.flatMap((n) => [n.name, ...n.aliases]) : []}
+          />
         ) : null}
         {tab === 'relationship' ? <RelationshipTab graph={graph} failed={graphFailed} /> : null}
         {tab === 'chatbot' ? (
