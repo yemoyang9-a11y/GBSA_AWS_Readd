@@ -182,7 +182,15 @@ async function* generateAndPersist(
     const appended = truncated.slice(fullText.length);
     if (appended.length > 0) yield appended;
     fullText = truncated;
-    await gen.return(undefined); // 이미 목표를 초과했으니 남은 토큰 생성을 이어갈 이유가 없다
+    try {
+      // 이미 목표를 초과했으니 남은 토큰 생성을 이어갈 이유가 없다 — 순수 비용 최적화라
+      // 취소 자체가 실패해도(예: 실제 게이트웨이가 스트림을 강제로 끊을 때 내부적으로
+      // 에러를 던지는 경우) 이미 확보한 fullText로 정상 진행해야 한다. 여기서 던지면
+      // 상한을 지키려던 로직이 오히려 응답 전체를 500으로 만든다 — 본말전도.
+      await gen.return(undefined);
+    } catch {
+      // 취소 실패는 무시 — 위 이유
+    }
     step = { done: true, value: undefined };
   }
   usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
