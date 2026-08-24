@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { SseFrame } from '../types';
 
 /**
@@ -9,8 +9,16 @@ import type { SseFrame } from '../types';
  *
  * 스트리밍 도중 페이지를 넘겨도 진행 중 스트림은 유지한다 — 진행 중인 응답은 시작 시점
  * 기준점을 쓴다 (UC-27 A5, R2·R3 8/20 확인). 그래서 여기에 페이지 의존성이 없다.
+ *
+ * "유지한다"는 네트워크 스트림을 끊지 않는다는 뜻이지 화면에 계속 얹는다는 뜻이 아니다.
+ * Reader가 페이지마다 새 consume()을 부르므로(FR-SVB-003), 이전 호출의 for-await가
+ * 아직 끝나지 않은 채로 새 consume()이 시작될 수 있다 — 그러면 두 스트림의 delta가
+ * 같은 text state에 번갈아 쌓여 서로 다른 기준점의 문장이 뒤섞인 채로 보인다. latestToken
+ * 으로 "지금 화면에 반영해도 되는 호출"을 하나로 못박고, 낡은 호출은 상태 반영 없이
+ * 끝까지 소비만 시켜 백엔드 쪽 생성·캐싱은 그대로 완료되게 둔다.
  */
 export function useSSE() {
+  const latestToken = useRef(0);
   const [text, setText] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +35,17 @@ export function useSSE() {
   const [conversationId, setConversationId] = useState<number | null>(null);
 
   const consume = useCallback(async (frames: AsyncGenerator<SseFrame>) => {
+    const token = ++latestToken.current;
     setText('');
     setError(null);
     setStreaming(true);
 
     try {
       for await (const frame of frames) {
+        // 더 새 consume()이 이미 시작됐으면 이 호출은 낡은 것이다 — 스트림은 끝까지
+        // 받아서(백엔드 생성·캐싱을 그대로 두고) 화면 상태에는 더 이상 반영하지 않는다.
+        if (token !== latestToken.current) continue;
+
         if (frame.type === 'delta') {
           setText((previous) => previous + frame.text);
           continue;
@@ -53,7 +66,7 @@ export function useSSE() {
         return;
       }
     } finally {
-      setStreaming(false);
+      if (token === latestToken.current) setStreaming(false);
     }
   }, []);
 
