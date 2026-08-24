@@ -14,10 +14,23 @@ describe('RecapTab', () => {
     expect(screen.getByText('불러오는 중')).toHaveClass('text-brief-muted');
   });
 
-  it('"지금까지" eyebrow 라벨과 장식용 인용부호를 보여준다', () => {
+  it('"이전 이야기 요약" eyebrow 라벨과 장식용 인용부호를 보여준다', () => {
     render(<RecapTab text="정 주사는" streaming={false} failed={false} />);
-    expect(screen.getByText('지금까지')).toBeInTheDocument();
+    expect(screen.getByText('이전 이야기 요약')).toBeInTheDocument();
     expect(screen.getByText('"', { exact: true })).toBeInTheDocument();
+  });
+
+  it('본문 첫 줄이 백엔드 고정 소제목("이전 이야기 요약")과 일치하면 본문에서는 걷어낸다', () => {
+    render(
+      <RecapTab
+        text={'이전 이야기 요약\n\n정 주사는 재산을 잃었다.'}
+        streaming={false}
+        failed={false}
+      />
+    );
+    // eyebrow 라벨 자리에만 남고, 본문 문단으로는 중복 렌더되지 않는다.
+    expect(screen.getAllByText('이전 이야기 요약')).toHaveLength(1);
+    expect(screen.getByText('정 주사는 재산을 잃었다.')).toBeInTheDocument();
   });
 
   it('카드에 brief-rule 테두리를 둔다 (패널과 배경색이 같아 테두리가 유일한 경계다)', () => {
