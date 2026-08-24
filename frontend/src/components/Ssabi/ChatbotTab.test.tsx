@@ -59,7 +59,7 @@ describe('ChatbotTab', () => {
     render(<ChatbotTab answer="" streaming={false} error={null} onAsk={onAsk} />);
 
     await userEvent.type(screen.getByLabelText('질문'), '정주사가 누구야');
-    await userEvent.click(screen.getByRole('button', { name: '질문' }));
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
 
     const bubble = screen.getByText('정주사가 누구야');
     expect(bubble).toHaveClass('bg-brief-paper');
