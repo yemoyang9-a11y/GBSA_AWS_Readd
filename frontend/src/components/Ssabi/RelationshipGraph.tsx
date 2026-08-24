@@ -359,10 +359,11 @@ export default function RelationshipGraph({
 
   /**
    * 관계 라벨 — 선택된 인물과 닿은 간선에서만. 참고 시안(reader-map-graph.html
-   * relayout())과 같은 규칙: 실제로 보이는 인물명 라벨은 항상 이긴다(우선순위
-   * 무한대로 블로커 취급), 관계 라벨끼리는 간선이 긴 쪽이 우선(짧은 간선끼리
-   * 몰린 라벨이 더 잘 겹치므로). 예전엔 이 겹침 회피가 전혀 없어서 연결이 많은
-   * 인물을 선택하면 라벨이 죄다 겹쳐 보였다(2026-08-25 피드백).
+   * relayout())과 같은 규칙: 선택·인접 인물의 이름 라벨은 항상 이긴다(우선순위
+   * 무한대로 블로커 취급, 아래 blockerBoxes 참고 — 흐려진 무관 인물의 이름은 제외),
+   * 관계 라벨끼리는 간선이 긴 쪽이 우선(짧은 간선끼리 몰린 라벨이 더 잘 겹치므로).
+   * 예전엔 이 겹침 회피가 전혀 없어서 연결이 많은 인물을 선택하면 라벨이 죄다 겹쳐
+   * 보였다(2026-08-25 피드백).
    */
   const edgeLabels = useMemo(() => {
     if (!validSelectedId) return [];
@@ -388,7 +389,15 @@ export default function RelationshipGraph({
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
 
-    const blockerBoxes = nameLabelBoxes.map((b) => ({ ...b, key: `name:${b.id}`, priority: Infinity }));
+    // 이름 라벨은 전부(선택·인접 무관) 항상 무한 우선순위 블로커였는데, 포커스 중엔
+    // 화면 대부분이 흐려진(dimmed) 무관 인물이라 그 이름과 우연히 겹쳤다는 이유만으로
+    // 정작 선택 인물의 관계 설명이 통째로 빠지는 경우가 잦았다("확대 배율에 따라 관계
+    // 설명이 안 보이는 경우가 많다" 피드백). 포커스 중엔 실제로 화면에서 또렷한
+    // 선택·인접 인물의 이름만 블로커로 남긴다 — 흐려진 인물 이름과의 우연한 겹침으로
+    // 관계 설명이 사라지지 않게 한다.
+    const blockerBoxes = nameLabelBoxes
+      .filter((b) => b.id === validSelectedId || neighborIds.has(b.id))
+      .map((b) => ({ ...b, key: `name:${b.id}`, priority: Infinity }));
     const edgeBoxes = candidates.map((c) => ({
       key: c.key,
       x: c.cx - c.width / 2,
@@ -461,8 +470,9 @@ export default function RelationshipGraph({
               />
               <text
                 x={label.cx}
-                y={label.cy + label.height / 2 - 2.6 * k}
+                y={label.cy}
                 textAnchor="middle"
+                dominantBaseline="central"
                 className="fill-brief-accent font-dashSans"
                 style={{ fontSize: EDGE_LABEL_FONT_PX * k * labelScale }}
               >
