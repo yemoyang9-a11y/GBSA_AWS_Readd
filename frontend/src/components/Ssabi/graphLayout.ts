@@ -117,10 +117,14 @@ export function centralNodeIndex(
  * 2026-08-25 — 처음엔 범위를 좁혔더니(16~20) 이번엔 "차이가 더 나도 된다"는 반대
  * 피드백. 겹침은 nodeRadius 범위가 아니라 전체 배치 여유(중력·겹침 제거 패스)로
  * 해결하는 쪽으로 방향을 바꿔서, 크기 차이는 원래보다 더 크게 되돌린다.
+ *
+ * 2026-08-25 (2차) — 화면상 크기를 100% 기준으로 고정(RelationshipGraph.tsx의
+ * nodeScale)한 뒤로 "노드가 전반적으로 작아 보여서 크기 비교가 어렵고 글씨만 혼자
+ * 떠다니는 느낌"이라는 피드백. 전체적으로 한 단계 키운다.
  */
-const MIN_RADIUS = 14;
-const MAX_RADIUS = 28;
-const RADIUS_STEP = 2;
+const MIN_RADIUS = 17;
+const MAX_RADIUS = 32;
+const RADIUS_STEP = 2.2;
 
 /** 연결 수가 많을수록 큰 원 — 상한을 둔다(주인공이라고 화면을 절반 잡아먹지 않는다). */
 export function nodeRadius(degree: number): number {
