@@ -48,10 +48,12 @@ import {
 // 감싸는 프레임 밖으로 튀어나온다"(CHAR_PX가 실제보다 작아 라벨 박스가 좁게
 // 잡혔던 것) 같은 계산-실측 어긋남이 다시 안 생긴다.
 const KOREAN_CHAR_WIDTH_RATIO = 0.94;
-const NAME_FONT_PX = 17;
+// 2026-08-25 (3차) — "여전히 좀 난잡해 보인다" 피드백으로 전체 글자 크기를 한 단계
+// 낮춘다(17→15, 12→10). CHAR_PX는 위 비율로 자동 재계산되니 손대지 않아도 된다.
+const NAME_FONT_PX = 15;
 const NAME_CHAR_PX = NAME_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 // 관계 라벨은 이름보다 한 단계 작게 — 인물명이 우선이라는 위계를 글자 크기로도 드러낸다.
-const EDGE_LABEL_FONT_PX = 12;
+const EDGE_LABEL_FONT_PX = 10;
 const EDGE_LABEL_CHAR_PX = EDGE_LABEL_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
@@ -308,16 +310,23 @@ export default function RelationshipGraph({
   }, []);
 
   const k = unit();
-  // 노드 원 확대·축소 배율. 화면상 크기를 100% 기준으로 완전히 고정(nodeScale = k/k0)해
-  // 봤더니 "노드가 전반적으로 작아 보여서 크기 비교가 어렵고 글씨만 혼자 떠다니는
-  // 느낌"이라는 반응(2026-08-25) — 아예 고정(지수 1)이 아니라 화면 배율보다 **덜**
-  // 움직이는 절충안(지수 0.5, 제곱근)으로 바꾼다. 지수 0 = 예전처럼 축소할수록 원래
-  // 유닛값 그대로 계속 작아짐(라벨과 완전히 어긋남), 지수 1 = 저번 수정처럼 완전히
-  // 고정(원·글씨 비율은 항상 같지만 축소해도 원이 안 작아져 밋밋함). 0.5는 그 중간 —
-  // 축소하면 원도 조금은 작아지되 글씨보다는 덜 작아진다. 100% 기준에서는 지수와
-  // 무관하게 항상 1이라 지금까지 확정한 기본 크기는 그대로다.
+  // 노드 원·글자는 출발선이 서로 반대다 — 원은 원래 아무 보정도 없어(유닛값 그대로)
+  // 축소할수록 계속 작아지고, 글자는 *k 보정이 이미 있어(NAME_FONT_PX*k) 화면상
+  // 크기가 완전히 고정돼 있었다. 둘 다 "완전 고정도 아니고 원래 방식도 아닌 절충
+  // (제곱근)"으로 만들려면 서로 다른 방향으로 다뤄야 한다 — 원은 고정 쪽으로 반만
+  // 끌어오고(곱한다), 글자는 원래(줌에 따라 변하는) 쪽으로 반만 풀어준다(나눈다).
+  // 처음에 둘 다 곱했다가 글자가 축소하면 오히려 커지고 확대하면 안 보일 정도로
+  // 작아지는 버그가 났다(2026-08-25, 4차) — 아래 계산 참고.
+  //
+  // nodeScale(곱함): 100% 기준 완전 고정이 nodeScale=k/k0(지수 1)이므로, 지수 0.5는
+  // 그 절반만 고정 쪽으로 끌어온 값 — 축소하면 원도 조금 작아지되 예전보다는 덜.
+  // labelScale(나눔): 완전 고정(지금까지 글자 방식)이 "그대로"(나눌 것 없음)이므로,
+  // 그 고정을 지수 0.5만큼 풀어주려면 1/nodeScale로 나눠야 한다 — 축소하면 글자도
+  // 조금 작아지되 원처럼 절반만.
+  // 둘 다 k=k0(100%)에서는 1이라 지금까지 확정한 기본 크기는 그대로 유지된다.
   const NODE_ZOOM_DAMPING = 0.5;
   const nodeScale = Math.pow(k / unit0(), NODE_ZOOM_DAMPING);
+  const labelScale = 1 / nodeScale;
 
   // 인물명 라벨 박스 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
   // 관계 라벨(아래)이 이 중 실제로 보이는 라벨과 안 겹치게 하려면 살아남은 박스
@@ -326,8 +335,8 @@ export default function RelationshipGraph({
     const boxes: (LabelBox & { id: string })[] = graph.nodes.map((node, i) => {
       const p = positions[i];
       const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
-      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k) + 4 * k;
-      const height = (NAME_FONT_PX + 4) * k;
+      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k * labelScale) + 4 * k;
+      const height = (NAME_FONT_PX * labelScale + 4) * k;
       const isSelected = node.id === validSelectedId;
       const isNeighbor = neighborIds.has(node.id);
       return {
@@ -341,7 +350,7 @@ export default function RelationshipGraph({
     });
     return pickNonOverlapping(boxes);
     // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
-  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, nodeScale]);
+  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, nodeScale, labelScale]);
 
   const nameLabels = useMemo(
     () => new Set(nameLabelBoxes.map((b) => b.id)),
@@ -370,8 +379,8 @@ export default function RelationshipGraph({
         const dx = far.x - near.x;
         const dy = far.y - near.y;
         const len = Math.hypot(dx, dy) || 1;
-        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k) + 10 * k;
-        const height = (EDGE_LABEL_FONT_PX + 7) * k;
+        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k * labelScale) + 10 * k;
+        const height = (EDGE_LABEL_FONT_PX * labelScale + 7) * k;
         const dist = Math.max(26 * k, Math.min(len * 0.62, len - 22 * k));
         const cx = near.x + (dx / len) * dist;
         const cy = near.y + (dy / len) * dist;
@@ -390,7 +399,7 @@ export default function RelationshipGraph({
     }));
     const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
     return candidates.filter((c) => kept.has(c.key));
-  }, [validSelectedId, graph.nodes, graph.edges, positions, k, nameLabelBoxes]);
+  }, [validSelectedId, graph.nodes, graph.edges, positions, k, labelScale, nameLabelBoxes]);
 
   return (
     <div
@@ -455,7 +464,7 @@ export default function RelationshipGraph({
                 y={label.cy + label.height / 2 - 2.6 * k}
                 textAnchor="middle"
                 className="fill-brief-accent font-dashSans"
-                style={{ fontSize: EDGE_LABEL_FONT_PX * k }}
+                style={{ fontSize: EDGE_LABEL_FONT_PX * k * labelScale }}
               >
                 {label.label}
               </text>
@@ -492,21 +501,26 @@ export default function RelationshipGraph({
                 opacity={dimmed ? 0.2 : 1}
               >
                 <circle cx={p.x} cy={p.y} r={r + 13 * k} fill="transparent" />
+                {/* 2026-08-25 — 그냥 회색 원이라 "성의없어 보인다"는 피드백. 브랜드 액센트
+                    (보라)를 옅게 채우고 테두리를 둘러 "핀" 느낌을 준다 — 새 색을 추가하지
+                    않고 이미 쓰는 brief-accent 톤 하나로 선택/인접/기본 3단계를 표현한다. */}
                 <circle
                   cx={p.x}
                   cy={p.y}
                   r={r}
-                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-ink/45'} ${isNeighbor ? 'stroke-brief-accent' : ''}`}
-                  strokeWidth={isNeighbor ? 2.8 * k : 0}
+                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-accent/25'} ${
+                    isNeighbor ? 'stroke-brief-accent' : 'stroke-brief-accent/45'
+                  }`}
+                  strokeWidth={(isNeighbor ? 2.8 : 1) * k}
                 />
                 {nameLabels.has(node.id) ? (
                   <text
                     x={p.x}
-                    y={p.y + r + NAME_FONT_PX * k + 2 * k}
+                    y={p.y + r + NAME_FONT_PX * k * labelScale + 2 * k}
                     textAnchor="middle"
                     className="fill-brief-ink stroke-white font-dashSerif font-semibold"
                     style={{
-                      fontSize: NAME_FONT_PX * k,
+                      fontSize: NAME_FONT_PX * k * labelScale,
                       paintOrder: 'stroke',
                       strokeWidth: 3 * k,
                       strokeLinejoin: 'round',
