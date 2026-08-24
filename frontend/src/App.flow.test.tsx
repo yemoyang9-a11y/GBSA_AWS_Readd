@@ -44,7 +44,8 @@ describe('관통 흐름 (mock 기준)', () => {
 
     // 읽기 화면에는 진도 바가 없고 페이지 번호만 있다 (FR-PRG-004)
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(screen.getByText(/\d+ \/ 30/)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toBeInTheDocument();
+    expect(screen.getByText('/ 30')).toBeInTheDocument();
 
     // 싸비는 닫힌 채로 들어온다 — 사용자가 top-bar 우측 토글을 눌러야 열린다
     expect(screen.queryByRole('tab', { name: '인물 관계도' })).not.toBeInTheDocument();

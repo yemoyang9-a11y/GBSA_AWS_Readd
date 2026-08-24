@@ -118,7 +118,19 @@ describe('싸비 사이드창', () => {
   it('polish: 헤더가 여닫기 버튼(Reader가 그리는 고정 위치, size-9)과 겹치지 않을 오른쪽 여백을 확보한다', () => {
     render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
     // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
-    expect(screen.getByText('싸비의 가이드북').parentElement).toHaveClass('pr-20');
+    expect(screen.getByText('아모의 가이드북').parentElement).toHaveClass('pr-20');
+  });
+
+  it('활성 탭은 brief-accent 테두리·배경을 쓴다', () => {
+    render(<SsabiPanel {...baseProps} />);
+    const activeTab = screen.getByRole('tab', { name: '인물 관계도' });
+    expect(activeTab.className).toContain('border-brief-accent');
+    expect(activeTab.className).toContain('bg-brief-accent-soft');
+  });
+
+  it('기준점 배지는 brief-accent 톤을 쓴다', () => {
+    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
+    expect(screen.getByText('79p까지 확인').className).toContain('text-brief-accent');
   });
 
   it('본문에서 인용 요청이 오면(pendingQuote) 다른 탭을 보고 있어도 챗봇 탭으로 전환한다', () => {

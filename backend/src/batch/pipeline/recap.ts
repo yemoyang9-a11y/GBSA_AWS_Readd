@@ -78,7 +78,7 @@ export function buildRecapPrompt(input: RecapInput, title: string, author: strin
 
   return `${author}의 장편소설 「${title}」을 읽고 있는 독자에게, 지금까지 읽은 부분(${input.cutoff}페이지까지)의 줄거리를 자연스러운 리캡으로 종합하라.
 아래 자료가 독자가 아는 것 전부다 — 여기 없는 사건은 지어내지 마라.
-5문장 내외, 500자 이내로 간결하게 써라(recap.service.ts와 동일한 목표 분량, 2026-08-24 확정).
+5문장 내외, 공백 포함 500자 이내로 간결하게 써라(recap.service.ts와 동일한 목표 분량, 2026-08-24 확정).
 한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.
 제목이나 "#" 같은 마크다운 기호를 붙이지 말고 본문 문단만 써라.
 
@@ -97,6 +97,26 @@ export interface DemoRecapParams {
   author: string;
 }
 
+/**
+ * 500자 실측 강제 상한 (2026-08-24, 이슈 대응) — 위 프롬프트의 "500자 이내로 써라"는
+ * 부탁일 뿐이라 모델이 지키지 않으면(recap.service.ts에서 800자+ 실측됨) 그대로 새어나간다.
+ * recap.service.ts의 RECAP_HARD_LIMIT_CHARS·truncateAtBoundary와 동일한 값·로직 —
+ * 이 스크립트는 스트리밍이 아니라 완성된 문자열을 한 번에 받으므로 여기서는 자체 구현한다.
+ */
+const RECAP_HARD_LIMIT_CHARS = 500;
+
+function truncateAtBoundary(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  const window = text.slice(0, limit);
+  const boundary = Math.max(
+    window.lastIndexOf('.'),
+    window.lastIndexOf('!'),
+    window.lastIndexOf('?'),
+    window.lastIndexOf('\n')
+  );
+  return boundary > 0 ? text.slice(0, boundary + 1).trimEnd() : window.trimEnd();
+}
+
 /** 조립 → LLM 종합 → saved_recap upsert. callLLM은 게이트웨이(⑥) 경유 호출을 주입받는다(4.3절) */
 export async function injectDemoRecap(
   client: QueryClient,
@@ -106,7 +126,8 @@ export async function injectDemoRecap(
 ): Promise<string> {
   const input = await assembleRecapInput(client, params.bookId, params.cutoff);
   const prompt = buildRecapPrompt(input, params.title, params.author);
-  const { recap } = parseRecap(await callLLM(prompt));
+  const { recap: rawRecap } = parseRecap(await callLLM(prompt));
+  const recap = truncateAtBoundary(rawRecap, RECAP_HARD_LIMIT_CHARS);
 
   await client.query(
     `INSERT INTO saved_recap (device_id, book_id, cutoff_page, recap_text, created_at)

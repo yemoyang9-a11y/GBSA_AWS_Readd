@@ -2,14 +2,13 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
-/**
- * critique P2 (2026-08-21): 사용자·싸비 말풍선이 정렬(ml-auto/mr-auto)만으로 구분되면
- * 좁은 패널에서 여러 줄 줄바꿈 시 화자 구분이 약하다 — 배경색으로도 구분한다.
- */
 describe('ChatbotTab', () => {
-  it('싸비 답변 말풍선은 ssabi-soft 배경을 쓴다', () => {
-    render(<ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />);
-    expect(screen.getByText(/정 주사에 대해/)).toHaveClass('bg-ssabi-soft');
+  it('싸비 답변 말풍선은 accent 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
+    const { container } = render(
+      <ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />
+    );
+    expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-brief-accent');
+    expect(container.querySelector('img')).toHaveAttribute('src', '/assets/ssabi-face.png');
   });
 
   it('polish: 답변이 없으면(질문 전) 빈 말풍선을 그리지 않는다', () => {
@@ -17,16 +16,19 @@ describe('ChatbotTab', () => {
       <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />
     );
     expect(container.querySelector('p')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
   });
 
-  it('사용자 질문 말풍선은 중립(canvas) 배경을 유지한다 — 액센트가 사용자 쪽으로 번지지 않는다', async () => {
+  it('사용자 질문 말풍선은 paper 배경 + rule 테두리를 쓴다 — 액센트가 사용자 쪽으로 번지지 않는다', async () => {
     const onAsk = vi.fn();
     render(<ChatbotTab answer="" streaming={false} error={null} onAsk={onAsk} />);
 
     await userEvent.type(screen.getByLabelText('질문'), '정주사가 누구야');
     await userEvent.click(screen.getByRole('button', { name: '질문' }));
 
-    expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-canvas');
+    const bubble = screen.getByText('정주사가 누구야');
+    expect(bubble).toHaveClass('bg-brief-paper');
+    expect(bubble).toHaveClass('border-brief-rule');
   });
 
   it('본문에서 인용한 문장이 오면(quote) 입력창을 그 문장으로 채운다', () => {
@@ -78,8 +80,8 @@ describe('ChatbotTab — 대화 이력', () => {
       />
     );
 
-    expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-canvas');
-    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-ssabi-soft');
+    expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-brief-paper');
+    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-white', 'border-brief-accent');
   });
 
   it('"새 채팅" 버튼을 누르면 onNewChat이 호출된다', async () => {

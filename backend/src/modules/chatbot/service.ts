@@ -18,11 +18,25 @@ import { recordTurns, getConversationContext } from './conversation-service';
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
 /**
+ * `text`의 꼬리 중 `token`의 접두사와 일치하는 가장 긴 길이를 구한다. 스트리밍 청크
+ * 경계가 토큰 중간을 가를 때, 아직 완성 여부를 판단할 수 없는 꼬리 부분을 얼마나
+ * 보류해야 하는지 계산하는 데 쓴다 — 예: text="...[NO_EVIDENC", token="[NO_EVIDENCE]"
+ * 이면 12를 반환한다("[NO_EVIDENC" 전체가 토큰 접두사와 겹친다).
+ */
+function tokenPrefixOverlapLength(text: string, token: string): number {
+  const max = Math.min(text.length, token.length - 1);
+  for (let len = max; len > 0; len--) {
+    if (text.endsWith(token.slice(0, len))) return len;
+  }
+  return 0;
+}
+
+/**
  * 근거 부재 토큰 (FR-QNA-004 🚦)
  */
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
 export const NO_EVIDENCE_MESSAGE =
-  '현재까지 읽은 페이지 기준으로 알 수 없는 내용입니다. 다른 질문 해주세요.';
+  '🔒 그건 아직 안 읽은 뒷부분 얘기라 말 못 해줘요 🤔 스포 없이 여기까지만 도와줄게요.';
 
 /**
  * 시스템 규칙 (프롬프트에 포함)
@@ -35,9 +49,10 @@ const SYSTEM_RULES = `
 ## 중요 제약사항
 
 1. **근거 외 생성 금지** (NFR-AI-005):
-   - 오직 아래 "근거 데이터"에 포함된 정보만 사용하세요
+   - 오직 아래 "근거 데이터"·"검색 결과"·"사용자가 지금 보고 있는 본문 인용"(있는 경우)에
+     포함된 정보만 사용하세요
    - 당신의 사전 지식을 사용하지 마세요
-   - 근거에 없는 내용은 절대 추론하거나 생성하지 마세요
+   - 그 세 곳에 없는 내용은 절대 추론하거나 생성하지 마세요
 
 2. **근거 부재 처리**:
    - 질문에 답할 근거가 충분하지 않으면 "${NO_EVIDENCE_TOKEN}" 토큰을 응답하세요
@@ -58,6 +73,15 @@ const SYSTEM_RULES = `
 - 간결하고 명확하게 답변하세요
 - 근거가 명확한 경우에만 답변하세요
 - 불확실하면 "${NO_EVIDENCE_TOKEN}"을 반환하세요
+
+## 말투
+
+- 반말이 아닌 친근한 해요체를 씁니다. "~예요", "~해요", "~돼요"처럼 편하게 끝맺으세요
+- 딱딱한 설명체("~함", "~임", "~됨") 금지. 옆에서 같이 책 읽어주는 친구처럼 말하세요
+- 문장은 짧게 끊고, 핵심 정보(이름·관계·사건)를 앞에 먼저 두세요
+- 과장된 감탄사나 이모지 남발은 피하고, 필요할 때 1개 정도만 자연스럽게 곁들이세요
+- 예시: "야간 알바생 독고가 손님한테 건넨 인사예요. 청량리역 노숙인 출신인데, 우연히
+  염영숙 여사한테 고용돼서 편의점을 지키고 있어요."
 `.trim();
 
 /**
@@ -69,6 +93,10 @@ const SYSTEM_RULES = `
  * @param deviceId - 디바이스 ID (로그용)
  * @param conversationId - 대화 이력에 기록할 대상 (resolveConversation이 미리 정한 값).
  *   생략하면 대화 이력에 기록하지 않는다 — 기존 호출부·테스트 하위 호환용.
+ * @param quote - 본문 드래그 인용(신규 UX). 사용자가 읽기 화면에서 직접 선택한 문장 그대로다 —
+ *   이미 화면에 떠 있는(R3: 본문 접근 무제한) 텍스트라 K 상한과 무관하게 프롬프트에
+ *   "본문 인용" 섹션으로 별도 주입한다. K로 강제하는 근거 조립(assembleContext)·검색
+ *   (vectorSearch) 범위는 그대로 두고 건드리지 않는다 — R1/FR-PRG-003 🚦은 불변.
  * @yields 텍스트 청크
  *
  * @example
@@ -81,7 +109,8 @@ export async function* handleQuery(
   query: string,
   K: number,
   deviceId: string,
-  conversationId?: number
+  conversationId?: number,
+  quote?: string
 ): AsyncGenerator<string> {
   let noEvidence = false;
 
@@ -104,6 +133,13 @@ export async function* handleQuery(
       searchResults.forEach((result) => {
         fullPrompt += `### p.${result.page_no}\n${result.content}\n\n`;
       });
+    }
+
+    // 3-0. 본문 드래그 인용 — 사용자가 지금 화면에서 직접 고른 문장. K로 자르지 않는다
+    // (R3: 본문 접근 무제한). "근거 데이터"·"검색 결과"와는 출처가 다르므로 별도 섹션으로
+    // 둔다 — assembleContext/vectorSearch의 K 상한과는 완전히 무관한 경로다.
+    if (quote) {
+      fullPrompt += `\n\n## 사용자가 지금 보고 있는 본문 인용\n\n"${quote}"\n\n(사용자가 읽기 화면에서 직접 선택한 문장입니다. 위 "근거 데이터"·"검색 결과"에 없어도 이 인용문 자체는 답변에 활용하세요.)`;
     }
 
     // 3-1. 이전 대화 맥락 (conversationId가 있을 때만) — "지난 대화를 기억하는 답변"
@@ -135,22 +171,37 @@ export async function* handleQuery(
 
     const streamSource = MOCK_MODE ? getMockLLMResponse(query) : llmStream(task, fullPrompt);
 
+    // 청크 경계가 토큰(`[NO_EVIDENCE]`) 중간을 가를 수 있다 — 예: "[NO_EVIDENCE"까지 온
+    // 청크와 "]"만 온 다음 청크로 나뉘면, 완성 판정 전에 앞 조각이 그대로 클라이언트로
+    // 새어 나가 답변 앞에 깨진 토큰이 붙는다(FR-QNA-004 🚦 위반 — "항상 같은 문구"가
+    // 아니게 됨). 토큰과 겹칠 수 있는 꼬리는 다음 청크와 합쳐 보기 전까지 보류한다.
+    let pending = '';
     for await (const chunk of streamSource) {
+      pending += chunk;
       responseText += chunk;
 
       // 근거 부재 토큰 감지 (FR-QNA-004 🚦)
-      if (responseText.includes(NO_EVIDENCE_TOKEN)) {
+      if (pending.includes(NO_EVIDENCE_TOKEN)) {
         noEvidence = true;
+        pending = '';
         break;
       }
 
-      yield chunk;
+      const holdback = tokenPrefixOverlapLength(pending, NO_EVIDENCE_TOKEN);
+      const safeToYield = pending.slice(0, pending.length - holdback);
+      if (safeToYield) {
+        yield safeToYield;
+        pending = pending.slice(safeToYield.length);
+      }
     }
 
     // 6. 근거 부재 처리
     if (noEvidence) {
       // 서버 상수 문구로 치환 (FR-QNA-004 🚦)
       yield NO_EVIDENCE_MESSAGE;
+    } else if (pending) {
+      // 스트림이 끝날 때까지 토큰과 안 겹친 보류분 — 정상 답변의 마지막 조각이다
+      yield pending;
     }
 
     // 6-1. 대화 이력 기록 — conversationId가 있을 때만 (resolveConversation이 미리 정함)
@@ -166,6 +217,7 @@ export async function* handleQuery(
       book_id: bookId,
       cutoff_page: K,
       query,
+      quote,
       input_records: {
         chapter_summaries: context.chapter_summaries.map((ch) => ch.title),
         current_chapter_pages: [], // TODO

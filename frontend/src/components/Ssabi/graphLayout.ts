@@ -216,8 +216,8 @@ export function forceLayout(
     // 실제 원인). 거리에 비례하는(dist/k) 스프링형 인력으로 바꾸면 같은 간선이라도
     // 멀어질 때 당기는 힘이 완만하게만 커져, 반발력이 이긴 만큼 더 퍼질 수 있다.
     for (const { a, b } of pairs) {
-      let ddx = points[a].x - points[b].x;
-      let ddy = points[a].y - points[b].y;
+      const ddx = points[a].x - points[b].x;
+      const ddy = points[a].y - points[b].y;
       let dist = Math.hypot(ddx, ddy);
       if (dist < 0.01) dist = 0.01;
       const force = dist / k;

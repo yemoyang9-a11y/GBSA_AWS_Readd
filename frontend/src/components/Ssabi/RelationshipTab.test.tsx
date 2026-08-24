@@ -95,4 +95,17 @@ describe('RelationshipTab', () => {
     expect(screen.queryByText('정주사')).not.toBeInTheDocument();
     expect(screen.queryByText('부녀')).not.toBeInTheDocument();
   });
+
+  it('인물 카드는 brief 톤 카드 스타일을 쓴다 (미선택 상태)', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+    const people = screen.getByRole('region', { name: '인물' });
+    const card = within(people).getByText('정주사').closest('button')!;
+    expect(card.className).toContain('bg-white');
+    expect(card.className).toContain('border-brief-rule');
+  });
+
+  it('되감기 슬라이더는 brief-accent 를 쓴다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+    expect(screen.getByLabelText('시점 되감기').className).toContain('accent-brief-accent');
+  });
 });

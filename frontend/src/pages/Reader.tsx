@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -10,6 +10,7 @@ import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
 import { useSsabiData } from '../hooks/useSsabiData';
 import { useHeartbeat } from '../hooks/useHeartbeat';
+import { usePanelResize } from '../hooks/usePanelResize';
 import { useSSE } from '../hooks/useSSE';
 import { useChatConversation } from '../hooks/useChatConversation';
 import { nextSeq } from '../utils/seq';
@@ -49,6 +50,12 @@ export default function Reader() {
    *   만족시키려면 조회 effect 들의 조건에 이 상태를 넣어야 한다 — 추가 기능 작업에서 처리.
    */
   const [panelOpen, setPanelOpen] = useState(false);
+
+  const appRef = useRef<HTMLDivElement>(null);
+  const { width: panelWidth, isDragging, handleProps } = usePanelResize({
+    minWidth: 380,
+    getMaxWidth: () => (appRef.current ? Math.round(appRef.current.clientWidth * 0.5) : 380),
+  });
 
   /**
    * 본문 드래그 선택 → 챗봇 인용. token 은 같은 문장을 연달아 다시 선택해도 SsabiPanel의
@@ -97,6 +104,7 @@ export default function Reader() {
     error: recapError,
     appliedCutoff: recapAppliedCutoff,
     consume: consumeRecap,
+    resetAppliedCutoff: resetRecapAppliedCutoff,
   } = useSSE();
   const {
     turns: chatTurns,
@@ -109,13 +117,22 @@ export default function Reader() {
     newChat: startNewChat,
     toggleHistory: toggleChatHistory,
     selectConversation: selectChatConversation,
+    resetAppliedCutoff: resetChatAppliedCutoff,
   } = useChatConversation(bookId);
   /**
-   * 패널 헤더에 보여줄 "확인된 기준점". 리캡(R2 확정 필드)을 우선하고, 아직 리캡을 열지
-   * 않았다면 챗봇 쪽 값을 쓴다. 관계도 탭은 계약에 이 값이 아직 없어(GraphResponse TODO)
-   * 관계도만 본 상태에서는 표시할 수 없다 — 프론트가 K를 계산해서 채우지 않는다(절대 규칙 2번).
+   * progress 응답이 실어 온 확인된 기준점 (2026-08-24, 사용자 요청 — 리캡·챗봇을 안 열어도
+   * 페이지 넘길 때마다 배지가 최신으로 갱신되길 원함). sendProgress는 이미 페이지가 열릴
+   * 때마다 무조건 나가므로(FR-PRG-002), 리캡·챗봇보다 갱신이 훨씬 잦다.
    */
-  const panelAppliedCutoff = recapAppliedCutoff ?? chatAppliedCutoff;
+  const [progressAppliedCutoff, setProgressAppliedCutoff] = useState<number | null>(null);
+
+  /**
+   * 패널 헤더에 보여줄 "확인된 기준점". 리캡·챗봇(그 탭을 실제로 열어 확인한 값)을
+   * 우선하고, 아직 둘 다 없으면 progress 응답값으로 채운다. 관계도 탭은 계약에 이 값이
+   * 아직 없어(GraphResponse TODO) 셋 다 없으면 표시할 수 없다 — 어느 경우든 프론트가
+   * K를 계산해서 채우지 않는다(절대 규칙 2번) — 셋 다 서버가 확인해 준 값 그대로다.
+   */
+  const panelAppliedCutoff = recapAppliedCutoff ?? chatAppliedCutoff ?? progressAppliedCutoff;
   const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
 
   /**
@@ -141,11 +158,30 @@ export default function Reader() {
     [bookId]
   );
 
+  /**
+   * "Np까지 확인" 배지는 리캡·챗봇이 확인해 준 값을 유지만 하고 스스로 지우지 않는다
+   * (useSSE·useChatConversation 주석) — 그래서 예전 페이지에서 리캡을 한 번 열어 두고
+   * 관계도 탭으로 옮긴 채 계속 다음 페이지로 넘기면, 리캡·챗봇을 다시 열기 전까지 배지가
+   * 옛 페이지의 숫자를 그대로 붙들고 있었다. 페이지가 바뀌면 그 값부터 비운다 — 프론트가
+   * 새 숫자를 계산해서 채우는 게 아니라(절대 규칙 2번), 다음에 리캡·챗봇이 확인해 줄
+   * 때까지 배지를 안 보여주는 쪽으로 처리한다(critique P1 정책 그대로).
+   */
+  useEffect(() => {
+    resetRecapAppliedCutoff();
+    resetChatAppliedCutoff();
+    setProgressAppliedCutoff(null);
+  }, [currentPage, resetRecapAppliedCutoff, resetChatAppliedCutoff]);
+
   useEffect(() => {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     loadPage(currentPage);
-    // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
-    sendProgress(bookId, currentPage);
+    // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005) — 응답은
+    // 기다리지 않는다(넘김을 막지 않음). 배지 갱신은 응답이 오면 뒤늦게 반영될 뿐이다.
+    // 서버가 매번 "현재 저장된 위치" 기준으로 다시 조회해 응답하므로, 여러 요청이 뒤섞여
+    // 순서가 바뀌어 도착해도 항상 최신 진실을 반환한다 — 프론트가 순서를 맞출 필요가 없다.
+    void sendProgress(bookId, currentPage).then((cutoff) => {
+      if (cutoff !== null) setProgressAppliedCutoff(cutoff);
+    });
   }, [bookId, currentPage, loadPage]);
 
   // 리캡 탭을 열면 그 시점 기준점으로 받는다. 페이지가 바뀌면 다시 받는다 (FR-SVB-003)
@@ -155,17 +191,17 @@ export default function Reader() {
   }, [tab, bookId, currentPage, consumeRecap]);
 
   const handleAsk = useCallback(
-    (query: string) => {
+    (query: string, quote?: string) => {
       if (currentPage === null) return;
-      void askChat(query, currentPage, nextSeq());
+      void askChat(query, currentPage, nextSeq(), quote);
     },
     [askChat, currentPage]
   );
 
   if (entryError) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-        <p role="alert" className="text-[13px] text-muted">
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
+        <p role="alert" className="text-[13px] text-brief-muted">
           읽기를 시작하지 못했습니다
         </p>
         <Button onClick={loadEntry}>다시 시도</Button>
@@ -176,8 +212,8 @@ export default function Reader() {
   if (!page) {
     if (pageError) {
       return (
-        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-          <p role="alert" className="text-[13px] text-muted">
+        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
+          <p role="alert" className="text-[13px] text-brief-muted">
             페이지를 불러오지 못했습니다
           </p>
           <Button onClick={() => currentPage !== null && loadPage(currentPage)}>다시 시도</Button>
@@ -188,33 +224,27 @@ export default function Reader() {
   }
 
   return (
-    <div className="relative flex h-screen flex-col bg-canvas">
+    <div ref={appRef} className="relative flex h-screen flex-col bg-brief-page">
       {/*
-       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(72px)
-       * 아래, 패널 헤더의 "싸비의 가이드북"과 같은 줄, 화면 우측에서 24px.
-       * 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고, top-bar 안에 두면
-       * 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
+       * 싸비 여닫기 버튼. **열림/닫힘과 무관하게 늘 같은 자리**에 있다 — top-bar(64px)
+       * 아래, 화면 우측에서 24px. 패널 안에 두면 닫는 순간 버튼도 사라져 다시 열 수 없고,
+       * top-bar 안에 두면 열고 닫을 때 버튼이 위아래로 튄다. 그래서 흐름 밖에 고정한다.
        */}
-      <div className="absolute right-6 top-24 z-10">
+      <div className="absolute right-6 top-20 z-10">
         <SsabiToggleButton open={panelOpen} onToggle={() => setPanelOpen((open) => !open)} />
       </div>
 
-      <div className="flex h-[72px] shrink-0 items-center border-b border-line px-8">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="뒤로 가기"
-            className="flex size-8 items-center justify-center rounded-full border border-line bg-surface text-ink transition-opacity hover:opacity-60"
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-          <div className="flex flex-col gap-0.5">
-            <span className="font-serif text-lg font-bold tracking-widest text-ink">RE:ADD</span>
-            <span className="text-xs text-muted">탁류</span>
-          </div>
-        </div>
-
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="뒤로 가기"
+          className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+        >
+          <span aria-hidden="true" className="text-base">
+            ‹
+          </span>
+        </button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -231,7 +261,20 @@ export default function Reader() {
         </div>
 
         {panelOpen ? (
-          <aside id="ssabi-panel" className="w-[420px] shrink-0">
+          <aside
+            id="ssabi-panel"
+            style={{ width: panelWidth, flexBasis: panelWidth }}
+            className={`relative shrink-0 border-l border-brief-rule ${isDragging ? '' : 'transition-[width]'}`}
+          >
+            <div
+              {...handleProps}
+              className={`absolute -left-[5px] top-0 z-10 flex h-full w-[10px] cursor-col-resize items-center justify-center ${isDragging ? 'select-none' : ''}`}
+            >
+              <span
+                aria-hidden="true"
+                className={`w-[3px] rounded-full bg-brief-rule transition-all ${isDragging ? 'h-[52px] bg-brief-ink' : 'h-9'}`}
+              />
+            </div>
             <SsabiPanel
               sessionEpoch={session?.session_epoch ?? 0}
               appliedCutoff={panelAppliedCutoff}
