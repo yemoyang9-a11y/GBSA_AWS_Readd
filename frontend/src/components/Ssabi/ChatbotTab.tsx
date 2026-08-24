@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
+import ssabiFace from '../../assets/images/ssabi-face.png';
 
 /**
  * 챗봇 탭 — SSE 스트리밍 (NFR-PERF-008) — 재설계 2026-08-23 (`.reader-scr .a-thread`)
@@ -16,8 +17,15 @@ import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../
  * accent 테두리)을 다른 처리로 구분한다 — 정렬만으로는 좁은 패널에서 화자 구분이 약하다는
  * critique P2(2026-08-21) 판단을 그대로 잇는다.
  *
- * 아바타는 텍스트 "싸" 대신 마스코트 이미지(`/assets/ssabi-face.png`, 사용자 제공 원본을
- * public/assets로 복사)를 쓴다(2026-08-24). 답변이 여러 개(대화 이력)여도 답변마다 그린다.
+ * 아바타는 텍스트 "싸" 대신 마스코트 이미지를 쓴다(2026-08-24). 답변이 여러 개(대화
+ * 이력)여도 답변마다 그린다.
+ *
+ * 이미지는 public/assets가 아니라 src/assets에 두고 import한다(2026-08-25) — public의
+ * 정적 파일은 배포 시 파일명이 안 바뀌는데 CloudFront가 이 경로에 1년 캐시를 걸어서,
+ * 이미지를 바꿔도(이번 세션에서만 세 번 있었다: 원본→빨강→오렌지) 이미 한 번 받아본
+ * 브라우저는 예전 버전을 계속 캐시에서 꺼내 썼다. src/assets에서 import하면 Vite가
+ * 빌드마다 내용 해시를 파일명에 붙여서, 이미지가 바뀔 때 URL 자체가 바뀌어 캐시가
+ * 자동으로 무효화된다.
  *
  * 답변 말풍선은 `answer`가 있을 때만 그린다(polish, 2026-08-21) — 예전엔 무조건 그려서
  * 질문을 하기도 전에(챗봇 탭을 열자마자) 속이 빈 말풍선이 떠 있었다.
@@ -146,7 +154,7 @@ export default function ChatbotTab({
               ) : (
                 <div key={i} className="flex items-end gap-2">
                   <img
-                    src="/assets/ssabi-face.png"
+                    src={ssabiFace}
                     alt=""
                     aria-hidden="true"
                     className="h-9 w-auto shrink-0 translate-y-3 object-contain"

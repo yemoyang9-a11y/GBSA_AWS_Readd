@@ -8,7 +8,9 @@ describe('ChatbotTab', () => {
       <ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />
     );
     expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-brief-accent');
-    expect(container.querySelector('img')).toHaveAttribute('src', '/assets/ssabi-face.png');
+    // Vite가 빌드마다 파일명에 해시를 붙이므로(캐시 버스팅, 2026-08-25) 정확한 경로 대신
+    // 파일명만 확인한다.
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
   });
 
   it('polish: 답변이 없으면(질문 전) 빈 말풍선을 그리지 않는다', () => {
