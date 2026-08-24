@@ -48,10 +48,12 @@ import {
 // 감싸는 프레임 밖으로 튀어나온다"(CHAR_PX가 실제보다 작아 라벨 박스가 좁게
 // 잡혔던 것) 같은 계산-실측 어긋남이 다시 안 생긴다.
 const KOREAN_CHAR_WIDTH_RATIO = 0.94;
-const NAME_FONT_PX = 17;
+// 2026-08-25 (3차) — "여전히 좀 난잡해 보인다" 피드백으로 전체 글자 크기를 한 단계
+// 낮춘다(17→15, 12→10). CHAR_PX는 위 비율로 자동 재계산되니 손대지 않아도 된다.
+const NAME_FONT_PX = 15;
 const NAME_CHAR_PX = NAME_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 // 관계 라벨은 이름보다 한 단계 작게 — 인물명이 우선이라는 위계를 글자 크기로도 드러낸다.
-const EDGE_LABEL_FONT_PX = 12;
+const EDGE_LABEL_FONT_PX = 10;
 const EDGE_LABEL_CHAR_PX = EDGE_LABEL_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
@@ -316,6 +318,11 @@ export default function RelationshipGraph({
   // 고정(원·글씨 비율은 항상 같지만 축소해도 원이 안 작아져 밋밋함). 0.5는 그 중간 —
   // 축소하면 원도 조금은 작아지되 글씨보다는 덜 작아진다. 100% 기준에서는 지수와
   // 무관하게 항상 1이라 지금까지 확정한 기본 크기는 그대로다.
+  //
+  // 2026-08-25 (3차) — 글자는 그동안 이 배율을 안 타고 완전히 고정(지수 1)이었는데,
+  // 그러면 원(지수 0.5)과 글자(지수 1)가 서로 다른 속도로 움직여 축소할 때 또 어긋난다.
+  // "글자 크기도 같이 조정되도록" 피드백대로 글자도 같은 nodeScale을 타게 한다 —
+  // 100%에서는 항상 1이라 기본 크기(위에서 낮춘 15/10)는 그대로 유지된다.
   const NODE_ZOOM_DAMPING = 0.5;
   const nodeScale = Math.pow(k / unit0(), NODE_ZOOM_DAMPING);
 
@@ -326,8 +333,8 @@ export default function RelationshipGraph({
     const boxes: (LabelBox & { id: string })[] = graph.nodes.map((node, i) => {
       const p = positions[i];
       const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
-      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k) + 4 * k;
-      const height = (NAME_FONT_PX + 4) * k;
+      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k * nodeScale) + 4 * k;
+      const height = (NAME_FONT_PX * nodeScale + 4) * k;
       const isSelected = node.id === validSelectedId;
       const isNeighbor = neighborIds.has(node.id);
       return {
@@ -370,8 +377,8 @@ export default function RelationshipGraph({
         const dx = far.x - near.x;
         const dy = far.y - near.y;
         const len = Math.hypot(dx, dy) || 1;
-        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k) + 10 * k;
-        const height = (EDGE_LABEL_FONT_PX + 7) * k;
+        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k * nodeScale) + 10 * k;
+        const height = (EDGE_LABEL_FONT_PX * nodeScale + 7) * k;
         const dist = Math.max(26 * k, Math.min(len * 0.62, len - 22 * k));
         const cx = near.x + (dx / len) * dist;
         const cy = near.y + (dy / len) * dist;
@@ -390,7 +397,7 @@ export default function RelationshipGraph({
     }));
     const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
     return candidates.filter((c) => kept.has(c.key));
-  }, [validSelectedId, graph.nodes, graph.edges, positions, k, nameLabelBoxes]);
+  }, [validSelectedId, graph.nodes, graph.edges, positions, k, nodeScale, nameLabelBoxes]);
 
   return (
     <div
@@ -455,7 +462,7 @@ export default function RelationshipGraph({
                 y={label.cy + label.height / 2 - 2.6 * k}
                 textAnchor="middle"
                 className="fill-brief-accent font-dashSans"
-                style={{ fontSize: EDGE_LABEL_FONT_PX * k }}
+                style={{ fontSize: EDGE_LABEL_FONT_PX * k * nodeScale }}
               >
                 {label.label}
               </text>
@@ -492,21 +499,26 @@ export default function RelationshipGraph({
                 opacity={dimmed ? 0.2 : 1}
               >
                 <circle cx={p.x} cy={p.y} r={r + 13 * k} fill="transparent" />
+                {/* 2026-08-25 — 그냥 회색 원이라 "성의없어 보인다"는 피드백. 브랜드 액센트
+                    (보라)를 옅게 채우고 테두리를 둘러 "핀" 느낌을 준다 — 새 색을 추가하지
+                    않고 이미 쓰는 brief-accent 톤 하나로 선택/인접/기본 3단계를 표현한다. */}
                 <circle
                   cx={p.x}
                   cy={p.y}
                   r={r}
-                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-ink/45'} ${isNeighbor ? 'stroke-brief-accent' : ''}`}
-                  strokeWidth={isNeighbor ? 2.8 * k : 0}
+                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-accent/25'} ${
+                    isNeighbor ? 'stroke-brief-accent' : 'stroke-brief-accent/45'
+                  }`}
+                  strokeWidth={(isNeighbor ? 2.8 : 1) * k}
                 />
                 {nameLabels.has(node.id) ? (
                   <text
                     x={p.x}
-                    y={p.y + r + NAME_FONT_PX * k + 2 * k}
+                    y={p.y + r + NAME_FONT_PX * k * nodeScale + 2 * k}
                     textAnchor="middle"
                     className="fill-brief-ink stroke-white font-dashSerif font-semibold"
                     style={{
-                      fontSize: NAME_FONT_PX * k,
+                      fontSize: NAME_FONT_PX * k * nodeScale,
                       paintOrder: 'stroke',
                       strokeWidth: 3 * k,
                       strokeLinejoin: 'round',
