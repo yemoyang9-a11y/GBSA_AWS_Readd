@@ -50,7 +50,7 @@ async function main(): Promise<void> {
 
   const recap = await injectDemoRecap(
     pool,
-    (prompt) => call('recap', prompt),
+    (prompt) => call('recap', prompt, { maxTokens: 2048 }), // 분량 안전망 — recap.service.ts RECAP_MAX_TOKENS_SAFETY와 동일 값
     (raw) => parseJsonResponse<{ recap: string }>(raw),
     { deviceId: DEVICE_ID, bookId: BOOK_ID, cutoff, title: '탁류', author: '채만식' }
   );

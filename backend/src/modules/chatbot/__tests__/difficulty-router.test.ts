@@ -9,14 +9,13 @@ import { selectModel } from '../difficulty-router';
 
 describe('난이도 라우팅', () => {
   describe('Sonnet 선택 (복잡한 질의)', () => {
-    test('긴 질의 (100자 초과)는 Sonnet', () => {
-      // 100자 초과 + 복잡도 키워드 없는 질의
+    test('길이만 긴 질의는 더 이상 Sonnet 기준이 아님 (의도 기반으로 변경)', () => {
+      // 100자를 넘지만 복잡도/요약 키워드도 다중 질문도 없는 질의 → Haiku
       const longQuery = '1234567890'.repeat(11); // 110자
 
       const result = selectModel(longQuery);
 
-      expect(result.model).toBe('sonnet');
-      expect(result.reason).toContain('긴 질문');
+      expect(result.model).toBe('haiku');
     });
 
     test('복잡도 키워드 포함 시 Sonnet', () => {
@@ -35,28 +34,52 @@ describe('난이도 라우팅', () => {
 
     test('다중 질문 (? 2개 이상)은 Sonnet', () => {
       // 복잡도 키워드 없는 다중 질문
-      const multiQuery = '초봉이가 고향이 어디인가요? 그리고 나이는 몇 살인가요?';
+      const multiQuery = '초봉이가 고향이 언제부터 여기였나요? 그리고 나이는 몇 살인가요?';
 
       const result = selectModel(multiQuery);
 
       expect(result.model).toBe('sonnet');
       expect(result.reason).toContain('다중 질의');
     });
+
+    test('요약 의도라도 추론 키워드가 있으면 Sonnet이 우선', () => {
+      const result = selectModel('지금까지 왜 이런 흐름으로 흘러갔는지 요약해줘');
+
+      expect(result.model).toBe('sonnet');
+      expect(result.reason).toContain('복잡한 추론 키워드');
+    });
   });
 
   describe('Haiku 선택 (단순한 질의)', () => {
-    test('짧고 단순한 질의는 Haiku', () => {
-      const simpleQueries = [
-        '초봉이가 누구인가요?',
-        '정주사는 무슨 일을 하나요?',
-        '이 장면은 어디인가요?',
+    test('요약·단순 조회 의도는 Haiku', () => {
+      const summaryQueries = [
+        '지금까지 읽은 내용 요약해줘',
+        '여기까지 정리해줘',
+        '간단히 알려줘',
       ];
+
+      summaryQueries.forEach((query) => {
+        const result = selectModel(query);
+        expect(result.model).toBe('haiku');
+        expect(result.reason).toContain('단순 조회/요약 의도');
+      });
+    });
+
+    test('단순 인물/사실 조회는 Haiku', () => {
+      const simpleQueries = ['초봉이가 누구인가요?', '이 장면은 어디인가요?'];
 
       simpleQueries.forEach((query) => {
         const result = selectModel(query);
         expect(result.model).toBe('haiku');
-        expect(result.reason).toContain('단순 질의');
+        expect(result.reason).toContain('단순 조회/요약 의도');
       });
+    });
+
+    test('키워드에 안 걸리는 짧은 질의는 기본값 Haiku', () => {
+      const result = selectModel('정주사는 무슨 일을 하나요?');
+
+      expect(result.model).toBe('haiku');
+      expect(result.reason).toContain('단순 질의');
     });
 
     test('빈 문자열은 Haiku (기본값)', () => {

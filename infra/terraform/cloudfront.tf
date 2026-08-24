@@ -1,3 +1,13 @@
+# SPA 라우팅 폴백 — 확장자 없는 요청(React Router 라우트)을 index.html로 넘긴다.
+# default_cache_behavior(S3 오리진)에만 붙여서 /api/* 동작에는 영향 없다.
+resource "aws_cloudfront_function" "spa_routing" {
+  name    = "${var.project_name}-spa-routing"
+  runtime = "cloudfront-js-2.0"
+  comment = "SPA fallback: extensionless requests -> /index.html"
+  publish = true
+  code    = file("${path.module}/functions/spa-routing.js")
+}
+
 # CloudFront Origin Access Control for S3
 resource "aws_cloudfront_origin_access_control" "web" {
   name                              = "${var.project_name}-web-oac"
@@ -61,6 +71,11 @@ resource "aws_cloudfront_distribution" "main" {
     min_ttl     = 0
     default_ttl = 3600
     max_ttl     = 86400
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_routing.arn
+    }
   }
 
   # API behavior - /api/* to ALB

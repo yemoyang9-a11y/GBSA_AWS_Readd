@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/R4-query-endpoints
     paths:
       - 'backend/**'
       - '.github/workflows/deploy-backend.yml'
