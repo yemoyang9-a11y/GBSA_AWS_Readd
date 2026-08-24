@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-08-24T04:34:06.135Z",
+        "reason": "리더/브리핑/싸비 화면 캡션·배지류에 일관되게 쓰는 마이크로 사이즈, DESIGN.md 램프 미기재 (사용자 승인)"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-08-24T04:34:15.479Z",
+        "reason": "동일 — 캡션류 마이크로 사이즈 (사용자 승인)"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10.5px",
+        "createdAt": "2026-08-24T04:34:15.563Z",
+        "reason": "동일 — 캡션류 마이크로 사이즈 (사용자 승인)"
+      }
+    ]
+  }
+}
