@@ -155,9 +155,9 @@ export default function Reader() {
   }, [tab, bookId, currentPage, consumeRecap]);
 
   const handleAsk = useCallback(
-    (query: string) => {
+    (query: string, quote?: string) => {
       if (currentPage === null) return;
-      void askChat(query, currentPage, nextSeq());
+      void askChat(query, currentPage, nextSeq(), quote);
     },
     [askChat, currentPage]
   );

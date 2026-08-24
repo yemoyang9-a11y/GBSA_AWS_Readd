@@ -29,13 +29,20 @@ export function useChatConversation(bookId: string) {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const ask = useCallback(
-    async (query: string, page: number, seq: number) => {
+    async (query: string, page: number, seq: number, quote?: string) => {
       setError(null);
       setStreaming(true);
       setTurns((prev) => [...prev, { role: 'user', text: query }, { role: 'assistant', text: '' }]);
 
       try {
-        for await (const frame of askChatbot(bookId, query, page, seq, conversationId ?? undefined)) {
+        for await (const frame of askChatbot(
+          bookId,
+          query,
+          page,
+          seq,
+          conversationId ?? undefined,
+          quote
+        )) {
           if (frame.type === 'delta') {
             setTurns((prev) => {
               const next = [...prev];

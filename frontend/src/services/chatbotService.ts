@@ -19,7 +19,8 @@ export async function* askChatbot(
   query: string,
   page: number,
   seq: number,
-  conversationId?: number
+  conversationId?: number,
+  quote?: string
 ): AsyncGenerator<SseFrame> {
   if (USE_MOCK) {
     const { mockStreamFrames, mockChatAnswer } = await import('../../mocks/server');
@@ -30,7 +31,7 @@ export async function* askChatbot(
   const response = await fetch(`${API_BASE_URL}/books/${bookId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() ?? '' },
-    body: JSON.stringify({ query, page, seq, conversationId }),
+    body: JSON.stringify({ query, quote, page, seq, conversationId }),
   });
 
   if (response.status === 429) {

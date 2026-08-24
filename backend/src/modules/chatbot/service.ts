@@ -35,9 +35,10 @@ const SYSTEM_RULES = `
 ## 중요 제약사항
 
 1. **근거 외 생성 금지** (NFR-AI-005):
-   - 오직 아래 "근거 데이터"에 포함된 정보만 사용하세요
+   - 오직 아래 "근거 데이터"·"검색 결과"·"사용자가 지금 보고 있는 본문 인용"(있는 경우)에
+     포함된 정보만 사용하세요
    - 당신의 사전 지식을 사용하지 마세요
-   - 근거에 없는 내용은 절대 추론하거나 생성하지 마세요
+   - 그 세 곳에 없는 내용은 절대 추론하거나 생성하지 마세요
 
 2. **근거 부재 처리**:
    - 질문에 답할 근거가 충분하지 않으면 "${NO_EVIDENCE_TOKEN}" 토큰을 응답하세요
@@ -69,6 +70,10 @@ const SYSTEM_RULES = `
  * @param deviceId - 디바이스 ID (로그용)
  * @param conversationId - 대화 이력에 기록할 대상 (resolveConversation이 미리 정한 값).
  *   생략하면 대화 이력에 기록하지 않는다 — 기존 호출부·테스트 하위 호환용.
+ * @param quote - 본문 드래그 인용(신규 UX). 사용자가 읽기 화면에서 직접 선택한 문장 그대로다 —
+ *   이미 화면에 떠 있는(R3: 본문 접근 무제한) 텍스트라 K 상한과 무관하게 프롬프트에
+ *   "본문 인용" 섹션으로 별도 주입한다. K로 강제하는 근거 조립(assembleContext)·검색
+ *   (vectorSearch) 범위는 그대로 두고 건드리지 않는다 — R1/FR-PRG-003 🚦은 불변.
  * @yields 텍스트 청크
  *
  * @example
@@ -81,7 +86,8 @@ export async function* handleQuery(
   query: string,
   K: number,
   deviceId: string,
-  conversationId?: number
+  conversationId?: number,
+  quote?: string
 ): AsyncGenerator<string> {
   let noEvidence = false;
 
@@ -104,6 +110,13 @@ export async function* handleQuery(
       searchResults.forEach((result) => {
         fullPrompt += `### p.${result.page_no}\n${result.content}\n\n`;
       });
+    }
+
+    // 3-0. 본문 드래그 인용 — 사용자가 지금 화면에서 직접 고른 문장. K로 자르지 않는다
+    // (R3: 본문 접근 무제한). "근거 데이터"·"검색 결과"와는 출처가 다르므로 별도 섹션으로
+    // 둔다 — assembleContext/vectorSearch의 K 상한과는 완전히 무관한 경로다.
+    if (quote) {
+      fullPrompt += `\n\n## 사용자가 지금 보고 있는 본문 인용\n\n"${quote}"\n\n(사용자가 읽기 화면에서 직접 선택한 문장입니다. 위 "근거 데이터"·"검색 결과"에 없어도 이 인용문 자체는 답변에 활용하세요.)`;
     }
 
     // 3-1. 이전 대화 맥락 (conversationId가 있을 때만) — "지난 대화를 기억하는 답변"
@@ -166,6 +179,7 @@ export async function* handleQuery(
       book_id: bookId,
       cutoff_page: K,
       query,
+      quote,
       input_records: {
         chapter_summaries: context.chapter_summaries.map((ch) => ch.title),
         current_chapter_pages: [], // TODO
