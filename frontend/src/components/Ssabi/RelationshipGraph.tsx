@@ -39,13 +39,20 @@ import {
  * 보여주는 쪽이 더 낫다. 항상 보이는 "관계" 텍스트 목록은 RelationshipTab이 맡는다.
  */
 
-// 2026-08-25 — "글씨가 작다"(1차) → 14/12로 올렸는데 "꽤 더 키워야" 재요청. CHAR_PX
-// (글자당 너비 어림)도 같이 올려야 라벨 충돌회피(pickNonOverlapping)가 실제 렌더
-// 너비와 어긋나지 않는다 — 어긋나면 겹치는데 안 숨기거나, 안 겹치는데 숨기는 쪽으로 튄다.
+// 2026-08-25 — "글씨가 작다"(1차) → 14/12로 올렸는데 "꽤 더 키워야" 재요청, 그 다음
+// "관계 글자는 이름보다 작아도 된다"는 재조정 요청까지 세 차례 거쳤다. CHAR_PX(글자당
+// 너비 어림)를 매번 감으로 골랐던 게 문제였다 — 실제 렌더된 <text>의
+// getComputedTextLength()를 재보니(2026-08-25, 실데이터 인물명·관계 라벨로 측정)
+// 한글 글자 너비는 글꼴 크기의 약 0.94배로 거의 일정했다. 매번 새 폰트 크기마다
+// CHAR_PX를 따로 어림하지 않도록 폰트 크기에서 직접 계산한다 — 그래야 "관계 라벨이
+// 감싸는 프레임 밖으로 튀어나온다"(CHAR_PX가 실제보다 작아 라벨 박스가 좁게
+// 잡혔던 것) 같은 계산-실측 어긋남이 다시 안 생긴다.
+const KOREAN_CHAR_WIDTH_RATIO = 0.94;
 const NAME_FONT_PX = 17;
-const NAME_CHAR_PX = 9.4;
-const EDGE_LABEL_FONT_PX = 14;
-const EDGE_LABEL_CHAR_PX = 9;
+const NAME_CHAR_PX = NAME_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
+// 관계 라벨은 이름보다 한 단계 작게 — 인물명이 우선이라는 위계를 글자 크기로도 드러낸다.
+const EDGE_LABEL_FONT_PX = 12;
+const EDGE_LABEL_CHAR_PX = EDGE_LABEL_FONT_PX * KOREAN_CHAR_WIDTH_RATIO;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
 // clampViewBox 의 팬 여유는 (1 + 2*PAN_MARGIN_RATIO)*base.width 까지만 뷰박스를 허용한다.
@@ -175,6 +182,15 @@ export default function RelationshipGraph({
     return Math.max(viewBox.width / widthPx, viewBox.height / heightPx);
   };
 
+  // 100%(fit) 상태 기준 k — 노드 원을 이 값 대비로 스케일해 "글자처럼" 화면상 크기를
+  // 고정한다(아래 nodeScale 참고).
+  const unit0 = () => {
+    const el = wrapRef.current;
+    const widthPx = el?.clientWidth || 1;
+    const heightPx = el?.clientHeight || 1;
+    return Math.max(base.width / widthPx, base.height / heightPx);
+  };
+
   function zoomAt(clientX: number, clientY: number, factor: number) {
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -292,6 +308,12 @@ export default function RelationshipGraph({
   }, []);
 
   const k = unit();
+  // 노드 원 확대·축소 배율 — 축소(k > k0)하면 커지고 확대(k < k0)하면 작아져, 화면상
+  // 크기가 100% 기준으로 항상 일정하게 유지된다. 라벨(NAME_FONT_PX*k)과 똑같은 원리다.
+  // 이게 없으면(예전) 원은 순수 유닛값이라 축소할수록 점점 작아지는데 글자는 그대로라,
+  // "축소하면 노드는 너무 작아지고 글씨는 너무 커 보인다"는 피드백(2026-08-25)의 원인이
+  // 됐다 — 100% 기준에선 nodeScale이 1이라 지금까지 확정한 크기와 동일하게 보인다.
+  const nodeScale = k / unit0();
 
   // 인물명 라벨 박스 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
   // 관계 라벨(아래)이 이 중 실제로 보이는 라벨과 안 겹치게 하려면 살아남은 박스
@@ -299,7 +321,7 @@ export default function RelationshipGraph({
   const nameLabelBoxes = useMemo(() => {
     const boxes: (LabelBox & { id: string })[] = graph.nodes.map((node, i) => {
       const p = positions[i];
-      const r = nodeRadius(degree.get(node.id) ?? 0);
+      const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
       const width = estimateTextWidth(node.name, NAME_CHAR_PX * k) + 4 * k;
       const height = (NAME_FONT_PX + 4) * k;
       const isSelected = node.id === validSelectedId;
@@ -315,7 +337,7 @@ export default function RelationshipGraph({
     });
     return pickNonOverlapping(boxes);
     // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
-  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k]);
+  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, nodeScale]);
 
   const nameLabels = useMemo(
     () => new Set(nameLabelBoxes.map((b) => b.id)),
@@ -440,7 +462,7 @@ export default function RelationshipGraph({
         <g>
           {graph.nodes.map((node, i) => {
             const p = positions[i];
-            const r = nodeRadius(degree.get(node.id) ?? 0);
+            const r = nodeRadius(degree.get(node.id) ?? 0) * nodeScale;
             const isSelected = node.id === validSelectedId;
             const isNeighbor = neighborIds.has(node.id);
             const dimmed = validSelectedId !== null && !isSelected && !isNeighbor;
