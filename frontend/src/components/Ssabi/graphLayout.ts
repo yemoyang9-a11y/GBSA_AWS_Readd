@@ -103,9 +103,14 @@ export function centralNodeIndex(
   return best;
 }
 
-const MIN_RADIUS = 14;
-const MAX_RADIUS = 26;
-const RADIUS_STEP = 2.4;
+/**
+ * 2026-08-25 — 최소·최대 차이가 너무 커서(14~26, 약 1.9배) 연결 수 적은 인물이 눈에
+ * 잘 안 띄고 화면이 들쭉날쭉해 보인다는 피드백. 범위를 좁히고(16~20) 완만하게 키워
+ * "중요도가 크기에 드러나긴 하지만 튀지는 않는" 정도로 낮춘다.
+ */
+const MIN_RADIUS = 16;
+const MAX_RADIUS = 20;
+const RADIUS_STEP = 0.5;
 
 /** 연결 수가 많을수록 큰 원 — 상한을 둔다(주인공이라고 화면을 절반 잡아먹지 않는다). */
 export function nodeRadius(degree: number): number {
@@ -227,7 +232,51 @@ export function forceLayout(
     temperature = Math.max(0, temperature - cooling);
   }
 
+  // 겹침 제거 후처리 (2026-08-25) — 위 힘-분산은 노드를 점으로만 다뤄서, 실제 렌더
+  // 반경이 큰(연결 수 많은) 노드들이 서로의 "이상적인 거리" 안에서도 원끼리는 겹칠 수
+  // 있었다("여전히 겹치는 노드가 많다" 피드백). 실제 반경 합만큼 떨어지도록 직접
+  // 밀어내는 별도 패스로 마무리한다 — 전체 구조(중력·간선 인력)는 이미 자리를 잡은
+  // 뒤라 이 패스는 국소적인 미세 조정만 한다.
+  const degree = computeDegrees(nodes, edges);
+  const radii = nodes.map((node) => nodeRadius(degree.get(node.id) ?? 0));
+  resolveOverlaps(points, radii);
+
   return points;
+}
+
+const OVERLAP_PADDING = 6;
+const OVERLAP_ITERATIONS = 80;
+
+/** 원끼리 반경 합(+여유)보다 가까우면 그만큼 서로 밀어낸다 — 결정적, 무작위 없음. */
+function resolveOverlaps(points: Point[], radii: number[]): void {
+  const n = points.length;
+  for (let iter = 0; iter < OVERLAP_ITERATIONS; iter += 1) {
+    let anyOverlap = false;
+    for (let i = 0; i < n; i += 1) {
+      for (let j = i + 1; j < n; j += 1) {
+        const minDist = radii[i] + radii[j] + OVERLAP_PADDING;
+        let ddx = points[i].x - points[j].x;
+        let ddy = points[i].y - points[j].y;
+        let dist = Math.hypot(ddx, ddy);
+        if (dist < 0.01) {
+          ddx = 0.01 * (i - j || 1);
+          ddy = 0.01;
+          dist = Math.hypot(ddx, ddy);
+        }
+        if (dist < minDist) {
+          anyOverlap = true;
+          const push = (minDist - dist) / 2;
+          const ux = ddx / dist;
+          const uy = ddy / dist;
+          points[i].x += ux * push;
+          points[i].y += uy * push;
+          points[j].x -= ux * push;
+          points[j].y -= uy * push;
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
 }
 
 /** 인물이 1~2명뿐일 때도 뷰박스가 너무 좁아지지 않게 두는 하한선. */
