@@ -104,6 +104,7 @@ export default function Reader() {
     error: recapError,
     appliedCutoff: recapAppliedCutoff,
     consume: consumeRecap,
+    resetAppliedCutoff: resetRecapAppliedCutoff,
   } = useSSE();
   const {
     turns: chatTurns,
@@ -116,6 +117,7 @@ export default function Reader() {
     newChat: startNewChat,
     toggleHistory: toggleChatHistory,
     selectConversation: selectChatConversation,
+    resetAppliedCutoff: resetChatAppliedCutoff,
   } = useChatConversation(bookId);
   /**
    * 패널 헤더에 보여줄 "확인된 기준점". 리캡(R2 확정 필드)을 우선하고, 아직 리캡을 열지
@@ -148,6 +150,19 @@ export default function Reader() {
     [bookId]
   );
 
+  /**
+   * "Np까지 확인" 배지는 리캡·챗봇이 확인해 준 값을 유지만 하고 스스로 지우지 않는다
+   * (useSSE·useChatConversation 주석) — 그래서 예전 페이지에서 리캡을 한 번 열어 두고
+   * 관계도 탭으로 옮긴 채 계속 다음 페이지로 넘기면, 리캡·챗봇을 다시 열기 전까지 배지가
+   * 옛 페이지의 숫자를 그대로 붙들고 있었다. 페이지가 바뀌면 그 값부터 비운다 — 프론트가
+   * 새 숫자를 계산해서 채우는 게 아니라(절대 규칙 2번), 다음에 리캡·챗봇이 확인해 줄
+   * 때까지 배지를 안 보여주는 쪽으로 처리한다(critique P1 정책 그대로).
+   */
+  useEffect(() => {
+    resetRecapAppliedCutoff();
+    resetChatAppliedCutoff();
+  }, [currentPage, resetRecapAppliedCutoff, resetChatAppliedCutoff]);
+
   useEffect(() => {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     loadPage(currentPage);
@@ -162,9 +177,9 @@ export default function Reader() {
   }, [tab, bookId, currentPage, consumeRecap]);
 
   const handleAsk = useCallback(
-    (query: string) => {
+    (query: string, quote?: string) => {
       if (currentPage === null) return;
-      void askChat(query, currentPage, nextSeq());
+      void askChat(query, currentPage, nextSeq(), quote);
     },
     [askChat, currentPage]
   );
@@ -172,7 +187,7 @@ export default function Reader() {
   if (entryError) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
-        <p role="alert" className="text-[13px] text-muted">
+        <p role="alert" className="text-[13px] text-brief-muted">
           읽기를 시작하지 못했습니다
         </p>
         <Button onClick={loadEntry}>다시 시도</Button>
@@ -184,7 +199,7 @@ export default function Reader() {
     if (pageError) {
       return (
         <div className="flex h-screen flex-col items-center justify-center gap-4 bg-brief-page px-6 text-center">
-          <p role="alert" className="text-[13px] text-muted">
+          <p role="alert" className="text-[13px] text-brief-muted">
             페이지를 불러오지 못했습니다
           </p>
           <Button onClick={() => currentPage !== null && loadPage(currentPage)}>다시 시도</Button>

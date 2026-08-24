@@ -61,7 +61,7 @@ export default function SsabiPanel({
   chatHistoryOpen: boolean;
   /** 본문에서 드래그로 인용한 문장. token 이 바뀔 때마다 챗봇 탭으로 강제 전환한다 */
   pendingQuote?: { text: string; token: number } | null;
-  onAsk: (query: string) => void;
+  onAsk: (query: string, quote?: string) => void;
   onNewChat: () => void;
   onToggleChatHistory: () => void;
   onSelectChatConversation: (conversationId: number) => void;

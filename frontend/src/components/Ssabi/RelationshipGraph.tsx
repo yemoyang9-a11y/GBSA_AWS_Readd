@@ -39,10 +39,13 @@ import {
  * 보여주는 쪽이 더 낫다. 항상 보이는 "관계" 텍스트 목록은 RelationshipTab이 맡는다.
  */
 
-const NAME_FONT_PX = 12;
-const NAME_CHAR_PX = 6.4;
-const EDGE_LABEL_FONT_PX = 10.5;
-const EDGE_LABEL_CHAR_PX = 6.6;
+// 2026-08-25 — "글씨가 작다" 피드백으로 이름·관계 라벨 폰트를 키운다. CHAR_PX(글자당
+// 너비 어림)도 같이 올려야 라벨 충돌회피(pickNonOverlapping)가 실제 렌더 너비와
+// 어긋나지 않는다 — 어긋나면 겹치는데 안 숨기거나, 안 겹치는데 숨기는 쪽으로 튄다.
+const NAME_FONT_PX = 14;
+const NAME_CHAR_PX = 7.6;
+const EDGE_LABEL_FONT_PX = 12;
+const EDGE_LABEL_CHAR_PX = 7.6;
 const MIN_ZOOM_RATIO = 0.32;
 const MAX_ZOOM_RATIO = 2.4;
 // clampViewBox 의 팬 여유는 (1 + 2*PAN_MARGIN_RATIO)*base.width 까지만 뷰박스를 허용한다.
@@ -50,6 +53,8 @@ const MAX_ZOOM_RATIO = 2.4;
 // 쪼그라들어 드래그가 전혀 안 먹는다(실기기 확인, 2026-08-24) — 0.35였을 때 한계가
 // 1.7이라 2.4까지 축소가 가능한 것과 충돌했다. 축소 한계(2.4)를 넉넉히 덮도록 올린다.
 const PAN_MARGIN_RATIO = 0.9;
+/** 포커스 확대 시 선택 인물·인접 인물 범위 바깥에 남기는 여유(라벨이 잘리지 않을 만큼) */
+const FOCUS_PADDING = 90;
 
 interface ViewBox {
   x: number;
@@ -114,20 +119,6 @@ export default function RelationshipGraph({
 
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
-  // 선택한 인물이 화면 밖이면 부드럽게 중앙으로(확대율 유지) — 목업의 select() 동작
-  useEffect(() => {
-    if (!validSelectedId) return;
-    const idx = graph.nodes.findIndex((n) => n.id === validSelectedId);
-    if (idx < 0) return;
-    const p = positions[idx];
-    setViewBox((vb) => {
-      if (p.x >= vb.x && p.x <= vb.x + vb.width && p.y >= vb.y && p.y <= vb.y + vb.height) {
-        return vb;
-      }
-      return clampViewBox({ x: p.x - vb.width / 2, y: p.y - vb.height / 2, width: vb.width, height: vb.height }, base);
-    });
-  }, [validSelectedId, graph.nodes, positions, base]);
-
   const neighborIds = useMemo(() => {
     if (!validSelectedId) return new Set<string>();
     const ids = new Set<string>();
@@ -137,6 +128,27 @@ export default function RelationshipGraph({
     }
     return ids;
   }, [validSelectedId, graph.edges]);
+
+  // 선택하면 그 인물 + 인접 인물이 보이는 범위로 중앙 이동·확대한다(2026-08-25 —
+  // 예전엔 화면 밖일 때만 팬하고 확대율은 그대로 뒀는데, "포커싱될 때 중심 이동 +
+  // 적절한 확대"를 요청받아 항상 재조정한다. 인접 인물이 없으면(고립 노드) 선택
+  // 인물 하나만 감쌀 여유만큼만 확대한다.
+  useEffect(() => {
+    if (!validSelectedId) return;
+    const idx = graph.nodes.findIndex((n) => n.id === validSelectedId);
+    if (idx < 0) return;
+    const p = positions[idx];
+    const neighborPositions = graph.nodes
+      .map((n, i) => (neighborIds.has(n.id) ? positions[i] : null))
+      .filter((q): q is Point => q !== null);
+    const pts = [p, ...neighborPositions];
+    const spanX = Math.max(...pts.map((q) => q.x)) - Math.min(...pts.map((q) => q.x));
+    const spanY = Math.max(...pts.map((q) => q.y)) - Math.min(...pts.map((q) => q.y));
+    const width = Math.max(spanX, spanY) + FOCUS_PADDING * 2;
+    setViewBox(
+      clampViewBox({ x: p.x - width / 2, y: p.y - width / 2, width, height: width }, base)
+    );
+  }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
   const unit = () => {
     const px = wrapRef.current?.clientWidth || 1;

@@ -29,13 +29,20 @@ export function useChatConversation(bookId: string) {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const ask = useCallback(
-    async (query: string, page: number, seq: number) => {
+    async (query: string, page: number, seq: number, quote?: string) => {
       setError(null);
       setStreaming(true);
       setTurns((prev) => [...prev, { role: 'user', text: query }, { role: 'assistant', text: '' }]);
 
       try {
-        for await (const frame of askChatbot(bookId, query, page, seq, conversationId ?? undefined)) {
+        for await (const frame of askChatbot(
+          bookId,
+          query,
+          page,
+          seq,
+          conversationId ?? undefined,
+          quote
+        )) {
           if (frame.type === 'delta') {
             setTurns((prev) => {
               const next = [...prev];
@@ -62,6 +69,15 @@ export function useChatConversation(bookId: string) {
     },
     [bookId, conversationId]
   );
+
+  /**
+   * "Np까지 확인" 배지 전용 초기화. useSSE.resetAppliedCutoff와 같은 이유 — 페이지를
+   * 넘기면 이전에 확인된 숫자가 지금 페이지를 더 이상 설명하지 못한다. turns·conversationId는
+   * 그대로 둔다 — 대화 이어가기는 페이지 이동과 무관하다.
+   */
+  const resetAppliedCutoff = useCallback(() => {
+    setAppliedCutoff(null);
+  }, []);
 
   /** "새 채팅" — conversationId를 비운다. 다음 질문이 서버에 새 대화로 잡힌다 */
   const newChat = useCallback(() => {
@@ -117,5 +133,6 @@ export function useChatConversation(bookId: string) {
     newChat,
     toggleHistory,
     selectConversation,
+    resetAppliedCutoff,
   };
 }

@@ -66,7 +66,7 @@ router.get('/health', (_req: Request, res: Response) => {
  */
 router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   const { bookId } = req.params;
-  const { query, page, seq, conversationId: requestedConversationId } = req.body;
+  const { query, quote, page, seq, conversationId: requestedConversationId } = req.body;
   const deviceId = req.headers['x-device-id'] as string;
 
   // 입력 검증
@@ -139,7 +139,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 챗봇 처리 (스트리밍)
     try {
-      for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId, conversationId)) {
+      const quoteText = typeof quote === 'string' && quote.trim() ? quote : undefined;
+      for await (const chunk of handleChatbotQuery(bookId, query, K, deviceId, conversationId, quoteText)) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 근거 부재 거절도 일반 delta로 흘려보냄
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);

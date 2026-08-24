@@ -47,7 +47,7 @@ export default function ChatbotTab({
   error: string | null;
   /** 본문에서 드래그로 인용한 문장. token 이 바뀔 때마다 입력창을 새로 채운다 */
   quote?: { text: string; token: number } | null;
-  onAsk: (query: string) => void;
+  onAsk: (query: string, quote?: string) => void;
   /** 현재 열려 있는 대화의 전체 문답. 부모(Reader)가 이력 기능을 연결했을 때만 온다 */
   turns?: ChatbotConversationTurn[];
   /** 이력 목록 — historyOpen 일 때만 그려진다 */
@@ -60,10 +60,17 @@ export default function ChatbotTab({
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  /**
+   * 다음 질문에 실어 보낼 인용문. 입력창엔 사용자가 편집할 수 있는 표시용 텍스트만
+   * 채우고, 실제로 서버 프롬프트에 "본문 인용" 근거로 들어갈 원문은 여기 그대로 둔다 —
+   * 입력창을 고쳐 써도(질문을 덧붙이거나 따옴표를 지워도) 원문 자체는 바뀌지 않는다.
+   */
+  const [attachedQuote, setAttachedQuote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!quote) return;
     setQuery(`"${quote.text}" `);
+    setAttachedQuote(quote.text);
     inputRef.current?.focus();
   }, [quote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -169,9 +176,10 @@ export default function ChatbotTab({
             onSubmit={(event) => {
               event.preventDefault();
               if (!query.trim() || streaming) return;
-              onAsk(query.trim());
+              onAsk(query.trim(), attachedQuote ?? undefined);
               setAsked(query.trim());
               setQuery('');
+              setAttachedQuote(null);
             }}
           >
             <label htmlFor="chat-query" className="sr-only">

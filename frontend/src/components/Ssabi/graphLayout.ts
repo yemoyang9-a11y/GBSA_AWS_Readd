@@ -29,8 +29,28 @@ export interface BoundingBox {
  *  자신의 viewBox 로 옮겨 그린다. */
 const CANVAS_SIZE = 640;
 
-/** forceLayout이 노드를 이 반경(중심 기준) 밖으로 내보내지 않는다. */
-const LAYOUT_RADIUS = CANVAS_SIZE * 0.42;
+/**
+ * forceLayout이 노드를 이 반경(중심 기준) 밖으로 내보내지 않는 **안전망**. 평소엔
+ * 아래 중력(GRAVITY_STRENGTH)이 배치를 붙잡고, 이건 병적으로 큰 입력에서만 걸린다.
+ *
+ * 실데이터(인물 20~30명 규모)에서 이 값을 컴팩트하게(예 0.42) 잡았더니, 반발력만 있고
+ * 서로 당기는 간선이 없는 다수의 인물이 매 반복마다 경계에서 튕겨 나와 **정확히 같은
+ * 반경에 줄지어 서는 도넛 모양**이 됐다(2026-08-25 사용자 제보 — "원형 주위에 빙 둘러져
+ * 있다"). 하드 클램프는 노드 수와 무관하게 반경이 고정이라 인물이 늘수록 그 원 위에
+ * 더 많은 노드가 밀집한다. 지도처럼 줌/팬이 가능해진 뒤로는 첫 화면에 전부 욱여넣을
+ * 필요가 없어, 안전망 반경을 넉넉히 키우고 실제 형태는 중력에 맡긴다.
+ */
+const LAYOUT_RADIUS = CANVAS_SIZE * 1.6;
+
+/**
+ * 중심으로 끌어당기는 약한 중력 — 매 반복마다 거리에 비례해 적용한다(2026-08-25).
+ * 반발력만 있는 무관계 노드 군집이 무한히 퍼지는 걸 막는 게 목적이고, 위 하드 클램프처럼
+ * "이 선을 넘으면 즉시 튕겨낸다"가 아니라 매 스텝 조금씩 당기기만 해서 특정 반경에
+ * 노드가 줄지어 서는 인공적인 형태(도넛)를 만들지 않는다. 노드가 많을수록 반발력 총합이
+ * 커져 자연히 더 넓게 퍼지고, 중력과 만나는 지점에서 균형을 이룬다 — 인물 수에 맞춰 손으로
+ * 반경 공식을 다시 잡을 필요가 없다.
+ */
+const GRAVITY_STRENGTH = 1.5;
 
 /**
  * 인물별 연결 수(간선 수). 노드에 없는 id 를 가리키는 간선은 세지 않는다 — 유령 id 가
@@ -43,9 +63,12 @@ export function computeDegrees(
   const degree = new Map<string, number>();
   for (const node of nodes) degree.set(node.id, 0);
   for (const edge of edges) {
-    if (!degree.has(edge.source) || !degree.has(edge.target)) continue;
-    degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
-    degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+    // 두 id 모두 노드 목록에 있을 때만 센다 — 한쪽이 유령 id면 그 간선 자체를 없는 것으로
+    // 취급한다. 반대쪽만이라도 세면 유령 id 가 실재 노드의 연결 수를 부풀린다.
+    if (degree.has(edge.source) && degree.has(edge.target)) {
+      degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+    }
   }
   return degree;
 }
@@ -80,9 +103,14 @@ export function centralNodeIndex(
   return best;
 }
 
-const MIN_RADIUS = 14;
-const MAX_RADIUS = 26;
-const RADIUS_STEP = 2.4;
+/**
+ * 2026-08-25 — 최소·최대 차이가 너무 커서(14~26, 약 1.9배) 연결 수 적은 인물이 눈에
+ * 잘 안 띄고 화면이 들쭉날쭉해 보인다는 피드백. 범위를 좁히고(16~20) 완만하게 키워
+ * "중요도가 크기에 드러나긴 하지만 튀지는 않는" 정도로 낮춘다.
+ */
+const MIN_RADIUS = 16;
+const MAX_RADIUS = 20;
+const RADIUS_STEP = 0.5;
 
 /** 연결 수가 많을수록 큰 원 — 상한을 둔다(주인공이라고 화면을 절반 잡아먹지 않는다). */
 export function nodeRadius(degree: number): number {
@@ -177,6 +205,12 @@ export function forceLayout(
       dy[b] += fy;
     }
 
+    // 중력 — 거리에 비례해 중심으로 약하게 당긴다(하드 클램프 대신, 위 GRAVITY_STRENGTH 설명 참고)
+    for (let i = 0; i < n; i += 1) {
+      dx[i] += (CANVAS_SIZE / 2 - points[i].x) * GRAVITY_STRENGTH;
+      dy[i] += (CANVAS_SIZE / 2 - points[i].y) * GRAVITY_STRENGTH;
+    }
+
     // 한 스텝에서 움직일 수 있는 최대 거리(temperature)로 변위를 제한 후 적용
     for (let i = 0; i < n; i += 1) {
       const disp = Math.hypot(dx[i], dy[i]);
@@ -185,10 +219,7 @@ export function forceLayout(
         points[i].x += (dx[i] / disp) * capped;
         points[i].y += (dy[i] / disp) * capped;
       }
-      // 캔버스 밖으로 못 나가게 원형 경계에 붙잡아 둔다. 반발력만 있고 간선(인력)이
-      // 없는 인물 쌍은 이 경계가 없으면 서로를 계속 밀어내기만 해서 몇 천 단위까지
-      // 벌어진다 — 그러면 노드 수가 조금만 바뀌어도 배치 전체 크기가 요동쳐,
-      // 고정 크기인 노드·글자가 매번 다른 비율로 보였다(실기기 확인, 2026-08-24).
+      // 병적으로 큰 입력에서만 걸리는 안전망 — 평소엔 위 중력이 배치를 붙잡는다(LAYOUT_RADIUS 설명 참고)
       const cdx = points[i].x - CANVAS_SIZE / 2;
       const cdy = points[i].y - CANVAS_SIZE / 2;
       const cdist = Math.hypot(cdx, cdy);
@@ -201,7 +232,51 @@ export function forceLayout(
     temperature = Math.max(0, temperature - cooling);
   }
 
+  // 겹침 제거 후처리 (2026-08-25) — 위 힘-분산은 노드를 점으로만 다뤄서, 실제 렌더
+  // 반경이 큰(연결 수 많은) 노드들이 서로의 "이상적인 거리" 안에서도 원끼리는 겹칠 수
+  // 있었다("여전히 겹치는 노드가 많다" 피드백). 실제 반경 합만큼 떨어지도록 직접
+  // 밀어내는 별도 패스로 마무리한다 — 전체 구조(중력·간선 인력)는 이미 자리를 잡은
+  // 뒤라 이 패스는 국소적인 미세 조정만 한다.
+  const degree = computeDegrees(nodes, edges);
+  const radii = nodes.map((node) => nodeRadius(degree.get(node.id) ?? 0));
+  resolveOverlaps(points, radii);
+
   return points;
+}
+
+const OVERLAP_PADDING = 6;
+const OVERLAP_ITERATIONS = 80;
+
+/** 원끼리 반경 합(+여유)보다 가까우면 그만큼 서로 밀어낸다 — 결정적, 무작위 없음. */
+function resolveOverlaps(points: Point[], radii: number[]): void {
+  const n = points.length;
+  for (let iter = 0; iter < OVERLAP_ITERATIONS; iter += 1) {
+    let anyOverlap = false;
+    for (let i = 0; i < n; i += 1) {
+      for (let j = i + 1; j < n; j += 1) {
+        const minDist = radii[i] + radii[j] + OVERLAP_PADDING;
+        let ddx = points[i].x - points[j].x;
+        let ddy = points[i].y - points[j].y;
+        let dist = Math.hypot(ddx, ddy);
+        if (dist < 0.01) {
+          ddx = 0.01 * (i - j || 1);
+          ddy = 0.01;
+          dist = Math.hypot(ddx, ddy);
+        }
+        if (dist < minDist) {
+          anyOverlap = true;
+          const push = (minDist - dist) / 2;
+          const ux = ddx / dist;
+          const uy = ddy / dist;
+          points[i].x += ux * push;
+          points[i].y += uy * push;
+          points[j].x -= ux * push;
+          points[j].y -= uy * push;
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
 }
 
 /** 인물이 1~2명뿐일 때도 뷰박스가 너무 좁아지지 않게 두는 하한선. */

@@ -381,6 +381,9 @@ export interface ChatbotQueryLog {
   book_id: string;
   cutoff_page: number;
   query: string;
+  /** 본문 드래그 인용(신규 UX). K와 무관하게 프롬프트에 별도 주입된 문장 — CP5 인젝션
+   *  판정 시 이 필드도 봐야 "K 밖 콘텐츠가 어디서 들어왔는지" 설명이 된다 */
+  quote?: string;
 
   /** 투입 레코드 ID 전수 (구분별) */
   input_records: {
