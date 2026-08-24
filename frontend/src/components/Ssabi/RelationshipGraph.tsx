@@ -402,7 +402,12 @@ export default function RelationshipGraph({
                 y2={positions[tIdx].y}
                 className={touches ? 'stroke-brief-accent' : 'stroke-brief-rule'}
                 strokeWidth={(touches ? 2.4 : 1.2) * k}
-                opacity={dimmed ? 0.15 : 1}
+                // 실데이터(간선 54개, 핵심 인물군에 몰림)로 확인: 선택 전 기본 상태에서
+                // 전부 opacity 1이면 얽힌 간선이 서로 겹쳐 빽빽해 보인다("선이 겹치고
+                // 빽빽해 보인다" 피드백, 2026-08-25). 아무것도 선택 안 했을 때도 옅게
+                // 낮춰 겹치는 선끼리 서로 잡아먹는 인상을 줄인다 — 선택하면 그대로 1로
+                // 돌아온다(반대편 dimmed 분기는 원래도 0.15).
+                opacity={dimmed ? 0.15 : validSelectedId ? 1 : 0.55}
               />
             );
           })}
