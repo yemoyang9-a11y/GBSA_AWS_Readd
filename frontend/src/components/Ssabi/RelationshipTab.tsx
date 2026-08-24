@@ -73,9 +73,9 @@ export default function RelationshipTab({
       {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
           예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
           그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
-      <div className="flex items-center justify-between text-[11px] text-faint">
+      <div className="flex items-center justify-between text-[11px] text-brief-muted">
         <span>두 손가락으로 확대 · 끌어서 이동</span>
-        <button type="button" onClick={() => setSelected(null)} className="font-bold text-ssabi underline">
+        <button type="button" onClick={() => setSelected(null)} className="font-bold text-brief-accent underline">
           선택 해제
         </button>
       </div>
