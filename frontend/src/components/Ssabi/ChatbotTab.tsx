@@ -39,6 +39,12 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * 대상이 아니고(기존에도 query는 필터링하지 않았다), 이미 화면에 떠 있는 본문이라 R3와도
  * 충돌하지 않는다. "추천 질문 칩"은 여전히 만들지 않았다 — CLAUDE.md 9장이
  * **미결(데모 시연 시나리오)** 로 둔 항목이라 지어내면 잘못된 결정이 코드에 굳는다.
+ *
+ * 선택 문장 고정 표시 (2026-08-24, 사용자 요청) — 인용이 들어오면 대화 목록 맨 위에
+ * "선택한 문장" 카드로 원문을 계속 띄워 둔다. 질문을 보내면 입력창의 `attachedQuote`는
+ * 그 한 번의 질문에만 쓰이고 비워지지만(기존 동작 유지), 이 카드는 그 뒤로 이어지는
+ * 후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여주려고 세션 동안 남는다 —
+ * 새 문장을 다시 드래그하거나 "새 채팅"/다른 대화 선택으로 넘어가면 지운다.
  */
 const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
 
@@ -73,20 +79,33 @@ export default function ChatbotTab({
 }) {
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   /**
    * 다음 질문에 실어 보낼 인용문. 입력창엔 사용자가 편집할 수 있는 표시용 텍스트만
    * 채우고, 실제로 서버 프롬프트에 "본문 인용" 근거로 들어갈 원문은 여기 그대로 둔다 —
    * 입력창을 고쳐 써도(질문을 덧붙이거나 따옴표를 지워도) 원문 자체는 바뀌지 않는다.
    */
   const [attachedQuote, setAttachedQuote] = useState<string | null>(null);
+  /** 대화 목록 맨 위 "선택한 문장" 카드에 계속 띄워 둘 원문. 질문을 보내도 비우지 않는다 —
+   *  후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여줘야 하기 때문. */
+  const [pinnedQuote, setPinnedQuote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!quote) return;
     setQuery(`"${quote.text}" `);
     setAttachedQuote(quote.text);
+    setPinnedQuote(quote.text);
     inputRef.current?.focus();
   }, [quote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 입력창 칸 밖으로 넘어가는 긴 질문은 가로 스크롤 대신 줄바꿈되며 칸이 늘어난다
+  // (2026-08-24, 사용자 요청 — 넘치는 텍스트가 "질문" 버튼을 밀어내던 문제).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [query]);
 
   const hasHistoryFeature = Boolean(onToggleHistory && onNewChat);
   /**
@@ -113,7 +132,10 @@ export default function ChatbotTab({
           </button>
           <button
             type="button"
-            onClick={onNewChat}
+            onClick={() => {
+              setPinnedQuote(null);
+              onNewChat?.();
+            }}
             className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
           >
             새 채팅
@@ -129,7 +151,10 @@ export default function ChatbotTab({
                 <li key={c.id}>
                   <button
                     type="button"
-                    onClick={() => onSelectConversation?.(c.id)}
+                    onClick={() => {
+                      setPinnedQuote(null);
+                      onSelectConversation?.(c.id);
+                    }}
                     className="flex w-full flex-col rounded-xl px-3 py-2 text-left hover:bg-white"
                   >
                     <span className="truncate font-dashSans text-xs text-brief-ink">
@@ -149,6 +174,17 @@ export default function ChatbotTab({
       ) : (
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
+            {pinnedQuote ? (
+              <div className="rounded-2xl border border-brief-accent bg-brief-accent-soft px-[13px] py-[10px]">
+                <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
+                  선택한 문장
+                </p>
+                <p className="whitespace-pre-wrap text-xs leading-[1.6] text-brief-ink">
+                  "{pinnedQuote}"
+                </p>
+              </div>
+            ) : null}
+
             {bubbles.length === 0 ? (
               <div className="flex items-end gap-2">
                 <img
@@ -200,7 +236,7 @@ export default function ChatbotTab({
           </div>
 
           <form
-            className="mt-4 flex items-center gap-2 rounded-full border border-brief-rule bg-white px-4 py-2.5"
+            className="mt-4 flex items-end gap-2 rounded-3xl border border-brief-rule bg-white px-4 py-2.5"
             onSubmit={(event) => {
               event.preventDefault();
               if (!query.trim() || streaming) return;
@@ -213,18 +249,25 @@ export default function ChatbotTab({
             <label htmlFor="chat-query" className="sr-only">
               질문
             </label>
-            <input
+            <textarea
               id="chat-query"
               ref={inputRef}
+              rows={1}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="flex-1 bg-transparent text-xs text-brief-ink outline-none placeholder:text-brief-muted"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              className="max-h-32 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-xs leading-[1.6] text-brief-ink outline-none placeholder:text-brief-muted"
               placeholder="읽은 데까지의 내용으로 물어보세요"
             />
             <button
               type="submit"
               disabled={streaming}
-              className="shrink-0 font-dashSans text-xs font-bold text-brief-accent disabled:opacity-40"
+              className="shrink-0 self-end pb-1 font-dashSans text-xs font-bold text-brief-accent disabled:opacity-40"
             >
               질문
             </button>
