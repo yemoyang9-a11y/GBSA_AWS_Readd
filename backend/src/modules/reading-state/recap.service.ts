@@ -96,6 +96,14 @@ const RECAP_TARGET_SENTENCES = 5;
  */
 const RECAP_MAX_TOKENS_SAFETY = 2048;
 
+/**
+ * 500자 실측 강제 상한 (2026-08-24, 이슈 대응) — RECAP_TARGET_CHARS는 프롬프트 "부탁"일
+ * 뿐이라 모델이 지키지 않으면(실측 800자+ 확인됨) 그대로 새어나간다. 이 값은 스트리밍
+ * 도중에 실제로 잘라내는 하드 상한이라, 공백 포함 결과 길이가 이 값을 넘는 경우가 없다.
+ * RECAP_TARGET_CHARS와 값을 맞춰 둔다 — 목표를 지키면 이 상한에 걸리지 않는다.
+ */
+const RECAP_HARD_LIMIT_CHARS = RECAP_TARGET_CHARS;
+
 export function createRecapService(deps: RecapServiceDeps): RecapService {
   const { savedRecap, sessionCache, recapLog, llmStream, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = deps;
 
@@ -158,14 +166,26 @@ async function* generateAndPersist(
   const prompt = buildRecapPrompt(input);
 
   let fullText = '';
+  let usage: LLMUsage | undefined;
   const gen = io.llmStream('recap', prompt, { maxTokens: RECAP_MAX_TOKENS_SAFETY });
   let step = await gen.next();
   while (!step.done) {
-    fullText += step.value;
-    yield step.value;
-    step = await gen.next();
+    const next = fullText + step.value;
+    if (next.length <= RECAP_HARD_LIMIT_CHARS) {
+      fullText = next;
+      yield step.value;
+      step = await gen.next();
+      continue;
+    }
+    // 이 청크까지 받으면 하드 상한을 넘는다 — 문장 경계에서 잘라내고 남은 생성은 취소한다
+    const truncated = truncateAtBoundary(next, RECAP_HARD_LIMIT_CHARS);
+    const appended = truncated.slice(fullText.length);
+    if (appended.length > 0) yield appended;
+    fullText = truncated;
+    await gen.return(undefined); // 이미 목표를 초과했으니 남은 토큰 생성을 이어갈 이유가 없다
+    step = { done: true, value: undefined };
   }
-  const usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
+  usage = step.value ?? undefined; // gen.next()의 마지막 호출 — TReturn 값 (for await로는 못 받는다)
 
   if (trigger === 'realtime') {
     await io.sessionCache.saveCached(
@@ -203,7 +223,7 @@ function buildRecapPrompt(input: RecapInput): string {
 
   return [
     '아래 자료만으로 독자가 지금까지 읽은 줄거리를 이어서 요약해라.',
-    `${RECAP_TARGET_SENTENCES}문장 내외, ${RECAP_TARGET_CHARS}자 이내로 간결하게 써라.`,
+    `${RECAP_TARGET_SENTENCES}문장 내외, 공백 포함 ${RECAP_TARGET_CHARS}자 이내로 간결하게 써라.`,
     '한 문단으로 몰아쓰지 말고 2~3개의 짧은 문단으로 나눠라. 문단 사이는 빈 줄로 구분해라.',
     '제목이나 "#" 같은 마크다운 기호를 붙이지 말고 본문 문단만 써라.',
     '분량을 채우려고 없는 내용을 늘리지 마라 — 자료가 적으면 있는 것만 짧게 말해라.',
@@ -212,6 +232,23 @@ function buildRecapPrompt(input: RecapInput): string {
     '현재 장에서 읽은 부분:',
     currentChapter || '(없음)',
   ].join('\n\n');
+}
+
+/**
+ * 하드 상한(RECAP_HARD_LIMIT_CHARS) 실제 절단 지점 — limit 이내에서 마지막 문장 부호
+ * (.!?) 또는 문단 구분(개행)을 찾아 그 직후에서 자른다. 경계가 없으면(예: 첫 문장이
+ * 이미 limit보다 김) limit에서 그냥 끊는다 — 매끄러움보다 상한 보장이 우선이다.
+ */
+function truncateAtBoundary(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  const window = text.slice(0, limit);
+  const boundary = Math.max(
+    window.lastIndexOf('.'),
+    window.lastIndexOf('!'),
+    window.lastIndexOf('?'),
+    window.lastIndexOf('\n')
+  );
+  return boundary > 0 ? text.slice(0, boundary + 1).trimEnd() : window.trimEnd();
 }
 
 function buildRecapCallLog(
