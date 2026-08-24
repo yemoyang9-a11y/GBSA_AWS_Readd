@@ -25,9 +25,16 @@ export default function RecapTab({
       </p>
     );
 
+  // 백엔드가 문단을 빈 줄로 구분해 보낸다(recap.service.ts) — 그대로 나눠서 별도 문단으로 렌더한다.
+  const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
+
   return (
     <div className="space-y-3">
-      <p className="whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">{text}</p>
+      {paragraphs.map((paragraph, i) => (
+        <p key={i} className="whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">
+          {paragraph}
+        </p>
+      ))}
       {streaming ? (
         <span aria-live="polite" className="block text-[11px] text-faint">
           불러오는 중
