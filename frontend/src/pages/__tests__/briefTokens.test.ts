@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import config from '../../../tailwind.config.js';
 
 describe('브리핑 재설계 — 신규 토큰', () => {
-  it('brief 색 토큰이 시안 실측값과 일치한다', () => {
+  it('brief 색 토큰 — "황토색 느낌" 피드백(2026-08-24)으로 시안 실측값보다 밝고 채도 낮게 조정됐다', () => {
     const brief = (config.theme!.extend!.colors as Record<string, unknown>).brief as Record<
       string,
       string
     >;
-    expect(brief.paper).toBe('#fbf8f2');
-    expect(brief.ink).toBe('#2a2620');
-    expect(brief.muted).toBe('#8c8473');
-    expect(brief.line).toBe('#ece6d8');
-    expect(brief.rule).toBe('#d3c6a8');
+    expect(brief.paper).toBe('#fdfdfa');
+    expect(brief.ink).toBe('#272623');
+    expect(brief.muted).toBe('#86847c');
+    expect(brief.line).toBe('#ebe8e1');
+    expect(brief.rule).toBe('#e4e0d5');
     expect(brief.accent).toBe('#4b3fd6');
     expect(brief['accent-soft']).toBe('#f1effc');
   });
