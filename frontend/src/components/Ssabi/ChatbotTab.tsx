@@ -139,19 +139,19 @@ export default function ChatbotTab({
               turn.role === 'user' ? (
                 <p
                   key={i}
-                  className="ml-auto max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
+                  className="ml-auto w-fit max-w-[76%] rounded-2xl rounded-br-md border border-brief-rule bg-brief-paper px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink"
                 >
                   {turn.text}
                 </p>
               ) : (
                 <div key={i} className="flex items-end gap-2">
-                  <span
+                  <img
+                    src="/assets/ssabi-face.png"
+                    alt=""
                     aria-hidden="true"
-                    className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brief-accent bg-brief-accent-soft"
-                  >
-                    <img src="/assets/ssabi-face.png" alt="" className="size-full object-contain" />
-                  </span>
-                  <p className="max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                    className="h-9 w-auto shrink-0 translate-y-3 object-contain"
+                  />
+                  <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
                     {turn.text}
                   </p>
                 </div>
