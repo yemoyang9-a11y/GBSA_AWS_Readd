@@ -8,9 +8,12 @@ import { useState } from 'react';
  *
  * **대화 이력은 아직 없다.** 마지막 문답 한 쌍만 보인다 (FR-QNA-003 은 P1).
  *
- * 시안은 사용자 말풍선(paper 배경 + rule 테두리)과 싸비 답변(원형 "싸" 아바타 + panel
- * 배경 + accent 테두리)을 다른 처리로 구분한다 — 정렬만으로는 좁은 패널에서 화자 구분이
- * 약하다는 critique P2(2026-08-21) 판단을 그대로 잇는다.
+ * 시안은 사용자 말풍선(paper 배경 + rule 테두리)과 싸비 답변(원형 아바타 + panel 배경 +
+ * accent 테두리)을 다른 처리로 구분한다 — 정렬만으로는 좁은 패널에서 화자 구분이 약하다는
+ * critique P2(2026-08-21) 판단을 그대로 잇는다.
+ *
+ * 아바타는 텍스트 "싸" 대신 마스코트 이미지(`/assets/ssabi-face.png`, 사용자 제공 원본을
+ * public/assets로 복사)를 쓴다(2026-08-24).
  *
  * 답변 말풍선은 `answer`가 있을 때만 그린다 — 질문 전에 빈 말풍선이 뜨지 않게 한다.
  *
@@ -48,9 +51,9 @@ export default function ChatbotTab({
           <div className="flex items-end gap-2">
             <span
               aria-hidden="true"
-              className="flex size-[26px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-brief-accent bg-brief-accent-soft font-dashSerif text-[11px] font-bold text-brief-accent"
+              className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brief-accent bg-brief-accent-soft"
             >
-              싸
+              <img src="/assets/ssabi-face.png" alt="" className="size-full object-contain" />
             </span>
             <p className="max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
               {answer}

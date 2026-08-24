@@ -83,7 +83,7 @@ export default function SsabiPanel({
          * 고정 위치로 그린다(size-9=36px). px-6만 쓰면 이 배지의 오른쪽 끝이 버튼과 정확히
          * 같은 x좌표에서 겹친다 — 버튼 폭(36px) + 여유(20px)만큼 오른쪽을 비워 겹침을 막는다.
          */}
-        <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">싸비의 가이드북</h2>
+        <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         {appliedCutoff !== null ? (
           <span className="shrink-0 rounded-full bg-brief-accent-soft px-2.5 py-1 font-dashMono text-[11px] font-bold text-brief-accent">
             {appliedCutoff}p까지 확인

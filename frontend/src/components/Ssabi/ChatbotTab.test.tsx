@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
 describe('ChatbotTab', () => {
-  it('싸비 답변 말풍선은 accent 테두리를 쓰고 옆에 "싸" 아바타가 있다', () => {
-    render(<ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />);
+  it('싸비 답변 말풍선은 accent 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
+    const { container } = render(
+      <ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />
+    );
     expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-brief-accent');
-    expect(screen.getByText('싸')).toBeInTheDocument();
+    expect(container.querySelector('img')).toHaveAttribute('src', '/assets/ssabi-face.png');
   });
 
   it('polish: 답변이 없으면(질문 전) 빈 말풍선을 그리지 않는다', () => {
@@ -14,7 +16,7 @@ describe('ChatbotTab', () => {
       <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />
     );
     expect(container.querySelector('p')).toBeNull();
-    expect(screen.queryByText('싸')).not.toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
   });
 
   it('사용자 질문 말풍선은 paper 배경 + rule 테두리를 쓴다 — 액센트가 사용자 쪽으로 번지지 않는다', async () => {
