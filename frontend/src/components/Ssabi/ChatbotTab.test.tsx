@@ -30,4 +30,95 @@ describe('ChatbotTab', () => {
     expect(bubble).toHaveClass('bg-brief-paper');
     expect(bubble).toHaveClass('border-brief-rule');
   });
+
+  it('본문에서 인용한 문장이 오면(quote) 입력창을 그 문장으로 채운다', () => {
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        quote={{ text: '정 주사는 여전히 미두장 앞을', token: 1 }}
+      />
+    );
+
+    expect(screen.getByLabelText('질문')).toHaveValue('"정 주사는 여전히 미두장 앞을" ');
+  });
+
+  it('같은 문장을 다시 인용해도(token 증가) 입력창을 새 인용문으로 다시 채운다', () => {
+    const { rerender } = render(
+      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 1 }} />
+    );
+    expect(screen.getByLabelText('질문')).toHaveValue('"첫 인용" ');
+
+    rerender(
+      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 2 }} />
+    );
+
+    expect(screen.getByLabelText('질문')).toHaveValue('"첫 인용" ');
+  });
+});
+
+/**
+ * 대화 이력 (2026-08-24, 사용자·R2 조율 결정) — turns가 오면 그 대화 전체를 그리고,
+ * "새 채팅"·"지난 대화" 버튼과 이력 목록도 함께 노출한다.
+ */
+describe('ChatbotTab — 대화 이력', () => {
+  it('turns가 오면 전체 문답을 화자별 배경으로 그린다', () => {
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[
+          { role: 'user', text: '정주사가 누구야' },
+          { role: 'assistant', text: '고무신 장사입니다.' },
+        ]}
+        conversations={[]}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+
+    expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-brief-paper');
+    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-white', 'border-brief-accent');
+  });
+
+  it('"새 채팅" 버튼을 누르면 onNewChat이 호출된다', async () => {
+    const onNewChat = vi.fn();
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[]}
+        onToggleHistory={() => {}}
+        onNewChat={onNewChat}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '새 채팅' }));
+    expect(onNewChat).toHaveBeenCalled();
+  });
+
+  it('"지난 대화"를 열면 목록을 보여주고, 선택하면 onSelectConversation이 호출된다', async () => {
+    const onSelectConversation = vi.fn();
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[{ id: 42, conversation_date: '2026-08-24', title: '정주사가 누구야', created_at: '', updated_at: '' }]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+        onSelectConversation={onSelectConversation}
+      />
+    );
+
+    await userEvent.click(screen.getByText('정주사가 누구야'));
+    expect(onSelectConversation).toHaveBeenCalledWith(42);
+  });
 });

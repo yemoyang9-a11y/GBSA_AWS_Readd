@@ -13,16 +13,42 @@ const graph: GraphResponse = {
 /**
  * 인물 관계도 탭 — FR-SVB-002, FR-SPL-005 🚦, NFR-USE-006
  *
+ * ⚠️ 정책 변경(2026-08-24, 지도형 리디자인) — 관계 라벨은 더 이상 항상 펼쳐져 있지
+ *    않다. 인물 카드를 선택(그래프 클릭과 동등)해야 그 인물의 관계가 글자로 나온다.
+ *    NFR-USE-006("라벨을 글자로 병기, 색상만으로 구분하지 않는다")의 검증 지점이
+ *    "항상 보임"에서 "선택하면 보임"으로 옮겨졌다 — 라벨이 사라진 게 아니라 위치가
+ *    바뀐 것이다.
+ *
  * ⚠️ 인물 이름은 그래프 노드와 인물 카드 **양쪽**에 나온다. 전역 쿼리는 다중 매치로
  *    실패하므로 aria-label 로 구획한 영역 안에서 찾는다.
  */
 describe('RelationshipTab', () => {
-  it('NFR-USE-006: 관계 라벨을 글자로 병기한다 — 색상만으로 구분하지 않는다', () => {
+  it('NFR-USE-006: 인물을 선택하면 관계 라벨이 글자로 나온다 — 색상만으로 구분하지 않는다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
-    // 그래프가 뜨지 않는 환경에서도 라벨이 글자로 남아야 한다 — 관계 목록에서 확인한다
-    const relations = screen.getByRole('region', { name: '관계' });
-    expect(within(relations).getByText('부녀')).toBeInTheDocument();
+    const people = screen.getByRole('region', { name: '인물' });
+    fireEvent.click(within(people).getByText('정주사'));
+
+    expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+  });
+
+  it('선택하지 않으면 관계 라벨이 카드에 없다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+
+    const people = screen.getByRole('region', { name: '인물' });
+    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('같은 인물을 다시 선택하면 접힌다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+
+    const people = screen.getByRole('region', { name: '인물' });
+    const card = within(people).getByText('정주사');
+    fireEvent.click(card);
+    expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+
+    fireEvent.click(card);
+    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
   });
 
   it('인물 이름과 별칭을 카드로 렌더한다', () => {
@@ -57,8 +83,9 @@ describe('RelationshipTab', () => {
     expect(within(people).getByText('정주사')).toBeInTheDocument();
     expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
 
-    const relations = screen.getByRole('region', { name: '관계' });
-    expect(within(relations).queryByText('부녀')).not.toBeInTheDocument();
+    // 이 시점의 정주사를 선택해도 관계는 아직 확립 전이라 안 나온다
+    fireEvent.click(within(people).getByText('정주사'));
+    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
   });
 
   it('FR-SPL-005 🚦: 조회 실패는 부분 표시로 넘어가지 않는다', () => {
@@ -69,10 +96,10 @@ describe('RelationshipTab', () => {
     expect(screen.queryByText('부녀')).not.toBeInTheDocument();
   });
 
-  it('인물 카드는 brief 톤 카드 스타일을 쓴다', () => {
+  it('인물 카드는 brief 톤 카드 스타일을 쓴다 (미선택 상태)', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
     const people = screen.getByRole('region', { name: '인물' });
-    const card = within(people).getByText('정주사').closest('li')!;
+    const card = within(people).getByText('정주사').closest('button')!;
     expect(card.className).toContain('bg-white');
     expect(card.className).toContain('border-brief-rule');
   });

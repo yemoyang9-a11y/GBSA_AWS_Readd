@@ -38,6 +38,16 @@ function makeFakeLlmWithUsage(usage: { inputTokens: number; outputTokens: number
   return { llmStream };
 }
 
+/** 실제로 게이트웨이에 어떤 프롬프트가 전달되는지 검사하기 위한 페이크. */
+function makeFakeLlmCapturingPrompt() {
+  const prompts: string[] = [];
+  const llmStream = async function* (_task: string, prompt: string) {
+    prompts.push(prompt);
+    yield '정주사는';
+  };
+  return { llmStream, prompts };
+}
+
 function build() {
   const { books } = makeSeededFakes();
   const savedRecap = new FakeSavedRecapRepository();
@@ -92,6 +102,28 @@ describe('리캡 재사용 판정 — getRecap', () => {
       await drain(result.chunks);
     }
     expect(llm.callCount()).toBe(1);
+  });
+
+  test('이슈 대응(분량 편차): 프롬프트가 자료 양과 무관한 분량 지시를 담는다', async () => {
+    const { books, savedRecap, sessionCache, recapLog } = build();
+    const captured = makeFakeLlmCapturingPrompt();
+    const service = createRecapService({
+      content: books,
+      books,
+      savedRecap,
+      sessionCache,
+      recapLog,
+      llmStream: captured.llmStream,
+    });
+
+    const result = await service.getRecap(SEED_DEVICE_ID, SEED_BOOK_ID, 15, 'realtime');
+    if (result.kind === 'generated') await drain(result.chunks);
+
+    expect(captured.prompts).toHaveLength(1);
+    expect(captured.prompts[0]).toMatch(/문장/);
+    // NFR-AI-004 🚦 회귀 방지 — 분량 지시를 추가해도 "기준점 이후를 쓰지 마"류 상한
+    // 지시는 절대 들어가면 안 된다. 상한은 조립 단계(입력 절단)에서만 강제한다.
+    expect(captured.prompts[0]).not.toMatch(/기준점|cutoff|이후.*(쓰지|말)/i);
   });
 
   test('UC-09 A7: 세션 캐시(K) 적중 → 그대로 반환, 호출 0회', async () => {

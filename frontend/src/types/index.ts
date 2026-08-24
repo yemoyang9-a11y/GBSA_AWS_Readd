@@ -47,9 +47,37 @@ export interface SseDoneFrame {
    * 항상 온다. 챗봇 스트림은 R3 확인 전이라 아직 optional 로 둔다 (team-sync §3.1·§4.2).
    */
   applied_cutoff?: number;
+  /**
+   * 이 문답이 기록된 대화 ID (2026-08-24 대화 이력 기능). 챗봇 스트림에만 실린다 —
+   * 다음 질문부터 이 값을 그대로 요청에 실어 보내면 같은 대화로 이어진다.
+   */
+  conversation_id?: number;
 }
 
 export interface SseErrorFrame {
   type: 'error';
   message: string;
+}
+
+// ============================================================================
+// 챗봇 대화 이력 (2026-08-24 사용자·R2 조율 결정)
+// @see backend/migrations/005_chatbot_conversation_history.sql
+// ============================================================================
+
+export interface ChatbotConversationSummary {
+  id: number;
+  /** KST 자정 기준 캘린더 날짜 'YYYY-MM-DD' */
+  conversation_date: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatbotConversationTurn {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+export interface ChatbotConversationDetail extends ChatbotConversationSummary {
+  turns: ChatbotConversationTurn[];
 }

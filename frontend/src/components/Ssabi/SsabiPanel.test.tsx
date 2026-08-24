@@ -16,10 +16,15 @@ const baseProps = {
   recapText: '',
   recapStreaming: false,
   recapFailed: false,
-  chatAnswer: '',
+  chatTurns: [],
   chatStreaming: false,
   chatError: null,
+  chatConversations: [],
+  chatHistoryOpen: false,
   onAsk: () => {},
+  onNewChat: () => {},
+  onToggleChatHistory: () => {},
+  onSelectChatConversation: () => {},
 };
 
 /**
@@ -126,5 +131,27 @@ describe('싸비 사이드창', () => {
   it('기준점 배지는 brief-accent 톤을 쓴다', () => {
     render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
     expect(screen.getByText('79p까지 확인').className).toContain('text-brief-accent');
+  });
+
+  it('본문에서 인용 요청이 오면(pendingQuote) 다른 탭을 보고 있어도 챗봇 탭으로 전환한다', () => {
+    const { rerender } = render(<SsabiPanel {...baseProps} />);
+    // 기본은 인물 관계도 탭
+    expect(screen.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />);
+
+    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('같은 문장을 연달아 다시 인용해도(token 증가) 챗봇 탭으로 매번 전환한다', async () => {
+    const { rerender } = render(
+      <SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 1 }} />
+    );
+    await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
+    expect(screen.getByRole('tab', { name: '리캡' })).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 2 }} />);
+
+    expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
   });
 });

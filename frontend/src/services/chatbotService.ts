@@ -9,15 +9,17 @@
  */
 
 import { readSseStream } from './stream';
+import { api } from './api';
 import { API_BASE_URL, USE_MOCK } from '../utils/constants';
 import { getDeviceId } from '../utils/storage';
-import type { SseFrame } from '../types';
+import type { ChatbotConversationDetail, ChatbotConversationSummary, SseFrame } from '../types';
 
 export async function* askChatbot(
   bookId: string,
   query: string,
   page: number,
-  seq: number
+  seq: number,
+  conversationId?: number
 ): AsyncGenerator<SseFrame> {
   if (USE_MOCK) {
     const { mockStreamFrames, mockChatAnswer } = await import('../../mocks/server');
@@ -28,7 +30,7 @@ export async function* askChatbot(
   const response = await fetch(`${API_BASE_URL}/books/${bookId}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() ?? '' },
-    body: JSON.stringify({ query, page, seq }),
+    body: JSON.stringify({ query, page, seq, conversationId }),
   });
 
   if (response.status === 429) {
@@ -48,4 +50,25 @@ export async function* askChatbot(
     return;
   }
   yield* readSseStream(response.body);
+}
+
+/**
+ * 대화 이력 목록 (2026-08-24). 봉인 기준점이 현재 기준점을 넘는 대화는 서버가 이미
+ * 제외해서 준다 — 프론트는 받은 목록을 그대로 그린다.
+ */
+export async function fetchChatConversations(bookId: string): Promise<ChatbotConversationSummary[]> {
+  if (USE_MOCK) return [];
+  const { data } = await api.get<ChatbotConversationSummary[]>(`/books/${bookId}/chat/conversations`);
+  return data;
+}
+
+/** 대화 상세(전체 문답). 봉인되어 숨겨졌거나 존재하지 않으면 서버가 404를 준다. */
+export async function fetchChatConversationDetail(
+  bookId: string,
+  conversationId: number
+): Promise<ChatbotConversationDetail> {
+  const { data } = await api.get<ChatbotConversationDetail>(
+    `/books/${bookId}/chat/conversations/${conversationId}`
+  );
+  return data;
 }

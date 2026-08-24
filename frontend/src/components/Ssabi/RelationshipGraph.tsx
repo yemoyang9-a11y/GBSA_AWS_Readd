@@ -1,87 +1,470 @@
-import { ReactFlow, Background, type Edge, type Node } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphResponse } from '../../types';
-import { centralNodeIndex, radialLayout, shouldShowEdgeLabels } from './graphLayout';
+import {
+  boundingBox,
+  computeDegrees,
+  estimateTextWidth,
+  forceLayout,
+  nodeRadius,
+  pickNonOverlapping,
+  type BoundingBox,
+  type LabelBox,
+  type Point,
+} from './graphLayout';
 
 /**
- * 관계도 그래프 렌더 — S4
+ * 관계도 그래프 렌더 — 지도형 리디자인 (2026-08-24)
  *
- * 서버 JSON(nodes/edges)을 그대로 그린다. 라벨을 글자로 병기하며 색상만으로 구분하지 않는다
- * (NFR-USE-006). 간선은 이력형 최신 라벨 1개만 내려온다 (A6, FR-CHR-001 🚦).
- * 좌표는 graphLayout.ts 의 **방사형 배치**로 만든다 — 중심 인물 1명 + 나머지를 둘레에
- * (스펙 §6). 중심 인물은 배치 규칙이 데이터로 고르며, 여기서는 그 결과를 받아 그리기만 한다.
+ * 시안 `docs-local/reader-map-graph.html`의 상호작용(줌/팬/핀치, 노드 클릭 선택,
+ * 라벨 충돌회피)을 이 저장소의 디자인 톤(Tailwind 토큰)으로 그린다 — **디자인은 R4
+ * 기존 구성이 우선이고, 목업에서는 구조·인터랙션만 가져온다.** 목업 CSS의 원색(cream/
+ * terra 계열)은 옮기지 않는다 — 이미 R4 토큰(ssabi/ink/muted/line)이 비슷한 색감이다.
+ *
+ * React Flow → 순수 SVG로 교체했다. 좌표는 graphLayout.ts 의 힘-분산 배치(무작위성 없음,
+ * 같은 입력엔 항상 같은 좌표)로 만든다.
  *
  * ⚠️ 여기서 노드·간선을 걸러내지 않는다. 서버가 이미 기준점 이하로 필터해 내려보냈고,
  *    초과 여부를 판별하는 코드를 프론트에 두지 않는다 (절대 규칙 7번).
  *
- * ⚠️ 색이 hex 리터럴인 이유 — React Flow 는 노드·간선을 자기 인라인 스타일로 그려서
- *    Tailwind 클래스가 닿지 않는다. G11 의 "토큰 이름으로 쓴다"를 지킬 수 없는 유일한
- *    구간이라, 값을 아래 한 곳에 모으고 어느 토큰의 값인지 이름으로 남긴다.
- *    tailwind.config.js 의 해당 토큰을 바꾸면 여기도 함께 고쳐야 한다.
+ * ## 선택 상태는 이 컴포넌트가 소유하지 않는다
  *
- * 재설계(2026-08-23)로 brief-rule/brief-ink/brief-muted 값으로 갱신했다 — React Flow가
- * Tailwind 클래스를 못 읽는 사정은 그대로라 hex를 계속 직접 쓴다.
+ * `selectedId`/`onSelect`로 부모(RelationshipTab)가 선택 상태를 갖는다 — 추후 "본문에서
+ * 인물명 선택 시 관계도 포커싱" 기능이 이 자리에 그대로 꽂힐 수 있어야 한다(같은
+ * setSelected를 본문 클릭 핸들러가 호출하면 된다). 이 컴포넌트는 selectedId를 받아
+ * 그리기만 한다.
  *
- * 간선이 많으면(graphLayout.ts의 shouldShowEdgeLabels 기준 초과) 캔버스 라벨을 생략한다
- * (polish, 2026-08-21) — 실 데이터(100p 시점, 간선 51개)에서 라벨이 중심 근처에 뭉쳐
- * 읽을 수 없었다. 아래 "관계" 목록이 항상 텍스트로 병기하므로 NFR-USE-006은 그대로 지켜진다.
+ * 인물명 라벨은 항상 전부 그리려 하고, 겹치면 연결 수가 적은 쪽을 숨긴다(선택·인접
+ * 인물은 최우선 유지). 관계 라벨은 선택된 인물과 닿은 간선에서만 보여준다 — 예전엔
+ * 간선 51개에서 캔버스 라벨을 통째로 생략했는데(2026-08-21 polish), 이제 선택 시에만
+ * 보여주는 쪽이 더 낫다. 항상 보이는 "관계" 텍스트 목록은 RelationshipTab이 맡는다.
  */
-const TOKEN = {
-  surface: '#ffffff',
-  line: '#d3c6a8', // brief-rule
-  ink: '#2a2620', // brief-ink
-  muted: '#8c8473', // brief-muted
-} as const;
 
-export default function RelationshipGraph({ graph }: { graph: GraphResponse }) {
-  const centerIndex = centralNodeIndex(graph.nodes, graph.edges);
-  const positions = radialLayout(graph.nodes.length, centerIndex);
+const NAME_FONT_PX = 12;
+const NAME_CHAR_PX = 6.4;
+const EDGE_LABEL_FONT_PX = 10.5;
+const EDGE_LABEL_CHAR_PX = 6.6;
+const MIN_ZOOM_RATIO = 0.32;
+const MAX_ZOOM_RATIO = 2.4;
+// clampViewBox 의 팬 여유는 (1 + 2*PAN_MARGIN_RATIO)*base.width 까지만 뷰박스를 허용한다.
+// 이 값이 MAX_ZOOM_RATIO 보다 작으면 최대 축소 근처에서 팬 가능 범위가 한 점으로
+// 쪼그라들어 드래그가 전혀 안 먹는다(실기기 확인, 2026-08-24) — 0.35였을 때 한계가
+// 1.7이라 2.4까지 축소가 가능한 것과 충돌했다. 축소 한계(2.4)를 넉넉히 덮도록 올린다.
+const PAN_MARGIN_RATIO = 0.9;
 
-  const nodes: Node[] = graph.nodes.map((node, i) => ({
-    id: node.id,
-    position: positions[i],
-    data: { label: node.name },
-    type: 'default',
-    draggable: false,
-    style: {
-      background: TOKEN.surface,
-      // 중심 인물은 테두리를 강조해 한눈에 구분되게 한다 — 색만으로 구분하지 않으므로
-      // 이름은 그대로 글자로 남는다 (NFR-USE-006)
-      border: i === centerIndex ? `1.5px solid ${TOKEN.ink}` : `1px solid ${TOKEN.line}`,
-      borderRadius: 9999,
-      padding: '6px 12px',
-      fontSize: 12,
-      fontWeight: i === centerIndex ? 700 : 400,
-      color: TOKEN.ink,
-    },
+interface ViewBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+function clampViewBox(vb: ViewBox, base: BoundingBox): ViewBox {
+  const minW = base.width * MIN_ZOOM_RATIO;
+  const maxW = base.width * MAX_ZOOM_RATIO;
+  const width = Math.max(minW, Math.min(maxW, vb.width));
+  const height = width * (base.height / base.width);
+
+  const marginX = base.width * PAN_MARGIN_RATIO;
+  const marginY = base.height * PAN_MARGIN_RATIO;
+  const x = Math.max(base.x - marginX, Math.min(base.x + base.width + marginX - width, vb.x));
+  const y = Math.max(base.y - marginY, Math.min(base.y + base.height + marginY - height, vb.y));
+
+  return { x, y, width, height };
+}
+
+export default function RelationshipGraph({
+  graph,
+  selectedId,
+  onSelect,
+}: {
+  graph: GraphResponse;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointers: Map<number, Point>; last: Point | null; pinchDist: number | null; moved: number }>({
+    pointers: new Map(),
+    last: null,
+    pinchDist: null,
+    moved: 0,
+  });
+
+  const degree = useMemo(() => computeDegrees(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
+  const positions = useMemo(() => forceLayout(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
+  const base = useMemo(() => boundingBox(positions), [positions]);
+
+  const [viewBox, setViewBox] = useState<ViewBox>(() => ({
+    x: base.x,
+    y: base.y,
+    width: base.width,
+    height: base.height,
   }));
 
-  const showLabels = shouldShowEdgeLabels(graph.edges.length);
+  // 그래프가 바뀌면(되감기·페이지 진행) 그 그래프의 배치로 다시 fit — 이전 줌 위치를
+  // 새 좌표계에 그대로 들고 있으면 화면 밖을 보게 된다.
+  //
+  // ⚠️ 처음엔 "중심 인물로 확대"를 시도했다(목업의 focusDefault()를 그대로 옮김) —
+  //    목업은 인물 30명 규모에 맞춘 고정 캔버스라 확대가 자연스러웠지만, 여기 base는
+  //    그래프 크기에 맞춰 매번 다시 계산되는 값이라 인물이 몇 명 안 될 때(예: 첫 진입
+  //    직후) 확대하면 나머지 인물이 통째로 화면 밖으로 잘려 나갔다(스크린샷으로 확인).
+  //    전체를 우선 보여주고, 확대는 사용자가 노드를 선택했을 때(아래 effect)만 한다.
+  useEffect(() => {
+    setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
+  }, [base]);
 
-  const edges: Edge[] = graph.edges.map((edge) => ({
-    id: `${edge.source}-${edge.target}`,
-    source: edge.source,
-    target: edge.target,
-    // NFR-USE-006(글자로 병기)은 아래 "관계" 목록이 항상 만족한다 — 캔버스 라벨은
-    // 간선이 적어 겹치지 않을 때만 얹는 보너스다 (graphLayout.ts의 EDGE_LABEL_LIMIT 참조).
-    label: showLabels ? edge.label : undefined,
-    labelStyle: { fontSize: 11, fill: TOKEN.muted },
-    style: { stroke: TOKEN.line },
-  }));
+  const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
+
+  // 선택한 인물이 화면 밖이면 부드럽게 중앙으로(확대율 유지) — 목업의 select() 동작
+  useEffect(() => {
+    if (!validSelectedId) return;
+    const idx = graph.nodes.findIndex((n) => n.id === validSelectedId);
+    if (idx < 0) return;
+    const p = positions[idx];
+    setViewBox((vb) => {
+      if (p.x >= vb.x && p.x <= vb.x + vb.width && p.y >= vb.y && p.y <= vb.y + vb.height) {
+        return vb;
+      }
+      return clampViewBox({ x: p.x - vb.width / 2, y: p.y - vb.height / 2, width: vb.width, height: vb.height }, base);
+    });
+  }, [validSelectedId, graph.nodes, positions, base]);
+
+  const neighborIds = useMemo(() => {
+    if (!validSelectedId) return new Set<string>();
+    const ids = new Set<string>();
+    for (const edge of graph.edges) {
+      if (edge.source === validSelectedId) ids.add(edge.target);
+      if (edge.target === validSelectedId) ids.add(edge.source);
+    }
+    return ids;
+  }, [validSelectedId, graph.edges]);
+
+  const unit = () => {
+    const px = wrapRef.current?.clientWidth || 1;
+    return viewBox.width / px;
+  };
+
+  function zoomAt(clientX: number, clientY: number, factor: number) {
+    const rect = wrapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setViewBox((vb) => {
+      const ux = vb.x + ((clientX - rect.left) / rect.width) * vb.width;
+      const uy = vb.y + ((clientY - rect.top) / rect.height) * vb.height;
+      const rawWidth = vb.width / factor;
+      const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
+      const k = width / vb.width;
+      return clampViewBox(
+        { x: ux - (ux - vb.x) * k, y: uy - (uy - vb.y) * k, width, height: vb.height * k },
+        base
+      );
+    });
+  }
+
+  // 네이티브 리스너로 직접 붙인다 — React 17+ 는 onWheel 합성 이벤트를 passive로
+  // 등록해서 그 안에서 preventDefault()를 불러도 실제로는 막히지 않는다(콘솔 경고만
+  // 뜨고 페이지가 같이 스크롤된다). 줌 도중 배경 스크롤을 막으려면 이 방법뿐이다.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    function handleWheel(event: WheelEvent) {
+      event.preventDefault();
+      zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 1.14 : 1 / 1.14);
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base]);
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest('[data-graph-zoom-control]')) return;
+    const drag = dragRef.current;
+    drag.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    drag.moved = 0;
+    if (drag.pointers.size === 1) {
+      drag.last = { x: event.clientX, y: event.clientY };
+    } else if (drag.pointers.size === 2) {
+      const pts = [...drag.pointers.values()];
+      drag.pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    }
+  }
+
+  // 포인터 캡처를 쓰지 않는다 — 캡처하면 드래그 중 손가락이 노드 위를 지나가도 그
+  // 노드의 클릭 이벤트가 죽는다. window 에서 추적해야 클릭이 살아 있다.
+  useEffect(() => {
+    function handleMove(event: PointerEvent) {
+      const drag = dragRef.current;
+      if (!drag.pointers.has(event.pointerId)) return;
+      drag.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      if (drag.pointers.size === 2 && drag.pinchDist !== null) {
+        const pts = [...drag.pointers.values()];
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (drag.pinchDist > 0) {
+          zoomAt((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, dist / drag.pinchDist);
+        }
+        drag.pinchDist = dist;
+        drag.moved = 99;
+        return;
+      }
+
+      if (drag.pointers.size === 1 && drag.last) {
+        const rect = wrapRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const dx = ((event.clientX - drag.last.x) / rect.width) * viewBox.width;
+        const dy = ((event.clientY - drag.last.y) / rect.height) * viewBox.height;
+        drag.moved += Math.abs(event.clientX - drag.last.x) + Math.abs(event.clientY - drag.last.y);
+        if (drag.moved > 4) {
+          setViewBox((vb) => clampViewBox({ ...vb, x: vb.x - dx, y: vb.y - dy }, base));
+        }
+        drag.last = { x: event.clientX, y: event.clientY };
+      }
+    }
+    function handleUp(event: PointerEvent) {
+      const drag = dragRef.current;
+      drag.pointers.delete(event.pointerId);
+      if (drag.pointers.size < 2) drag.pinchDist = null;
+      if (drag.pointers.size === 0) drag.last = null;
+    }
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+    };
+    // base 는 그래프가 바뀔 때만 바뀌고, viewBox 는 최신값을 클로저로 매번 새로 잡아야
+    // 팬 델타 계산이 어긋나지 않는다.
+  }, [base, viewBox.width, viewBox.height]);
+
+  function wasDragged() {
+    return dragRef.current.moved > 6;
+  }
+
+  function handleNodeClick(id: string) {
+    if (wasDragged()) return;
+    onSelect(validSelectedId === id ? null : id);
+  }
+
+  function fitView() {
+    setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
+  }
+
+  // 컨테이너 크기가 바뀌면(창 크기·반응형 레이아웃) k(줌 배율)도 다시 계산해야
+  // 폰트·선 굵기가 화면상 크기를 유지한다 — viewBox 값 자체는 안 바꾸고 재렌더만 강제한다
+  useEffect(() => {
+    function handleResize() {
+      setViewBox((vb) => ({ ...vb }));
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const k = unit();
+
+  // 인물명 라벨 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
+  const nameLabels = useMemo(() => {
+    const boxes: (LabelBox & { id: string; label: Point })[] = graph.nodes.map((node, i) => {
+      const p = positions[i];
+      const r = nodeRadius(degree.get(node.id) ?? 0);
+      const width = estimateTextWidth(node.name, NAME_CHAR_PX * k) + 4 * k;
+      const height = (NAME_FONT_PX + 4) * k;
+      const isSelected = node.id === validSelectedId;
+      const isNeighbor = neighborIds.has(node.id);
+      return {
+        id: node.id,
+        label: { x: p.x, y: p.y + r + NAME_FONT_PX * k + 2 * k },
+        x: p.x - width / 2,
+        y: p.y + r,
+        width,
+        height,
+        priority: (degree.get(node.id) ?? 0) + (isSelected ? 9999 : 0) + (isNeighbor ? 500 : 0),
+      };
+    });
+    return new Set(pickNonOverlapping(boxes).map((b) => b.id));
+    // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
+  }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k]);
+
+  // 관계 라벨 — 선택된 인물과 닿은 간선에서만
+  const edgeLabels = useMemo(() => {
+    if (!validSelectedId) return [];
+    const indexOf = new Map(graph.nodes.map((n, i) => [n.id, i]));
+    return graph.edges
+      .filter((edge) => edge.source === validSelectedId || edge.target === validSelectedId)
+      .map((edge) => {
+        const fromSelected = edge.source === validSelectedId;
+        const nearIdx = indexOf.get(fromSelected ? edge.source : edge.target);
+        const farIdx = indexOf.get(fromSelected ? edge.target : edge.source);
+        if (nearIdx === undefined || farIdx === undefined) return null;
+        const near = positions[nearIdx];
+        const far = positions[farIdx];
+        const dx = far.x - near.x;
+        const dy = far.y - near.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k) + 10 * k;
+        const height = (EDGE_LABEL_FONT_PX + 7) * k;
+        const dist = Math.max(26 * k, Math.min(len * 0.62, len - 22 * k));
+        const cx = near.x + (dx / len) * dist;
+        const cy = near.y + (dy / len) * dist;
+        return { key: `${edge.source}-${edge.target}`, label: edge.label, cx, cy, width, height };
+      })
+      .filter((v): v is NonNullable<typeof v> => v !== null);
+  }, [validSelectedId, graph.nodes, graph.edges, positions, k]);
 
   return (
-    <div className="h-[280px] w-full overflow-hidden rounded-xl border border-brief-rule bg-brief-page">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        fitView
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        proOptions={{ hideAttribution: true }}
+    <div
+      ref={wrapRef}
+      className="relative h-[280px] w-full touch-none overflow-hidden rounded-xl border border-brief-rule bg-white"
+      onPointerDown={handlePointerDown}
+    >
+      <svg
+        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+        className="h-full w-full cursor-grab active:cursor-grabbing"
+        onClick={(event) => {
+          if (wasDragged()) return;
+          if (!(event.target as SVGElement).closest('[data-node-id]')) onSelect(null);
+        }}
       >
-        <Background color={TOKEN.line} gap={16} />
-      </ReactFlow>
+        <g>
+          {graph.edges.map((edge) => {
+            const sIdx = graph.nodes.findIndex((n) => n.id === edge.source);
+            const tIdx = graph.nodes.findIndex((n) => n.id === edge.target);
+            if (sIdx < 0 || tIdx < 0) return null;
+            const touches = validSelectedId === edge.source || validSelectedId === edge.target;
+            const dimmed = validSelectedId !== null && !touches;
+            return (
+              <line
+                key={`${edge.source}-${edge.target}`}
+                x1={positions[sIdx].x}
+                y1={positions[sIdx].y}
+                x2={positions[tIdx].x}
+                y2={positions[tIdx].y}
+                className={touches ? 'stroke-brief-accent' : 'stroke-brief-rule'}
+                strokeWidth={(touches ? 2.4 : 1.2) * k}
+                opacity={dimmed ? 0.15 : 1}
+              />
+            );
+          })}
+        </g>
+
+        <g>
+          {edgeLabels.map((label) => (
+            <g key={label.key} pointerEvents="none">
+              <rect
+                x={label.cx - label.width / 2}
+                y={label.cy - label.height / 2}
+                width={label.width}
+                height={label.height}
+                rx={label.height / 2}
+                className="fill-white stroke-brief-accent/40"
+              />
+              <text
+                x={label.cx}
+                y={label.cy + label.height / 2 - 2.6 * k}
+                textAnchor="middle"
+                className="fill-brief-accent font-dashSans"
+                style={{ fontSize: EDGE_LABEL_FONT_PX * k }}
+              >
+                {label.label}
+              </text>
+            </g>
+          ))}
+        </g>
+
+        <g>
+          {graph.nodes.map((node, i) => {
+            const p = positions[i];
+            const r = nodeRadius(degree.get(node.id) ?? 0);
+            const isSelected = node.id === validSelectedId;
+            const isNeighbor = neighborIds.has(node.id);
+            const dimmed = validSelectedId !== null && !isSelected && !isNeighbor;
+            return (
+              <g
+                key={node.id}
+                data-node-id={node.id}
+                tabIndex={0}
+                role="button"
+                aria-label={node.name}
+                aria-pressed={isSelected}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleNodeClick(node.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleNodeClick(node.id);
+                  }
+                }}
+                className="cursor-pointer outline-none"
+                opacity={dimmed ? 0.2 : 1}
+              >
+                <circle cx={p.x} cy={p.y} r={r + 13 * k} fill="transparent" />
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={r}
+                  className={`${isSelected ? 'fill-brief-accent' : 'fill-brief-ink/45'} ${isNeighbor ? 'stroke-brief-accent' : ''}`}
+                  strokeWidth={isNeighbor ? 2.8 * k : 0}
+                />
+                {nameLabels.has(node.id) ? (
+                  <text
+                    x={p.x}
+                    y={p.y + r + NAME_FONT_PX * k + 2 * k}
+                    textAnchor="middle"
+                    className="fill-brief-ink stroke-white font-dashSerif font-semibold"
+                    style={{
+                      fontSize: NAME_FONT_PX * k,
+                      paintOrder: 'stroke',
+                      strokeWidth: 3 * k,
+                      strokeLinejoin: 'round',
+                    }}
+                  >
+                    {node.name}
+                  </text>
+                ) : null}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      <div className="absolute right-2 top-2 flex flex-col gap-1.5" data-graph-zoom-control>
+        <button
+          type="button"
+          aria-label="확대"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+          onClick={() => {
+            const rect = wrapRef.current?.getBoundingClientRect();
+            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35);
+          }}
+        >
+          +
+        </button>
+        <button
+          type="button"
+          aria-label="축소"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+          onClick={() => {
+            const rect = wrapRef.current?.getBoundingClientRect();
+            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35);
+          }}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          aria-label="전체 보기"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-[11px] text-brief-muted"
+          onClick={fitView}
+        >
+          ⤢
+        </button>
+      </div>
+
+      {/* 시안(reader-map-graph.html)의 .scalebar 그대로 — 확대율 표시. base/viewBox 비율만 쓰므로 새 데이터 없이 되는 순수 표시값 */}
+      <span className="absolute bottom-2 left-2 rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
+        {Math.round((base.width / viewBox.width) * 100)}%
+      </span>
     </div>
   );
 }

@@ -7,7 +7,18 @@ import { graphMilestones, graphUpTo } from './graphFilter';
 /**
  * 인물 관계도 탭 — 기본 탭 (FR-SVB-002)
  *
- * 시안(48:1067) 구성 — 그래프 영역 위, 인물 카드 목록 아래.
+ * 지도형 리디자인(2026-08-24, `docs-local/reader-map-graph.html` 구조 반영) — 인물
+ * 카드는 항상 목록으로 보이되, **그래프에서 인물을 선택했을 때만 그 인물의 관계 태그가
+ * 펼쳐진다.** 카드를 눌러도 같은 선택 상태를 공유한다(그래프 쪽 클릭과 동등) — 이 선택
+ * 상태(`selected`)는 이 컴포넌트가 소유하고, RelationshipGraph에는 controlled prop으로
+ * 내려준다. 추후 "본문에서 인물명을 누르면 관계도가 그 인물로 포커싱"되는 기능이
+ * 들어올 자리도 여기다 — 그 기능은 이 `setSelected`를 그대로 호출하면 된다.
+ *
+ * ⚠️ 정책 변경(2026-08-24) — 예전엔 "관계" 섹션이 선택과 무관하게 항상 전부 펼쳐져
+ *    있었다(NFR-USE-006: 라벨을 글자로 병기, 색상만으로 구분하지 않는다). 그 요구
+ *    자체는 여전히 지킨다 — 다만 "항상 전부"가 아니라 "선택하면 텍스트로 나온다"로
+ *    바뀌었다. 목업이 채택한 방식을 그대로 따른 것이라 팀 승인 없이 되돌리지 않는다.
+ *    관련 테스트(RelationshipTab.test.tsx)도 이 정책에 맞춰 같이 고쳤다.
  *
  * ## 되감기 슬라이더
  *
@@ -15,9 +26,6 @@ import { graphMilestones, graphUpTo } from './graphFilter';
  * 내려보냈으므로 이건 **받은 데이터 안의 표시 필터**이고, 서버에 다시 묻지 않는다.
  * 눈금을 받은 데이터에서 만들기 때문에 슬라이더 오른쪽 끝이 곧 현재 진도이며,
  * 그 너머는 막힌 게 아니라 **존재하지 않는다** (graphFilter.ts 주석 참조).
- *
- * 관계 목록은 시안에 없으나 유지한다 — 간선 라벨을 글자로 병기하는 수단이 그래프
- * 하나뿐이면 그래프가 뜨지 않는 환경에서 NFR-USE-006 이 깨진다.
  *
  * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
  *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
@@ -32,6 +40,7 @@ export default function RelationshipTab({
   failed: boolean;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
   const latest = milestones[milestones.length - 1] ?? 0;
@@ -40,14 +49,36 @@ export default function RelationshipTab({
   const at = picked !== null && milestones.includes(picked) ? picked : latest;
   const shown = useMemo(() => (graph ? graphUpTo(graph, at) : null), [graph, at]);
 
+  // 되감아서 선택했던 인물이 아직 안 나왔으면 선택을 무시한다(지우지는 않는다 —
+  // 다시 앞으로 감으면 그대로 복원된다)
+  const activeSelected =
+    selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
+
   if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
-  const nameOf = (id: string) => shown.nodes.find((n) => n.id === id)?.name ?? id;
+  const relationsOf = (id: string) =>
+    shown.edges
+      .filter((edge) => edge.source === id || edge.target === id)
+      .map((edge) => {
+        const otherId = edge.source === id ? edge.target : edge.source;
+        const other = shown.nodes.find((n) => n.id === otherId);
+        return { key: `${edge.source}-${edge.target}`, name: other?.name ?? otherId, label: edge.label };
+      });
 
   return (
     <div className="space-y-5">
-      <RelationshipGraph graph={shown} />
+      <RelationshipGraph graph={shown} selectedId={activeSelected} onSelect={setSelected} />
+
+      {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
+          예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
+          그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
+      <div className="flex items-center justify-between text-[11px] text-faint">
+        <span>두 손가락으로 확대 · 끌어서 이동</span>
+        <button type="button" onClick={() => setSelected(null)} className="font-bold text-ssabi underline">
+          선택 해제
+        </button>
+      </div>
 
       {milestones.length > 1 ? (
         <div className="space-y-2">
@@ -75,28 +106,41 @@ export default function RelationshipTab({
       <section aria-label="인물" className="space-y-3">
         <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
         <ul className="space-y-3">
-          {shown.nodes.map((node) => (
-            <li key={node.id} className="rounded-xl border border-brief-rule bg-white p-3.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-dashSerif text-sm font-bold text-brief-ink">{node.name}</span>
-                {node.aliases.length > 0 ? (
-                  <span className="text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section aria-label="관계" className="space-y-2">
-        <h3 className="text-xs font-bold text-brief-muted">관계 {shown.edges.length}</h3>
-        <ul className="space-y-1.5">
-          {shown.edges.map((edge) => (
-            <li key={`${edge.source}-${edge.target}`} className="text-xs text-brief-muted">
-              {nameOf(edge.source)} — {nameOf(edge.target)} :{' '}
-              <span className="font-bold text-brief-ink">{edge.label}</span>
-            </li>
-          ))}
+          {shown.nodes.map((node) => {
+            const isOpen = node.id === activeSelected;
+            const relations = isOpen ? relationsOf(node.id) : [];
+            return (
+              <li key={node.id}>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setSelected(isOpen ? null : node.id)}
+                  className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
+                    isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
+                  }`}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-dashSerif text-sm font-bold text-brief-ink">{node.name}</span>
+                    {node.aliases.length > 0 ? (
+                      <span className="text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                    ) : null}
+                  </div>
+                  {isOpen && relations.length > 0 ? (
+                    <ul aria-label="관계" className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-brief-rule pt-2.5">
+                      {relations.map((rel) => (
+                        <li
+                          key={rel.key}
+                          className="rounded-full bg-brief-accent-soft px-2 py-1 text-[11px] text-brief-accent"
+                        >
+                          {rel.name} · {rel.label}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>

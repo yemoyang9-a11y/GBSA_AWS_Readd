@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReaderView from './ReaderView';
 
@@ -109,5 +109,54 @@ describe('읽기 화면', () => {
       <ReaderView content="본문" currentPage={1} totalPages={30} prevPage={null} nextPage={2} onMove={() => {}} />
     );
     expect(screen.getByRole('article').className).toMatch(/overflow-y-auto/);
+  });
+
+  describe('본문 드래그 → 챗봇 인용', () => {
+    function selectArticleText(start: number, end: number) {
+      const article = screen.getByRole('article');
+      const textNode = article.firstChild!;
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      fireEvent(document, new Event('selectionchange'));
+    }
+
+    it('본문 일부를 선택하면 인용 팝오버가 뜬다', () => {
+      render(<ReaderView {...baseProps} onQuote={() => {}} />);
+      selectArticleText(0, 4); // "정 주사"
+
+      expect(screen.getByRole('button', { name: '싸비에게 질문하기' })).toBeInTheDocument();
+    });
+
+    it('팝오버를 누르면 선택한 문장 그대로 onQuote로 전달한다', async () => {
+      const onQuote = vi.fn();
+      render(<ReaderView {...baseProps} onQuote={onQuote} />);
+      selectArticleText(0, 4); // "정 주사"
+
+      await userEvent.click(screen.getByRole('button', { name: '싸비에게 질문하기' }));
+
+      expect(onQuote).toHaveBeenCalledWith('정 주사');
+    });
+
+    it('선택이 풀리면 팝오버도 사라진다', () => {
+      render(<ReaderView {...baseProps} onQuote={() => {}} />);
+      selectArticleText(0, 4);
+      expect(screen.getByRole('button', { name: '싸비에게 질문하기' })).toBeInTheDocument();
+
+      window.getSelection()!.removeAllRanges();
+      fireEvent(document, new Event('selectionchange'));
+
+      expect(screen.queryByRole('button', { name: '싸비에게 질문하기' })).not.toBeInTheDocument();
+    });
+
+    it('onQuote를 넘기지 않으면(부모가 아직 연결 안 함) 팝오버를 그리지 않는다', () => {
+      render(<ReaderView {...baseProps} />);
+      selectArticleText(0, 4);
+
+      expect(screen.queryByRole('button', { name: '싸비에게 질문하기' })).not.toBeInTheDocument();
+    });
   });
 });

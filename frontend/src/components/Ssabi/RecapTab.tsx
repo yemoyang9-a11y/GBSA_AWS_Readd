@@ -39,7 +39,8 @@ export default function RecapTab({
       </p>
     );
 
-  const paragraphs = text.split(/\n\n+/).filter((p) => p.length > 0);
+  // 백엔드가 문단을 빈 줄로 구분해 보낸다(recap.service.ts) — 그대로 나눠서 별도 문단으로 렌더한다.
+  const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
 
   return (
     <div className="rounded-xl border border-brief-rule bg-brief-paper p-[26px_22px_22px]">

@@ -1,117 +1,171 @@
-import { centralNodeIndex, radialLayout, shouldShowEdgeLabels, EDGE_LABEL_LIMIT } from './graphLayout';
+import {
+  boundingBox,
+  centralNodeIndex,
+  computeDegrees,
+  estimateTextWidth,
+  forceLayout,
+  nodeRadius,
+  pickNonOverlapping,
+} from './graphLayout';
 
 /**
- * 관계도 배치 — 스펙 §6
+ * 관계도 배치 — 지도형 리디자인 (2026-08-24)
  *
- * React Flow 가 렌더되지 않는 환경에서도 배치 규칙은 여기서 고정된다.
+ * SVG 렌더가 안 되는 환경에서도 배치·크기·라벨 충돌회피 규칙은 여기서 고정된다.
  */
 
 const node = (id: string, page: number) => ({ id, first_appearance_page: page });
 const edge = (source: string, target: string) => ({ source, target });
 
-describe('centralNodeIndex — 가운데에 놓을 인물', () => {
+describe('computeDegrees — 연결 수', () => {
+  it('간선 수만큼 양쪽 인물의 연결 수를 올린다', () => {
+    const nodes = [node('a', 1), node('b', 2), node('c', 3)];
+    const edges = [edge('a', 'b'), edge('b', 'c')];
+    const degree = computeDegrees(nodes, edges);
+    expect(degree.get('a')).toBe(1);
+    expect(degree.get('b')).toBe(2);
+    expect(degree.get('c')).toBe(1);
+  });
+
+  it('노드에 없는 id 를 가리키는 간선은 세지 않는다', () => {
+    const nodes = [node('a', 1), node('b', 2)];
+    const degree = computeDegrees(nodes, [edge('a', 'ghost'), edge('b', 'a')]);
+    expect(degree.get('a')).toBe(1);
+    expect(degree.get('b')).toBe(1);
+  });
+});
+
+describe('centralNodeIndex — 기본 포커스로 놓을 인물', () => {
   it('연결이 가장 많은 인물을 고른다', () => {
     const nodes = [node('a', 1), node('b', 2), node('c', 3)];
-    // b 가 2개, a·c 가 1개씩
     const edges = [edge('a', 'b'), edge('b', 'c')];
     expect(centralNodeIndex(nodes, edges)).toBe(1);
   });
 
   it('연결 수가 같으면 먼저 등장한 인물을 고른다', () => {
     const nodes = [node('late', 9), node('early', 2)];
-    const edges = [edge('late', 'early')]; // 둘 다 1개
-    expect(centralNodeIndex(nodes, edges)).toBe(1);
-  });
-
-  it('간선이 없으면 먼저 등장한 인물을 고른다', () => {
-    const nodes = [node('late', 9), node('early', 2)];
-    expect(centralNodeIndex(nodes, [])).toBe(1);
+    expect(centralNodeIndex(nodes, [edge('late', 'early')])).toBe(1);
   });
 
   it('노드가 없으면 -1', () => {
     expect(centralNodeIndex([], [])).toBe(-1);
   });
+});
 
-  it('노드에 없는 id 를 가리키는 간선은 세지 않는다', () => {
-    const nodes = [node('a', 1), node('b', 2)];
-    // 유령 id 가 a 의 연결 수를 부풀리면 안 된다
-    const edges = [edge('a', 'ghost'), edge('b', 'a')];
-    expect(centralNodeIndex(nodes, edges)).toBe(0); // a 1개, b 1개 → 먼저 등장한 a
+describe('nodeRadius — 연결 수가 많을수록 크지만 상한이 있다', () => {
+  it('연결이 없으면(0) 최소 크기', () => {
+    expect(nodeRadius(0)).toBeCloseTo(nodeRadius(1), 5);
+  });
+
+  it('연결이 많을수록 커진다', () => {
+    expect(nodeRadius(4)).toBeGreaterThan(nodeRadius(1));
+  });
+
+  it('연결이 아주 많아도 상한을 넘지 않는다', () => {
+    expect(nodeRadius(21)).toBe(nodeRadius(100));
   });
 });
 
-describe('radialLayout — 중심 1명 + 둘레', () => {
-  const center = { x: 0, y: 0 };
-  const opts = { radius: 100, center };
-
+describe('forceLayout — 힘-분산 배치', () => {
   it('노드 개수만큼 좌표를 만들고 순서를 유지한다', () => {
-    expect(radialLayout(5, 0, opts)).toHaveLength(5);
-    expect(radialLayout(0, 0, opts)).toHaveLength(0);
+    const nodes = [node('a', 1), node('b', 2), node('c', 3)];
+    expect(forceLayout(nodes, [])).toHaveLength(3);
+    expect(forceLayout([], [])).toHaveLength(0);
   });
 
-  it('중심 인물은 정확히 중심에 놓인다', () => {
-    const points = radialLayout(4, 2, opts);
-    expect(points[2]).toEqual(center);
+  it('노드가 1개면 좌표 하나를 낸다', () => {
+    expect(forceLayout([node('a', 1)], [])).toHaveLength(1);
   });
 
-  it('중심이 아닌 인물은 모두 중심에서 같은 거리에 있다', () => {
-    const points = radialLayout(5, 1, opts);
-    points.forEach((p, i) => {
-      if (i === 1) return;
-      expect(Math.hypot(p.x - center.x, p.y - center.y)).toBeCloseTo(100, 5);
-    });
+  it('같은 입력에 항상 같은 좌표를 낸다 — 무작위성이 없다', () => {
+    const nodes = [node('a', 1), node('b', 2), node('c', 3), node('d', 4)];
+    const edges = [edge('a', 'b'), edge('b', 'c'), edge('c', 'd')];
+    expect(forceLayout(nodes, edges)).toEqual(forceLayout(nodes, edges));
   });
 
-  it('첫 둘레 인물은 12시 방향에 놓인다', () => {
-    // centerIndex 가 0 이므로 인덱스 1 이 둘레의 첫 자리다
-    const points = radialLayout(4, 0, opts);
-    expect(points[1].x).toBeCloseTo(0, 5);
-    expect(points[1].y).toBeCloseTo(-100, 5);
+  it('서로 다른 인물은 겹치지 않는 좌표를 갖는다', () => {
+    const nodes = [node('a', 1), node('b', 2), node('c', 3), node('d', 4), node('e', 5)];
+    const points = forceLayout(nodes, []);
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        expect(Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y)).toBeGreaterThan(1);
+      }
+    }
   });
 
-  it('둘레 인물이 균등 분포한다 — 중심 1 + 둘레 4면 90도 간격', () => {
-    const points = radialLayout(5, 0, opts);
-    expect(points[2].x).toBeCloseTo(100, 5); // 3시
-    expect(points[2].y).toBeCloseTo(0, 5);
-    expect(points[3].x).toBeCloseTo(0, 5); // 6시
-    expect(points[3].y).toBeCloseTo(100, 5);
+  it('간선으로 이어진 인물은 무관한 인물보다 서로 더 가깝다', () => {
+    // a-b 는 간선으로 이어져 있고, c 는 아무와도 안 이어져 있다
+    const nodes = [node('a', 1), node('b', 2), node('c', 3)];
+    const points = forceLayout(nodes, [edge('a', 'b')], { iterations: 300 });
+    const distAB = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    const distAC = Math.hypot(points[0].x - points[2].x, points[0].y - points[2].y);
+    expect(distAB).toBeLessThan(distAC);
   });
 
-  it('노드가 1개면 중심에 놓는다', () => {
-    expect(radialLayout(1, 0, opts)).toEqual([center]);
-  });
-
-  it('같은 입력에 같은 좌표를 낸다 — 렌더마다 흔들리지 않는다', () => {
-    expect(radialLayout(5, 2)).toEqual(radialLayout(5, 2));
-  });
-
-  it('마주 보는 간선의 중점이 겹치지 않는다 — 라벨이 서로를 가리던 문제', () => {
-    // 중심 0 과 둘레 3명. 중심에서 뻗는 간선들의 중점은 서로 다른 지점이다
-    const [c, a, b] = radialLayout(4, 0, opts);
-    const midA = { x: (c.x + a.x) / 2, y: (c.y + a.y) / 2 };
-    const midB = { x: (c.x + b.x) / 2, y: (c.y + b.y) / 2 };
-    expect(midA).not.toEqual(midB);
+  /**
+   * 이슈 대응(2026-08-24, 실기기 확인) — "인물 1명일 땐 노드가 너무 크고, 2명이 되자마자
+   * 화면이 확 작아지고, 12페이지에서 다시 깨진다"는 보고. 원인은 이 배치가 경계 없이
+   * 퍼져서, 서로 안 이어진 인물 쌍(반발력만 있고 당기는 간선이 없음)이 몇 천 단위까지
+   * 벌어질 수 있었던 것 — 노드 수가 하나만 바뀌어도 전체 배치 크기가 요동쳤다.
+   */
+  it('간선이 하나도 없어도(전부 서로 무관) 배치가 고정된 반경 안에 머문다', () => {
+    const nodes = Array.from({ length: 6 }, (_, i) => node(`n${i}`, i));
+    const points = forceLayout(nodes, [], { iterations: 300 });
+    const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+    for (const p of points) {
+      expect(Math.hypot(p.x - cx, p.y - cy)).toBeLessThan(500);
+    }
   });
 });
 
-/**
- * shouldShowEdgeLabels — polish (2026-08-21)
- *
- * 실 데이터(「탁류」 100p 시점, 인물 30·간선 51)에서 캔버스 라벨이 중심 근처에 뭉쳐
- * 읽을 수 없었다. 관계 목록이 항상 텍스트로 병기하므로(NFR-USE-006) 간선이 많을 땐
- * 캔버스 라벨만 생략한다.
- */
-describe('shouldShowEdgeLabels — 간선이 많으면 캔버스 라벨을 생략한다', () => {
-  it(`${EDGE_LABEL_LIMIT}개 이하면 라벨을 보여준다`, () => {
-    expect(shouldShowEdgeLabels(EDGE_LABEL_LIMIT)).toBe(true);
-    expect(shouldShowEdgeLabels(0)).toBe(true);
+describe('boundingBox — 배치를 감싸는 사각형', () => {
+  it('패딩만큼 여유를 둔다 (하한선보다 큰 배치)', () => {
+    const box = boundingBox([{ x: 0, y: 0 }, { x: 400, y: 400 }], 5);
+    expect(box).toEqual({ x: -5, y: -5, width: 410, height: 410 });
   });
 
-  it(`${EDGE_LABEL_LIMIT}개를 넘으면 라벨을 생략한다`, () => {
-    expect(shouldShowEdgeLabels(EDGE_LABEL_LIMIT + 1)).toBe(false);
+  /**
+   * 이슈 대응(2026-08-24) — 인물이 1~2명뿐이면 점들이 서로 가까워 패딩만 준 뷰박스가
+   * 아주 좁아진다. 그 좁은 뷰박스에 고정 크기 노드·글자를 그리면 실제보다 훨씬 크게
+   * 보였다 — 하한선 밑으로는 안 줄어들게 한다.
+   */
+  it('점들이 아주 가까이 있어도 최소 크기보다 작아지지 않는다', () => {
+    const box = boundingBox([{ x: 0, y: 0 }, { x: 10, y: 10 }], 5);
+    expect(box.width).toBeGreaterThanOrEqual(300);
+    expect(box.height).toBeGreaterThanOrEqual(300);
+    // 그래도 중심은 점들 쪽에 그대로 맞춰져 있다
+    expect(box.x + box.width / 2).toBeCloseTo(5, 0);
+    expect(box.y + box.height / 2).toBeCloseTo(5, 0);
   });
 
-  it('실 데이터 규모(간선 51개)에서는 라벨을 생략한다', () => {
-    expect(shouldShowEdgeLabels(51)).toBe(false);
+  it('점이 없으면 기본 크기를 반환한다', () => {
+    const box = boundingBox([]);
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.height).toBeGreaterThan(0);
+  });
+});
+
+describe('pickNonOverlapping — 겹치는 라벨은 우선순위 낮은 쪽을 뺀다', () => {
+  it('겹치지 않으면 전부 남긴다', () => {
+    const boxes = [
+      { x: 0, y: 0, width: 10, height: 10, priority: 1 },
+      { x: 100, y: 100, width: 10, height: 10, priority: 1 },
+    ];
+    expect(pickNonOverlapping(boxes)).toHaveLength(2);
+  });
+
+  it('겹치면 우선순위 높은 쪽만 남긴다', () => {
+    const low = { x: 0, y: 0, width: 20, height: 20, priority: 1 };
+    const high = { x: 5, y: 5, width: 20, height: 20, priority: 9999 };
+    const kept = pickNonOverlapping([low, high]);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].priority).toBe(9999);
+  });
+});
+
+describe('estimateTextWidth — 글자수 기반 너비 어림', () => {
+  it('글자가 길수록 너비가 커진다', () => {
+    expect(estimateTextWidth('가나다', 6)).toBeGreaterThan(estimateTextWidth('가', 6));
   });
 });
