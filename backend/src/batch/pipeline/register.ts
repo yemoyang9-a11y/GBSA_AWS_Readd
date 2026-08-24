@@ -117,11 +117,18 @@ export async function registerGeneratedContent(
   }
 
   for (const r of data.relationships) {
+    // FR-CHR-001 🚦: 조회 쿼리(findLatestRelationships)의 DISTINCT ON (character_a_id,
+    // character_b_id)는 같은 쌍의 모든 행이 동일한 컬럼 순서라고 가정한다. accumulate.ts가
+    // 정규화 순서로 생성하지만, 이 정규화 이전에 만들어진 all-resolved.json이 여전히
+    // 뒤섞인 순서를 담고 있을 수 있으므로 등록 시점에도 한 번 더 정규화한다(방어적 이중화).
+    // ON CONFLICT에도 두 컬럼을 포함해 재실행만으로 기존 행의 순서를 바로잡을 수 있게 한다.
+    const [character_a_id, character_b_id] = [r.character_a_id, r.character_b_id].sort();
     await client.query(
       `INSERT INTO relationships (id, book_id, character_a_id, character_b_id, label, established_page)
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (id) DO UPDATE SET label = $5, established_page = $6`,
-      [r.id, book_id, r.character_a_id, r.character_b_id, r.label, r.established_page]
+       ON CONFLICT (id) DO UPDATE SET
+         character_a_id = $3, character_b_id = $4, label = $5, established_page = $6`,
+      [r.id, book_id, character_a_id, character_b_id, r.label, r.established_page]
     );
   }
 

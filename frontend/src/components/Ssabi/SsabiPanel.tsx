@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GraphResponse, SsabiTab } from '../../types';
+import type { ChatbotConversationSummary, ChatbotConversationTurn, GraphResponse, SsabiTab } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
 import RecapTab from './RecapTab';
 import RelationshipTab from './RelationshipTab';
@@ -31,10 +31,16 @@ export default function SsabiPanel({
   recapText,
   recapStreaming,
   recapFailed,
-  chatAnswer,
+  chatTurns,
   chatStreaming,
   chatError,
+  chatConversations,
+  chatHistoryOpen,
+  pendingQuote,
   onAsk,
+  onNewChat,
+  onToggleChatHistory,
+  onSelectChatConversation,
 }: {
   sessionEpoch: number;
   /**
@@ -48,10 +54,17 @@ export default function SsabiPanel({
   recapText: string;
   recapStreaming: boolean;
   recapFailed: boolean;
-  chatAnswer: string;
+  chatTurns: ChatbotConversationTurn[];
   chatStreaming: boolean;
   chatError: string | null;
+  chatConversations: ChatbotConversationSummary[];
+  chatHistoryOpen: boolean;
+  /** 본문에서 드래그로 인용한 문장. token 이 바뀔 때마다 챗봇 탭으로 강제 전환한다 */
+  pendingQuote?: { text: string; token: number } | null;
   onAsk: (query: string) => void;
+  onNewChat: () => void;
+  onToggleChatHistory: () => void;
+  onSelectChatConversation: (conversationId: number) => void;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(null);
   const previousEpoch = useRef<number | null>(null);
@@ -72,6 +85,11 @@ export default function SsabiPanel({
   useEffect(() => {
     onTabChange(tab);
   }, [tab, onTabChange]);
+
+  // 본문에서 인용 요청이 올 때마다(token 변화) 챗봇 탭으로 전환한다
+  useEffect(() => {
+    if (pendingQuote) setLastTab('chatbot');
+  }, [pendingQuote?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="flex h-full flex-col border-l border-line bg-surface">
@@ -118,10 +136,16 @@ export default function SsabiPanel({
         {tab === 'relationship' ? <RelationshipTab graph={graph} failed={graphFailed} /> : null}
         {tab === 'chatbot' ? (
           <ChatbotTab
-            answer={chatAnswer}
+            turns={chatTurns}
             streaming={chatStreaming}
             error={chatError}
+            conversations={chatConversations}
+            historyOpen={chatHistoryOpen}
+            quote={pendingQuote}
             onAsk={onAsk}
+            onNewChat={onNewChat}
+            onToggleHistory={onToggleChatHistory}
+            onSelectConversation={onSelectChatConversation}
           />
         ) : null}
       </div>

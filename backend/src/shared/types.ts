@@ -155,6 +155,37 @@ export interface SearchChunk {
 }
 
 // ============================================================================
+// 챗봇 대화 이력 (R3, 2026-08-24 사용자·R2 조율 결정)
+//
+// @see backend/migrations/005_chatbot_conversation_history.sql
+// ============================================================================
+
+/**
+ * 대화 목록 항목
+ */
+export interface ChatbotConversationSummary {
+  id: number;
+  /** KST 자정 기준 캘린더 날짜 'YYYY-MM-DD' */
+  conversation_date: string;
+  /** 첫 질문으로 자동 채워짐 */
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatbotConversationTurnView {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+/**
+ * 대화 상세 — 전체 문답
+ */
+export interface ChatbotConversationDetail extends ChatbotConversationSummary {
+  turns: ChatbotConversationTurnView[];
+}
+
+// ============================================================================
 // 조회 API 관련 (R4)
 // ============================================================================
 
