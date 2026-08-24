@@ -20,6 +20,10 @@ import { splitHighlighted } from './highlightNames';
  *
  * 카드에 테두리(brief-rule)를 둔다 — 패널·카드 배경이 둘 다 brief-paper로 통일된 뒤로는
  * (2026-08-24) 배경색만으로 카드 경계가 안 보인다.
+ *
+ * eyebrow 라벨은 "이전 이야기 요약"을 쓴다 — 백엔드가 본문 첫 줄에 같은 문구를 고정
+ * 소제목으로 얹어 보내므로(recap.service.ts), 그 첫 줄을 본문에서 걷어내고 라벨 자리로
+ * 옮겨 중복 노출을 없앤다.
  */
 export default function RecapTab({
   text,
@@ -39,8 +43,13 @@ export default function RecapTab({
       </p>
     );
 
+  const RECAP_HEADING = '이전 이야기 요약';
+
   // 백엔드가 문단을 빈 줄로 구분해 보낸다(recap.service.ts) — 그대로 나눠서 별도 문단으로 렌더한다.
-  const paragraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
+  const rawParagraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
+  // 백엔드 첫 줄의 고정 소제목은 eyebrow 라벨 자리로 옮겼으니 본문에서는 뺀다.
+  const paragraphs =
+    rawParagraphs[0]?.trim() === RECAP_HEADING ? rawParagraphs.slice(1) : rawParagraphs;
 
   return (
     <div className="rounded-xl border border-brief-rule bg-brief-paper p-[26px_22px_22px]">
@@ -51,7 +60,7 @@ export default function RecapTab({
         "
       </span>
       <p className="mb-2.5 font-dashMono text-[10.5px] font-semibold uppercase tracking-[.06em] text-brief-muted">
-        지금까지
+        이전 이야기 요약
       </p>
       {paragraphs.map((paragraph, i) => (
         <p
