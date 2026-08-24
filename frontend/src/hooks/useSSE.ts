@@ -63,5 +63,16 @@ export function useSSE() {
     setConversationId(null);
   }, []);
 
-  return { text, streaming, error, appliedCutoff, conversationId, consume, reset };
+  /**
+   * "Np까지 확인" 배지 전용 초기화. 페이지를 넘기면 그 배지가 가리키는 기준점은 더 이상
+   * 지금 페이지를 설명하지 못한다 — 값을 지우지 않으면(=마지막 확인값 유지 정책, 위 주석)
+   * 예전 페이지에서 확인된 숫자가 새 페이지에서도 그대로 남아 사실과 다른 숫자를 보여준다.
+   * text·error·conversationId는 건드리지 않는다 — 진행 중 스트림·대화 이어가기는
+   * 페이지 이동과 무관하게 유지된다(UC-27 A5).
+   */
+  const resetAppliedCutoff = useCallback(() => {
+    setAppliedCutoff(null);
+  }, []);
+
+  return { text, streaming, error, appliedCutoff, conversationId, consume, reset, resetAppliedCutoff };
 }

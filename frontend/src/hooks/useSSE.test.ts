@@ -53,4 +53,21 @@ describe('useSSE — appliedCutoff', () => {
 
     expect(result.current.appliedCutoff).toBe(79);
   });
+
+  it('resetAppliedCutoff는 확인된 기준점만 지운다 — 다음 확인 전까지 배지를 안 보여준다', async () => {
+    const { result } = renderHook(() => useSSE());
+
+    await act(async () => {
+      await result.current.consume(frames({ type: 'delta', text: '안녕' }, { type: 'done', applied_cutoff: 79 }));
+    });
+    expect(result.current.appliedCutoff).toBe(79);
+
+    act(() => {
+      result.current.resetAppliedCutoff();
+    });
+
+    expect(result.current.appliedCutoff).toBeNull();
+    // 스트리밍 중이던 답변 텍스트는 페이지 이동과 무관하게 유지된다 (UC-27 A5)
+    expect(result.current.text).toBe('안녕');
+  });
 });
