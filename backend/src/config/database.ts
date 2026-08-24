@@ -9,15 +9,19 @@ import { Pool } from 'pg';
 /**
  * PostgreSQL 연결 풀
  */
+// 로컬 Docker Postgres는 SSL을 지원하지 않는다 — RDS(배포)만 SSL을 켠다.
+const useSSL = process.env.NODE_ENV === 'production';
+
 export const pool = new Pool({
+  // .env는 DATABASE_URL 하나만 정의한다 (DB_HOST 등 개별 변수는 없음) —
+  // connectionString을 우선하고, 배포 환경이 개별 변수를 쓴다면 그쪽으로 폴백한다.
+  connectionString: process.env.DATABASE_URL,
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ssl: useSSL ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
