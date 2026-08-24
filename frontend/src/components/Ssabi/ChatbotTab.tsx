@@ -175,20 +175,11 @@ export default function ChatbotTab({
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
-              <div className="rounded-[14px] bg-brief-accent-soft px-[14px] py-3">
-                <div className="mb-1.5 flex items-center gap-1.5 text-brief-accent">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="13"
-                    height="13"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M7.17 6A5.17 5.17 0 0 0 2 11.17c0 2.85 2.32 5.17 5.17 5.17.3 0 .6-.03.88-.08A5.2 5.2 0 0 1 4.5 20H7a8 8 0 0 0 3-6.25V11.2A5.17 5.17 0 0 0 7.17 6Zm10 0A5.17 5.17 0 0 0 12 11.17c0 2.85 2.32 5.17 5.17 5.17.3 0 .6-.03.88-.08A5.2 5.2 0 0 1 14.5 20H17a8 8 0 0 0 3-6.25V11.2A5.17 5.17 0 0 0 17.17 6Z" />
-                  </svg>
-                  <span className="font-dashSans text-[11px] font-bold">선택한 문장</span>
-                </div>
-                <p className="whitespace-pre-wrap text-xs leading-[1.6] text-brief-ink">
+              <div className="border-l-2 border-brief-accent py-0.5 pl-3">
+                <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
+                  선택한 문장
+                </p>
+                <p className="whitespace-pre-wrap font-serif text-xs italic leading-[1.6] text-brief-ink">
                   “{pinnedQuote}”
                 </p>
               </div>
@@ -279,7 +270,14 @@ export default function ChatbotTab({
               aria-label="질문 보내기"
               className="flex h-7 w-7 shrink-0 items-center justify-center self-end rounded-full bg-brief-accent text-white disabled:opacity-40"
             >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+                aria-hidden="true"
+                className="-rotate-45"
+              >
                 <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
