@@ -162,9 +162,17 @@ export default function RelationshipGraph({
     setViewBox(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
+  // SVG는 기본적으로 preserveAspectRatio="xMidYMid meet" — 컨테이너와 viewBox의 가로세로비가
+  // 다르면 더 좁게 맞아야 하는 쪽(폭 기준 배율 또는 높이 기준 배율 중 작은 쪽)에 맞춰 여백을
+  // 두고 줄인다. 폭만 기준으로 unit을 구하면, 패널을 가로로 늘려 컨테이너가 viewBox보다
+  // 상대적으로 넓어졌을 때 실제로는 높이가 배율을 결정하는데 폭 기준값을 쓰게 돼 글자·노드가
+  // 실제보다 작게 계산됐다(2026-08-25, "가로로 늘리면 글씨가 작아진다" 피드백) — 두 축 모두
+  // 계산해 더 큰 쪽(더 좁게 맞아야 하는 쪽)을 쓴다.
   const unit = () => {
-    const px = wrapRef.current?.clientWidth || 1;
-    return viewBox.width / px;
+    const el = wrapRef.current;
+    const widthPx = el?.clientWidth || 1;
+    const heightPx = el?.clientHeight || 1;
+    return Math.max(viewBox.width / widthPx, viewBox.height / heightPx);
   };
 
   function zoomAt(clientX: number, clientY: number, factor: number) {
@@ -361,7 +369,13 @@ export default function RelationshipGraph({
   return (
     <div
       ref={wrapRef}
-      className="relative h-[280px] w-full touch-none overflow-hidden rounded-xl border border-brief-rule bg-white"
+      // 높이를 고정값(h-[280px])으로 두면 패널을 가로로 늘려도(usePanelResize) 세로는
+      // 그대로라 그래프 영역이 점점 옆으로 길쭉해졌다(2026-08-25, "늘리면 가로로만
+      // 늘어난다" 피드백). 그래프 내용(base)의 가로세로비로 aspect-ratio를 잡아 폭이
+      // 늘면 높이도 같이 늘게 한다 — min/max로 극단적인 비율(인물이 한 줄로 쭉 이어진
+      // 그래프 등)에서도 너무 짜부라지거나 과하게 늘어나지 않게 막는다.
+      className="relative w-full min-h-[220px] max-h-[420px] touch-none overflow-hidden rounded-xl border border-brief-rule bg-white"
+      style={{ aspectRatio: `${base.width} / ${base.height}` }}
       onPointerDown={handlePointerDown}
     >
       <svg
