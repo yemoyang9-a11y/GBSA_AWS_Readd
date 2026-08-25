@@ -33,25 +33,32 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     window.history.pushState({}, '', '/');
   });
 
-  it('페이지를 넘기면 열려 있는 관계도 탭이 새 기준점으로 다시 조회된다', { timeout: 20000 }, async () => {
-    await goToReaderWithSsabi();
+  it(
+    '페이지를 넘기면 열려 있는 관계도 탭이 새 기준점으로 다시 조회된다',
+    { timeout: 20000 },
+    async () => {
+      await goToReaderWithSsabi();
 
-    // 21페이지 진입 → K = 20. 22페이지에서 처음 나오는 고태수는 아직 안 보인다.
-    await waitFor(() => expect(screen.getByRole('heading', { name: /^인물/ })).toBeInTheDocument());
-    expect(screen.queryByText(/고태수/)).not.toBeInTheDocument();
-
-    // 페이지를 넘기면 K 가 올라가고, 열려 있는 탭이 재조회된다 (FR-SVB-003)
-    for (const expected of ['22', '23', '24']) {
-      await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
-      await waitFor(
-        () => expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue(expected),
-        { timeout: 5000 }
+      // 21페이지 진입 → K = 21. 22페이지에서 처음 나오는 고태수는 아직 안 보인다.
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { name: /^인물/ })).toBeInTheDocument()
       );
-    }
+      expect(screen.queryByText(/고태수/)).not.toBeInTheDocument();
 
-    // 인물 목록과 관계 목록 양쪽에 나오므로 복수로 받는다
-    await waitFor(() => expect(screen.getAllByText(/고태수/).length).toBeGreaterThan(0));
-  });
+      // 페이지를 넘기면 K 가 올라가고, 열려 있는 탭이 재조회된다 (FR-SVB-003)
+      for (const expected of ['22', '23', '24']) {
+        await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+        await waitFor(
+          () =>
+            expect(screen.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue(expected),
+          { timeout: 5000 }
+        );
+      }
+
+      // 인물 목록과 관계 목록 양쪽에 나오므로 복수로 받는다
+      await waitFor(() => expect(screen.getAllByText(/고태수/).length).toBeGreaterThan(0));
+    }
+  );
 
   it('싸비 토글로 패널을 열고 닫는다 — 기본은 닫힘', { timeout: 20000 }, async () => {
     await goToReader();
@@ -84,18 +91,21 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     });
   });
 
-  it('근거 밖 질문에는 서버가 준 통일 문구가 그대로 렌더된다 (FR-QNA-004 🚦)', { timeout: 20000 }, async () => {
-    await goToReaderWithSsabi();
-    await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
+  it(
+    '근거 밖 질문에는 서버가 준 통일 문구가 그대로 렌더된다 (FR-QNA-004 🚦)',
+    { timeout: 20000 },
+    async () => {
+      await goToReaderWithSsabi();
+      await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
 
-    await userEvent.type(screen.getByLabelText('질문'), '결말이 어떻게 되나', { delay: null });
-    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+      await userEvent.type(screen.getByLabelText('질문'), '결말이 어떻게 되나', { delay: null });
+      await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
 
-    // 거절도 일반 답변과 똑같은 자리에 똑같이 렌더된다 — 프론트가 구분하지 않는다
-    await waitFor(
-      () => expect(screen.getByText(/알 수 없는 내용입니다/)).toBeInTheDocument(),
-      { timeout: 3000 }
-    );
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
+      // 거절도 일반 답변과 똑같은 자리에 똑같이 렌더된다 — 프론트가 구분하지 않는다
+      await waitFor(() => expect(screen.getByText(/알 수 없는 내용입니다/)).toBeInTheDocument(), {
+        timeout: 3000,
+      });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    }
+  );
 });

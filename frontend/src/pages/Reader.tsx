@@ -141,7 +141,11 @@ export default function Reader() {
   }, []);
 
   const appRef = useRef<HTMLDivElement>(null);
-  const { width: panelWidth, isDragging, handleProps } = usePanelResize({
+  const {
+    width: panelWidth,
+    isDragging,
+    handleProps,
+  } = usePanelResize({
     minWidth: 380,
     getMaxWidth: () => (appRef.current ? Math.round(appRef.current.clientWidth * 0.5) : 380),
   });
@@ -203,9 +207,10 @@ export default function Reader() {
    * 패널을 닫으면 통째로 언마운트되므로, 여기(Reader)가 대신 들고 있다가 재마운트 시
    * 돌려준다.
    */
-  const [characterModeMemory, setCharacterModeMemory] = useState<
-    { mode: 'major' | 'all'; epoch: number } | null
-  >(null);
+  const [characterModeMemory, setCharacterModeMemory] = useState<{
+    mode: 'major' | 'all';
+    epoch: number;
+  } | null>(null);
   const handleCharacterModeChange = useCallback(
     (mode: 'major' | 'all') => {
       setCharacterModeMemory({ mode, epoch: session?.session_epoch ?? 0 });
@@ -254,16 +259,26 @@ export default function Reader() {
     deleteConversation: deleteChatConversation,
   } = useChatConversation(bookId);
   /**
-   * 패널 헤더에 보여줄 "Np까지 읽음" 배지 (2026-08-24, 사용자 결정 — 리캡·챗봇이 실제로
-   * 어디까지 근거로 썼는지가 아니라 "지금 보고 있는 페이지"를 그대로 보여주는 쪽을
-   * 선택함). 챗봇은 이미 지금 페이지 본문을 매 질문마다 자동으로 근거에 포함하므로
-   * (service.ts "지금 보고 있는 페이지 본문" 섹션) 이 표시가 챗봇 기준으로는 정확하다 —
-   * 다만 리캡·관계도 조회 자체는 여전히 K(현재 페이지 − 1)까지만 본다(R1 불변). 여기
-   * 쓰는 값은 서버가 응답으로 확인해 준 현재 페이지 번호 그대로다 — 프론트가 page−1 같은
-   * 산술을 하지 않는다(절대 규칙 2번).
+   * 패널 배지는 로컬 currentPage가 아니라 POST /progress가 확인한 applied_cutoff만 보여준다.
+   * 그래야 배지는 최신인데 실제 챗봇·관계도는 전 페이지를 보는 거짓 상태가 되지 않는다.
    */
-  const panelAppliedCutoff = currentPage;
-  const { graph, failed: graphFailed } = useSsabiData({ bookId, tab, currentPage: currentPage ?? 0 });
+  const [panelAppliedCutoff, setPanelAppliedCutoff] = useState<number | null>(null);
+  const progressRequestIdRef = useRef(0);
+  const syncPageProgress = useCallback(
+    async (targetPage: number): Promise<void> => {
+      const requestId = ++progressRequestIdRef.current;
+      const appliedCutoff = await sendProgress(bookId, targetPage);
+      if (appliedCutoff === null) throw new Error('PROGRESS_SYNC_FAILED');
+      // 느린 이전 요청이 나중에 돌아와 최신 배지를 되감지 못하게 한다.
+      if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
+    },
+    [bookId]
+  );
+  const { graph, failed: graphFailed } = useSsabiData({
+    bookId,
+    tab,
+    currentPage: currentPage ?? 0,
+  });
 
   /**
    * 한 페이지에 오래 머물러도 세션이 끊기지 않게 한다 (A2).
@@ -300,8 +315,16 @@ export default function Reader() {
     if (currentPage === null) return; // 진입 판정 전에는 진도를 보내지 않는다
     loadPage(currentPage);
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
-    void sendProgress(bookId, currentPage);
-  }, [bookId, currentPage, loadPage]);
+    setPanelAppliedCutoff(null);
+    void syncPageProgress(currentPage).catch(() => {
+      // 자동 진도는 페이지 이동을 막지 않는다. 사용자는 챗봇의 반영 버튼으로 재시도할 수 있다.
+    });
+  }, [currentPage, loadPage, syncPageProgress]);
+
+  const refreshChatCurrentPage = useCallback(async () => {
+    if (currentPage === null) throw new Error('PAGE_NOT_READY');
+    await syncPageProgress(currentPage);
+  }, [currentPage, syncPageProgress]);
 
   /**
    * 리캡 자동 생성 — 싸비가 닫혀 있다가 열리거나(패널 재마운트), 열린 채로 다른 탭에서
@@ -430,7 +453,11 @@ export default function Reader() {
               className={`h-full transition-opacity duration-[280ms] ${tocExpanded ? 'opacity-100' : 'opacity-0'}`}
               style={{ width: TOC_WIDTH }}
             >
-              <TocPanel chapters={chapters} currentPage={currentPage} onSelectChapter={handleSelectChapter} />
+              <TocPanel
+                chapters={chapters}
+                currentPage={currentPage}
+                onSelectChapter={handleSelectChapter}
+              />
             </div>
           </aside>
         ) : null}
@@ -452,7 +479,10 @@ export default function Reader() {
         {panelRendered ? (
           <aside
             id="ssabi-panel"
-            style={{ width: panelExpanded ? panelWidth : 0, flexBasis: panelExpanded ? panelWidth : 0 }}
+            style={{
+              width: panelExpanded ? panelWidth : 0,
+              flexBasis: panelExpanded ? panelWidth : 0,
+            }}
             className={`relative shrink-0 overflow-hidden border-l border-brief-rule ${
               isDragging
                 ? ''
@@ -497,6 +527,7 @@ export default function Reader() {
                 pendingQuote={pendingQuote}
                 onRecapQuote={handleQuote}
                 onRecapRefresh={refreshRecap}
+                onChatRefresh={refreshChatCurrentPage}
                 onQuoteDismissed={() => setHighlightedQuote(null)}
                 onAsk={handleAsk}
                 onNewChat={startNewChat}

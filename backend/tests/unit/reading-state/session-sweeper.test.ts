@@ -59,7 +59,7 @@ function build(now: Date = T0) {
 describe('세션 종료 스위퍼 — runSweep', () => {
   test('4.4.1절: 무조작 30분 경과 + recap_state=none 대상만 처리한다', async () => {
     const { positions, sessions, savedRecap, deps } = build();
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=15
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=16
     sessions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
       last_activity_at: new Date(T0.getTime() - 31 * 60_000),
       recap_state: 'none',
@@ -70,7 +70,7 @@ describe('세션 종료 스위퍼 — runSweep', () => {
 
     expect(report.processed).toBe(1);
     const saved = await savedRecap.findSavedRecap(SEED_DEVICE_ID, SEED_BOOK_ID);
-    expect(saved).toEqual({ cutoff_page: 15, recap_text: '리캡 생성됨' });
+    expect(saved).toEqual({ cutoff_page: 16, recap_text: '리캡 생성됨' });
   });
 
   test('30분 미만 무조작 대상은 건드리지 않는다', async () => {
@@ -137,7 +137,7 @@ describe('세션 종료 스위퍼 — runSweep', () => {
 
   test('NFR-AI-016: 리캡 생성이 실패해도 사용자 동선을 막지 않는다 — recap_state=failed, 다음 대상 계속 처리', async () => {
     const { positions, sessions, deps } = build();
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=15 → 정상
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=16 → 정상
     positions.set('device-b', 'unknown-book', { current_page: 5, event_seq: 1 }); // 도서 없음 → 스냅샷 실패
     sessions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
       last_activity_at: new Date(T0.getTime() - 40 * 60_000),

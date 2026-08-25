@@ -20,7 +20,7 @@ export interface CutoffSnapshot {
   /** 마지막으로 열어본 페이지 (저장값) */
   current_page: number;
 
-  /** 기준점 (current_page - 1) - FR-PRG-003 🚦 */
+  /** 기준점 (진도 레코드가 없으면 0, 있으면 current_page) - FR-PRG-003 🚦 */
   cutoff: number;
 
   /** 진도 퍼센트 (current_page / total_pages) */

@@ -35,7 +35,9 @@ import type {
  * 프론트 런타임 코드가 아니라 **서버 대역**이므로 파생 계산이 여기 있는 것이 맞다.
  */
 function deriveCutoff(page: number): number {
-  return page - 1;
+  // 실제 서버는 "진도 레코드 없음"만 0으로 두는데, 이 mock은 항상 진도가 있는 상태를
+  // 모사하므로(currentPage 초기값 존재) 페이지 번호가 그대로 기준점이 된다.
+  return page;
 }
 
 function derivePercent(page: number, total: number): number {
@@ -51,7 +53,10 @@ let sessionEpoch = 1;
  * **재사용은 기준점 완전 일치 시에만** 한다 (FR-DAT-010, R8). 진도가 움직이면 저장분이
  * 무효가 되어 `recap: null` 로 내려가고, 클라이언트가 스트리밍 폴백을 부른다.
  */
-const savedRecap = { cutoff: 20, text: '20페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었습니다. (mock 저장 리캡)' };
+const savedRecap = {
+  cutoff: 21,
+  text: '21페이지까지의 줄거리입니다. 정 주사는 미두장에서 재산을 잃었습니다. (mock 저장 리캡)',
+};
 
 /** 기준점 결정기 대역 — 서버의 유일한 계산 지점 (00-shared §2.1) */
 function snapshot(page = currentPage) {
@@ -77,8 +82,9 @@ export function mockEntry(): EntryResponse {
   };
 }
 
-export function mockRecordProgress(page: number): void {
+export function mockRecordProgress(page: number): number {
   currentPage = page;
+  return snapshot().cutoff;
 }
 
 export function mockCatalogResponse(): CatalogResponse {
@@ -173,7 +179,9 @@ export function mockCharacterResponse(
 ): CharacterResponse | null {
   if (page !== undefined) currentPage = page;
   const { cutoff: k } = snapshot(page);
-  const character = mockCharacters.find((c) => c.id === characterId && c.first_appearance_page <= k);
+  const character = mockCharacters.find(
+    (c) => c.id === characterId && c.first_appearance_page <= k
+  );
   if (!character) return null; // 쿼리 결과 0행 → 404. 초과 여부를 판별한 게 아니다 (절대 규칙 7번)
 
   const notes = mockCharacterNotes

@@ -30,23 +30,23 @@ describe('브리핑 조립 — getBriefing', () => {
 
   test('R8: 저장 리캡.기준점 == K → 그대로 반환', async () => {
     const { positions, savedRecap, service } = build();
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=15
-    savedRecap.set(SEED_DEVICE_ID, SEED_BOOK_ID, { cutoff_page: 15, recap_text: '저장된 리캡' });
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=16
+    savedRecap.set(SEED_DEVICE_ID, SEED_BOOK_ID, { cutoff_page: 16, recap_text: '저장된 리캡' });
 
     const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(briefing.applied_cutoff).toBe(15);
+    expect(briefing.applied_cutoff).toBe(16);
     expect(briefing.recap).toBe('저장된 리캡');
   });
 
   test('R8: 저장 리캡.기준점 != K → 무효 처리, recap: null (폴백 대상 — applied_cutoff > 0)', async () => {
     const { positions, savedRecap, service } = build();
-    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=15
+    positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 16, event_seq: 1 }); // K=16
     savedRecap.set(SEED_DEVICE_ID, SEED_BOOK_ID, { cutoff_page: 5, recap_text: '옛 리캡' });
 
     const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(briefing.applied_cutoff).toBe(15);
+    expect(briefing.applied_cutoff).toBe(16);
     expect(briefing.recap).toBeNull();
   });
 
@@ -56,7 +56,7 @@ describe('브리핑 조립 — getBriefing', () => {
 
     const briefing = await service.getBriefing(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(briefing.applied_cutoff).toBe(15);
+    expect(briefing.applied_cutoff).toBe(16);
     expect(briefing.recap).toBeNull();
   });
 

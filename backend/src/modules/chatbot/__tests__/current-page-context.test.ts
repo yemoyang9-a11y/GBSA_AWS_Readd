@@ -1,10 +1,8 @@
 /**
  * 지금 보고 있는 페이지 본문 → 챗봇 프롬프트 자동 주입 테스트
  *
- * 신규 UX(2026-08-24, 사용자 요청): "13페이지도 포함해서 근거로 써라" — K(기준점, R1)는
- * 그대로 두고, 이미 화면에 떠 있는(R3: 본문 접근 무제한) 현재 페이지 전체를 매 질문마다
- * 자동으로 프롬프트에 얹는다. quote-context.test.ts와 같은 정신 — K로 자르는 근거
- * 조립(assembleContext)·검색(vectorSearch)은 건드리지 않는다.
+ * 진도가 있으면 현재 페이지는 K에 포함된다. 모델이 긴 조립 문맥 안에서 현재 페이지를
+ * 놓치지 않게 별도 섹션으로 다시 주입하는 동작을 검증한다.
  */
 
 import { handleQuery, NO_EVIDENCE_MESSAGE } from '../service';
@@ -19,9 +17,12 @@ jest.mock('../../llm-gateway/gateway', () => ({ stream: jest.fn() }));
 describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => {
   const BOOK_ID = 'takryu-vol1';
   const DEVICE_ID = 'device-123';
-  const K = 12; // 13페이지 진입 → K = 12 (FR-PRG-003)
+  const K = 13; // 진도가 있으면 K = current_page (FR-PRG-003)
   const QUERY = "'스래' 이게 뭐야?";
-  const CURRENT_PAGE = { pageNo: 13, content: "개복동, 구복동, 둔뱀이 그리고... '스래', 이러한 몇 곳이..." };
+  const CURRENT_PAGE = {
+    pageNo: 13,
+    content: "개복동, 구복동, 둔뱀이 그리고... '스래', 이러한 몇 곳이...",
+  };
 
   let capturedPrompt = '';
 
@@ -53,7 +54,15 @@ describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => 
   });
 
   test('현재 페이지 본문이 있으면 프롬프트에 "지금 보고 있는 페이지 본문" 섹션으로 그대로 들어간다', async () => {
-    for await (const _ of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID, undefined, undefined, CURRENT_PAGE)) {
+    for await (const _ of handleQuery(
+      BOOK_ID,
+      QUERY,
+      K,
+      DEVICE_ID,
+      undefined,
+      undefined,
+      CURRENT_PAGE
+    )) {
       // 소비만 한다
     }
 
@@ -70,7 +79,15 @@ describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => 
   });
 
   test('현재 페이지 본문은 K로 자르는 근거 조립·검색 경로를 거치지 않는다', async () => {
-    for await (const _ of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID, undefined, undefined, CURRENT_PAGE)) {
+    for await (const _ of handleQuery(
+      BOOK_ID,
+      QUERY,
+      K,
+      DEVICE_ID,
+      undefined,
+      undefined,
+      CURRENT_PAGE
+    )) {
       // 소비만 한다
     }
 

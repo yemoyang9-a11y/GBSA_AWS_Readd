@@ -22,6 +22,7 @@ import { BookNotReadyError } from '../modules/reading-state/session.service';
 import { createContentServices } from '../modules/content/composition';
 import { createSsabiServices } from '../modules/ssabi/composition';
 import { ensureBookReady } from './book-ready.guard';
+import { pageIsIncludedInCutoff } from './cutoff-inclusion';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
 
 const router = express.Router();
@@ -124,16 +125,19 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
       // 기준점 스냅샷 가져오기 (R2 연동)
       // UC-27 A5: 질의 시점 고정, 스트리밍 중 페이지 변경해도 시작 시점 K 유지
-      // FR-PRG-003 🚦: 기준점 = current_page - 1
+      // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : current_page
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
 
-      try {
-        const pageRow = await contentServices.pageService.getPage(bookId, snapshot.current_page);
-        if (pageRow) currentPageText = { pageNo: pageRow.page_no, content: pageRow.content };
-      } catch (error) {
-        // 실패해도 챗봇 응답 자체는 막지 않는다 — 이 섹션 없이 기존 K-bounded 근거로만 답한다
-        console.error('[API] current page fetch for chat context failed', { bookId, error });
+      // 첫 페이지 예외(K=0)에서는 페이지 1 본문을 별도 섹션으로 우회 주입하지 않는다.
+      if (pageIsIncludedInCutoff(snapshot.current_page, K)) {
+        try {
+          const pageRow = await contentServices.pageService.getPage(bookId, snapshot.current_page);
+          if (pageRow) currentPageText = { pageNo: pageRow.page_no, content: pageRow.content };
+        } catch (error) {
+          // 실패해도 챗봇 응답 자체는 막지 않는다 — 이 섹션 없이 기존 K-bounded 근거로만 답한다
+          console.error('[API] current page fetch for chat context failed', { bookId, error });
+        }
       }
 
       // 대화 이력 — 이어갈지/새로 열지는 여기서 정한다 (하루 롤오버·"새 채팅" 모두 이 경로)
@@ -632,6 +636,7 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
       await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
+
 
     // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
