@@ -222,25 +222,29 @@ export default function RelationshipGraph({
     const neighborPositions = graph.nodes
       .map((n, i) => (neighborIds.has(n.id) ? positions[i] : null))
       .filter((q): q is Point => q !== null);
-    // 뷰박스 중심은 p(선택 인물) 고정이다 — "해당 인물을 중심으로" 요청 그대로. 그래서
-    // 필요한 반너비는 "인접 인물들 사이의 전체 span"이 아니라 **p로부터 가장 먼 인접
-    // 인물까지의 거리**여야 한다. p가 인접 인물 무리의 한쪽으로 치우쳐 있으면(흔한 경우 —
-    // 인접 인물들이 p 기준 한 방향에 몰려 있을 수 있다) 전체 span의 절반만큼만 반너비를
-    // 잡으면 반대쪽 먼 인접 인물이 화면 밖으로 잘린다(2026-08-25, "주변 인물이 잘린다"
-    // 피드백의 실제 원인 — p를 중심으로 대칭 확장하는데 필요한 반경을 잘못 구했었다).
-    const maxDx = Math.max(0, ...neighborPositions.map((q) => Math.abs(q.x - p.x)));
-    const maxDy = Math.max(0, ...neighborPositions.map((q) => Math.abs(q.y - p.y)));
+    // p를 뷰박스 중심에 고정하고 대칭으로 확장하면, 인접 인물이 한쪽에 몰려 있을 때
+    // (흔한 경우) 반대쪽엔 아무도 없는데 그만큼 빈 공간이 생긴다(2026-08-25, "한쪽이
+    // 텅 비어 보인다" 피드백). 대신 방향별로 실제 필요한 만큼만 여백을 두는 바운딩박스
+    // (p + 인접 인물 전원)를 만들고, 그 박스의 중심으로 카메라를 맞춘다 — 인접 인물이
+    // p 주위에 고르게 둘러싸여 있으면 이 중심은 자연히 p 근처에 온다.
+    const leftExtent = Math.max(0, ...neighborPositions.map((q) => p.x - q.x));
+    const rightExtent = Math.max(0, ...neighborPositions.map((q) => q.x - p.x));
+    const topExtent = Math.max(0, ...neighborPositions.map((q) => p.y - q.y));
+    const bottomExtent = Math.max(0, ...neighborPositions.map((q) => q.y - p.y));
+    const minX = p.x - leftExtent - FOCUS_PADDING;
+    const maxX = p.x + rightExtent + FOCUS_PADDING;
+    const minY = p.y - topExtent - FOCUS_PADDING;
+    const maxY = p.y + bottomExtent + FOCUS_PADDING;
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
     const aspect = base.height / base.width;
     // clampViewBox가 height를 base의 가로세로비로 다시 계산한다. width 하나만 두 축 중
     // 큰 쪽으로 잡으면, 작은 쪽 축은 그 비율로 다시 계산된 height가 실제로 필요한 반경보다
     // 작아질 수 있다 — width를 두 축 모두를 여유 있게 덮는 값으로 따로 계산한다.
-    const rawWidth = Math.max(
-      maxDx * 2 + FOCUS_PADDING * 2,
-      (maxDy * 2 + FOCUS_PADDING * 2) / aspect
-    );
+    const rawWidth = Math.max(maxX - minX, (maxY - minY) / aspect);
     const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
     const height = width * aspect;
-    animateViewBoxTo(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
+    animateViewBoxTo(clampViewBox({ x: cx - width / 2, y: cy - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
   // SVG는 기본적으로 preserveAspectRatio="xMidYMid meet" — 컨테이너와 viewBox의 가로세로비가
