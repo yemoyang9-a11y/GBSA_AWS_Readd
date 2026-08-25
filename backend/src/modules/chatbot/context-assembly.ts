@@ -219,6 +219,27 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     sections.push('');
   }
 
+  // ⚠️ 실사용 중 발견(2026-08-25) — SYSTEM_RULES의 "질문 전제가 틀렸을 때 정정하라"는
+  // 지시만으로는 부족했다(2026-08-24의 currentPageText 케이스와 같은 이유: 위 인물·관계
+  // 목록이 프롬프트 앞부분 시스템 규칙보다 한참 뒤에 있다 보니, Haiku가 존재하지 않는
+  // 관계를 물으면 목록에 실제로 정정 근거가 있어도 무시하고 [NO_EVIDENCE]를 반환하는 걸
+  // 실제 배포본에서 재현했다 — 예: "정주사 아들 누구야?"에 목록엔 "정주사의 딸 초봉"이
+  // 있는데도 거절함). 지시를 근거 바로 옆에 다시 박아 넣는다.
+  if (
+    context.entities.characters.length > 0 ||
+    context.entities.relationships.length > 0 ||
+    context.entities.terms.length > 0 ||
+    context.entities.events.length > 0
+  ) {
+    sections.push(
+      '(위 인물·인물 관계·용어·사건은 전부 지금까지 확인된 확정 근거입니다. 질문의 전제가 ' +
+        '위 내용과 다르면(예: 실제로는 딸인데 "아들"이라고 물음) "[NO_EVIDENCE]" 대신 위 ' +
+        '내용으로 정정해서 답하세요 — 단, "OO는 아들이 없어요"처럼 책 전체에 대한 단정적 ' +
+        '부정은 쓰지 말고 "지금까지 읽은 부분에서는 ~"으로 범위를 한정하세요.)'
+    );
+    sections.push('');
+  }
+
   // 배경지식 (상한 없음 - R5)
   if (context.background) {
     sections.push('## 배경지식');
