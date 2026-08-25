@@ -70,7 +70,8 @@ export default function ContinueReadingHero({
               <span>{book.progress!.current_page}쪽</span>
             </div>
             <div className="mt-[9px]">
-              <ProgressBar percent={book.progress!.percent} tone="dash" />
+              {/* size="md" — 브리핑 쪽 크기로 통일(2026-08-25, ProgressBar.tsx 주석 참조) */}
+              <ProgressBar percent={book.progress!.percent} tone="dash" size="md" />
             </div>
           </div>
         ) : null}

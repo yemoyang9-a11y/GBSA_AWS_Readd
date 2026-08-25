@@ -39,17 +39,25 @@ describe('ProgressBar', () => {
 });
 
 describe('brief 톤·size (2026-08-23 브리핑 재설계)', () => {
-  it('tone="brief"는 brief-accent 채움·brief-line 트랙을 쓴다', () => {
-    render(<ProgressBar percent={50} tone="brief" />);
-    expect(screen.getByTestId('progress-fill').className).toContain('bg-brief-accent');
-    expect(screen.getByRole('progressbar').className).toContain('bg-brief-line');
-  });
-
   it('size="md"는 6px 높이(h-1.5)를 쓴다 — 기본은 4px(h-1) 그대로', () => {
     render(<ProgressBar percent={50} />);
     expect(screen.getByRole('progressbar').className).toContain('h-1 ');
 
     render(<ProgressBar percent={50} size="md" />);
     expect(screen.getAllByRole('progressbar')[1].className).toContain('h-1.5');
+  });
+});
+
+describe('진도 바 채움색 통일 (2026-08-25, 대시보드·브리핑 시안 5종 비교 후 결정)', () => {
+  it('tone="brief"는 progress 채움(대시보드와 통일)·brief-line 트랙을 쓴다', () => {
+    render(<ProgressBar percent={50} tone="brief" />);
+    expect(screen.getByTestId('progress-fill').className).toContain('bg-progress');
+    expect(screen.getByRole('progressbar').className).toContain('bg-brief-line');
+  });
+
+  it('tone="dash"도 같은 progress 채움을 쓴다 — 트랙만 dash-line으로 구분된다', () => {
+    render(<ProgressBar percent={50} tone="dash" />);
+    expect(screen.getByTestId('progress-fill').className).toContain('bg-progress');
+    expect(screen.getByRole('progressbar').className).toContain('bg-dash-line');
   });
 });
