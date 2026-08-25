@@ -209,6 +209,27 @@ describe('ChatbotTab', () => {
 
     expect(screen.getByText('두 번째 인용', { exact: false })).toBeInTheDocument();
   });
+
+  it('현재 페이지를 벗어나 quote가 비워지면 "선택한 문장" 카드와 다음 질문용 인용을 함께 지운다', async () => {
+    const onAsk = vi.fn();
+    const { rerender } = render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={onAsk}
+        quote={{ text: '이전 페이지에서 고른 문장', token: 1 }}
+      />
+    );
+
+    rerender(<ChatbotTab answer="" streaming={false} error={null} onAsk={onAsk} quote={null} />);
+
+    expect(screen.queryByText('선택한 문장')).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('질문'), '다음 페이지 내용이 궁금해');
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+    expect(onAsk).toHaveBeenCalledWith('다음 페이지 내용이 궁금해', undefined);
+  });
 });
 
 describe('ChatbotTab automatic scrolling', () => {

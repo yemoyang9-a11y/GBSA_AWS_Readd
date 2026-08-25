@@ -162,7 +162,11 @@ export default function ChatbotTab({
   };
 
   useEffect(() => {
-    if (!quote) return;
+    if (!quote) {
+      setAttachedQuote(null);
+      setPinnedQuote(null);
+      return;
+    }
     setAttachedQuote(quote.text);
     setPinnedQuote(quote.text);
     inputRef.current?.focus();

@@ -182,6 +182,20 @@ export default function Reader() {
    */
   const [session, setSession] = useState<EntryResponse | null>(entry ?? null);
   const [currentPage, setCurrentPage] = useState<number | null>(entry?.page ?? null);
+  const previousPageRef = useRef<number | null>(currentPage);
+
+  /**
+   * 선택 문장은 그 문장이 있던 본문 페이지에서만 유효하다. 이전/다음·목차·직접 입력처럼
+   * currentPage를 바꾸는 모든 이동 경로가 이 한 상태를 거치므로, 페이지를 떠나는 즉시
+   * 챗봇 카드와 본문 강조를 함께 비운다.
+   */
+  useEffect(() => {
+    if (previousPageRef.current !== null && previousPageRef.current !== currentPage) {
+      setPendingQuote(null);
+      setHighlightedQuote(null);
+    }
+    previousPageRef.current = currentPage;
+  }, [currentPage]);
 
   /**
    * 마지막으로 활성이던 싸비 탭 기억 — 어느 session_epoch에서 기록됐는지와 함께 보관한다.
