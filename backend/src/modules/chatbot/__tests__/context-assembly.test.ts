@@ -73,6 +73,7 @@ describe('관계 프롬프트 렌더링 - FR-QNA-006 🚦', () => {
   // uuidv4()라 사람이 읽을 수 없는데, buildPrompt가 그동안 이름 해석 없이
   // rel.label만 넣어서 "누구의" 관계인지 모델이 알 방법이 없었던 게 원인.
   const baseContext: ChatbotContext = {
+    book: { title: '탁류', author: '채만식' },
     chapter_summaries: [],
     current_chapter_text: null,
     entities: {
@@ -124,6 +125,7 @@ describe('인물 노트 프롬프트 렌더링 - FR-QNA-006 🚦', () => {
   // 질문이 항상 [NO_EVIDENCE]였던 버그.
   test('인물 노트가 프롬프트에 실제로 포함된다', () => {
     const context: ChatbotContext = {
+      book: { title: '탁류', author: '채만식' },
       chapter_summaries: [],
       current_chapter_text: null,
       entities: {

@@ -371,15 +371,25 @@ async function logQuery(log: ChatbotQueryLog): Promise<void> {
   // TODO: 실제 DB에 저장
   // INSERT INTO chatbot_query_log (...)
 
+  // CP5 인젝션 판정은 "K 밖 콘텐츠가 어디서 들어왔는지"를 로그만 보고 되짚을 수 있어야
+  // 한다. 조립부는 input_records·search_selected_pages를 이미 채워 넘기는데 여기서
+  // 요약만 남기고 버리면 판정 자체가 불가능해진다 — 전달받은 필드를 그대로 싣는다.
+  // 부피 걱정은 없다: input_records는 ID·제목만, search_selected_pages는 페이지 번호와
+  // 거리만 담는다(본문 없음). 자유 텍스트인 query·quote만 앞부분으로 자른다.
   console.log('[Chatbot] Query log', {
     timestamp: log.timestamp.toISOString(),
     device_id: log.device_id,
     book_id: log.book_id,
     cutoff_page: log.cutoff_page,
     query: log.query.substring(0, 50),
+    quote: log.quote?.substring(0, 50),
+    input_records: log.input_records,
+    search_selected_pages: log.search_selected_pages,
     search_result_count: log.search_selected_pages.length,
     no_evidence: log.no_evidence,
     model: log.model,
+    output_ref: log.output_ref,
+    tokens: log.tokens,
   });
 }
 
