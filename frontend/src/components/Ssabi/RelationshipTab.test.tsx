@@ -106,7 +106,7 @@ describe('RelationshipTab', () => {
 
   it('되감기 슬라이더는 brief-accent 를 쓴다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
-    expect(screen.getByLabelText('시점 되감기').className).toContain('accent-brief-accent');
+    expect(screen.getByLabelText('시점 되감기').className).toContain('bg-brief-accent');
   });
 
   describe('되감기 트랙 — 전체 분량 표시', () => {
