@@ -80,6 +80,28 @@ describe('ChatbotTab', () => {
     expect(screen.getByLabelText('질문')).toHaveValue('"정 주사는 여전히 미두장 앞을" ');
   });
 
+  it('2026-08-25: "선택한 문장" 카드의 ×를 누르면 카드가 사라지고, 그 뒤 질문에는 인용이 딸려가지 않는다', async () => {
+    const onAsk = vi.fn();
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={onAsk}
+        quote={{ text: '정 주사는 여전히 미두장 앞을', token: 1 }}
+      />
+    );
+
+    expect(screen.getByText('선택한 문장')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '선택한 문장 해제' }));
+
+    expect(screen.queryByText('선택한 문장')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+    expect(onAsk).toHaveBeenCalledWith(expect.stringContaining('정 주사는 여전히 미두장 앞을'), undefined);
+  });
+
   it('같은 문장을 다시 인용해도(token 증가) 입력창을 새 인용문으로 다시 채운다', () => {
     const { rerender } = render(
       <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 1 }} />

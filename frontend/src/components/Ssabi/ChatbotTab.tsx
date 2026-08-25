@@ -44,7 +44,11 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * "선택한 문장" 카드로 원문을 계속 띄워 둔다. 질문을 보내면 입력창의 `attachedQuote`는
  * 그 한 번의 질문에만 쓰이고 비워지지만(기존 동작 유지), 이 카드는 그 뒤로 이어지는
  * 후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여주려고 세션 동안 남는다 —
- * 새 문장을 다시 드래그하거나 "새 채팅"/다른 대화 선택으로 넘어가면 지운다.
+ * 새 문장을 다시 드래그하거나 "새 채팅"/다른 대화 선택으로 넘어가면 지운다. 카드 우측
+ * ×버튼(2026-08-25, 사용자 요청)으로도 직접 해제할 수 있다 — 아직 안 보낸 인용
+ * (`attachedQuote`)도 같이 지워서, 해제한 뒤 보내는 질문엔 그 문장이 조용히 딸려가지
+ * 않는다. 입력창에 이미 채워진 텍스트 자체는 손대지 않는다(사용자가 직접 수정 중일 수
+ * 있어 임의로 지우면 더 놀랍다).
  */
 const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
 
@@ -175,13 +179,33 @@ export default function ChatbotTab({
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
-              <div className="border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-[14px]">
-                <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
-                  선택한 문장
-                </p>
-                <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
-                  “{pinnedQuote}”
-                </p>
+              <div className="flex items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2">
+                <div>
+                  <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
+                    선택한 문장
+                  </p>
+                  <p className="whitespace-pre-wrap font-serif text-xs leading-[1.6] text-brief-ink">
+                    “{pinnedQuote}”
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="선택한 문장 해제"
+                  onClick={() => {
+                    setPinnedQuote(null);
+                    setAttachedQuote(null);
+                  }}
+                  className="shrink-0 rounded-full p-1 text-brief-accent hover:bg-brief-accent/10"
+                >
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
               </div>
             ) : null}
 
