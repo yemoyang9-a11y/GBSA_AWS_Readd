@@ -14,6 +14,7 @@ import {
   listConversations as listChatConversations,
   getConversationDetail as getChatConversationDetail,
   deleteConversation as deleteChatConversation,
+  parseConversationId,
 } from '../modules/chatbot/conversation-service';
 import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
@@ -136,11 +137,12 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       }
 
       // 대화 이력 — 이어갈지/새로 열지는 여기서 정한다 (하루 롤오버·"새 채팅" 모두 이 경로)
+      // conversationId는 문자열로 왕복할 수 있다 — parseConversationId 주석 참고.
       const resolved = await resolveConversation(
         deviceId,
         bookId,
         K,
-        typeof requestedConversationId === 'number' ? requestedConversationId : undefined
+        parseConversationId(requestedConversationId)
       );
       conversationId = resolved.conversationId;
     }
