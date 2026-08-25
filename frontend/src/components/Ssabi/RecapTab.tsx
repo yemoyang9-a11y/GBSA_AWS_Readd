@@ -74,7 +74,7 @@ export default function RecapTab({
           끝에 오른쪽 정렬로 놓는다. 본문과의 간격도 넓혔다(사용자 요청). */}
       <span
         aria-hidden="true"
-        className="mb-4 block font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.28]"
+        className="mb-4 block font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.45]"
       >
         “
       </span>
@@ -104,7 +104,7 @@ export default function RecapTab({
       ) : (
         <span
           aria-hidden="true"
-          className="mt-4 block text-right font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.28]"
+          className="mt-4 block text-right font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.45]"
         >
           ”
         </span>
