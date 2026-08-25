@@ -97,9 +97,21 @@ export default function ShelfList({
                     type="button"
                     aria-label={`${book.title} 정보 보기`}
                     onClick={() => onInfo(book)}
-                    className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-full border border-dash-line bg-white font-dashSerif text-xs italic text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink"
+                    className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-full text-dash-muted transition-[color,transform] duration-150 hover:scale-[1.2] hover:text-dash-ink"
                   >
-                    i
+                    <svg viewBox="0 0 24 24" className="size-[15px]" fill="none" aria-hidden="true">
+                      <circle cx="12" cy="12" r="8.4" stroke="currentColor" strokeWidth="1.6" />
+                      <line
+                        x1="12"
+                        y1="11"
+                        x2="12"
+                        y2="16.2"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="12" cy="7.6" r="0.9" fill="currentColor" />
+                    </svg>
                   </button>
                 ) : null}
               </li>
