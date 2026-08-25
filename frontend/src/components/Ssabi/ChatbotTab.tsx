@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
 import ssabiFace from '../../assets/images/ssabi-face.png';
 import { splitMarkdownBold } from './parseMarkdownBold';
@@ -138,6 +138,8 @@ export default function ChatbotTab({
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const previousUserMessageCountRef = useRef<number | null>(null);
   /**
    * 다음 질문에 실어 보낼 인용문. 입력창엔 안 보인다(2026-08-25) — 사용자가 직접 타이핑한
    * 질문 위에 조용히 얹혀서, 서버 프롬프트엔 "본문 인용" 근거로 같이 들어간다.
@@ -200,6 +202,32 @@ export default function ChatbotTab({
       ...(asked ? [{ role: 'user' as const, text: asked }] : []),
       ...(answer ? [{ role: 'assistant' as const, text: answer }] : []),
     ];
+  const hasBubbles = bubbles.length > 0;
+  const latestBubbleText = bubbles[bubbles.length - 1]?.text;
+  const userMessageCount = bubbles.filter((bubble) => bubble.role === 'user').length;
+
+  useLayoutEffect(() => {
+    const userMessageWasAdded =
+      previousUserMessageCountRef.current !== null && userMessageCount > previousUserMessageCountRef.current;
+    previousUserMessageCountRef.current = userMessageCount;
+
+    if (!hasBubbles) return;
+
+    const messages = messagesRef.current;
+    if (!messages) return;
+
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const scrollOptions = {
+      top: messages.scrollHeight,
+      behavior: userMessageWasAdded && !reduceMotion ? 'smooth' : 'auto',
+    } as const;
+
+    if (typeof messages.scrollTo === 'function') {
+      messages.scrollTo(scrollOptions);
+    } else {
+      messages.scrollTop = messages.scrollHeight;
+    }
+  }, [hasBubbles, latestBubbleText, streaming, userMessageCount]);
 
   return (
     <div className="flex h-full flex-col">
@@ -325,7 +353,7 @@ export default function ChatbotTab({
         </div>
       ) : (
         <>
-          <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
+          <div ref={messagesRef} className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
               <div
                 key={pinnedQuote}

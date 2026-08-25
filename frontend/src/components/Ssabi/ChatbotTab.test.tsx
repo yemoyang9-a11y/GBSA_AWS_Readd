@@ -176,6 +176,58 @@ describe('ChatbotTab', () => {
   });
 });
 
+describe('ChatbotTab automatic scrolling', () => {
+  it('smoothly scrolls to a newly submitted user message', () => {
+    const { container, rerender } = render(
+      <ChatbotTab streaming={false} error={null} onAsk={() => {}} turns={[]} conversations={[]} />
+    );
+    const messages = container.querySelector('.brief-scroll.flex-1.space-y-3.overflow-y-auto') as HTMLDivElement;
+    const scrollTo = vi.fn();
+    Object.defineProperty(messages, 'scrollTo', { value: scrollTo });
+    Object.defineProperty(messages, 'scrollHeight', { value: 640 });
+
+    rerender(
+      <ChatbotTab
+        streaming
+        error={null}
+        onAsk={() => {}}
+        turns={[{ role: 'user', text: '새 질문' }, { role: 'assistant', text: '' }]}
+        conversations={[]}
+      />
+    );
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 640, behavior: 'smooth' });
+  });
+
+  it('keeps the view at the latest streaming response without replaying the animation', () => {
+    const { container, rerender } = render(
+      <ChatbotTab
+        streaming
+        error={null}
+        onAsk={() => {}}
+        turns={[{ role: 'user', text: '새 질문' }, { role: 'assistant', text: '답' }]}
+        conversations={[]}
+      />
+    );
+    const messages = container.querySelector('.brief-scroll.flex-1.space-y-3.overflow-y-auto') as HTMLDivElement;
+    const scrollTo = vi.fn();
+    Object.defineProperty(messages, 'scrollTo', { value: scrollTo });
+    Object.defineProperty(messages, 'scrollHeight', { value: 700 });
+
+    rerender(
+      <ChatbotTab
+        streaming
+        error={null}
+        onAsk={() => {}}
+        turns={[{ role: 'user', text: '새 질문' }, { role: 'assistant', text: '답변이 이어집니다' }]}
+        conversations={[]}
+      />
+    );
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 700, behavior: 'auto' });
+  });
+});
+
 /**
  * 대화 이력 (2026-08-24, 사용자·R2 조율 결정) — turns가 오면 그 대화 전체를 그리고,
  * "새 채팅"·"지난 대화" 버튼과 이력 목록도 함께 노출한다.
