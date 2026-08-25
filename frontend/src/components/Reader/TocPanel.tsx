@@ -14,6 +14,11 @@ import type { ChapterSummary } from '../../types';
  * 각 장을 누르면 그 장의 start_page로 이동한다 — 서버가 내려준 값 그대로 쓰고
  * 프론트에서 페이지 산술을 하지 않는다(절대 규칙 2번). 페이지 입력창으로 임의
  * 페이지 이동이 이미 가능한 것과 같은 카테고리의 이동이라 새 우회 경로가 아니다.
+ *
+ * "목차" 제목에 pl-20(2026-08-25, 사용자 제보 — 아이콘과 글자가 겹침)을 준다 —
+ * TocToggleButton은 Reader.tsx가 이 패널과 무관하게 `absolute left-6 top-20`
+ * 고정 위치로 그리는데, 그 자리가 패널을 열었을 때 이 제목이 시작되는 자리와
+ * 겹친다. SsabiPanel 헤더의 pr-20(반대쪽, 같은 이유)과 같은 처방이다.
  */
 export default function TocPanel({
   chapters,
@@ -26,7 +31,7 @@ export default function TocPanel({
 }) {
   return (
     <div className="brief-scroll h-full overflow-y-auto px-5 py-6">
-      <h2 className="mb-4 font-dashSerif text-base font-extrabold text-brief-ink">목차</h2>
+      <h2 className="mb-4 pl-20 font-dashSerif text-base font-extrabold text-brief-ink">목차</h2>
       {chapters.length === 0 ? (
         <p className="text-xs text-brief-muted">목차를 불러오는 중</p>
       ) : (

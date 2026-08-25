@@ -45,6 +45,7 @@ export default function SsabiPanel({
   onToggleChatHistory,
   onSelectChatConversation,
   onDeleteChatConversation,
+  onQuoteDismissed,
   onRecapQuote,
 }: {
   sessionEpoch: number;
@@ -87,6 +88,9 @@ export default function SsabiPanel({
   onSelectChatConversation: (conversationId: number) => void;
   /** 지난 대화 삭제 (2026-08-25, 사용자 요청) */
   onDeleteChatConversation?: (conversationId: number) => void;
+  /** "선택한 문장" 카드가 지워질 때마다 호출된다(2026-08-25, 사용자 요청) — Reader.tsx가
+   *  본문 하이라이트를 같이 지운다. */
+  onQuoteDismissed?: () => void;
   /**
    * 리캡 카드에서 드래그로 인용했을 때(2026-08-25, 사용자 요청). ReaderView의 onQuote와
    * 같은 핸들러(Reader.tsx의 handleQuote)를 받는다 — 소스가 본문이든 리캡이든 결과는
@@ -197,6 +201,7 @@ export default function SsabiPanel({
             onToggleHistory={onToggleChatHistory}
             onSelectConversation={onSelectChatConversation}
             onDeleteConversation={onDeleteChatConversation}
+            onQuoteDismissed={onQuoteDismissed}
           />
         ) : null}
       </div>

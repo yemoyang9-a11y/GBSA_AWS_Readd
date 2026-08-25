@@ -156,7 +156,17 @@ export default function Reader() {
   const handleQuote = useCallback((text: string) => {
     setPanelOpen(true);
     setPendingQuote((prev) => ({ text, token: (prev?.token ?? 0) + 1 }));
+    setHighlightedQuote(text);
   }, []);
+
+  /**
+   * 본문 인용 하이라이트 (2026-08-25, 사용자 요청) — "선택한 문장" 카드와 같은 값을
+   * 따로 들고 있다가 ReaderView에 내려준다. pendingQuote와 값은 같지만 목적이 다르다 —
+   * pendingQuote는 "새 인용이 왔다"는 1회성 신호(token 포함, SsabiPanel 탭 전환용)이고
+   * 이건 "지금 강조해야 할 문장이 있는가"라는 상태값이라, 카드가 지워지면(×·새 채팅·
+   * 다른 대화 선택 — ChatbotTab의 onQuoteDismissed) 이것만 따로 null로 돌아간다.
+   */
+  const [highlightedQuote, setHighlightedQuote] = useState<string | null>(null);
 
   /**
    * 시작 페이지·세션은 **서버 진입 판정**이 정한다 (FR-BRF-001, 절대 규칙 8번).
@@ -370,6 +380,7 @@ export default function Reader() {
             nextPage={page.next_page}
             onMove={setCurrentPage}
             onQuote={handleQuote}
+            highlightedQuote={highlightedQuote}
           />
         </div>
 
@@ -417,6 +428,7 @@ export default function Reader() {
                 chatHistoryOpen={chatHistoryOpen}
                 pendingQuote={pendingQuote}
                 onRecapQuote={handleQuote}
+                onQuoteDismissed={() => setHighlightedQuote(null)}
                 onAsk={handleAsk}
                 onNewChat={startNewChat}
                 onToggleChatHistory={toggleChatHistory}

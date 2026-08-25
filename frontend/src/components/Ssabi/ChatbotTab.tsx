@@ -59,7 +59,10 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * 새 문장을 인용할 때마다(문장이 다르면 key가 바뀌어 리마운트) 살짝 떠오르며 나타난다.
  * sticky top-0(2026-08-25, 사용자 요청 — 스크롤해도 배너처럼 안 밀려 올라가게)로
  * 대화를 스크롤해도 이 카드만 스크롤 영역 맨 위에 계속 붙어 있는다 — 배경이 불투명해
- * (bg-brief-accent-soft) 뒤로 지나가는 말풍선을 가려 준다.
+ * (bg-brief-accent-soft) 뒤로 지나가는 말풍선을 가려 준다. 지워지는 세 자리(×·새 채팅·
+ * 다른 대화 선택) 모두 onQuoteDismissed도 같이 불러서(2026-08-25, 사용자 요청 — 본문에도
+ * 인용문을 하이라이트하기 시작하며 추가), 부모(Reader.tsx)가 본문 하이라이트를 이
+ * 카드와 같은 타이밍에 지울 수 있게 한다.
  *
  * 답변 말풍선 테두리는 brief-accent(남보라) 대신 `progress` 토큰(남색 #35536b)을
  * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
@@ -80,6 +83,7 @@ export default function ChatbotTab({
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
+  onQuoteDismissed,
 }: {
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
@@ -99,6 +103,10 @@ export default function ChatbotTab({
   /** 지난 대화 삭제 (2026-08-25, 사용자 요청). historyOpen일 때만 그려지는 목록 각 항목의
    *  삭제 버튼에 연결된다. */
   onDeleteConversation?: (conversationId: number) => void;
+  /** 선택한 문장이 지워질 때(×·새 채팅·다른 대화 선택)마다 호출된다(2026-08-25, 사용자
+   *  요청). Reader.tsx가 본문 하이라이트를 이 콜백에 맞춰 같이 지운다 — "선택한 문장"
+   *  카드와 본문 하이라이트가 서로 다른 상태로 갈라지지 않게 한다. */
+  onQuoteDismissed?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
@@ -111,6 +119,12 @@ export default function ChatbotTab({
   /** 대화 목록 맨 위 "선택한 문장" 카드에 계속 띄워 둘 원문. 질문을 보내도 비우지 않는다 —
    *  후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여줘야 하기 때문. */
   const [pinnedQuote, setPinnedQuote] = useState<string | null>(null);
+  /** setPinnedQuote(null) 세 자리(×·새 채팅·다른 대화 선택) 모두 이걸로 통일한다 —
+   *  onQuoteDismissed 호출을 한 곳에서만 관리해 빠뜨리는 자리가 생기지 않게 한다. */
+  const clearPinnedQuote = () => {
+    setPinnedQuote(null);
+    onQuoteDismissed?.();
+  };
 
   useEffect(() => {
     if (!quote) return;
@@ -154,7 +168,7 @@ export default function ChatbotTab({
           <button
             type="button"
             onClick={() => {
-              setPinnedQuote(null);
+              clearPinnedQuote();
               onNewChat?.();
             }}
             className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
@@ -173,7 +187,7 @@ export default function ChatbotTab({
                   <button
                     type="button"
                     onClick={() => {
-                      setPinnedQuote(null);
+                      clearPinnedQuote();
                       onSelectConversation?.(c.id);
                     }}
                     className="flex min-w-0 flex-1 flex-col px-3 py-2 text-left"
@@ -235,7 +249,7 @@ export default function ChatbotTab({
                   type="button"
                   aria-label="선택한 문장 해제"
                   onClick={() => {
-                    setPinnedQuote(null);
+                    clearPinnedQuote();
                     setAttachedQuote(null);
                   }}
                   className="shrink-0 rounded-full p-1 text-brief-accent hover:bg-brief-accent/10"

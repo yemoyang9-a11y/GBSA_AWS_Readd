@@ -179,4 +179,28 @@ describe('읽기 화면', () => {
       expect(screen.queryByRole('button', { name: '아모에게 물어보기' })).not.toBeInTheDocument();
     });
   });
+
+  describe('2026-08-25: 인용 하이라이트 — 챗봇 "선택한 문장" 카드와 같은 문장을 본문에서 강조', () => {
+    it('highlightedQuote가 본문 안에 있으면 강조 표시(mark)한다', () => {
+      const { container } = render(
+        <ReaderView {...baseProps} highlightedQuote="여전히 미두장 앞을" />
+      );
+      const mark = container.querySelector('mark');
+      expect(mark).not.toBeNull();
+      expect(mark).toHaveTextContent('여전히 미두장 앞을');
+    });
+
+    it('highlightedQuote가 없으면(null) 강조하지 않는다', () => {
+      const { container } = render(<ReaderView {...baseProps} highlightedQuote={null} />);
+      expect(container.querySelector('mark')).toBeNull();
+    });
+
+    it('highlightedQuote가 본문에 없으면(다른 페이지 등) 원문을 그대로 보여준다 — 지어내지 않는다', () => {
+      const { container } = render(
+        <ReaderView {...baseProps} highlightedQuote="본문에 전혀 없는 문장입니다" />
+      );
+      expect(container.querySelector('mark')).toBeNull();
+      expect(screen.getByText(/미두장 앞을 서성이고/)).toBeInTheDocument();
+    });
+  });
 });

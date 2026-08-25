@@ -1,6 +1,42 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuotePopover from '../common/QuotePopover';
+
+/**
+ * 인용된 문장을 본문 안에서 하이라이트한다(2026-08-25, 사용자 요청 — "선택한 문장이
+ * 본문에서도 표시되었으면"). 드래그 선택이 원문에서 그대로 뽑아낸 부분 문자열이라
+ * 정확히 일치하는 자리를 찾으면 되고, 혹시 못 찾으면(페이지가 바뀌었거나 등) 그냥
+ * 강조 없이 원문을 그대로 보여준다 — 없는 자리를 지어내 표시하지 않는다.
+ * 같은 문장이 본문에 여러 번 나오면 전부 강조한다 — 실제로 고른 자리 하나만 골라낼
+ * 방법이 없어서, 놓치는 것보다는 안전한 쪽을 택했다.
+ */
+function highlightContent(content: string, highlight: string | null): ReactNode {
+  if (!highlight) return content;
+  const idx = content.indexOf(highlight);
+  if (idx === -1) return content;
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  let matchIndex = idx;
+  let key = 0;
+  while (matchIndex !== -1) {
+    if (matchIndex > cursor) parts.push(content.slice(cursor, matchIndex));
+    parts.push(
+      <mark
+        key={key++}
+        className="rounded-[2px] bg-brief-accent-soft text-brief-ink"
+        style={{ boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}
+      >
+        {content.slice(matchIndex, matchIndex + highlight.length)}
+      </mark>
+    );
+    cursor = matchIndex + highlight.length;
+    matchIndex = content.indexOf(highlight, cursor);
+  }
+  if (cursor < content.length) parts.push(content.slice(cursor));
+  return parts;
+}
 
 /**
  * 읽기 화면 — S3, 재설계 2026-08-23
@@ -19,6 +55,11 @@ import QuotePopover from '../common/QuotePopover';
  * 텍스트라 R3(본문 접근은 제한하지 않는다)와 충돌하지 않는다 — 챗봇 질문(query)은 원래도
  * 자유 텍스트로 cutoff 필터링 대상이 아니므로, 드래그는 타이핑 대신 인용하는 UX일 뿐
  * 새 우회 경로를 만들지 않는다. onQuote 는 선택한 문자열만 부모로 올려 보낸다.
+ *
+ * 인용 하이라이트(2026-08-25, 사용자 요청) — 챗봇의 "선택한 문장" 카드에 떠 있는 원문을
+ * `highlightedQuote`로 받아 본문 안에서 강조한다. Reader.tsx가 카드와 같은 값을 들고
+ * 있다가 카드가 지워지면(×·새 채팅·다른 대화 선택) 이것도 같이 지운다 — 두 표시가
+ * 서로 다른 상태로 갈라지지 않게 한다.
  */
 export default function ReaderView({
   content,
@@ -28,6 +69,7 @@ export default function ReaderView({
   nextPage,
   onMove,
   onQuote,
+  highlightedQuote,
 }: {
   content: string;
   currentPage: number;
@@ -36,6 +78,9 @@ export default function ReaderView({
   nextPage: number | null;
   onMove: (page: number) => void;
   onQuote?: (text: string) => void;
+  /** 챗봇 "선택한 문장" 카드에 지금 떠 있는 원문(2026-08-25, 사용자 요청) — 이 페이지
+   *  본문 안에 있으면 강조한다. */
+  highlightedQuote?: string | null;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -73,7 +118,7 @@ export default function ReaderView({
           role="article"
           className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-brief-ink"
         >
-          {content}
+          {highlightContent(content, highlightedQuote ?? null)}
         </article>
       </div>
 

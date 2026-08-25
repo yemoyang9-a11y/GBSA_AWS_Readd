@@ -123,6 +123,24 @@ describe('ChatbotTab', () => {
     expect(onAsk).toHaveBeenCalledWith('이 사람 누구야', undefined);
   });
 
+  it('2026-08-25: "선택한 문장" 카드의 ×를 누르면 onQuoteDismissed도 호출된다 — Reader.tsx가 본문 하이라이트를 같이 지운다', async () => {
+    const onQuoteDismissed = vi.fn();
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        quote={{ text: '정 주사는 여전히 미두장 앞을', token: 1 }}
+        onQuoteDismissed={onQuoteDismissed}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '선택한 문장 해제' }));
+
+    expect(onQuoteDismissed).toHaveBeenCalledTimes(1);
+  });
+
   it('다른 문장을 다시 인용하면(token 증가) "선택한 문장" 카드를 새 인용문으로 갈아 끼운다', () => {
     const { rerender } = render(
       <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 1 }} />
