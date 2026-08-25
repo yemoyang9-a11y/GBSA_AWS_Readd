@@ -440,6 +440,7 @@ export default function Reader() {
             onMove={setCurrentPage}
             onQuote={handleQuote}
             highlightedQuote={highlightedQuote}
+            chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
           />
         </div>
 
