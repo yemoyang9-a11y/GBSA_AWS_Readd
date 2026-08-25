@@ -95,6 +95,17 @@ export default {
         'row-cover': '118px',
         'brief-cover': '230px',
       },
+      keyframes: {
+        // 싸비 탭 전환(2026-08-25 사용자 요청) — 탭을 바꿀 때 카드가 살짝 아래에서
+        // 떠오르며 스치듯 나타나게 한다. key={tab}로 리마운트될 때마다 재생된다.
+        'tab-in': {
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'tab-in': 'tab-in 200ms ease-out',
+      },
     },
   },
   plugins: [],

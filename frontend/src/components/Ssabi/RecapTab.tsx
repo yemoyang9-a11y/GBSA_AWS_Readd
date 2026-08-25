@@ -18,8 +18,9 @@ import { splitHighlighted } from './highlightNames';
  * 색은 brief-ink로 둔다(critique P2, 2026-08-21 판단 유지) — 이 탭에서 독자가 실제로
  * 찾는 본문이라, brief-muted는 eyebrow 같은 진짜 보조 요소에만 남긴다.
  *
- * 카드에 테두리(brief-rule)를 둔다 — 패널·카드 배경이 둘 다 brief-paper로 통일된 뒤로는
- * (2026-08-24) 배경색만으로 카드 경계가 안 보인다.
+ * 카드 테두리는 이 컴포넌트가 아니라 SsabiPanel의 tabpanel 컨테이너가 진다(2026-08-25 —
+ * 탭이 카드 위 테두리에 포스트잇처럼 겹치는 디자인으로 바뀌면서, 안쪽에 또 테두리를 두면
+ * 이중 박스로 보였다). 여기서는 내용(인용부호·eyebrow·본문)만 그린다.
  *
  * eyebrow 라벨은 "이전 이야기 요약"을 쓴다 — 백엔드가 본문 첫 줄에 같은 문구를 고정
  * 소제목으로 얹어 보내므로(recap.service.ts), 그 첫 줄을 본문에서 걷어내고 라벨 자리로
@@ -52,7 +53,7 @@ export default function RecapTab({
     rawParagraphs[0]?.trim() === RECAP_HEADING ? rawParagraphs.slice(1) : rawParagraphs;
 
   return (
-    <div className="rounded-xl border border-brief-rule bg-brief-paper p-[26px_22px_22px]">
+    <div>
       <span
         aria-hidden="true"
         className="-mb-3 block font-dashSerif text-[40px] leading-none text-brief-accent opacity-[.28]"

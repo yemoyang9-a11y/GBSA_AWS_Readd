@@ -121,11 +121,12 @@ describe('싸비 사이드창', () => {
     expect(screen.getByText('아모의 가이드북').parentElement).toHaveClass('pr-20');
   });
 
-  it('활성 탭은 brief-accent 테두리·배경을 쓴다', () => {
+  it('활성 탭은 brief-accent 테두리를 쓰고, 아래 카드와 같은 배경으로 포스트잇처럼 겹친다', () => {
     render(<SsabiPanel {...baseProps} />);
     const activeTab = screen.getByRole('tab', { name: '인물 관계도' });
     expect(activeTab.className).toContain('border-brief-accent');
-    expect(activeTab.className).toContain('bg-brief-accent-soft');
+    expect(activeTab.className).toContain('bg-brief-paper');
+    expect(screen.getByRole('tabpanel').className).toContain('bg-brief-paper');
   });
 
   it('기준점 배지는 brief-accent 톤을 쓴다', () => {

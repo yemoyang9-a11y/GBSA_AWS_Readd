@@ -33,11 +33,6 @@ describe('RecapTab', () => {
     expect(screen.getByText('정 주사는 재산을 잃었다.')).toBeInTheDocument();
   });
 
-  it('카드에 brief-rule 테두리를 둔다 (패널과 배경색이 같아 테두리가 유일한 경계다)', () => {
-    const { container } = render(<RecapTab text="정 주사" streaming={false} failed={false} />);
-    expect(container.firstElementChild?.className).toContain('border-brief-rule');
-  });
-
   it('characterNames에 있는 이름은 굵게 강조한다', () => {
     render(
       <RecapTab

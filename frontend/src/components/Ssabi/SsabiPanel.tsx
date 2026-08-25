@@ -124,8 +124,16 @@ export default function SsabiPanel({
         ) : null}
       </div>
 
-      {/* 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]") */}
-      <div role="tablist" aria-label="싸비" className="flex gap-2 px-6">
+      {/*
+       * 탭은 3개다. 시안의 '타임라인'은 만들지 않는다 (00-shared §2.5 "[이후 확장]").
+       *
+       * 포스트잇 탭 (2026-08-25, 사용자 요청) — 활성 탭이 아래 카드에서 위로 삐져나온
+       * 메모지처럼 보이도록, 카드와 같은 배경(brief-paper)을 쓰고 바닥 테두리 없이
+       * -mb-px로 카드 위 테두리 선에 정확히 겹친다. 비활성 탭은 살짝 아래로 내려
+       * (mt-2) 카드 뒤에 깔린 것처럼 보이게 한다. z-10으로 탭이 카드 위에 그려져야
+       * 겹친 자리의 카드 테두리 선을 탭 배경이 덮어 이음매가 사라진다.
+       */}
+      <div role="tablist" aria-label="싸비" className="relative z-10 flex gap-1.5 px-6">
         {TAB_ORDER.map((it) => (
           <button
             key={it}
@@ -135,8 +143,8 @@ export default function SsabiPanel({
             onClick={() => setLastTab(it)}
             className={
               tab === it
-                ? 'rounded-lg border border-brief-accent bg-brief-accent-soft px-3 py-2 font-dashSans text-xs font-bold text-brief-accent'
-                : 'rounded-lg border border-brief-rule px-3 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:border-brief-muted hover:text-brief-ink'
+                ? '-mb-px rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent'
+                : 'mt-2 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink'
             }
           >
             {TAB_LABELS[it]}
@@ -144,7 +152,11 @@ export default function SsabiPanel({
         ))}
       </div>
 
-      <div role="tabpanel" className="brief-scroll flex-1 overflow-y-auto px-6 pb-6 pt-5">
+      <div
+        key={tab}
+        role="tabpanel"
+        className="brief-scroll relative z-0 flex-1 animate-tab-in overflow-y-auto rounded-b-xl rounded-tr-xl border border-brief-rule bg-brief-paper px-6 pb-6 pt-5"
+      >
         {tab === 'recap' ? (
           <RecapTab
             text={recapText}
