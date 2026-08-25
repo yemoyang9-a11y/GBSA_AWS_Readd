@@ -29,6 +29,7 @@ export default function Briefing() {
 
   const {
     text: streamedRecap,
+    streaming: recapStreaming,
     error: recapError,
     consume: consumeRecap,
   } = useSSE();
@@ -71,6 +72,7 @@ export default function Briefing() {
       onBack={() => navigate('/')}
       streamedRecap={streamedRecap}
       recapFailed={recapError !== null}
+      recapStreaming={recapStreaming}
     />
   );
 }

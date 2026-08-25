@@ -166,6 +166,35 @@ describe('브리핑 화면', () => {
     expect(screen.getByText(/미두장에서 재산을 잃었다/)).toBeInTheDocument();
   });
 
+  it('2026-08-25: 리캡을 읽기 화면 리캡 탭과 같은 형식(문단 분리·고정 소제목 제거)으로 보여준다', () => {
+    render(
+      <BriefingView
+        {...baseProps}
+        briefing={briefing({
+          recap: '이전 이야기 요약\n\n정주사는 미두장에서 재산을 잃었다.\n\n초봉은 제중당에서 일한다.',
+        })}
+      />
+    );
+
+    // 고정 소제목은 h3("그동안 이런 이야기였어요")가 이미 있어 본문에서는 걷어낸다
+    expect(screen.queryByText('이전 이야기 요약')).not.toBeInTheDocument();
+    expect(screen.getByText('정주사는 미두장에서 재산을 잃었다.')).toBeInTheDocument();
+    expect(screen.getByText('초봉은 제중당에서 일한다.')).toBeInTheDocument();
+  });
+
+  it('2026-08-25: 폴백 스트림이 진행 중이면 "불러오는 중"을 보여준다', () => {
+    render(
+      <BriefingView
+        {...baseProps}
+        briefing={briefing({ recap: null })}
+        streamedRecap="정주사는"
+        recapStreaming={true}
+      />
+    );
+
+    expect(screen.getByText('불러오는 중')).toBeInTheDocument();
+  });
+
   it('FR-BRF-005 🚦: 진도는 서버가 준 percent 를 그대로 렌더한다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
