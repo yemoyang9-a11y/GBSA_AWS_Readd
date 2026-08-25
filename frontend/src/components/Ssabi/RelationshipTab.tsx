@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
-import { graphMilestones, graphUpTo } from './graphFilter';
+import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
 
 /**
  * 인물 관계도 탭 — 기본 탭 (FR-SVB-002)
@@ -55,6 +55,22 @@ import { graphMilestones, graphUpTo } from './graphFilter';
  * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
  *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
  *
+ * ## 주요인물 / 전체 토글 (2026-08-25)
+ *
+ * 진도가 쌓일수록 인물이 계속 늘어난다 — mock 30명 규모로 확인. `filterMajorCharacters`
+ * (graphFilter.ts)로 연결 수(degree)가 낮은 인물을 걷어낸 "주요인물" 모드를 추가한다.
+ * 그래프·카드 리스트·"인물 N" 표시 개수가 전부 같은 `displayed` 값 하나를 공유한다 —
+ * 그래프엔 8명, 목록엔 30개처럼 서로 다르게 보이지 않는다.
+ *
+ * **기본값은 "전체"다.** "주요인물"을 기본으로 하면 진도 초반(관계가 거의 안 드러난
+ * 시점)엔 임계값을 넘는 인물이 아예 없어 화면이 텅 비어 보인다 — 되감기로 과거 시점을
+ * 볼 때도 같은 문제가 생긴다. 그래서 "주요인물"은 사용자가 켜는 선택지로 두고, 결과가
+ * 0명이면 안내 문구로 대신한다(아래 `displayed.nodes.length === 0` 분기).
+ *
+ * 검색은 모드와 무관하게 항상 `shown.nodes`(되감긴 범위 전체) 대상이다 — "주요인물"에
+ * 걸러진 인물도 검색으로는 찾아 포커싱할 수 있어야 완전히 숨겨지지 않는다(`focusOn`이
+ * 걸러진 인물을 고르면 자동으로 "전체"로 전환한다).
+ *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
 export default function RelationshipTab({
@@ -71,6 +87,7 @@ export default function RelationshipTab({
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [characterMode, setCharacterMode] = useState<'major' | 'all'>('all');
 
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
   const latest = milestones[milestones.length - 1] ?? 0;
@@ -91,9 +108,13 @@ export default function RelationshipTab({
   if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
+  // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
+  const displayed = characterMode === 'major' ? filterMajorCharacters(shown) : shown;
+
   // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
   // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
   // 기준점을 우회하는 별도 조회 경로가 된다(절대 규칙 7번과 같은 종류의 문제).
+  // "주요인물" 필터로 걸러진 인물은 여기 포함된다 — 검색은 걸러도 완전히 숨기지 않는다.
   const normalizedQuery = query.trim().toLowerCase();
   const searchResults = normalizedQuery
     ? shown.nodes.filter(
@@ -104,6 +125,11 @@ export default function RelationshipTab({
     : [];
 
   function focusOn(id: string) {
+    // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
+    // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
+    if (characterMode === 'major' && !displayed.nodes.some((node) => node.id === id)) {
+      setCharacterMode('all');
+    }
     setSelected(id);
     setQuery('');
     setResultsOpen(false);
@@ -120,7 +146,7 @@ export default function RelationshipTab({
 
   return (
     <div className="space-y-5">
-      <RelationshipGraph graph={shown} selectedId={activeSelected} onSelect={setSelected} />
+      <RelationshipGraph graph={displayed} selectedId={activeSelected} onSelect={setSelected} />
 
       {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
           예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
@@ -189,8 +215,39 @@ export default function RelationshipTab({
       ) : null}
 
       <section aria-label="인물" className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold text-brief-muted">인물 {displayed.nodes.length}</h3>
+
+            {/* 주요인물/전체 토글 — 그래프·카드 리스트가 공유하는 displayed를 바꾼다
+                (클래스 주석 "주요인물 / 전체 토글" 참고). */}
+            <div
+              role="group"
+              aria-label="인물 범위"
+              className="inline-flex items-center gap-0.5 rounded-pill border border-brief-rule bg-brief-page p-0.5"
+            >
+              <button
+                type="button"
+                aria-pressed={characterMode === 'major'}
+                onClick={() => setCharacterMode('major')}
+                className={`rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                  characterMode === 'major' ? 'bg-brief-accent text-white' : 'text-brief-muted'
+                }`}
+              >
+                주요인물
+              </button>
+              <button
+                type="button"
+                aria-pressed={characterMode === 'all'}
+                onClick={() => setCharacterMode('all')}
+                className={`rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                  characterMode === 'all' ? 'bg-brief-accent text-white' : 'text-brief-muted'
+                }`}
+              >
+                전체
+              </button>
+            </div>
+          </div>
 
           {/* 시안(첫 번째 스크린샷)의 알약형 검색창 — 클릭 후 포커싱은 그래프가 이미
               selectedId 로 하고 있어(RelationshipGraph.tsx), 여기서는 검색 결과를 골라
@@ -267,8 +324,14 @@ export default function RelationshipTab({
             ) : null}
           </div>
         </div>
+        {characterMode === 'major' && displayed.nodes.length === 0 ? (
+          <p className="text-[11px] text-brief-muted">
+            이 시점엔 연결이 두드러진 인물이 아직 없습니다 — "전체"를 눌러보세요.
+          </p>
+        ) : null}
+
         <ul className="space-y-3">
-          {shown.nodes.map((node) => {
+          {displayed.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
             const relations = isOpen ? relationsOf(node.id) : [];
             return (

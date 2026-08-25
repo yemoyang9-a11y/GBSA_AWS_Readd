@@ -192,6 +192,84 @@ describe('RelationshipTab', () => {
     });
   });
 
+  describe('주요인물/전체 토글', () => {
+    // hub(정주사)만 연결 수 4로 임계값(MAJOR_CHARACTER_MIN_DEGREE=4)을 넘는다 —
+    // 초봉은 2(hub+고참봉), 나머지는 1이다.
+    const majorMinorGraph: GraphResponse = {
+      nodes: [
+        { id: 'hub', name: '정주사', first_appearance_page: 1, aliases: [] },
+        { id: 'a', name: '초봉', first_appearance_page: 1, aliases: [] },
+        { id: 'b', name: '계봉', first_appearance_page: 1, aliases: [] },
+        { id: 'c', name: '형주', first_appearance_page: 1, aliases: [] },
+        { id: 'd', name: '병주', first_appearance_page: 1, aliases: [] },
+        { id: 'extra', name: '고참봉', first_appearance_page: 1, aliases: [] },
+      ],
+      edges: [
+        { source: 'hub', target: 'a', label: '부녀', established_page: 1 },
+        { source: 'hub', target: 'b', label: '부녀', established_page: 1 },
+        { source: 'hub', target: 'c', label: '부자', established_page: 1 },
+        { source: 'hub', target: 'd', label: '부자', established_page: 1 },
+        { source: 'extra', target: 'a', label: '지인', established_page: 1 },
+      ],
+    };
+
+    it('기본값은 "전체"다 — 처음엔 인물이 다 보인다', () => {
+      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+
+      const people = screen.getByRole('region', { name: '인물' });
+      expect(within(people).getByText('인물 6')).toBeInTheDocument();
+      expect(within(people).getByText('고참봉')).toBeInTheDocument();
+    });
+
+    it('"주요인물"을 누르면 연결 수가 적은 인물이 목록·개수에서 빠진다', () => {
+      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+
+      expect(within(people).getByText('인물 1')).toBeInTheDocument();
+      expect(within(people).getByText('정주사')).toBeInTheDocument();
+      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
+      expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
+    });
+
+    it('다시 "전체"를 누르면 걸러졌던 인물이 되돌아온다', () => {
+      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+      fireEvent.click(within(people).getByRole('button', { name: '전체' }));
+
+      expect(within(people).getByText('인물 6')).toBeInTheDocument();
+      expect(within(people).getByText('고참봉')).toBeInTheDocument();
+    });
+
+    it('걸러진 인물도 검색으로 찾아 선택하면 "전체"로 전환되며 보인다 — 완전히 숨기지 않는다', () => {
+      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '고참봉' } });
+      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('고참봉'));
+
+      expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(people).getByText('고참봉')).toBeInTheDocument();
+      expect(within(people).getByText('지인', { exact: false })).toBeInTheDocument();
+    });
+
+    it('"주요인물"에서 아무도 임계값을 못 넘으면 안내 문구가 나온다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+
+      expect(within(people).getByText('인물 0')).toBeInTheDocument();
+      expect(screen.getByText(/연결이 두드러진 인물이 아직 없습니다/)).toBeInTheDocument();
+    });
+  });
+
   describe('전체화면', () => {
     it('전체화면 버튼을 누르면 그래프가 화면을 덮는 오버레이로 열린다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
