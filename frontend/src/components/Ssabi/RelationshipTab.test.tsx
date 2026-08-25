@@ -164,4 +164,51 @@ describe('RelationshipTab', () => {
       expect(screen.getByText('일치하는 인물 없음')).toBeInTheDocument();
     });
   });
+
+  describe('전체화면', () => {
+    it('전체화면 버튼을 누르면 그래프가 화면을 덮는 오버레이로 열린다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+
+      expect(screen.getByTestId('relationship-graph-fullscreen-overlay')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: '인물 관계도 전체화면' })).toBeInTheDocument();
+    });
+
+    it('전체화면에서 같은 버튼을 다시 누르면 닫힌다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+      fireEvent.click(screen.getByRole('button', { name: '전체화면 종료' }));
+
+      expect(screen.queryByTestId('relationship-graph-fullscreen-overlay')).not.toBeInTheDocument();
+    });
+
+    it('그래프 밖(오버레이 배경)을 누르면 닫힌다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+      fireEvent.click(screen.getByTestId('relationship-graph-fullscreen-overlay'));
+
+      expect(screen.queryByTestId('relationship-graph-fullscreen-overlay')).not.toBeInTheDocument();
+    });
+
+    it('그래프 안쪽을 눌러도 전체화면이 닫히지 않는다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+      fireEvent.click(screen.getByRole('dialog', { name: '인물 관계도 전체화면' }));
+
+      expect(screen.getByTestId('relationship-graph-fullscreen-overlay')).toBeInTheDocument();
+    });
+
+    it('Esc 를 누르면 닫힌다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '전체화면' }));
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      expect(screen.queryByTestId('relationship-graph-fullscreen-overlay')).not.toBeInTheDocument();
+    });
+  });
 });
