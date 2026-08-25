@@ -3,6 +3,9 @@ import TypographicCover from '../common/TypographicCover';
 import type { BookSummary } from '../../types';
 import type { BookInfoContent } from '../../data/bookInfoContent';
 
+const PROGRESS_RING_RADIUS = 7;
+const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
+
 /**
  * 도서 소개 모달 — 서재 카드의 "i" 버튼이 연다 (2026-08-23 사용자 요청).
  *
@@ -54,8 +57,31 @@ export default function BookInfoModal({
           {book.progress ? (
             <div className="mt-3 flex justify-center">
               <div className="flex items-center gap-1.5 rounded-full border border-dash-line bg-white px-3 py-1.5 font-dashSans text-xs text-dash-muted">
-                <span aria-hidden="true" className="size-1.5 rounded-full bg-ssabi" />
-                이어 읽는 중 · {book.progress.percent}% 읽음
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r={PROGRESS_RING_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-dash-line"
+                  />
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r={PROGRESS_RING_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={PROGRESS_RING_CIRCUMFERENCE}
+                    strokeDashoffset={PROGRESS_RING_CIRCUMFERENCE * (1 - book.progress.percent / 100)}
+                    transform="rotate(-90 9 9)"
+                    className="text-ssabi"
+                  />
+                </svg>
+                {book.progress.percent}%까지 읽음
               </div>
             </div>
           ) : null}
@@ -70,9 +96,11 @@ export default function BookInfoModal({
               type="button"
               onClick={onClose}
               aria-label="닫기"
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-dash-line font-dashSans text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-ssabi opacity-70 transition hover:bg-ssabi-soft hover:opacity-100"
             >
-              ×
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
             </button>
           </div>
 
