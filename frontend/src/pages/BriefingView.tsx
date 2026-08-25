@@ -3,6 +3,7 @@ import type { BriefingResponse, ChapterSummary } from '../types';
 import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
 import { parseRecapParagraphs } from '../utils/recapText';
+import { splitHighlighted } from '../components/Ssabi/highlightNames';
 import ProgressBar from '../components/Reader/ProgressBar';
 import TypographicCover from '../components/common/TypographicCover';
 
@@ -36,6 +37,7 @@ export default function BriefingView({
   streamedRecap,
   recapFailed,
   recapStreaming = false,
+  characterNames = [],
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
@@ -49,6 +51,8 @@ export default function BriefingView({
   recapFailed?: boolean;
   /** 폴백(실시간 생성) 스트림이 아직 진행 중인지 — RecapTab과 같은 "불러오는 중" 표시에 쓴다 */
   recapStreaming?: boolean;
+  /** 리캡 인물명 강조(RecapTab.tsx와 동일) — 이미 K 이하로 걸러진 /ssabi/graph 이름 목록 */
+  characterNames?: string[];
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
@@ -65,7 +69,8 @@ export default function BriefingView({
   }, [view.kind, onRequestFallback]);
 
   return (
-    <main className="mx-auto max-w-[760px] bg-brief-paper px-[38px] py-8 font-dashSans text-brief-ink">
+    <div className="min-h-screen bg-brief-paper">
+    <main className="mx-auto max-w-[760px] px-[38px] py-8 font-dashSans text-brief-ink">
       <button
         type="button"
         onClick={onBack}
@@ -147,9 +152,11 @@ export default function BriefingView({
         읽기 화면 리캡 탭(RecapTab.tsx)과 같은 형식으로 통일했다(2026-08-25, 사용자 요청) —
         세리프 폰트·문단 분리·장식용 인용부호. "그동안 이런 이야기였어요" h3가 이미 이
         섹션의 라벨 역할을 하므로 RecapTab의 작은 eyebrow 라벨("이전 이야기 요약")은
-        중복이라 가져오지 않았다. 인물 이름 강조(RecapTab의 characterNames)도 이 화면엔
-        해당 데이터(인물 관계도 조회) 자체가 없어 이번 범위에서 뺐다 — 필요하면 별도로
-        조회를 추가해야 한다.
+        중복이라 가져오지 않았다. 인물 이름 강조(RecapTab의 characterNames, highlightNames.ts)는
+        처음엔 이 화면에 해당 데이터가 없어 범위에서 뺐으나(사용자 요청, 2026-08-25),
+        Briefing.tsx가 /ssabi/graph를 별도로 1회 조회해 characterNames prop으로 내려주는
+        방식으로 추가했다 — 조회는 RecapTab과 마찬가지로 이미 K 이하로 걸러진 응답이라
+        여기서 새로 판별하지 않는다(types/ssabi.ts:3).
       */}
       <div className="rounded-brief-panel bg-white p-6 shadow-brief-soft-sm">
         {view.kind === 'empty' ? (
@@ -179,7 +186,15 @@ export default function BriefingView({
                 key={i}
                 className="whitespace-pre-wrap font-dashSerif text-[15px] leading-[1.85] text-brief-ink [&:not(:first-child)]:mt-3"
               >
-                {paragraph}
+                {splitHighlighted(paragraph, characterNames).map((segment, j) =>
+                  segment.bold ? (
+                    <b key={j} className="font-bold">
+                      {segment.text}
+                    </b>
+                  ) : (
+                    segment.text
+                  )
+                )}
               </p>
             ))}
             {view.kind === 'fallback' && recapStreaming ? (
@@ -271,5 +286,6 @@ export default function BriefingView({
         </div>
       </div>
     </main>
+    </div>
   );
 }
