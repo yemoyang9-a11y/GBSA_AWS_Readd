@@ -110,6 +110,10 @@ export default function Reader() {
    * 본문 드래그 선택 → 챗봇 인용. token 은 같은 문장을 연달아 다시 선택해도 SsabiPanel의
    * 탭 강제 전환 effect 가 매번 반응하도록 하는 1회성 신호다 (문자열만 같으면 effect가
    * 재실행되지 않는 문제 방지).
+   *
+   * 리캡 카드 드래그(2026-08-25)도 같은 핸들러를 쓴다 — ReaderView에는 onQuote로,
+   * SsabiPanel에는 onRecapQuote로 똑같이 넘긴다. 소스가 뭐든 결과(pendingQuote)는
+   * 동일하게 처리되므로 핸들러를 나눌 이유가 없다.
    */
   const [pendingQuote, setPendingQuote] = useState<{ text: string; token: number } | null>(null);
   const handleQuote = useCallback((text: string) => {
@@ -349,6 +353,7 @@ export default function Reader() {
                 chatConversations={chatConversations}
                 chatHistoryOpen={chatHistoryOpen}
                 pendingQuote={pendingQuote}
+                onRecapQuote={handleQuote}
                 onAsk={handleAsk}
                 onNewChat={startNewChat}
                 onToggleChatHistory={toggleChatHistory}

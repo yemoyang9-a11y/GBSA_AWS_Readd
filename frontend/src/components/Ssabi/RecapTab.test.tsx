@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RecapTab from './RecapTab';
 
 describe('RecapTab', () => {
@@ -65,5 +66,50 @@ describe('RecapTab', () => {
     expect(paragraphs).toHaveLength(2);
     expect(paragraphs[0]).toHaveTextContent('정 주사는 재산을 잃었다.');
     expect(paragraphs[1]).toHaveTextContent('초봉은 약국에서 일한다.');
+  });
+
+  describe('리캡 문장 드래그 → 챗봇 인용 (2026-08-25)', () => {
+    // ReaderView.test.tsx와 같은 흐름 — 실제 사용자는 mousedown → 드래그 → mouseup 순으로
+    // 선택을 끝낸다. useQuoteSelection을 공유하므로 팝오버도 mouseup(드래그 종료) 후에만 뜬다.
+    function selectRecapText(start: number, end: number) {
+      const paragraph = screen.getByText('정 주사는 재산을 잃었다.');
+      const textNode = paragraph.firstChild!;
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      fireEvent(document, new Event('selectionchange'));
+      fireEvent.mouseUp(document);
+    }
+
+    it('리캡 문장을 드래그하면(드래그 종료) 인용 팝오버가 뜬다', () => {
+      render(
+        <RecapTab text="정 주사는 재산을 잃었다." streaming={false} failed={false} onQuote={() => {}} />
+      );
+      selectRecapText(0, 4); // "정 주사"
+
+      expect(screen.getByRole('button', { name: '아모에게 물어보기' })).toBeInTheDocument();
+    });
+
+    it('팝오버를 누르면 선택한 문장 그대로 onQuote로 전달한다', async () => {
+      const onQuote = vi.fn();
+      render(
+        <RecapTab text="정 주사는 재산을 잃었다." streaming={false} failed={false} onQuote={onQuote} />
+      );
+      selectRecapText(0, 4);
+
+      await userEvent.click(screen.getByRole('button', { name: '아모에게 물어보기' }));
+
+      expect(onQuote).toHaveBeenCalledWith('정 주사');
+    });
+
+    it('onQuote를 넘기지 않으면(부모가 아직 연결 안 함) 팝오버를 그리지 않는다', () => {
+      render(<RecapTab text="정 주사는 재산을 잃었다." streaming={false} failed={false} />);
+      selectRecapText(0, 4);
+
+      expect(screen.queryByRole('button', { name: '아모에게 물어보기' })).not.toBeInTheDocument();
+    });
   });
 });

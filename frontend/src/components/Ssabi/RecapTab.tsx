@@ -1,4 +1,6 @@
 import { splitHighlighted } from './highlightNames';
+import { useQuoteSelection } from '../../hooks/useQuoteSelection';
+import QuotePopover from '../common/QuotePopover';
 
 /**
  * 리캡 탭 — SSE 스트리밍 렌더 (NFR-PERF-002 🚦) — 재설계 2026-08-23 (`.reader-scr .e-card`)
@@ -25,18 +27,27 @@ import { splitHighlighted } from './highlightNames';
  * eyebrow 라벨은 "이전 이야기 요약"을 쓴다 — 백엔드가 본문 첫 줄에 같은 문구를 고정
  * 소제목으로 얹어 보내므로(recap.service.ts), 그 첫 줄을 본문에서 걷어내고 라벨 자리로
  * 옮겨 중복 노출을 없앤다.
+ *
+ * 리캡 문장 드래그 → 챗봇 인용 (2026-08-25, 사용자 요청). ReaderView(본문)와 같은
+ * useQuoteSelection 훅을 쓴다 — 리캡도 이미 K 이하로만 만들어진 표시값이라(R2 불변식)
+ * 본문과 동급으로 "이미 열람 가능한 확정 텍스트"이므로, 같은 인용 예외 경로를 하나 더
+ * 연결하는 것뿐이다. 새 cutoff 판정은 없다.
  */
 export default function RecapTab({
   text,
   streaming,
   failed,
   characterNames = [],
+  onQuote,
 }: {
   text: string;
   streaming: boolean;
   failed: boolean;
   characterNames?: string[];
+  onQuote?: (text: string) => void;
 }) {
+  const { containerRef, popover, clearPopover } = useQuoteSelection<HTMLDivElement>();
+
   if (failed)
     return (
       <p role="alert" className="text-[13px] text-brief-muted">
@@ -53,7 +64,8 @@ export default function RecapTab({
     rawParagraphs[0]?.trim() === RECAP_HEADING ? rawParagraphs.slice(1) : rawParagraphs;
 
   return (
-    <div>
+    <div ref={containerRef}>
+      <QuotePopover popover={popover} onQuote={onQuote} onDone={clearPopover} />
       <span
         aria-hidden="true"
         className="-mb-3 block font-dashSerif text-[40px] leading-none text-brief-accent opacity-[.28]"

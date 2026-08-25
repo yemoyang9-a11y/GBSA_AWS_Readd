@@ -77,7 +77,7 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
 
     await userEvent.type(screen.getByLabelText('질문'), '정주사는 어떤 사람인가', { delay: null });
-    await userEvent.click(screen.getByRole('button', { name: '질문' }));
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
 
     await waitFor(() => expect(screen.getByText(/정주사에 대해/)).toBeInTheDocument(), {
       timeout: 3000,
@@ -89,7 +89,7 @@ describe('싸비 데이터 연결 (mock 기준)', () => {
     await userEvent.click(screen.getByRole('tab', { name: '챗봇' }));
 
     await userEvent.type(screen.getByLabelText('질문'), '결말이 어떻게 되나', { delay: null });
-    await userEvent.click(screen.getByRole('button', { name: '질문' }));
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
 
     // 거절도 일반 답변과 똑같은 자리에 똑같이 렌더된다 — 프론트가 구분하지 않는다
     await waitFor(

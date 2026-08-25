@@ -43,6 +43,7 @@ export default function SsabiPanel({
   onNewChat,
   onToggleChatHistory,
   onSelectChatConversation,
+  onRecapQuote,
 }: {
   sessionEpoch: number;
   /**
@@ -80,6 +81,12 @@ export default function SsabiPanel({
   onNewChat: () => void;
   onToggleChatHistory: () => void;
   onSelectChatConversation: (conversationId: number) => void;
+  /**
+   * 리캡 카드에서 드래그로 인용했을 때(2026-08-25, 사용자 요청). ReaderView의 onQuote와
+   * 같은 핸들러(Reader.tsx의 handleQuote)를 받는다 — 소스가 본문이든 리캡이든 결과는
+   * 똑같이 pendingQuote로 흘러 챗봇 탭 전환·인용 프롬프트 주입까지 그대로 재사용된다.
+   */
+  onRecapQuote?: (text: string) => void;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -165,6 +172,7 @@ export default function SsabiPanel({
             // graph는 이미 기준점 K 이하로 필터된 응답이다(types/ssabi.ts:3) — 리캡 강조가
             // 쓰는 이름 목록도 그 범위를 벗어나지 않는다.
             characterNames={graph ? graph.nodes.flatMap((n) => [n.name, ...n.aliases]) : []}
+            onQuote={onRecapQuote}
           />
         ) : null}
         {tab === 'relationship' ? <RelationshipTab graph={graph} failed={graphFailed} /> : null}
