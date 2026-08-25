@@ -53,11 +53,21 @@ export function createPgReadingPositionRepository(db: QueryClient): ReadingPosit
     },
 
     async savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void> {
+      // FR-PRG-002 — 이 WHERE가 순서 보장의 실제 강제 지점이다. progress.service.ts의
+      // findPosition→비교→savePosition은 두 번의 왕복이라 그 사이에 다른 요청이 끼어들면
+      // (빠른 연속 페이지 넘김 등) 더 새 seq가 먼저 쓰이고 더 낡은 seq가 뒤늦게 도착해
+      // 덮어쓰는 lost-update가 실사용 중 재현됐다(2026-08-25, 챗봇이 낡은 페이지 기준으로
+      // 답한 문제). 이 UPDATE는 Postgres가 충돌 행에 락을 건 상태로 원자적으로 비교하므로
+      // 두 요청이 어떤 순서로 도착해도 더 새 seq가 항상 이긴다 — 호출부의 사전 비교는
+      // 그대로 두되(불필요한 쓰기를 건너뛰는 최적화일 뿐) 정확성은 이 WHERE가 보장한다.
       await db.query(
         `INSERT INTO reading_position (device_id, book_id, current_page, event_seq, updated_at)
          VALUES ($1, $2, $3, $4, now())
          ON CONFLICT (device_id, book_id) DO UPDATE SET
-           current_page = $3, event_seq = $4, updated_at = now()`,
+           current_page = EXCLUDED.current_page,
+           event_seq = EXCLUDED.event_seq,
+           updated_at = now()
+         WHERE reading_position.event_seq < EXCLUDED.event_seq`,
         [deviceId, bookId, position.current_page, position.event_seq]
       );
     },
