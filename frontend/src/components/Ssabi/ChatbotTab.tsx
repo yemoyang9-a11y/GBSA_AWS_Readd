@@ -57,6 +57,9 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * (`attachedQuote`)도 같이 지워서, 해제한 뒤 보내는 질문엔 그 문장이 조용히 딸려가지
  * 않는다. key={pinnedQuote} + animate-tab-in(2026-08-25, 사용자 요청 — "거칠게 뜬다")로
  * 새 문장을 인용할 때마다(문장이 다르면 key가 바뀌어 리마운트) 살짝 떠오르며 나타난다.
+ * sticky top-0(2026-08-25, 사용자 요청 — 스크롤해도 배너처럼 안 밀려 올라가게)로
+ * 대화를 스크롤해도 이 카드만 스크롤 영역 맨 위에 계속 붙어 있는다 — 배경이 불투명해
+ * (bg-brief-accent-soft) 뒤로 지나가는 말풍선을 가려 준다.
  *
  * 답변 말풍선 테두리는 brief-accent(남보라) 대신 `progress` 토큰(남색 #35536b)을
  * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
@@ -218,7 +221,7 @@ export default function ChatbotTab({
             {pinnedQuote ? (
               <div
                 key={pinnedQuote}
-                className="flex animate-tab-in items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2"
+                className="sticky top-0 z-10 flex animate-tab-in items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2"
               >
                 <div>
                   <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
