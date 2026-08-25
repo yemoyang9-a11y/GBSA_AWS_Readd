@@ -213,60 +213,79 @@ describe('RelationshipTab', () => {
       ],
     };
 
-    it('기본값은 "전체"다 — 처음엔 인물이 다 보인다', () => {
+    it('기본값은 "주요인물"이다 — 처음부터 연결 수 적은 인물이 걸러져 있다', () => {
       render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
 
       const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByText('인물 6')).toBeInTheDocument();
-      expect(within(people).getByText('고참봉')).toBeInTheDocument();
-    });
-
-    it('"주요인물"을 누르면 연결 수가 적은 인물이 목록·개수에서 빠진다', () => {
-      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
-      const people = screen.getByRole('region', { name: '인물' });
-
-      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
-
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
       expect(within(people).getByText('인물 1')).toBeInTheDocument();
       expect(within(people).getByText('정주사')).toBeInTheDocument();
       expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
       expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
     });
 
-    it('다시 "전체"를 누르면 걸러졌던 인물이 되돌아온다', () => {
+    it('"전체"를 누르면 걸러졌던 인물이 다 보인다', () => {
       render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
 
       expect(within(people).getByText('인물 6')).toBeInTheDocument();
       expect(within(people).getByText('고참봉')).toBeInTheDocument();
     });
 
+    it('다시 "주요인물"을 누르면 도로 걸러진다', () => {
+      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      fireEvent.click(within(people).getByRole('button', { name: '전체' }));
+      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+
+      expect(within(people).getByText('인물 1')).toBeInTheDocument();
+      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
+    });
+
     it('걸러진 인물도 검색으로 찾아 선택하면 "전체"로 전환되며 보인다 — 완전히 숨기지 않는다', () => {
       render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
-      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
+      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
 
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '고참봉' } });
       fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('고참봉'));
 
-      expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
       expect(within(people).getByText('고참봉')).toBeInTheDocument();
       expect(within(people).getByText('지인', { exact: false })).toBeInTheDocument();
     });
 
-    it('"주요인물"에서 아무도 임계값을 못 넘으면 안내 문구가 나온다', () => {
+    it('아무도 임계값을 못 넘으면 "주요인물"에 눌린 채로 전체를 대신 보여준다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
+      // graph 픽스처(정주사·초봉, degree 1)는 아무도 임계값(4)을 못 넘는다 — 그래도
+      // 토글을 누를 필요 없이 기본값(주요인물)에서 바로 전체가 대신 보여야 한다.
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(within(people).getByText('인물 2')).toBeInTheDocument();
+      expect(within(people).getByText('정주사')).toBeInTheDocument();
+      expect(within(people).getByText('초봉')).toBeInTheDocument();
+      expect(screen.getByText(/연결이 두드러진 인물이 없어 전체를 보여드립니다/)).toBeInTheDocument();
+    });
 
-      expect(within(people).getByText('인물 0')).toBeInTheDocument();
-      expect(screen.getByText(/연결이 두드러진 인물이 아직 없습니다/)).toBeInTheDocument();
+    it('등장한 인물 자체가 없으면(진도 최초) 그 사실을 알린다', () => {
+      const empty: GraphResponse = { nodes: [], edges: [] };
+      render(<RelationshipTab graph={empty} failed={false} />);
+
+      expect(screen.getByText('아직 등장한 인물이 없습니다.')).toBeInTheDocument();
     });
   });
 

@@ -16,8 +16,9 @@ const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
 /**
  * 싸비 사이드창 3탭 — S5 (FR-SVB-002·004·005)
  *
- * 이 컴포넌트가 갖는 상태는 "어느 탭이 열려 있는가" 하나다. 조회는 컨테이너가 하고,
- * 페이지 변경 시 재조회(FR-SVB-003)도 그쪽 책임이다.
+ * 이 컴포넌트가 갖는 상태는 "어느 탭이 열려 있는가"와 "인물 관계도의 주요인물/전체
+ * 토글" 둘이다(2026-08-25, 후자 추가 — RelationshipTab.tsx "토글 위치 기억" 참고).
+ * 조회는 컨테이너가 하고, 페이지 변경 시 재조회(FR-SVB-003)도 그쪽 책임이다.
  * 세션 경계는 서버가 준 session_epoch 의 **변화**로만 판정한다 — 클라이언트가 30분 규칙을
  * 다시 계산하지 않는다 (절대 규칙 8번, 자가 검증 17번).
  * 본문 페이지를 옮기는 수단을 갖지 않아 FR-SVB-005 를 구조로 지킨다.
@@ -28,6 +29,9 @@ export default function SsabiPanel({
   initialTab = null,
   initialTabEpoch = null,
   onTabChange,
+  initialCharacterMode = null,
+  initialCharacterModeEpoch = null,
+  onCharacterModeChange,
   graph,
   graphFailed,
   totalPages,
@@ -68,6 +72,16 @@ export default function SsabiPanel({
   initialTab?: SsabiTab | null;
   initialTabEpoch?: number | null;
   onTabChange: (tab: SsabiTab) => void;
+  /**
+   * 인물 관계도 탭의 "주요인물/전체" 토글 기억 — initialTab/initialTabEpoch와 똑같은
+   * 이유·구조다(RelationshipTab.tsx "토글 위치 기억" 참고). 이 컴포넌트조차 탭이 바뀔
+   * 때마다(아래 `key={tab}`) RelationshipTab을 리마운트시키므로, 이 값 자체는
+   * SsabiPanel이 들고 있다가(`lastCharacterMode`) 매 렌더 다시 넘겨주고, 패널이
+   * 통째로 닫힐 때를 대비해 Reader에도 다시 올려보낸다.
+   */
+  initialCharacterMode?: 'major' | 'all' | null;
+  initialCharacterModeEpoch?: number | null;
+  onCharacterModeChange: (mode: 'major' | 'all') => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
   /** 목차 기준 전체 페이지 수 — 인물 관계도 탭의 되감기 트랙 오른쪽 끝 표시용(R1 요청). */
@@ -117,6 +131,24 @@ export default function SsabiPanel({
   useEffect(() => {
     onTabChange(tab);
   }, [tab, onTabChange]);
+
+  // 위 lastTab/previousEpoch와 같은 구조(RelationshipTab.tsx "토글 위치 기억" 참고).
+  const [lastCharacterMode, setLastCharacterMode] = useState<'major' | 'all' | null>(
+    initialCharacterMode
+  );
+  const previousCharacterModeEpoch = useRef<number | null>(initialCharacterModeEpoch);
+
+  useEffect(() => {
+    if (previousCharacterModeEpoch.current !== sessionEpoch) {
+      previousCharacterModeEpoch.current = sessionEpoch;
+      setLastCharacterMode(null); // 새 세션 — 기본값("주요인물")으로 초기화
+    }
+  }, [sessionEpoch]);
+
+  function handleCharacterModeChange(mode: 'major' | 'all') {
+    setLastCharacterMode(mode);
+    onCharacterModeChange(mode);
+  }
 
   // 본문에서 인용 요청이 올 때마다(token 변화) 챗봇 탭으로 전환한다
   useEffect(() => {
@@ -186,7 +218,13 @@ export default function SsabiPanel({
           />
         ) : null}
         {tab === 'relationship' ? (
-          <RelationshipTab graph={graph} failed={graphFailed} totalPages={totalPages} />
+          <RelationshipTab
+            graph={graph}
+            failed={graphFailed}
+            totalPages={totalPages}
+            initialCharacterMode={lastCharacterMode}
+            onCharacterModeChange={handleCharacterModeChange}
+          />
         ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab

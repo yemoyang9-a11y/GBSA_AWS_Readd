@@ -62,14 +62,27 @@ import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter
  * 그래프·카드 리스트·"인물 N" 표시 개수가 전부 같은 `displayed` 값 하나를 공유한다 —
  * 그래프엔 8명, 목록엔 30개처럼 서로 다르게 보이지 않는다.
  *
- * **기본값은 "전체"다.** "주요인물"을 기본으로 하면 진도 초반(관계가 거의 안 드러난
- * 시점)엔 임계값을 넘는 인물이 아예 없어 화면이 텅 비어 보인다 — 되감기로 과거 시점을
- * 볼 때도 같은 문제가 생긴다. 그래서 "주요인물"은 사용자가 켜는 선택지로 두고, 결과가
- * 0명이면 안내 문구로 대신한다(아래 `displayed.nodes.length === 0` 분기).
+ * **기본값은 "주요인물"이다** (2026-08-25 재조정 — 처음엔 "전체"를 기본으로 뒀었다).
+ * 진도 초반처럼 임계값을 넘는 인물이 하나도 없는 시점엔, 걸러내기만 하고 아무것도
+ * 안 보여주는 대신 **자동으로 전체를 대신 보여준다** (`usingMajorFallback`, 아래
+ * `displayed` 계산 참고) — 토글은 여전히 "주요인물"에 눌린 채로 두고 안내 문구만
+ * 붙인다. 인물이 늘어 임계값을 넘기기 시작하면 다시 저절로 좁혀진다.
  *
  * 검색은 모드와 무관하게 항상 `shown.nodes`(되감긴 범위 전체) 대상이다 — "주요인물"에
  * 걸러진 인물도 검색으로는 찾아 포커싱할 수 있어야 완전히 숨겨지지 않는다(`focusOn`이
- * 걸러진 인물을 고르면 자동으로 "전체"로 전환한다).
+ * 걸러진 인물을 고르면 명시적으로 "전체"로 전환한다 — 위 자동 대체와 달리 이건 사용자
+ * 선택이 바뀐 것이므로 토글 표시도 같이 옮긴다).
+ *
+ * ## 토글 위치 기억 (2026-08-25, 사용자 요청)
+ *
+ * "싸비를 열고 닫아도, 다른 탭에 갔다 와도 세션 동안은 고른 토글이 유지돼야 한다"는
+ * 요청이다. 이 컴포넌트는 싸비 탭을 바꿀 때마다(SsabiPanel의 `key={tab}`) 통째로
+ * 리마운트되고, 패널을 닫으면(Reader.tsx) SsabiPanel까지 언마운트된다 — 그래서 내부
+ * useState만으론 기억할 수 없다. Reader → SsabiPanel → 여기로 내려오는
+ * `initialCharacterMode`/`onCharacterModeChange`는 탭 기억(`tabMemory`, Reader.tsx)과
+ * 정확히 같은 구조다: 언마운트되지 않는 상위 컴포넌트가 대신 들고 있다가 재마운트 시
+ * 초기값으로 돌려준다. 세션이 바뀌면(SsabiPanel의 epoch 판정) 자동으로 기본값("주요인물")
+ * 으로 리셋된다 — 탭 기억과 동일하게 새 세션에는 옛 화면 설정을 들고 가지 않는다.
  *
  * 조회 실패는 부분 표시로 넘어가지 않는다 (FR-SPL-005 🚦).
  */
@@ -77,17 +90,31 @@ export default function RelationshipTab({
   graph,
   failed,
   totalPages,
+  initialCharacterMode = null,
+  onCharacterModeChange,
 }: {
   graph: GraphResponse | null;
   failed: boolean;
   /** 목차 기준 전체 페이지 수(상한 대상 아님, R3). 트랙 오른쪽 끝 표시에만 쓴다. */
   totalPages?: number;
+  /** 세션 동안 기억해 둔 마지막 토글 값(위 "토글 위치 기억" 참고). 없으면 기본값
+   *  "주요인물"에서 시작한다. */
+  initialCharacterMode?: 'major' | 'all' | null;
+  /** 토글이 바뀔 때마다 호출 — 상위(SsabiPanel)가 이 값을 들고 있다가 재마운트 시
+   *  initialCharacterMode로 돌려준다. */
+  onCharacterModeChange?: (mode: 'major' | 'all') => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [resultsOpen, setResultsOpen] = useState(false);
-  const [characterMode, setCharacterMode] = useState<'major' | 'all'>('all');
+  const [characterMode, setCharacterModeState] = useState<'major' | 'all'>(
+    initialCharacterMode ?? 'major'
+  );
+  function setCharacterMode(mode: 'major' | 'all') {
+    setCharacterModeState(mode);
+    onCharacterModeChange?.(mode);
+  }
 
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
   const latest = milestones[milestones.length - 1] ?? 0;
@@ -109,7 +136,11 @@ export default function RelationshipTab({
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
-  const displayed = characterMode === 'major' ? filterMajorCharacters(shown) : shown;
+  const majorFiltered = characterMode === 'major' ? filterMajorCharacters(shown) : null;
+  // 걸러낸 결과가 0명이면(진도 초반 등) 토글은 "주요인물"에 눌린 채로 두고 전체를
+  // 대신 보여준다 — 안내 문구(아래)로만 그 사실을 알린다.
+  const usingMajorFallback = majorFiltered !== null && majorFiltered.nodes.length === 0 && shown.nodes.length > 0;
+  const displayed = majorFiltered && majorFiltered.nodes.length > 0 ? majorFiltered : shown;
 
   // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
   // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
@@ -324,10 +355,13 @@ export default function RelationshipTab({
             ) : null}
           </div>
         </div>
-        {characterMode === 'major' && displayed.nodes.length === 0 ? (
+        {usingMajorFallback ? (
           <p className="text-[11px] text-brief-muted">
-            이 시점엔 연결이 두드러진 인물이 아직 없습니다 — "전체"를 눌러보세요.
+            아직 연결이 두드러진 인물이 없어 전체를 보여드립니다.
           </p>
+        ) : null}
+        {displayed.nodes.length === 0 ? (
+          <p className="text-[11px] text-brief-muted">아직 등장한 인물이 없습니다.</p>
         ) : null}
 
         <ul className="space-y-3">

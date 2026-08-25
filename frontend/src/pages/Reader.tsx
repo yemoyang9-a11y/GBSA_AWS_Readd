@@ -195,6 +195,22 @@ export default function Reader() {
   );
 
   /**
+   * 인물 관계도 "주요인물/전체" 토글 기억 — tabMemory와 정확히 같은 이유·구조다
+   * (2026-08-25, 사용자 요청. RelationshipTab.tsx "토글 위치 기억" 참고). SsabiPanel도
+   * 패널을 닫으면 통째로 언마운트되므로, 여기(Reader)가 대신 들고 있다가 재마운트 시
+   * 돌려준다.
+   */
+  const [characterModeMemory, setCharacterModeMemory] = useState<
+    { mode: 'major' | 'all'; epoch: number } | null
+  >(null);
+  const handleCharacterModeChange = useCallback(
+    (mode: 'major' | 'all') => {
+      setCharacterModeMemory({ mode, epoch: session?.session_epoch ?? 0 });
+    },
+    [session?.session_epoch]
+  );
+
+  /**
    * 진입 판정 실패 상태. 실패 시 무한 로딩 대신 재시도 UI를 보여준다 —
    * 크리틱 P0: 이전에는 `.catch` 가 없어 백엔드 장애 시 "불러오는 중"에서 영원히 멈췄다.
    */
@@ -415,6 +431,9 @@ export default function Reader() {
                 initialTab={tabMemory?.tab ?? null}
                 initialTabEpoch={tabMemory?.epoch ?? null}
                 onTabChange={handleTabChange}
+                initialCharacterMode={characterModeMemory?.mode ?? null}
+                initialCharacterModeEpoch={characterModeMemory?.epoch ?? null}
+                onCharacterModeChange={handleCharacterModeChange}
                 graph={graph}
                 graphFailed={graphFailed}
                 totalPages={totalPages}

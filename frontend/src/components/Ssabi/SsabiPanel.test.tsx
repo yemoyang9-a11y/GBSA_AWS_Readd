@@ -11,6 +11,7 @@ const graph: GraphResponse = {
 const baseProps = {
   sessionEpoch: 7,
   onTabChange: () => {},
+  onCharacterModeChange: () => {},
   graph,
   graphFailed: false,
   recapText: '',
@@ -180,5 +181,71 @@ describe('싸비 사이드창', () => {
     rerender(<SsabiPanel {...baseProps} pendingQuote={{ text: '정 주사', token: 2 }} />);
 
     expect(screen.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  describe('인물 관계도 — 주요인물/전체 토글 기억 (2026-08-25)', () => {
+    it('최초 열기의 기본값은 "주요인물"이다', () => {
+      render(<SsabiPanel {...baseProps} />);
+      const people = screen.getByRole('region', { name: '인물' });
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('토글이 바뀌면 알린다 — 컨테이너(Reader)가 이 값을 들고 있는다', async () => {
+      const onCharacterModeChange = vi.fn();
+      render(<SsabiPanel {...baseProps} onCharacterModeChange={onCharacterModeChange} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      await userEvent.click(within(people).getByRole('button', { name: '전체' }));
+
+      expect(onCharacterModeChange).toHaveBeenCalledWith('all');
+    });
+
+    it('다른 탭에 갔다 돌아와도(리마운트) 골랐던 토글이 유지된다', async () => {
+      render(<SsabiPanel {...baseProps} />);
+      const people = () => screen.getByRole('region', { name: '인물' });
+
+      await userEvent.click(within(people()).getByRole('button', { name: '전체' }));
+      expect(within(people()).getByRole('button', { name: '전체' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+
+      // 리캡 탭으로 갔다가(인물 관계도 tabpanel이 key={tab}으로 언마운트) 돌아온다
+      await userEvent.click(screen.getByRole('tab', { name: '리캡' }));
+      await userEvent.click(screen.getByRole('tab', { name: '인물 관계도' }));
+
+      expect(within(people()).getByRole('button', { name: '전체' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('2026-08-25: initialCharacterMode가 같은 세션(epoch 일치)이면 그 값에서 시작한다 — 패널 재마운트(닫았다 열기) 대역', () => {
+      render(<SsabiPanel {...baseProps} initialCharacterMode="all" initialCharacterModeEpoch={7} />);
+      const people = screen.getByRole('region', { name: '인물' });
+      expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('2026-08-25: initialCharacterMode가 있어도 epoch이 다르면(세션이 바뀜) 기본값("주요인물")으로 시작한다', () => {
+      render(
+        <SsabiPanel
+          {...baseProps}
+          sessionEpoch={7}
+          initialCharacterMode="all"
+          initialCharacterModeEpoch={6}
+        />
+      );
+      const people = screen.getByRole('region', { name: '인물' });
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
   });
 });
