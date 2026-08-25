@@ -46,6 +46,12 @@ import { graphMilestones, graphUpTo } from './graphFilter';
  *    모양을 맞췄다 — 두 막대가 맞닿는 안쪽 모서리는 각지게, 트랙 전체의 바깥쪽 끝만
  *    둥글게 해서 하나로 이어진 막대처럼 보이게 한다.
  *
+ * ⚠️ 폴리시 2(2026-08-25, 사용자 재제보) — 위 수정 후에도 파란 구간과 회색 구간이
+ *    수직으로 안 맞아 보였다. `<input>`의 기본 `display`가 `inline-block`이라 아래에
+ *    글꼴 하강폭만큼 여백이 남아 flex 줄 높이가 인접 `div`보다 커지고, `items-center`가
+ *    그 늘어난 줄 안에서 두 막대를 서로 다른 위치로 정렬한 것이었다(실측: 2px 차이,
+ *    getBoundingClientRect로 확인). `block`을 추가해 그 여백을 없애 해결.
+ *
  * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
  *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
  *
@@ -146,7 +152,7 @@ export default function RelationshipTab({
                 step={1}
                 value={Math.max(0, milestones.indexOf(at))}
                 onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`h-3.5 w-full cursor-pointer appearance-none bg-transparent
+                className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent
                   [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
                   [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
                   ${
