@@ -8,8 +8,8 @@ import WelcomeBanner from '../components/Dashboard/WelcomeBanner';
 import Loading from '../components/common/Loading';
 import Header from '../components/Layout/Header';
 import { BOOK_INFO_CONTENT } from '../data/bookInfoContent';
-import { DEMO_SHELF_BOOKS } from '../data/demoShelfBooks';
-import { fetchCatalog } from '../services/bookService';
+import { DEMO_SHELF_BOOKS, DEMO_TOTAL_PAGES } from '../data/demoShelfBooks';
+import { fetchBookInfo, fetchCatalog } from '../services/bookService';
 import { enterBook } from '../services/progressService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
 import { routePathFor } from '../utils/routes';
@@ -77,6 +77,39 @@ export default function Dashboard() {
     () => (books ?? []).some((book) => book.book_id === selectedBook?.book_id),
     [books, selectedBook]
   );
+
+  /**
+   * 히어로의 "N쪽"(2026-08-25, 사용자 요청 — 현재 페이지 대신 전체 페이지 수를 고정
+   * 표시)이 쓸 값. `BookSummary`엔 total_pages가 없어(D-1, ContinueReadingHero.tsx
+   * 주석 참조) 실제 도서는 `GET /info`의 목차 마지막 장 end_page로 따로 받아 온다 —
+   * Reader.tsx가 총 페이지를 구하는 방식과 같다. 데모 항목(enterable=false)은 서버에
+   * 없어 이 엔드포인트를 부를 수 없으므로 정적 값(DEMO_TOTAL_PAGES)을 쓴다.
+   */
+  const [totalPages, setTotalPages] = useState<number | null>(null);
+  useEffect(() => {
+    if (!selectedBook) {
+      setTotalPages(null);
+      return;
+    }
+    if (!enterable) {
+      setTotalPages(DEMO_TOTAL_PAGES[selectedBook.book_id] ?? null);
+      return;
+    }
+    let cancelled = false;
+    setTotalPages(null); // 책이 바뀌는 순간 옛 총 페이지가 잠깐이라도 남지 않게 먼저 비운다
+    void fetchBookInfo(selectedBook.book_id)
+      .then((info) => {
+        if (cancelled) return;
+        const last = info.chapters[info.chapters.length - 1];
+        setTotalPages(last ? last.end_page : null);
+      })
+      .catch(() => {
+        if (!cancelled) setTotalPages(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBook, enterable]);
 
   const visibleBooks = useMemo(() => applyDashFilter(displayBooks, filter), [displayBooks, filter]);
 
@@ -151,6 +184,7 @@ export default function Dashboard() {
           onResume={handleResume}
           busy={enteringId === selectedBook.book_id}
           enterable={enterable}
+          totalPages={totalPages}
         />
 
         <ShelfList
