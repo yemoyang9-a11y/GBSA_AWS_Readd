@@ -72,9 +72,18 @@ export default function BriefingView({
         aria-label="돌아가기"
         className="flex size-9 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
       >
-        <span aria-hidden="true" className="text-base">
-          ‹
-        </span>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          className="size-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M9.5 4.8 6.5 8 9.5 11.2" />
+        </svg>
       </button>
 
       <div className="my-5 h-[2px] w-full rounded-[1px] bg-brief-rule" />

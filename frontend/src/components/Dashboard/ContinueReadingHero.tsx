@@ -91,7 +91,7 @@ export default function ContinueReadingHero({
         type="button"
         onClick={onResume}
         disabled={!ready || busy || !enterable}
-        className="justify-self-end self-end rounded-full border border-dash-ink bg-transparent px-[14px] py-2 text-xs font-bold text-dash-ink transition-opacity disabled:opacity-40"
+        className="justify-self-end self-end rounded-full border border-dash-ink bg-transparent px-[14px] py-2 text-xs font-bold text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40 disabled:hover:bg-transparent"
       >
         {buttonLabel}
       </button>
