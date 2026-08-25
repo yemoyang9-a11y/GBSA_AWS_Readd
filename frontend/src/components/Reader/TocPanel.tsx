@@ -20,7 +20,7 @@ import type { ChapterSummary } from '../../types';
  * 고정 위치로 그리는데, 그 자리가 패널을 열었을 때 이 제목이 시작되는 자리와
  * 겹친다. SsabiPanel 헤더의 pr-20(반대쪽, 같은 이유)과 같은 처방이다.
  *
- * 각 장 옆 "{start_page}p~" 표시(2026-08-25, 사용자 요청) — `chapter.start_page`를
+ * 각 장 옆 "{start_page}p" 표시(2026-08-25, 사용자 요청) — `chapter.start_page`를
  * 그대로 문자열에 꽂는 것뿐, 계산 없음. 목차 자체가 상한 대상이 아니므로(위 설명)
  * 시작 페이지 노출도 같은 이유로 안전하다.
  */
@@ -74,7 +74,7 @@ export default function TocPanel({
                       isNow ? 'text-brief-accent' : 'text-brief-muted'
                     }`}
                   >
-                    {chapter.start_page}p~
+                    {chapter.start_page}p
                   </span>
                 </button>
               </li>
