@@ -145,6 +145,18 @@ describe('RecapTab', () => {
       expect(screen.getByRole('button', { name: '리캡 새로고침' })).toBeDisabled();
     });
 
+    it('스트리밍 중에는 아이콘이 회전한다', () => {
+      render(<RecapTab text="정 주사는" streaming={true} failed={false} onRefresh={() => {}} />);
+      const icon = screen.getByRole('button', { name: '리캡 새로고침' }).querySelector('svg');
+      expect(icon).toHaveClass('animate-spin');
+    });
+
+    it('스트리밍이 끝나면 회전을 멈춘다', () => {
+      render(<RecapTab text="정 주사는" streaming={false} failed={false} onRefresh={() => {}} />);
+      const icon = screen.getByRole('button', { name: '리캡 새로고침' }).querySelector('svg');
+      expect(icon).not.toHaveClass('animate-spin');
+    });
+
     it('실패 상태에서도 재시도용으로 보여준다', () => {
       render(<RecapTab text="" streaming={false} failed={true} onRefresh={() => {}} />);
       expect(screen.getByRole('button', { name: '리캡 새로고침' })).toBeInTheDocument();
