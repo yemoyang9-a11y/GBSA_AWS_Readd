@@ -185,6 +185,7 @@ export default function Reader() {
     newChat: startNewChat,
     toggleHistory: toggleChatHistory,
     selectConversation: selectChatConversation,
+    deleteConversation: deleteChatConversation,
   } = useChatConversation(bookId);
   /**
    * 패널 헤더에 보여줄 "Np까지 읽음" 배지 (2026-08-24, 사용자 결정 — 리캡·챗봇이 실제로
@@ -358,6 +359,7 @@ export default function Reader() {
                 onNewChat={startNewChat}
                 onToggleChatHistory={toggleChatHistory}
                 onSelectChatConversation={selectChatConversation}
+                onDeleteChatConversation={deleteChatConversation}
               />
             </div>
           </aside>

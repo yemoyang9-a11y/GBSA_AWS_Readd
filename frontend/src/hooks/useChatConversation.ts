@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   askChatbot,
+  deleteChatConversation,
   fetchChatConversationDetail,
   fetchChatConversations,
 } from '../services/chatbotService';
@@ -120,6 +121,29 @@ export function useChatConversation(bookId: string) {
     [bookId]
   );
 
+  /**
+   * 지난 대화 삭제 (2026-08-25, 사용자 요청). 목록에서는 낙관적으로 바로 지우고
+   * (실패하면 되돌림), 지금 보고 있던 대화가 삭제 대상이었으면 서버 확인 후에만
+   * 새 채팅 상태로 돌린다 — 삭제가 실패했는데 화면의 대화가 먼저 사라지는 걸 막는다.
+   */
+  const deleteConversation = useCallback(
+    async (id: number) => {
+      const previous = conversations;
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      try {
+        await deleteChatConversation(bookId, id);
+        if (conversationId === id) {
+          setTurns([]);
+          setConversationId(null);
+        }
+      } catch {
+        setConversations(previous);
+        setError('대화를 삭제하지 못했습니다');
+      }
+    },
+    [bookId, conversationId, conversations]
+  );
+
   return {
     turns,
     conversationId,
@@ -133,6 +157,7 @@ export function useChatConversation(bookId: string) {
     newChat,
     toggleHistory,
     selectConversation,
+    deleteConversation,
     resetAppliedCutoff,
   };
 }

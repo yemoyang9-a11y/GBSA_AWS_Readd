@@ -43,6 +43,7 @@ export default function SsabiPanel({
   onNewChat,
   onToggleChatHistory,
   onSelectChatConversation,
+  onDeleteChatConversation,
   onRecapQuote,
 }: {
   sessionEpoch: number;
@@ -81,6 +82,8 @@ export default function SsabiPanel({
   onNewChat: () => void;
   onToggleChatHistory: () => void;
   onSelectChatConversation: (conversationId: number) => void;
+  /** 지난 대화 삭제 (2026-08-25, 사용자 요청) */
+  onDeleteChatConversation?: (conversationId: number) => void;
   /**
    * 리캡 카드에서 드래그로 인용했을 때(2026-08-25, 사용자 요청). ReaderView의 onQuote와
    * 같은 핸들러(Reader.tsx의 handleQuote)를 받는다 — 소스가 본문이든 리캡이든 결과는
@@ -188,6 +191,7 @@ export default function SsabiPanel({
             onNewChat={onNewChat}
             onToggleHistory={onToggleChatHistory}
             onSelectConversation={onSelectChatConversation}
+            onDeleteConversation={onDeleteChatConversation}
           />
         ) : null}
       </div>

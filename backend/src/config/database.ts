@@ -4,7 +4,23 @@
  * PostgreSQL 15 + pgvector
  */
 
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
+
+/**
+ * DATE 컬럼(oid 1082)을 pg 기본값인 Date 객체 대신 원본 문자열('YYYY-MM-DD')로 받는다.
+ *
+ * 이 프로젝트는 conversation_date 등 DATE 컬럼을 어디서나 string으로 취급한다
+ * (conversation-repository.ts 타입 주석 "DATE -> 'YYYY-MM-DD'" 참조) — 근데 pg
+ * 드라이버 기본 파서는 DATE를 Date 객체로 바꿔서 그 가정이 실제로는 깨져 있었다.
+ * 두 군데서 실제 버그로 나타난다(2026-08-25, 실사용 중 발견):
+ *   1) JSON 응답에 Date 객체가 그대로 실리면 Date.toJSON()이 불려 "2026-08-25T00:00:00.000Z"
+ *      처럼 타임스탬프로 새어 나간다 — 대화 이력 목록의 날짜 표시가 이래서 깨져 있었다.
+ *   2) resolveConversation의 "오늘과 같은 날짜면 이어서 쓴다" 비교
+ *      (`existing.conversation_date === today`, today는 문자열)가 Date 객체 vs 문자열
+ *      비교라 항상 false — 즉 같은 날 이어지는 대화가 매번 새 대화로 갈라지고 있었다.
+ * setTypeParser로 DATE를 원본 문자열 그대로 받으면 두 버그 다 근본에서 해결된다.
+ */
+types.setTypeParser(1082, (value) => value);
 
 /**
  * PostgreSQL 연결 풀

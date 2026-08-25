@@ -13,6 +13,7 @@ import {
   resolveConversation,
   listConversations as listChatConversations,
   getConversationDetail as getChatConversationDetail,
+  deleteConversation as deleteChatConversation,
 } from '../modules/chatbot/conversation-service';
 import { pool } from '../config/database';
 import { createReadingStateServices } from '../modules/reading-state/composition';
@@ -242,6 +243,38 @@ router.get(
       return res.json(detail);
     } catch (error) {
       console.error('[API] Conversation detail error', { bookId, conversationId, error });
+      return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * DELETE /books/:bookId/chat/conversations/:conversationId (2026-08-25, 사용자 요청)
+ *
+ * device_id·book_id가 다르면 삭제되지 않는다(소유자 확인). 목록 조회의 봉인 규칙과
+ * 달리 여기선 cutoff_page를 확인하지 않는다 — 삭제는 새 정보를 노출하지 않으므로
+ * 절대 규칙 7번과 무관하다.
+ */
+router.delete(
+  '/books/:bookId/chat/conversations/:conversationId',
+  async (req: Request, res: Response) => {
+    const { bookId, conversationId } = req.params;
+    const deviceId = requireDeviceId(req, res);
+    if (!deviceId) return;
+
+    const numericId = Number(conversationId);
+    if (!Number.isInteger(numericId)) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid conversationId' });
+    }
+
+    try {
+      const deleted = await deleteChatConversation(deviceId, bookId, numericId);
+      if (!deleted) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'conversation not found' });
+      }
+      return res.status(204).send();
+    } catch (error) {
+      console.error('[API] Conversation delete error', { bookId, conversationId, error });
       return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
     }
   }

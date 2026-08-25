@@ -145,3 +145,12 @@ export async function getConversationDetail(
     turns: turns.map((t: ConversationTurnRow) => ({ role: t.role, text: t.text })),
   };
 }
+
+/** 대화 삭제(2026-08-25, 사용자 요청). 존재하지 않거나 소유자가 다르면 false. */
+export async function deleteConversation(
+  deviceId: string,
+  bookId: string,
+  conversationId: number
+): Promise<boolean> {
+  return repo.deleteConversation(deviceId, bookId, conversationId);
+}

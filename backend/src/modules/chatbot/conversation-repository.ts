@@ -123,6 +123,26 @@ export async function listConversations(
   return result.rows;
 }
 
+/**
+ * 대화 삭제(2026-08-25, 사용자 요청). device_id·book_id까지 같이 걸어 소유자 확인을
+ * 겸한다 — 다른 디바이스의 conversationId를 넣어도 지워지지 않는다. turn들은
+ * ON DELETE CASCADE(005 마이그레이션)로 같이 지워진다.
+ *
+ * 봉인(cutoff_page) 여부는 확인하지 않는다 — 그 규칙은 "아직 안 읽은 내용을 보여줄지"를
+ * 가리는 노출 제어용이지 삭제 권한과는 무관하다. 삭제는 새 정보를 노출하지 않는다.
+ */
+export async function deleteConversation(
+  deviceId: string,
+  bookId: string,
+  conversationId: number
+): Promise<boolean> {
+  const result = await pool.query(
+    `DELETE FROM chatbot_conversation WHERE id = $1 AND device_id = $2 AND book_id = $3`,
+    [conversationId, deviceId, bookId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function listTurns(conversationId: number): Promise<ConversationTurnRow[]> {
   const result = await pool.query(
     `SELECT id, conversation_id, turn_no, role, text, cutoff_page, created_at

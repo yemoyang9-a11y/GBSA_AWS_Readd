@@ -198,4 +198,54 @@ describe('ChatbotTab — 대화 이력', () => {
     await userEvent.click(screen.getByText('정주사가 누구야'));
     expect(onSelectConversation).toHaveBeenCalledWith(42);
   });
+
+  it('2026-08-25: 대화 항목의 삭제 버튼을 누르면 onDeleteConversation만 호출되고 onSelectConversation은 호출되지 않는다', async () => {
+    const onSelectConversation = vi.fn();
+    const onDeleteConversation = vi.fn();
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[{ id: 42, conversation_date: '2026-08-24', title: '정주사가 누구야', created_at: '', updated_at: '' }]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+        onSelectConversation={onSelectConversation}
+        onDeleteConversation={onDeleteConversation}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '대화 삭제' }));
+
+    expect(onDeleteConversation).toHaveBeenCalledWith(42);
+    expect(onSelectConversation).not.toHaveBeenCalled();
+  });
+
+  it('2026-08-25: conversation_date에 타임스탬프가 섞여 와도 날짜만 보여준다', () => {
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[
+          {
+            id: 42,
+            conversation_date: '2026-08-25T00:00:00.000Z',
+            title: '정주사가 누구야',
+            created_at: '',
+            updated_at: '',
+          },
+        ]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+
+    expect(screen.getByText('2026-08-25')).toBeInTheDocument();
+    expect(screen.queryByText('2026-08-25T00:00:00.000Z')).not.toBeInTheDocument();
+  });
 });

@@ -15,6 +15,7 @@ import {
   kstDateString,
   listConversations,
   getConversationDetail,
+  deleteConversation,
   recordTurns,
   getConversationContext,
 } from '../conversation-service';
@@ -126,6 +127,30 @@ describe('listConversations / getConversationDetail — 봉인 규칙 (positive/
 
     expect(repo.listConversations).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID, 40);
     expect(result).toHaveLength(1);
+  });
+});
+
+/**
+ * 대화 삭제 (2026-08-25, 사용자 요청) — device_id·book_id까지 걸어 소유자 확인을
+ * 겸한다. positive(내 소유 → 삭제됨)/negative(남의 소유·존재하지 않음 → 삭제 안 됨)
+ * 쌍으로 확인한다.
+ */
+describe('deleteConversation — 소유자 확인 (positive/negative 쌍)', () => {
+  test('positive: 내 device_id·book_id 소유의 대화는 삭제된다', async () => {
+    (repo.deleteConversation as jest.Mock).mockResolvedValue(true);
+
+    const result = await deleteConversation(DEVICE_ID, BOOK_ID, 1);
+
+    expect(repo.deleteConversation).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID, 1);
+    expect(result).toBe(true);
+  });
+
+  test('negative: 존재하지 않거나 다른 디바이스 소유면 삭제되지 않는다(false)', async () => {
+    (repo.deleteConversation as jest.Mock).mockResolvedValue(false);
+
+    const result = await deleteConversation(DEVICE_ID, BOOK_ID, 999);
+
+    expect(result).toBe(false);
   });
 });
 

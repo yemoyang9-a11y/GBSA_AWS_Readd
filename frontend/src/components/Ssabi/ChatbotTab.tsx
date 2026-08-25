@@ -43,6 +43,11 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * "추천 질문 칩"은 여전히 만들지 않았다 — CLAUDE.md 9장이 **미결(데모 시연 시나리오)**
  * 로 둔 항목이라 지어내면 잘못된 결정이 코드에 굳는다.
  *
+ * 지난 대화 삭제 (2026-08-25, 사용자 요청) — 목록 각 항목에 휴지통 버튼을 둔다.
+ * 클릭 시 onSelectConversation으로 안 새지 않게 stopPropagation한다. 실제 삭제·목록
+ * 갱신은 부모(useChatConversation.deleteConversation)가 맡는다 — 이 컴포넌트는 어느
+ * id를 지울지만 올려보낸다.
+ *
  * 선택 문장 고정 표시 (2026-08-24, 사용자 요청) — 인용이 들어오면 대화 목록 맨 위에
  * "선택한 문장" 카드로 원문을 계속 띄워 둔다. 질문을 보내면 `attachedQuote`는 그 한
  * 번의 질문에만 쓰이고 비워지지만(기존 동작 유지), 이 카드는 그 뒤로 이어지는 후속
@@ -66,6 +71,7 @@ export default function ChatbotTab({
   onToggleHistory,
   onNewChat,
   onSelectConversation,
+  onDeleteConversation,
 }: {
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
@@ -82,6 +88,9 @@ export default function ChatbotTab({
   onToggleHistory?: () => void;
   onNewChat?: () => void;
   onSelectConversation?: (conversationId: number) => void;
+  /** 지난 대화 삭제 (2026-08-25, 사용자 요청). historyOpen일 때만 그려지는 목록 각 항목의
+   *  삭제 버튼에 연결된다. */
+  onDeleteConversation?: (conversationId: number) => void;
 }) {
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
@@ -152,22 +161,45 @@ export default function ChatbotTab({
           {conversations && conversations.length > 0 ? (
             <ul className="space-y-1.5">
               {conversations.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="flex items-center gap-1 rounded-xl hover:bg-white">
                   <button
                     type="button"
                     onClick={() => {
                       setPinnedQuote(null);
                       onSelectConversation?.(c.id);
                     }}
-                    className="flex w-full flex-col rounded-xl px-3 py-2 text-left hover:bg-white"
+                    className="flex min-w-0 flex-1 flex-col px-3 py-2 text-left"
                   >
                     <span className="truncate font-dashSans text-xs text-brief-ink">
                       {c.title || '(질문 없음)'}
                     </span>
+                    {/* 서버는 'YYYY-MM-DD'를 주는 게 계약이지만, 혹시 타임스탬프가 섞여 와도
+                        날짜 10자만 보이게 방어적으로 자른다(2026-08-25, 사용자 요청). */}
                     <span className="font-dashMono text-[10px] text-brief-muted">
-                      {c.conversation_date}
+                      {c.conversation_date.slice(0, 10)}
                     </span>
                   </button>
+                  {onDeleteConversation ? (
+                    <button
+                      type="button"
+                      aria-label="대화 삭제"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDeleteConversation(c.id);
+                      }}
+                      className="shrink-0 rounded-full p-1.5 text-brief-muted hover:bg-brief-paper hover:text-brief-ink"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                        <path
+                          d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.867 12.142A2 2 0 0 1 14.138 21H9.862a2 2 0 0 1-1.995-1.858L7 7"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ul>

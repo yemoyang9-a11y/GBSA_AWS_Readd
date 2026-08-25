@@ -73,3 +73,8 @@ export async function fetchChatConversationDetail(
   );
   return data;
 }
+
+/** 대화 삭제 (2026-08-25, 사용자 요청). 다른 디바이스 소유이거나 존재하지 않으면 404. */
+export async function deleteChatConversation(bookId: string, conversationId: number): Promise<void> {
+  await api.delete(`/books/${bookId}/chat/conversations/${conversationId}`);
+}
