@@ -92,7 +92,11 @@ export interface SessionService {
 }
 
 export function createSessionService(deps: SessionServiceDeps): SessionService {
-  const { positions, books, sessions, clock } = deps;
+  // clock은 이 함수 안에서 더 이상 쓰이지 않는다 — 30분 경과 비교(clock.now() 기준)를
+  // 없앴기 때문(위 decideEntry 주석). SessionServiceDeps 인터페이스에는 남겨 둔다 —
+  // composition.ts가 다른 서비스(스위퍼 등)와 같은 clock을 공유해 넘기는 배선이라
+  // 이 함수 시그니처만 바뀌면 호출부를 건드리게 된다.
+  const { positions, books, sessions } = deps;
 
   return {
     async decideEntry(deviceId: string, bookId: string): Promise<EntryDecision> {
@@ -101,10 +105,25 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
         throw new BookNotReadyError(bookId); // FR-BRW-002 🚦 — 존재하지 않는 도서도 포함
       }
 
-      const session = await sessions.findSession(deviceId, bookId);
-      const isNewSession =
-        session === null ||
-        clock.now().getTime() - session.last_activity_at.getTime() >= SESSION_TIMEOUT_MS; // R6
+      /**
+       * (2026-08-25, 사용자 요청 — 데모 기간 임시 조치) 원래 R6/FR-BRF-001은 여기서
+       * `session.last_activity_at`과 SESSION_TIMEOUT_MS(위 상수, 스위퍼와 공유)를 비교해
+       * 30분 무조작이어야 새 세션(브리핑)으로 판정했다. 데모에서는 진입할 때마다 항상
+       * 브리핑을 거쳐야 해서 그 비교를 없애고 매번 새 세션으로 취급한다.
+       *
+       * ⚠️ 스위퍼(session-sweeper/sweep.ts)의 SESSION_TIMEOUT_MS 사용은 건드리지
+       *    않았다 — 그건 "세션 종료 시 저장 리캡 재종합"이라는 별개 배치 작업이고, 실제
+       *    30분 무조작 경과로만 동작해야 한다(안 그러면 리캡 재생성이 반복 트리거된다).
+       *    여기서 없앤 건 "진입 시 브리핑/읽기 화면 라우팅 판정" 하나뿐이다.
+       *
+       * 원복하려면 이 줄 대신 아래를 되돌린다:
+       *   const session = await sessions.findSession(deviceId, bookId);
+       *   const isNewSession =
+       *     session === null ||
+       *     clock.now().getTime() - session.last_activity_at.getTime() >= SESSION_TIMEOUT_MS;
+       * (git log — 이 커밋 직전 버전 참조)
+       */
+      const isNewSession = true;
 
       // R4 CP0 회신 항목 2 — "POST /entry를 받으면 항상 event_seq를 0으로 리셋한다"
       // (frontend/src/utils/seq.ts 주석, 8/20 확정). 새 세션 여부와 무관하게 매번 리셋해야
@@ -115,20 +134,16 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       // 기준점(K)은 버그가 터진 시점에 영원히 멈추는 증상으로 나타났다.
       await positions.resetEventSeq(deviceId, bookId);
 
-      let sessionEpoch: number;
-      if (isNewSession) {
-        const result = await sessions.startNewSession(deviceId, bookId);
-        sessionEpoch = result.session_epoch;
-      } else {
-        await sessions.recordActivity(deviceId, bookId);
-        sessionEpoch = session.session_epoch;
-      }
+      // isNewSession이 항상 true라(위 주석) 예전 "기존 세션 유지" 분기(recordActivity +
+      // 기존 epoch 재사용)는 도달하지 않는다 — 그 분기를 남겨두면 죽은 코드가 되므로 제거했다.
+      const result = await sessions.startNewSession(deviceId, bookId);
+      const sessionEpoch = result.session_epoch;
 
       const stored = await positions.findPosition(deviceId, bookId);
       const page = stored?.current_page ?? FIRST_ENTRY_PAGE;
 
       return {
-        route: isNewSession ? 'briefing' : 'reader', // R6 — 브리핑은 새 세션 진입 시 1회
+        route: isNewSession ? 'briefing' : 'reader', // R6 — 브리핑은 새 세션 진입 시 1회 (지금은 항상 briefing)
         page,
         is_new_session: isNewSession,
         session_epoch: sessionEpoch,

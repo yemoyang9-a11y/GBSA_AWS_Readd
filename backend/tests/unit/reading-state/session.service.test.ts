@@ -49,7 +49,10 @@ describe('진입 판정 — decideEntry', () => {
     expect(decision.session_epoch).toBe(1);
   });
 
-  test('R6: 마지막 조작으로부터 30분 미만이면 같은 세션 — reader로 라우팅', async () => {
+  test('2026-08-25(데모 기간 임시 조치): 30분 이내 재진입해도 항상 새 세션 — briefing으로 라우팅한다', async () => {
+    // 원래 R6는 30분 미만이면 같은 세션(reader 라우팅)이었다. 데모에서 진입할 때마다
+    // 항상 브리핑을 보여줘야 해서, 그 30분 비교를 없애고 매번 새 세션으로 취급하도록
+    // session.service.ts의 decideEntry를 바꿨다(사용자 요청, 위 파일 주석 참조).
     const { sessions, service } = build();
     sessions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
       last_activity_at: new Date(T0.getTime() - 29 * 60_000),
@@ -59,9 +62,9 @@ describe('진입 판정 — decideEntry', () => {
 
     const decision = await service.decideEntry(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(decision.route).toBe('reader');
-    expect(decision.is_new_session).toBe(false);
-    expect(decision.session_epoch).toBe(3);
+    expect(decision.route).toBe('briefing');
+    expect(decision.is_new_session).toBe(true);
+    expect(decision.session_epoch).toBe(4); // startNewSession이 매번 epoch를 증가시킨다
   });
 
   test('R6: 마지막 조작으로부터 30분 이상 무조작이면 새 세션 — briefing으로 라우팅, epoch 증가', async () => {
@@ -79,7 +82,7 @@ describe('진입 판정 — decideEntry', () => {
     expect(decision.session_epoch).toBe(4);
   });
 
-  test('세션 epoch는 route와 무관하게 항상 반환된다 (R4 CP0 회신 항목 1)', async () => {
+  test('2026-08-25(데모 기간 임시 조치): 세션 epoch는 매 진입마다 증가한다 (항상 새 세션이므로)', async () => {
     const { sessions, service } = build();
     sessions.set(SEED_DEVICE_ID, SEED_BOOK_ID, {
       last_activity_at: T0,
@@ -89,8 +92,8 @@ describe('진입 판정 — decideEntry', () => {
 
     const decision = await service.decideEntry(SEED_DEVICE_ID, SEED_BOOK_ID);
 
-    expect(decision.route).toBe('reader');
-    expect(decision.session_epoch).toBe(5);
+    expect(decision.route).toBe('briefing');
+    expect(decision.session_epoch).toBe(6);
   });
 
   test('R4 CP0 회신 항목 2: 새 세션 진입은 저장된 event_seq를 0으로 리셋한다', async () => {
