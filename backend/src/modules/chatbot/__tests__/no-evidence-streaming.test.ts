@@ -35,6 +35,7 @@ describe('근거 부재 토큰의 청크 분할 (FR-QNA-004 🚦)', () => {
     (repo.findTerms as jest.Mock).mockResolvedValue([]);
     (repo.findEvents as jest.Mock).mockResolvedValue([]);
     (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
     (vectorSearch as jest.Mock).mockResolvedValue([]);
 
     jest.spyOn(console, 'log').mockImplementation();

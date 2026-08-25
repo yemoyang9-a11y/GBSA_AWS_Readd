@@ -17,6 +17,22 @@ import type {
 } from '../../shared/types';
 
 /**
+ * 책 제목·저자 조회
+ *
+ * 상한 없음 — 배경지식(getBackgroundKnowledge)과 같은 고정 메타데이터라 K를 받지 않는다.
+ */
+export async function getBookMeta(bookId: string): Promise<{ title: string; author: string }> {
+  const query = `
+    SELECT title, author
+    FROM books
+    WHERE book_id = $1
+  `;
+
+  const result = await pool.query(query, [bookId]);
+  return result.rows[0] || { title: '', author: '' };
+}
+
+/**
  * 장 요약 조회 (완결된 장만)
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K

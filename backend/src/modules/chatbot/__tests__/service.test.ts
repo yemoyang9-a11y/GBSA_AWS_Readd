@@ -52,6 +52,7 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         (repo.findTerms as jest.Mock).mockResolvedValue([]);
         (repo.findEvents as jest.Mock).mockResolvedValue([]);
         (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+        (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
         (vectorSearch as jest.Mock).mockResolvedValue([
           { page_no: 12, content: '정주사 관련 서술', distance: 0.1 },
         ]);
@@ -76,6 +77,7 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         (repo.findTerms as jest.Mock).mockResolvedValue([]);
         (repo.findEvents as jest.Mock).mockResolvedValue([]);
         (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+        (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
         (vectorSearch as jest.Mock).mockResolvedValue([]);
         (llmStream as jest.Mock).mockImplementation(async function* () {
           yield '[NO_EVIDENCE]';
@@ -98,6 +100,7 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         (repo.findTerms as jest.Mock).mockResolvedValue([]);
         (repo.findEvents as jest.Mock).mockResolvedValue([]);
         (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+        (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
         (vectorSearch as jest.Mock).mockResolvedValue([]);
         (llmStream as jest.Mock).mockImplementation(async function* () {
           yield '정주사는 고무신 장사로 돈을 모았어요 (p.10).';

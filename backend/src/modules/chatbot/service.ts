@@ -47,6 +47,24 @@ export const NO_EVIDENCE_MESSAGE =
   '🔒 지금까지 읽은 내용으로는 알 수 없어요 🤔 스포 없이 여기까지만 도와줄게요.';
 
 /**
+ * "아모"(챗봇 캐릭터 이름) 자기소개 — 고정 멘트
+ *
+ * "아모가 뭐야"처럼 챗봇 자신의 정체를 묻는 질문은 소설 근거와 무관하다. 근거 조립·검색
+ * 없이 LLM에게 판단을 맡기면 시스템 규칙 6번(챗봇 동작 방식 질문)에 걸려
+ * NO_EVIDENCE_MESSAGE가 나가는데, 이건 "지금까지 읽은 내용으로는 알 수 없다"는 스포일러
+ * 성격 문구라 "네 이름이 뭐야"에는 맥락이 안 맞다. LLM 호출 자체를 생략하고 코드에서
+ * 고정 멘트로 즉시 답한다 — difficulty-router.ts와 같은 키워드 매칭 스타일. 프론트
+ * DEFAULT_GREETING(ChatbotTab.tsx)과 같은 자기소개 톤을 맞췄다.
+ */
+const AMO_KEYWORD = '아모';
+export const AMO_INTRO_MESSAGE =
+  '저는 아모예요. 지금까지 읽은 내용 안에서만, 스포일러 없이 답해드리는 도우미예요. 궁금한 거 편하게 물어보세요.';
+
+function isAskingAboutAmo(query: string): boolean {
+  return query.includes(AMO_KEYWORD);
+}
+
+/**
  * 시스템 규칙 (프롬프트에 포함)
  */
 const SYSTEM_RULES = `
@@ -151,6 +169,38 @@ export async function* handleQuery(
   currentPageText?: { pageNo: number; content: string }
 ): AsyncGenerator<string> {
   let noEvidence = false;
+
+  // 0. 아모 자기소개 — 근거 조립·검색·LLM 호출 전부 건너뛰고 고정 멘트로 즉시 답한다
+  if (isAskingAboutAmo(query)) {
+    if (conversationId != null) {
+      await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
+    }
+    await logQuery({
+      timestamp: new Date(),
+      device_id: deviceId,
+      book_id: bookId,
+      cutoff_page: K,
+      query,
+      quote,
+      input_records: {
+        chapter_summaries: [],
+        current_chapter_pages: [],
+        characters: [],
+        relationships: [],
+        character_notes: [],
+        terms: [],
+        events: [],
+        background: 'none',
+      },
+      search_selected_pages: [],
+      no_evidence: false,
+      model: 'canned:amo-self-intro',
+      output_ref: `chatbot-amo-${Date.now()}`,
+      tokens: { input: 0, output: AMO_INTRO_MESSAGE.length },
+    });
+    yield AMO_INTRO_MESSAGE;
+    return;
+  }
 
   try {
     // 1. 근거 조립 (질의 텍스트는 인자로 넘기지 않음! - NFR-SEC-006 🚦)
