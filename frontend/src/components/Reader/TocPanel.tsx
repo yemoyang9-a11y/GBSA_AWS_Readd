@@ -51,20 +51,24 @@ export default function TocPanel({
                   type="button"
                   aria-current={isNow ? 'true' : undefined}
                   onClick={() => onSelectChapter(chapter.start_page)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    isNow ? 'bg-brief-accent-soft' : 'hover:bg-brief-paper'
+                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-[background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent/40 focus-visible:ring-offset-2 ${
+                    isNow
+                      ? 'bg-brief-accent-soft'
+                      : 'hover:bg-brief-accent/10 hover:shadow-brief-soft-sm hover:translate-x-0.5'
                   }`}
                 >
                   <span
                     className={`flex size-[24px] shrink-0 items-center justify-center rounded-full font-dashMono text-[11px] font-semibold ${
-                      isNow ? 'bg-brief-accent text-white' : 'bg-brief-paper text-brief-muted'
+                      isNow
+                        ? 'bg-brief-accent text-white'
+                        : 'bg-brief-paper text-brief-muted transition-colors group-hover:bg-white group-hover:text-brief-accent'
                     }`}
                   >
                     {chapter.chapter_no}
                   </span>
                   <span
                     className={`flex-1 font-dashSans text-[13.5px] ${
-                      isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'
+                      isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink transition-colors group-hover:text-brief-accent'
                     }`}
                   >
                     {chapter.title}

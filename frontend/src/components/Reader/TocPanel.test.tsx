@@ -42,4 +42,12 @@ describe('TocPanel', () => {
     expect(screen.getByText('11p')).toBeInTheDocument();
     expect(screen.getByText('21p')).toBeInTheDocument();
   });
+
+  it('applies a subtle hover and keyboard-focus treatment to inactive chapters', () => {
+    render(<TocPanel chapters={chapters} currentPage={1} onSelectChapter={() => {}} />);
+
+    const inactiveChapter = screen.getAllByRole('button')[1];
+    expect(inactiveChapter).toHaveClass('hover:bg-brief-accent/10');
+    expect(inactiveChapter).toHaveClass('focus-visible:ring-2');
+  });
 });
