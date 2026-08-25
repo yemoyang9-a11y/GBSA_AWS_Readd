@@ -30,6 +30,7 @@ export default function SsabiPanel({
   onTabChange,
   graph,
   graphFailed,
+  totalPages,
   recapText,
   recapStreaming,
   recapFailed,
@@ -68,6 +69,8 @@ export default function SsabiPanel({
   onTabChange: (tab: SsabiTab) => void;
   graph: GraphResponse | null;
   graphFailed: boolean;
+  /** 목차 기준 전체 페이지 수 — 인물 관계도 탭의 되감기 트랙 오른쪽 끝 표시용(R1 요청). */
+  totalPages?: number;
   recapText: string;
   recapStreaming: boolean;
   recapFailed: boolean;
@@ -178,7 +181,9 @@ export default function SsabiPanel({
             onQuote={onRecapQuote}
           />
         ) : null}
-        {tab === 'relationship' ? <RelationshipTab graph={graph} failed={graphFailed} /> : null}
+        {tab === 'relationship' ? (
+          <RelationshipTab graph={graph} failed={graphFailed} totalPages={totalPages} />
+        ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab
             turns={chatTurns}
