@@ -198,6 +198,14 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     context.entities.relationships.forEach((rel) => {
       sections.push(`- ${rel.label} (확립: p.${rel.established_page})`);
     });
+    // 라벨은 "A → B: 관계" 한 방향으로만 저장된다. 질문이 반대 방향(예: "정주사 아들
+    // 누구야?"인데 저장된 라벨은 "정주사 → 병주: 아버지")으로 오면 방향을 못 뒤집어
+    // 답을 못 하는 걸 실사용 중 확인해서(2026-08-25) 지시를 목록 바로 옆에 추가한다.
+    sections.push(
+      '(위 관계는 "A → B: 관계" 한 방향으로만 저장돼 있습니다. 질문이 반대 방향에서 오면 ' +
+        '방향을 뒤집어 답하세요 — 예: "정주사 → 병주: 아버지"가 있으면 "정주사 아들 누구야?" ' +
+        '질문엔 "병주"로 답하세요(아버지↔아들/딸, 남편↔아내 등).)'
+    );
     sections.push('');
   }
 
