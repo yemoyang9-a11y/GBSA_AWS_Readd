@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
+import TocPanel from '../components/Reader/TocPanel';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
 import Loading from '../components/common/Loading';
 import Button from '../components/common/Button';
 import SsabiToggleButton from '../components/common/SsabiToggleButton';
+import TocToggleButton from '../components/common/TocToggleButton';
 import { fetchBookInfo, fetchPage } from '../services/bookService';
 import { enterBook, sendProgress } from '../services/progressService';
 import { streamRecap } from '../services/recapService';
@@ -16,7 +18,7 @@ import { useSSE } from '../hooks/useSSE';
 import { useChatConversation } from '../hooks/useChatConversation';
 import { nextSeq } from '../utils/seq';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
-import type { EntryResponse, PageResponse, SsabiTab } from '../types';
+import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../types';
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -36,6 +38,9 @@ export default function Reader() {
 
   const [page, setPage] = useState<PageResponse | null>(null);
   const [totalPages, setTotalPages] = useState(0);
+  /** 목차 (2026-08-25, 사용자 요청) — GET /info가 cutoff 인자 없이 전량 내려준다
+   *  (FR-NAV-001, R3 4장). TocPanel이 그대로 그린다. */
+  const [chapters, setChapters] = useState<ChapterSummary[]>([]);
   const [tab, setTab] = useState<SsabiTab>(DEFAULT_SSABI_TAB);
   /**
    * 빠르게 여러 번 페이지를 넘기면(직접 입력 포함) fetchPage 요청이 겹쳐 나가고, 응답이
@@ -99,6 +104,38 @@ export default function Reader() {
     });
     return () => cancelAnimationFrame(panelRafRef.current);
   }, [panelOpen]);
+
+  /**
+   * 목차 패널 (2026-08-25, 사용자 요청) — 싸비 패널과 같은 열기/닫기 방식을 왼쪽에
+   * 대칭으로 쓴다. 폭은 고정값이라(usePanelResize 같은 드래그 리사이즈 없음) 위
+   * panelExpanded와 같은 2단 requestAnimationFrame 트릭만 그대로 가져온다 — 열 때
+   * `<aside>`가 마운트와 동시에 최종 폭으로 그려지면 브라우저가 보간할 "이전 값"이
+   * 없어 애니메이션 없이 즉시 나타나는 문제를 막는다.
+   */
+  const TOC_WIDTH = 300;
+  const TOC_ANIM_MS = 320;
+  const [tocOpen, setTocOpen] = useState(false);
+  const toggleToc = useCallback(() => setTocOpen((open) => !open), []);
+  const tocRendered = usePanelOpenTransition(tocOpen, TOC_ANIM_MS);
+  const [tocExpanded, setTocExpanded] = useState(false);
+  const tocRafRef = useRef(0);
+  useEffect(() => {
+    if (!tocOpen) {
+      setTocExpanded(false);
+      return;
+    }
+    tocRafRef.current = requestAnimationFrame(() => {
+      tocRafRef.current = requestAnimationFrame(() => setTocExpanded(true));
+    });
+    return () => cancelAnimationFrame(tocRafRef.current);
+  }, [tocOpen]);
+
+  /** 목차에서 장을 고르면 그 장의 start_page로 이동하고 패널을 닫는다 — 서버가 준
+   *  값을 그대로 쓴다(절대 규칙 2번). 페이지 입력창의 임의 이동과 같은 카테고리다. */
+  const handleSelectChapter = useCallback((startPage: number) => {
+    setCurrentPage(startPage);
+    setTocOpen(false);
+  }, []);
 
   const appRef = useRef<HTMLDivElement>(null);
   const { width: panelWidth, isDragging, handleProps } = usePanelResize({
@@ -209,6 +246,7 @@ export default function Reader() {
     void fetchBookInfo(bookId).then((info) => {
       const last = info.chapters[info.chapters.length - 1];
       setTotalPages(last ? last.end_page : 0);
+      setChapters(info.chapters);
     });
   }, [bookId]);
 
@@ -286,6 +324,11 @@ export default function Reader() {
         <SsabiToggleButton open={panelOpen} onToggle={togglePanel} />
       </div>
 
+      {/* 목차 여닫기 버튼 — 싸비 버튼과 같은 규칙을 좌측에 대칭으로 적용 (2026-08-25) */}
+      <div className="absolute left-6 top-20 z-10">
+        <TocToggleButton open={tocOpen} onToggle={toggleToc} />
+      </div>
+
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
         <button
           type="button"
@@ -300,6 +343,24 @@ export default function Reader() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
+        {tocRendered ? (
+          <aside
+            id="toc-panel"
+            style={{
+              width: tocExpanded ? TOC_WIDTH : 0,
+              flexBasis: tocExpanded ? TOC_WIDTH : 0,
+            }}
+            className="relative shrink-0 overflow-hidden border-r border-brief-rule transition-[width,flex-basis] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+          >
+            <div
+              className={`h-full transition-opacity duration-[280ms] ${tocExpanded ? 'opacity-100' : 'opacity-0'}`}
+              style={{ width: TOC_WIDTH }}
+            >
+              <TocPanel chapters={chapters} currentPage={currentPage} onSelectChapter={handleSelectChapter} />
+            </div>
+          </aside>
+        ) : null}
+
         <div className="flex-1">
           <ReaderView
             content={page.content}
