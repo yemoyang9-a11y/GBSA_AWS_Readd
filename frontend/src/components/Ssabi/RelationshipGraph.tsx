@@ -113,6 +113,41 @@ export default function RelationshipGraph({
     width: base.width,
     height: base.height,
   }));
+  // 애니메이션 중인 뷰박스의 "지금" 값을 읽을 거울 — setState는 비동기라 다음 렌더
+  // 전까지는 viewBox 클로저가 낡은 값일 수 있다. rAF 루프 안에서 매 프레임 최신값을
+  // 읽어야(연속으로 다른 인물을 빠르게 선택할 때 등) 애니메이션이 어긋나지 않는다.
+  const viewBoxRef = useRef(viewBox);
+  viewBoxRef.current = viewBox;
+  const viewBoxAnimRef = useRef<number | null>(null);
+
+  /**
+   * 뷰박스를 즉시 바꾸는 대신 부드럽게 이동·확대한다(2026-08-25, 사용자 요청 — "인물
+   * 관계도 줌/포커스 이동이 거칠다"). 드래그·휠·핀치줌처럼 사용자 입력을 1:1로 따라가는
+   * 경우는 그 자체로 이미 부드러워 애니메이션이 필요 없다 — 여기는 "클릭 한 번으로
+   * 카메라가 순간이동하는" 경우(인물 선택 포커스, 전체 보기, +/− 버튼)에만 쓴다.
+   */
+  function animateViewBoxTo(target: ViewBox, duration = 380) {
+    if (viewBoxAnimRef.current != null) cancelAnimationFrame(viewBoxAnimRef.current);
+    const start = viewBoxRef.current;
+    const t0 = performance.now();
+    function tick(now: number) {
+      const t = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const next = {
+        x: start.x + (target.x - start.x) * eased,
+        y: start.y + (target.y - start.y) * eased,
+        width: start.width + (target.width - start.width) * eased,
+        height: start.height + (target.height - start.height) * eased,
+      };
+      setViewBox(next);
+      viewBoxAnimRef.current = t < 1 ? requestAnimationFrame(tick) : null;
+    }
+    viewBoxAnimRef.current = requestAnimationFrame(tick);
+  }
+
+  useEffect(() => () => {
+    if (viewBoxAnimRef.current != null) cancelAnimationFrame(viewBoxAnimRef.current);
+  }, []);
 
   // 그래프가 바뀌면(되감기·페이지 진행) 그 그래프의 배치로 다시 fit — 이전 줌 위치를
   // 새 좌표계에 그대로 들고 있으면 화면 밖을 보게 된다.
@@ -205,7 +240,7 @@ export default function RelationshipGraph({
     );
     const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
     const height = width * aspect;
-    setViewBox(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
+    animateViewBoxTo(clampViewBox({ x: p.x - width / 2, y: p.y - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
 
   // SVG는 기본적으로 preserveAspectRatio="xMidYMid meet" — 컨테이너와 viewBox의 가로세로비가
@@ -230,10 +265,15 @@ export default function RelationshipGraph({
     return Math.max(base.width / widthPx, base.height / heightPx);
   };
 
-  function zoomAt(clientX: number, clientY: number, factor: number) {
+  /**
+   * animated=true(+/− 버튼, 2026-08-25 — 클릭 한 번에 순간이동하던 걸 부드럽게)면
+   * animateViewBoxTo로, 아니면(휠·핀치줌 — 사용자 입력을 1:1로 따라가는 연속 동작이라
+   * 이미 부드럽다) 즉시 setViewBox로 반영한다.
+   */
+  function zoomAt(clientX: number, clientY: number, factor: number, animated = false) {
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setViewBox((vb) => {
+    const computeNext = (vb: ViewBox): ViewBox => {
       const ux = vb.x + ((clientX - rect.left) / rect.width) * vb.width;
       const uy = vb.y + ((clientY - rect.top) / rect.height) * vb.height;
       const rawWidth = vb.width / factor;
@@ -243,7 +283,12 @@ export default function RelationshipGraph({
         { x: ux - (ux - vb.x) * k, y: uy - (uy - vb.y) * k, width, height: vb.height * k },
         base
       );
-    });
+    };
+    if (animated) {
+      animateViewBoxTo(computeNext(viewBoxRef.current));
+    } else {
+      setViewBox(computeNext);
+    }
   }
 
   // 네이티브 리스너로 직접 붙인다 — React 17+ 는 onWheel 합성 이벤트를 passive로
@@ -333,7 +378,7 @@ export default function RelationshipGraph({
   }
 
   function fitView() {
-    setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
+    animateViewBoxTo({ x: base.x, y: base.y, width: base.width, height: base.height });
   }
 
   // 컨테이너 크기가 바뀌면(창 크기·반응형 레이아웃) k(줌 배율)도 다시 계산해야
@@ -607,7 +652,7 @@ export default function RelationshipGraph({
           className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
           onClick={() => {
             const rect = wrapRef.current?.getBoundingClientRect();
-            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35);
+            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35, true);
           }}
         >
           +
@@ -618,7 +663,7 @@ export default function RelationshipGraph({
           className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
           onClick={() => {
             const rect = wrapRef.current?.getBoundingClientRect();
-            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35);
+            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35, true);
           }}
         >
           −

@@ -28,6 +28,11 @@ const GAP = 10;
  * 컨텍스트 전체보다 위에 오므로, tabpanel 안에 있는 이 버튼은 z-20이어도 탭 바에
  * 가려 클릭이 안 먹었다(elementFromPoint로 직접 확인). body로 포털하면 그런 조상
  * 스태킹 컨텍스트 자체를 벗어나므로 z-index 비교가 항상 의도대로 동작한다.
+ *
+ * animate-pop-in(2026-08-25, 사용자 요청 — "거칠게 뜬다")으로 등장 시 살짝 커지며
+ * 페이드인한다. transform이 아니라 별개 프로퍼티인 scale로 애니메이션한다 — 이 버튼은
+ * 위치 자체를 -translate-y-full(transform)로 잡고 있어서, 등장 애니메이션도 transform을
+ * 쓰면 그 위치용 값을 덮어써 버린다.
  */
 export default function QuotePopover({
   popover,
@@ -47,7 +52,7 @@ export default function QuotePopover({
     <button
       type="button"
       style={showBelow ? { top: popover.bottom + GAP, right } : { top: popover.top - GAP, right }}
-      className={`fixed z-20 whitespace-nowrap rounded-2xl border border-brief-accent bg-brief-accent-soft px-3.5 py-2 text-[11px] font-bold text-brief-accent shadow-brief-soft-sm ${
+      className={`fixed z-20 animate-pop-in whitespace-nowrap rounded-2xl border border-brief-accent bg-brief-accent-soft px-3.5 py-2 text-[11px] font-bold text-brief-accent shadow-brief-soft-sm ${
         showBelow ? 'rounded-tr-md' : '-translate-y-full rounded-br-md'
       }`}
       onMouseDown={(event) => {

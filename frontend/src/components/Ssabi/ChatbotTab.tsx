@@ -55,7 +55,8 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * 문장을 다시 드래그하거나 "새 채팅"/다른 대화 선택으로 넘어가면 지운다. 카드 우측
  * ×버튼(2026-08-25, 사용자 요청)으로도 직접 해제할 수 있다 — 아직 안 보낸 인용
  * (`attachedQuote`)도 같이 지워서, 해제한 뒤 보내는 질문엔 그 문장이 조용히 딸려가지
- * 않는다.
+ * 않는다. key={pinnedQuote} + animate-tab-in(2026-08-25, 사용자 요청 — "거칠게 뜬다")로
+ * 새 문장을 인용할 때마다(문장이 다르면 key가 바뀌어 리마운트) 살짝 떠오르며 나타난다.
  *
  * 답변 말풍선 테두리는 brief-accent(남보라) 대신 `progress` 토큰(남색 #35536b)을
  * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
@@ -215,7 +216,10 @@ export default function ChatbotTab({
         <>
           <div className="brief-scroll flex-1 space-y-3 overflow-y-auto">
             {pinnedQuote ? (
-              <div className="flex items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2">
+              <div
+                key={pinnedQuote}
+                className="flex animate-tab-in items-start justify-between gap-2 border-l-2 border-brief-accent bg-brief-accent-soft py-2 pl-3 pr-2"
+              >
                 <div>
                   <p className="mb-1 font-dashSans text-[11px] font-bold text-brief-accent">
                     선택한 문장

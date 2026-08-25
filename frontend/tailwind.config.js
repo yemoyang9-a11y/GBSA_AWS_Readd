@@ -109,9 +109,18 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(6px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // 팝업류 등장(2026-08-25 사용자 요청 — "인용 팝오버·선택한 문장 카드가 거칠게
+        // 뜬다") — 표준 transform 대신 별개 CSS 프로퍼티인 scale을 쓴다. 이 두 요소는
+        // 이미 transform으로 위치를 잡아 두는데(QuotePopover의 -translate-y-full 등),
+        // 여기서 transform도 같이 애니메이션하면 그 위치용 transform 값을 덮어써 버린다.
+        'pop-in': {
+          '0%': { opacity: '0', scale: '.92' },
+          '100%': { opacity: '1', scale: '1' },
+        },
       },
       animation: {
         'tab-in': 'tab-in 200ms ease-out',
+        'pop-in': 'pop-in 160ms ease-out',
       },
     },
   },
