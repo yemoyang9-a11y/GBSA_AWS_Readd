@@ -36,10 +36,10 @@ describe('TocPanel', () => {
     expect(screen.getByText('목차를 불러오는 중')).toBeInTheDocument();
   });
 
-  it('각 장 옆에 서버가 내려준 start_page를 그대로 "{페이지}p~"로 보여준다', () => {
+  it('각 장 옆에 서버가 내려준 start_page를 그대로 "{페이지}p"로 보여준다', () => {
     render(<TocPanel chapters={chapters} currentPage={5} onSelectChapter={() => {}} />);
-    expect(screen.getByText('1p~')).toBeInTheDocument();
-    expect(screen.getByText('11p~')).toBeInTheDocument();
-    expect(screen.getByText('21p~')).toBeInTheDocument();
+    expect(screen.getByText('1p')).toBeInTheDocument();
+    expect(screen.getByText('11p')).toBeInTheDocument();
+    expect(screen.getByText('21p')).toBeInTheDocument();
   });
 });
