@@ -39,6 +39,13 @@ import { graphMilestones, graphUpTo } from './graphFilter';
  * 계산이지 우리 코드의 진도율 계산이 아니다). `totalPages`는 목차(전체 챕터) 기준이라
  * 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
  *
+ * ⚠️ 폴리시(2026-08-25, 사용자 제보) — 브라우저 기본 `<input type="range">` 트랙은
+ *    자체 높이·여백이 인접 막대(`h-1.5` div)와 안 맞아 이어 붙여도 진행바가 둘로 쪼개져
+ *    보였다. `appearance-none`으로 기본 트랙을 지우고 `::-webkit-slider-thumb`/
+ *    `::-moz-range-thumb`/`::-moz-range-track`을 직접 그려 옆 막대와 같은 h-1.5·둥근
+ *    모양을 맞췄다 — 두 막대가 맞닿는 안쪽 모서리는 각지게, 트랙 전체의 바깥쪽 끝만
+ *    둥글게 해서 하나로 이어진 막대처럼 보이게 한다.
+ *
  * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
  *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
  *
@@ -129,7 +136,7 @@ export default function RelationshipTab({
               {at === latest ? '현재까지' : `${at}페이지 시점`}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center">
             <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
               <input
                 id="graph-scrub"
@@ -139,14 +146,27 @@ export default function RelationshipTab({
                 step={1}
                 value={Math.max(0, milestones.indexOf(at))}
                 onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className="w-full accent-brief-accent"
+                className={`h-1.5 w-full cursor-pointer appearance-none bg-brief-accent
+                  ${unread > 0 ? 'rounded-l-full' : 'rounded-full'}
+                  [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
+                  [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
+                  [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5
+                  [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
+                  [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
+                  [&::-moz-range-thumb]:cursor-pointer
+                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none
+                  [&::-moz-range-track]:bg-transparent`}
               />
             </div>
             {unread > 0 ? (
               <div
                 aria-hidden="true"
                 data-testid="graph-scrub-unread"
-                className="h-1.5 shrink-0 rounded-full bg-brief-rule"
+                className="h-1.5 shrink-0 rounded-r-full bg-brief-rule"
                 style={{ flexGrow: unread, flexBasis: 0 }}
               />
             ) : null}
