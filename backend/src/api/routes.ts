@@ -559,6 +559,17 @@ router.get('/books/:bookId/pages/:pageNo', async (req: Request, res: Response) =
  *
  * FR-SPL-002 🚦: cutoff 기준 필터링
  * A6: 관계는 최신 라벨만 표시
+ *
+ * ⚠️ 버그 수정(2026-08-25, 사용자 제보 — 관계도 탭을 켜둔 채 페이지를 계속 넘겨도
+ *    화면이 갱신되지 않음) — 이 라우트가 프론트가 동봉하는 (page, seq)를 그동안
+ *    완전히 무시하고 DB에 저장된 진도(reading_position.current_page)만 봤다. 그
+ *    저장은 별도 POST /progress 요청이 하는데, 두 요청은 서로 다른 HTTP 왕복이라
+ *    순서가 보장되지 않는다 — 방금 넘긴 페이지의 progress 쓰기가 아직 커밋되기
+ *    전에 이 조회가 먼저 도착하면 옛 K로 응답했다. recap/stream 라우트(3.3절,
+ *    00-shared §2.5)와 같은 패턴으로 고쳤다 — 동봉된 (page, seq)를 진도 이벤트와
+ *    동일하게 먼저 반영한 뒤 스냅샷을 뜬다. ssabiService.ts의 프론트 주석·mock
+ *    서버(mockGraphResponse)는 이미 이 처리를 전제하고 있었다 — 실 라우트만 빠져
+ *    있었다.
  */
 router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => {
   const { bookId } = req.params;
@@ -570,7 +581,15 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
   if (!isReady) return;
 
   try {
-    // 기준점 스냅샷 가져오기 (R2 연동)
+    const page = Number(req.query.page);
+    const seq = Number(req.query.seq);
+    if (Number.isFinite(page) && Number.isFinite(seq)) {
+      // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
+      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    }
+    await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
+
+    // 기준점 스냅샷 가져오기 (R2 연동) — 방금 반영한 진도 기준으로 최신 K를 얻는다
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
     const K = snapshot.cutoff;
 
@@ -592,7 +611,8 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
  *
  * 인물 상세
  *
- * TODO: R4 구현
+ * ⚠️ /ssabi/graph와 같은 이유로 (page, seq) 처리를 추가했다(2026-08-25, 사용자 제보 —
+ *    관계도 참조).
  */
 router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, res: Response) => {
   const { bookId, characterId } = req.params;
@@ -603,6 +623,14 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
   if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
 
   try {
+    const page = Number(req.query.page);
+    const seq = Number(req.query.seq);
+    if (Number.isFinite(page) && Number.isFinite(seq)) {
+      // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
+      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    }
+    await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
+
     // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
 
