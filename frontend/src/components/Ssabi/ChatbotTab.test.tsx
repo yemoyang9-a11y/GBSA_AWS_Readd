@@ -66,7 +66,7 @@ describe('ChatbotTab', () => {
     expect(bubble).toHaveClass('border-brief-rule');
   });
 
-  it('본문에서 인용한 문장이 오면(quote) 입력창을 그 문장으로 채운다', () => {
+  it('2026-08-25: 본문에서 인용한 문장이 오면(quote) "선택한 문장" 카드로만 보여주고 입력창은 비워 둔다', () => {
     render(
       <ChatbotTab
         answer=""
@@ -77,7 +77,26 @@ describe('ChatbotTab', () => {
       />
     );
 
-    expect(screen.getByLabelText('질문')).toHaveValue('"정 주사는 여전히 미두장 앞을" ');
+    expect(screen.getByText('정 주사는 여전히 미두장 앞을', { exact: false })).toBeInTheDocument();
+    expect(screen.getByLabelText('질문')).toHaveValue('');
+  });
+
+  it('2026-08-25: 인용된 상태에서 직접 타이핑한 질문을 보내면 인용문이 조용히 같이 딸려간다', async () => {
+    const onAsk = vi.fn();
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={onAsk}
+        quote={{ text: '정 주사는 여전히 미두장 앞을', token: 1 }}
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText('질문'), '이 사람 누구야');
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+
+    expect(onAsk).toHaveBeenCalledWith('이 사람 누구야', '정 주사는 여전히 미두장 앞을');
   });
 
   it('2026-08-25: "선택한 문장" 카드의 ×를 누르면 카드가 사라지고, 그 뒤 질문에는 인용이 딸려가지 않는다', async () => {
@@ -98,21 +117,22 @@ describe('ChatbotTab', () => {
 
     expect(screen.queryByText('선택한 문장')).not.toBeInTheDocument();
 
+    await userEvent.type(screen.getByLabelText('질문'), '이 사람 누구야');
     await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
-    expect(onAsk).toHaveBeenCalledWith(expect.stringContaining('정 주사는 여전히 미두장 앞을'), undefined);
+    expect(onAsk).toHaveBeenCalledWith('이 사람 누구야', undefined);
   });
 
-  it('같은 문장을 다시 인용해도(token 증가) 입력창을 새 인용문으로 다시 채운다', () => {
+  it('다른 문장을 다시 인용하면(token 증가) "선택한 문장" 카드를 새 인용문으로 갈아 끼운다', () => {
     const { rerender } = render(
       <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 1 }} />
     );
-    expect(screen.getByLabelText('질문')).toHaveValue('"첫 인용" ');
+    expect(screen.getByText('첫 인용', { exact: false })).toBeInTheDocument();
 
     rerender(
-      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 2 }} />
+      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '두 번째 인용', token: 2 }} />
     );
 
-    expect(screen.getByLabelText('질문')).toHaveValue('"첫 인용" ');
+    expect(screen.getByText('두 번째 인용', { exact: false })).toBeInTheDocument();
   });
 });
 
