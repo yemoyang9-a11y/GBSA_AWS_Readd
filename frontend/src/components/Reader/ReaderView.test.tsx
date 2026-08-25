@@ -184,7 +184,7 @@ describe('읽기 화면', () => {
     it('chapterStart가 있으면 본문 위에 장 번호·제목을 보여준다', () => {
       render(<ReaderView {...baseProps} chapterStart={{ chapter_no: 8, title: '조그마한 사업' }} />);
 
-      expect(screen.getByText('8')).toBeInTheDocument();
+      expect(screen.getByText('제 8장')).toBeInTheDocument();
       expect(screen.getByText('조그마한 사업')).toBeInTheDocument();
     });
 

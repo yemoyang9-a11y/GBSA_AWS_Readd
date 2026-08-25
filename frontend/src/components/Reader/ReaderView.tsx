@@ -127,11 +127,11 @@ export default function ReaderView({
           className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-brief-ink"
         >
           {chapterStart ? (
-            <header className="mb-8 flex items-center gap-3 whitespace-normal">
-              <span className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-brief-paper font-dashMono text-[12px] font-semibold text-brief-muted">
-                {chapterStart.chapter_no}
-              </span>
-              <h2 className="font-dashSerif text-[16px] font-bold text-brief-ink">{chapterStart.title}</h2>
+            <header className="mb-10 whitespace-normal">
+              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]">
+                제 {chapterStart.chapter_no}장
+              </p>
+              <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink">{chapterStart.title}</h2>
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote ?? null)}
