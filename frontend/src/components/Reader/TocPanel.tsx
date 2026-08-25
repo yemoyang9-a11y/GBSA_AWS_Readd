@@ -19,6 +19,10 @@ import type { ChapterSummary } from '../../types';
  * TocToggleButton은 Reader.tsx가 이 패널과 무관하게 `absolute left-6 top-20`
  * 고정 위치로 그리는데, 그 자리가 패널을 열었을 때 이 제목이 시작되는 자리와
  * 겹친다. SsabiPanel 헤더의 pr-20(반대쪽, 같은 이유)과 같은 처방이다.
+ *
+ * 각 장 옆 "{start_page}p" 표시(2026-08-25, 사용자 요청) — `chapter.start_page`를
+ * 그대로 문자열에 꽂는 것뿐, 계산 없음. 목차 자체가 상한 대상이 아니므로(위 설명)
+ * 시작 페이지 노출도 같은 이유로 안전하다.
  */
 export default function TocPanel({
   chapters,
@@ -59,11 +63,18 @@ export default function TocPanel({
                     {chapter.chapter_no}
                   </span>
                   <span
-                    className={`font-dashSans text-[13.5px] ${
+                    className={`flex-1 font-dashSans text-[13.5px] ${
                       isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'
                     }`}
                   >
                     {chapter.title}
+                  </span>
+                  <span
+                    className={`shrink-0 font-dashMono text-[11px] ${
+                      isNow ? 'text-brief-accent' : 'text-brief-muted'
+                    }`}
+                  >
+                    {chapter.start_page}p
                   </span>
                 </button>
               </li>

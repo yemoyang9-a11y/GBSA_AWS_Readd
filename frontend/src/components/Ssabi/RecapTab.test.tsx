@@ -119,4 +119,47 @@ describe('RecapTab', () => {
       expect(screen.queryByRole('button', { name: '아모에게 물어보기' })).not.toBeInTheDocument();
     });
   });
+
+  describe('새로고침 버튼 (2026-08-25)', () => {
+    it('onRefresh를 넘기면 인용부호와 같은 줄 오른쪽에 새로고침 버튼을 보여준다', () => {
+      render(<RecapTab text="정 주사는" streaming={false} failed={false} onRefresh={() => {}} />);
+      expect(screen.getByRole('button', { name: '리캡 새로고침' })).toBeInTheDocument();
+    });
+
+    it('onRefresh를 넘기지 않으면 새로고침 버튼을 그리지 않는다', () => {
+      render(<RecapTab text="정 주사는" streaming={false} failed={false} />);
+      expect(screen.queryByRole('button', { name: '리캡 새로고침' })).not.toBeInTheDocument();
+    });
+
+    it('누르면 onRefresh를 호출한다', async () => {
+      const onRefresh = vi.fn();
+      render(<RecapTab text="정 주사는" streaming={false} failed={false} onRefresh={onRefresh} />);
+
+      await userEvent.click(screen.getByRole('button', { name: '리캡 새로고침' }));
+
+      expect(onRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('스트리밍 중에는 비활성화한다', () => {
+      render(<RecapTab text="정 주사는" streaming={true} failed={false} onRefresh={() => {}} />);
+      expect(screen.getByRole('button', { name: '리캡 새로고침' })).toBeDisabled();
+    });
+
+    it('스트리밍 중에는 아이콘이 회전한다', () => {
+      render(<RecapTab text="정 주사는" streaming={true} failed={false} onRefresh={() => {}} />);
+      const icon = screen.getByRole('button', { name: '리캡 새로고침' }).querySelector('svg');
+      expect(icon).toHaveClass('animate-spin');
+    });
+
+    it('스트리밍이 끝나면 회전을 멈춘다', () => {
+      render(<RecapTab text="정 주사는" streaming={false} failed={false} onRefresh={() => {}} />);
+      const icon = screen.getByRole('button', { name: '리캡 새로고침' }).querySelector('svg');
+      expect(icon).not.toHaveClass('animate-spin');
+    });
+
+    it('실패 상태에서도 재시도용으로 보여준다', () => {
+      render(<RecapTab text="" streaming={false} failed={true} onRefresh={() => {}} />);
+      expect(screen.getByRole('button', { name: '리캡 새로고침' })).toBeInTheDocument();
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { splitHighlighted } from './highlightNames';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuotePopover from '../common/QuotePopover';
+import { parseRecapParagraphs } from '../../utils/recapText';
 
 /**
  * 리캡 탭 — SSE 스트리밍 렌더 (NFR-PERF-002 🚦) — 재설계 2026-08-23 (`.reader-scr .e-card`)
@@ -32,6 +33,12 @@ import QuotePopover from '../common/QuotePopover';
  * useQuoteSelection 훅을 쓴다 — 리캡도 이미 K 이하로만 만들어진 표시값이라(R2 불변식)
  * 본문과 동급으로 "이미 열람 가능한 확정 텍스트"이므로, 같은 인용 예외 경로를 하나 더
  * 연결하는 것뿐이다. 새 cutoff 판정은 없다.
+ *
+ * 새로고침 버튼 (2026-08-25, 사용자 요청) — 페이지가 넘어갈 때마다 자동으로 리캡을
+ * 다시 생성하면 LLM이 계속 호출된다. 싸비를 새로 열 때(또는 리캡 탭으로 전환할 때)만
+ * 자동 생성하고, 이미 열려 있는 상태에서 페이지를 옮긴 뒤에는 이 버튼을 눌러야 다시
+ * 생성되도록 Reader.tsx 쪽에서 트리거를 나눴다(onRefresh). 실패 상태에서도 재시도
+ * 수단이 필요해 같은 버튼을 그대로 보여준다.
  */
 export default function RecapTab({
   text,
@@ -39,29 +46,49 @@ export default function RecapTab({
   failed,
   characterNames = [],
   onQuote,
+  onRefresh,
 }: {
   text: string;
   streaming: boolean;
   failed: boolean;
   characterNames?: string[];
   onQuote?: (text: string) => void;
+  onRefresh?: () => void;
 }) {
   const { containerRef, popover, clearPopover } = useQuoteSelection<HTMLDivElement>();
 
+  const refreshButton = onRefresh ? (
+    <button
+      type="button"
+      onClick={onRefresh}
+      disabled={streaming}
+      aria-label="리캡 새로고침"
+      title="리캡 새로고침"
+      className="flex size-8 shrink-0 items-center justify-center rounded-full text-brief-muted transition-colors hover:text-brief-ink disabled:opacity-40"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className={`size-[18px] fill-current ${streaming ? 'animate-spin' : ''}`}
+      >
+        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+      </svg>
+    </button>
+  ) : null;
+
   if (failed)
     return (
-      <p role="alert" className="text-[13px] text-brief-muted">
-        리캡을 불러오지 못했습니다
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p role="alert" className="text-[13px] text-brief-muted">
+          리캡을 불러오지 못했습니다
+        </p>
+        {refreshButton}
+      </div>
     );
 
-  const RECAP_HEADING = '이전 이야기 요약';
-
-  // 백엔드가 문단을 빈 줄로 구분해 보낸다(recap.service.ts) — 그대로 나눠서 별도 문단으로 렌더한다.
-  const rawParagraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
-  // 백엔드 첫 줄의 고정 소제목은 eyebrow 라벨 자리로 옮겼으니 본문에서는 뺀다.
-  const paragraphs =
-    rawParagraphs[0]?.trim() === RECAP_HEADING ? rawParagraphs.slice(1) : rawParagraphs;
+  // 백엔드 첫 줄의 고정 소제목("이전 이야기 요약")은 eyebrow 라벨 자리로 옮겼으니
+  // 본문에서는 뺀다 — 파싱 로직은 BriefingView와 공유한다(utils/recapText.ts).
+  const paragraphs = parseRecapParagraphs(text);
 
   return (
     <div ref={containerRef}>
@@ -72,12 +99,15 @@ export default function RecapTab({
           곱따옴표를 그대로 쓰는 쪽이 더 낫다. 여는 부호는 카드 맨 위에, 닫는 부호는
           본문이 다 온 뒤(스트리밍 중엔 아직 안 끝난 문장에 마침표 찍는 셈이라 숨김)
           끝에 오른쪽 정렬로 놓는다. 본문과의 간격도 넓혔다(사용자 요청). */}
-      <span
-        aria-hidden="true"
-        className="mb-4 block font-dashSerif text-[52px] font-bold leading-none text-brief-accent opacity-[.45]"
-      >
-        “
-      </span>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <span
+          aria-hidden="true"
+          className="font-dashSerif text-[52px] font-bold leading-none text-brief-accent opacity-[.45]"
+        >
+          “
+        </span>
+        {refreshButton}
+      </div>
       <p className="mb-2.5 font-dashMono text-[10.5px] font-semibold uppercase tracking-[.06em] text-brief-muted">
         이전 이야기 요약
       </p>

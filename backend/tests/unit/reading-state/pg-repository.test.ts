@@ -63,6 +63,19 @@ describe('진도 — createPgReadingPositionRepository', () => {
     expect(calls[0].params).toEqual(['dev-1', 'book-1', 20, 7]);
   });
 
+  test('FR-PRG-002: savePosition의 UPDATE는 event_seq가 더 클 때만 적용되는 WHERE 가드를 건다 (동시 요청 lost-update 방지)', async () => {
+    // 실사용 중 재현(2026-08-25): 빠른 연속 페이지 넘김 시 findPosition→비교→savePosition
+    // 두 왕복 사이로 다른 요청이 끼어들면 더 낡은 seq가 나중에 도착해 더 새 seq를 덮어썼다.
+    // 앱 레벨 사전 비교만으로는 원자성이 없어 못 막는다 — 이 WHERE가 DB 레벨에서
+    // "저장된 값보다 더 새로울 때만 반영"을 원자적으로 강제하는 실제 방어선이다.
+    const { client, calls } = mockClient();
+    const repo = createPgReadingPositionRepository(client);
+
+    await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 });
+
+    expect(calls[0].sql).toMatch(/WHERE\s+reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq/);
+  });
+
   test('resetEventSeq는 event_seq만 0으로 되돌린다 (current_page 미변경)', async () => {
     const { client, calls } = mockClient();
     const repo = createPgReadingPositionRepository(client);

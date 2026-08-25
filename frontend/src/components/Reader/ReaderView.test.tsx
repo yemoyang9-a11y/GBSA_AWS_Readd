@@ -180,6 +180,21 @@ describe('읽기 화면', () => {
     });
   });
 
+  describe('2026-08-25: 장 시작 표시 — FR-NAV-001, 상한 대상 아님', () => {
+    it('chapterStart가 있으면 본문 위에 장 번호·제목을 보여준다', () => {
+      render(<ReaderView {...baseProps} chapterStart={{ chapter_no: 8, title: '조그마한 사업' }} />);
+
+      expect(screen.getByText('8')).toBeInTheDocument();
+      expect(screen.getByText('조그마한 사업')).toBeInTheDocument();
+    });
+
+    it('chapterStart가 없으면(장 중간 페이지) 아무것도 보여주지 않는다', () => {
+      render(<ReaderView {...baseProps} chapterStart={null} />);
+
+      expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    });
+  });
+
   describe('2026-08-25: 인용 하이라이트 — 챗봇 "선택한 문장" 카드와 같은 문장을 본문에서 강조', () => {
     it('highlightedQuote가 본문 안에 있으면 강조 표시(mark)한다', () => {
       const { container } = render(

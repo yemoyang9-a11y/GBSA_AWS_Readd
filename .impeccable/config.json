@@ -32,6 +32,24 @@
         "value": "40px",
         "createdAt": "2026-08-24T08:57:41.819Z",
         "reason": "RecapTab 장식용 인용부호 크기 — 세션 초반 11px/10px/10.5px와 같은 사유(기존 값, DESIGN.md 램프 미기재)로 사용자 승인 범위에 포함해 억제"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "52px",
+        "createdAt": "2026-08-25T05:45:28.453Z",
+        "reason": "user confirmed: RecapTab.tsx의 기존 장식용 인용부호 패턴(text-[52px] opacity-[.45])을 그대로 재사용 — 브리핑 리캡 카드를 리캡 탭 형식과 통일하려는 의도적 중복(commit 23a5f4c)"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "28px",
+        "createdAt": "2026-08-25T05:59:28.586Z",
+        "reason": "브리핑 재설계(2026-08-23) 인사말 헤딩 크기, DESIGN.md 램프가 그 이전 시안 기준이라 미기재 — 세션 초반 11px/10px/10.5px/40px/52px와 같은 사유로 억제"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "17px",
+        "createdAt": "2026-08-25T05:59:38.461Z",
+        "reason": "브리핑 재설계(2026-08-23) 목차 토글 화살표(▾) 아이콘 크기, DESIGN.md 램프가 그 이전 시안 기준이라 미기재 — 세션 초반 11px/10px/10.5px/40px/52px/28px와 같은 사유로 억제"
       }
     ]
   }

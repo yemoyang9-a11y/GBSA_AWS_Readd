@@ -27,7 +27,10 @@ import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../t
  * GET /pages 로 흡수하지 않는다 — 선요청 안전 규칙 때문에 R2가 거절했다 (team-sync-r4.md §1.1).
  * 이동할 페이지 번호는 서버 응답의 prev_page·next_page 를 그대로 쓴다.
  *
- * 싸비 조회는 열려 있는 탭만 하고, 페이지가 바뀌면 다시 조회한다 (FR-SVB-003).
+ * 싸비 조회는 열려 있는 탭만 하고, 페이지가 바뀌면 다시 조회한다 (FR-SVB-003) — 단
+ * 리캡은 예외다(2026-08-25, 사용자 요청): LLM 호출이라 페이지 이동만으로는 다시 부르지
+ * 않고, 탭을 새로 열 때만 자동 생성하며 그 뒤로는 새로고침 버튼을 눌러야 한다(아래
+ * recapAutoFetchedRef 참고).
  * 리캡·챗봇은 스트리밍이라 useSSE 가 따로 받는다.
  */
 export default function Reader() {
@@ -300,11 +303,42 @@ export default function Reader() {
     void sendProgress(bookId, currentPage);
   }, [bookId, currentPage, loadPage]);
 
-  // 리캡 탭을 열면 그 시점 기준점으로 받는다. 페이지가 바뀌면 다시 받는다 (FR-SVB-003)
+  /**
+   * 리캡 자동 생성 — 싸비가 닫혀 있다가 열리거나(패널 재마운트), 열린 채로 다른 탭에서
+   * 리캡 탭으로 전환할 때만 그 시점 기준점으로 받는다 (2026-08-25, 사용자 요청).
+   *
+   * 이전에는 `currentPage`가 dep에 있어서 리캡 탭이 열린 채로 페이지를 넘길 때마다
+   * LLM을 다시 불렀다 — 분당 호출 상한(NFR-AI-017)에 쉽게 걸리는 원인이었다. 이제
+   * 페이지 이동만으로는 다시 부르지 않고, 아래 refreshRecap(새로고침 버튼)을 눌러야
+   * 다시 받는다.
+   *
+   * "언제 새로 받을지"는 recapAutoFetchedRef로 판단한다 — panelOpen && tab==='recap'
+   * 상태에 있는 동안은 true로 묶어 두고, 그 상태를 벗어나면(패널을 닫거나 다른 탭으로
+   * 전환하면) false로 되돌린다. 그래서 effect의 dep에는 일부러 currentPage를 넣지
+   * 않는다 — 넣으면 페이지가 바뀔 때마다 재실행되어 다시 원래 문제로 돌아간다. 대신
+   * fetch 시점에는 그 순간의 currentPage(클로저로 캡처된 최신값)를 그대로 쓴다.
+   *
+   * panelOpen을 조건에 넣은 것도 이번에 같이 고쳤다 — 예전엔 tab만 봐서, 리캡 탭을
+   * 한 번이라도 연 적이 있으면 그 값이 Reader에 남아(패널은 언마운트돼도 tab state는
+   * 안 지워짐) 패널이 닫혀 있어도 페이지를 넘길 때마다 리캡이 계속 생성되고 있었다.
+   */
+  const recapAutoFetchedRef = useRef(false);
   useEffect(() => {
-    if (tab !== 'recap' || currentPage === null) return;
+    if (!panelOpen || tab !== 'recap') {
+      recapAutoFetchedRef.current = false;
+      return;
+    }
+    if (recapAutoFetchedRef.current) return;
+    recapAutoFetchedRef.current = true;
+    if (currentPage === null) return;
     void consumeRecap(streamRecap(bookId, currentPage, nextSeq()));
-  }, [tab, bookId, currentPage, consumeRecap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelOpen, tab, bookId, consumeRecap]);
+
+  const refreshRecap = useCallback(() => {
+    if (currentPage === null) return;
+    void consumeRecap(streamRecap(bookId, currentPage, nextSeq()));
+  }, [bookId, currentPage, consumeRecap]);
 
   const handleAsk = useCallback(
     (query: string, quote?: string) => {
@@ -358,13 +392,27 @@ export default function Reader() {
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          // navigate(-1)(브라우저 히스토리 뒤로가기) 대신 홈으로 고정 이동한다(2026-08-25,
+          // 사용자 제보 — "그냥 브라우저 뒤로가기랑 똑같다"). 히스토리 기반이면 외부
+          // 사이트에서 바로 들어왔거나 새 탭으로 열었을 때 뒤로 갈 곳이 없거나 엉뚱한
+          // 곳으로 간다. Briefing.tsx의 "뒤로" 버튼(`onBack={() => navigate('/')}`)과
+          // 같은 패턴으로 맞춘다 — 이 앱에서 "뒤로"는 항상 홈(대시보드)을 뜻한다.
+          onClick={() => navigate('/')}
           aria-label="뒤로 가기"
           className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
-          <span aria-hidden="true" className="text-base">
-            ‹
-          </span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9.5 4.8 6.5 8 9.5 11.2" />
+          </svg>
         </button>
       </div>
 
@@ -397,6 +445,7 @@ export default function Reader() {
             onMove={setCurrentPage}
             onQuote={handleQuote}
             highlightedQuote={highlightedQuote}
+            chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
           />
         </div>
 
@@ -447,6 +496,7 @@ export default function Reader() {
                 chatHistoryOpen={chatHistoryOpen}
                 pendingQuote={pendingQuote}
                 onRecapQuote={handleQuote}
+                onRecapRefresh={refreshRecap}
                 onQuoteDismissed={() => setHighlightedQuote(null)}
                 onAsk={handleAsk}
                 onNewChat={startNewChat}

@@ -18,6 +18,7 @@ import {
   deleteConversation,
   recordTurns,
   getConversationContext,
+  parseConversationId,
 } from '../conversation-service';
 import * as repo from '../conversation-repository';
 
@@ -91,6 +92,44 @@ describe('resolveConversation — 대화 이어가기/롤오버/새 채팅', () 
     const result = await resolveConversation(DEVICE_ID, BOOK_ID, 40, 999);
 
     expect(result).toEqual({ conversationId: 7, isNew: true });
+  });
+
+  test('문자열로 왕복된 conversationId도 같은 대화로 이어간다 (parseConversationId 경유)', async () => {
+    // 회귀 재현 — conversation_id는 BIGINT라 pg가 문자열로 돌려주고("241") 프론트가
+    // 다음 질문에 그 값을 그대로 왕복시킨다. 라우트가 typeof로만 걸러내던 예전 코드는
+    // 문자열을 전부 "없음"으로 취급해 매번 새 대화를 만들었다(2026-08-25, 사용자 제보).
+    (repo.getConversationById as jest.Mock).mockResolvedValue(
+      row({ id: 5, conversation_date: kstDateString() })
+    );
+
+    const result = await resolveConversation(DEVICE_ID, BOOK_ID, 90, parseConversationId('5'));
+
+    expect(result).toEqual({ conversationId: 5, isNew: false });
+    expect(repo.createConversation).not.toHaveBeenCalled();
+  });
+});
+
+describe('parseConversationId — 요청 바디 conversationId 정규화', () => {
+  test('숫자 문자열은 정수로 정규화된다 (positive)', () => {
+    expect(parseConversationId('241')).toBe(241);
+  });
+
+  test('숫자 그대로도 정수로 나온다', () => {
+    expect(parseConversationId(241)).toBe(241);
+  });
+
+  test('없음(undefined)은 undefined — "새 채팅" 경로', () => {
+    expect(parseConversationId(undefined)).toBeUndefined();
+  });
+
+  test('null도 undefined로 취급한다', () => {
+    expect(parseConversationId(null)).toBeUndefined();
+  });
+
+  test('negative: 정수가 아닌 문자열은 undefined — 위 숫자 문자열 positive와 짝', () => {
+    expect(parseConversationId('abc')).toBeUndefined();
+    expect(parseConversationId('12.5')).toBeUndefined();
+    expect(parseConversationId('')).toBeUndefined();
   });
 });
 

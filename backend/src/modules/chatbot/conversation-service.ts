@@ -25,6 +25,26 @@ export interface ResolvedConversation {
 }
 
 /**
+ * 요청 바디로 들어온 conversationId를 정수로 정규화한다.
+ *
+ * `chatbot_conversation.id`는 BIGINT라 pg 드라이버가 문자열로 돌려준다("241") —
+ * SSE `done` 프레임도 그 값을 그대로 실어 보내고, 프론트는 다음 질문에 받은 값을
+ * 그대로 왕복시킨다. 그래서 요청 바디의 conversationId도 문자열로 들어온다.
+ * `typeof x === 'number'`처럼 타입만 보고 판별하면 문자열은 전부 "안 보냄"으로
+ * 취급돼 resolveConversation이 매번 새 대화를 만든다(2026-08-25, 사용자 제보 — "같은
+ * 세션에서 진행한 대화인데도 각각 다른 기록으로 저장된다"). 숫자든 숫자 문자열이든
+ * 정수로 정규화해서 판정해야 한다.
+ */
+export function parseConversationId(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  // 빈 문자열은 Number('') === 0 이라 정수 검사를 그냥 통과해버린다 — 값이 없는
+  // 것과 진짜 0을 구분하려면 빈 문자열을 먼저 걸러야 한다.
+  if (typeof raw === 'string' && raw.trim() === '') return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) ? n : undefined;
+}
+
+/**
  * 이번 질의가 속할 대화를 정한다.
  *
  * - requestedConversationId 없음 → 새 대화 (수동 "새 채팅"도 이 경로 — 프론트가 로컬

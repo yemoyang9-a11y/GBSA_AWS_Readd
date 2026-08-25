@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
 import { fetchBriefing, streamRecap } from '../services/recapService';
+import { fetchGraph } from '../services/ssabiService';
 import { useSSE } from '../hooks/useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
@@ -26,9 +27,14 @@ export default function Briefing() {
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
   const [book, setBook] = useState<{ title: string; author: string } | null>(null);
+  /** 리캡 인물명 강조(RecapTab.tsx와 동일 방식) — /ssabi/graph도 K 이하로 이미 걸러진
+   *  응답이라 여기서 새로 판별하지 않는다(types/ssabi.ts:3). 조회 실패 시에도 리캡 본문
+   *  자체는 그대로 보여줘야 하므로 강조만 조용히 빠진다. */
+  const [characterNames, setCharacterNames] = useState<string[]>([]);
 
   const {
     text: streamedRecap,
+    streaming: recapStreaming,
     error: recapError,
     consume: consumeRecap,
   } = useSSE();
@@ -44,6 +50,21 @@ export default function Briefing() {
       setBook({ title: info.basic_info.title, author: info.basic_info.author });
     });
   }, [bookId]);
+
+  useEffect(() => {
+    if (currentPage === null) return;
+    let cancelled = false;
+    void fetchGraph(bookId, currentPage, nextSeq())
+      .then((graph) => {
+        if (!cancelled) setCharacterNames(graph.nodes.flatMap((n) => [n.name, ...n.aliases]));
+      })
+      .catch(() => {
+        if (!cancelled) setCharacterNames([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId, currentPage]);
 
   const handleFallback = useCallback(() => {
     if (currentPage === null) return;
@@ -71,6 +92,8 @@ export default function Briefing() {
       onBack={() => navigate('/')}
       streamedRecap={streamedRecap}
       recapFailed={recapError !== null}
+      recapStreaming={recapStreaming}
+      characterNames={characterNames}
     />
   );
 }
