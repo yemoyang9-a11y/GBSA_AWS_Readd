@@ -47,6 +47,7 @@ export default function SsabiPanel({
   onDeleteChatConversation,
   onQuoteDismissed,
   onRecapQuote,
+  onRecapRefresh,
 }: {
   sessionEpoch: number;
   /**
@@ -97,6 +98,9 @@ export default function SsabiPanel({
    * 똑같이 pendingQuote로 흘러 챗봇 탭 전환·인용 프롬프트 주입까지 그대로 재사용된다.
    */
   onRecapQuote?: (text: string) => void;
+  /** 리캡 새로고침 버튼 클릭(2026-08-25, 사용자 요청) — Reader.tsx가 현재 페이지 기준으로
+   *  리캡을 다시 스트리밍한다. 자동 재생성(페이지 이동)은 막고 이 버튼으로만 허용한다. */
+  onRecapRefresh?: () => void;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -183,6 +187,7 @@ export default function SsabiPanel({
             // 쓰는 이름 목록도 그 범위를 벗어나지 않는다.
             characterNames={graph ? graph.nodes.flatMap((n) => [n.name, ...n.aliases]) : []}
             onQuote={onRecapQuote}
+            onRefresh={onRecapRefresh}
           />
         ) : null}
         {tab === 'relationship' ? (
