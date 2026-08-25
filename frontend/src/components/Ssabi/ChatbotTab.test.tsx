@@ -14,6 +14,27 @@ describe('ChatbotTab', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
   });
 
+  it('2026-08-25: 싸비 답변의 "**굵게**"를 실제로 굵게(b) 렌더한다 — 별표가 글자로 남지 않는다', () => {
+    render(
+      <ChatbotTab
+        answer="**기본 정보:** 정주사는 하바꾼이다"
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+      />
+    );
+    expect(screen.getByText('기본 정보:', { selector: 'b' })).toBeInTheDocument();
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  });
+
+  it('2026-08-25: 사용자 말풍선은 "**"를 마크다운으로 재해석하지 않고 그대로 보여준다', async () => {
+    render(<ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />);
+    await userEvent.type(screen.getByLabelText('질문'), '**이게** 무슨 뜻이야');
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+
+    expect(screen.getByText('**이게** 무슨 뜻이야')).toBeInTheDocument();
+  });
+
   it('2026-08-24: 대화가 없으면(질문 전) 기본 인사 멘트를 보여준다 — 빈 말풍선은 아니다', () => {
     render(<ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} />);
     expect(
