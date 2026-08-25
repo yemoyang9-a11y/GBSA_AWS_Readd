@@ -1,6 +1,7 @@
 import { splitHighlighted } from './highlightNames';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuotePopover from '../common/QuotePopover';
+import { parseRecapParagraphs } from '../../utils/recapText';
 
 /**
  * 리캡 탭 — SSE 스트리밍 렌더 (NFR-PERF-002 🚦) — 재설계 2026-08-23 (`.reader-scr .e-card`)
@@ -55,13 +56,9 @@ export default function RecapTab({
       </p>
     );
 
-  const RECAP_HEADING = '이전 이야기 요약';
-
-  // 백엔드가 문단을 빈 줄로 구분해 보낸다(recap.service.ts) — 그대로 나눠서 별도 문단으로 렌더한다.
-  const rawParagraphs = text.split(/\n{2,}/).filter((p) => p.trim().length > 0);
-  // 백엔드 첫 줄의 고정 소제목은 eyebrow 라벨 자리로 옮겼으니 본문에서는 뺀다.
-  const paragraphs =
-    rawParagraphs[0]?.trim() === RECAP_HEADING ? rawParagraphs.slice(1) : rawParagraphs;
+  // 백엔드 첫 줄의 고정 소제목("이전 이야기 요약")은 eyebrow 라벨 자리로 옮겼으니
+  // 본문에서는 뺀다 — 파싱 로직은 BriefingView와 공유한다(utils/recapText.ts).
+  const paragraphs = parseRecapParagraphs(text);
 
   return (
     <div ref={containerRef}>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { BriefingResponse, ChapterSummary } from '../types';
 import { resolveBriefingView } from '../utils/briefingView';
 import { EMPTY_RECAP_MESSAGE } from '../utils/constants';
+import { parseRecapParagraphs } from '../utils/recapText';
 import ProgressBar from '../components/Reader/ProgressBar';
 import TypographicCover from '../components/common/TypographicCover';
 
@@ -34,6 +35,7 @@ export default function BriefingView({
   onBack,
   streamedRecap,
   recapFailed,
+  recapStreaming = false,
 }: {
   briefing: BriefingResponse;
   chapters: ChapterSummary[];
@@ -45,6 +47,8 @@ export default function BriefingView({
   onBack: () => void;
   streamedRecap?: string;
   recapFailed?: boolean;
+  /** 폴백(실시간 생성) 스트림이 아직 진행 중인지 — RecapTab과 같은 "불러오는 중" 표시에 쓴다 */
+  recapStreaming?: boolean;
 }) {
   const view = resolveBriefingView(briefing);
   const requested = useRef(false);
@@ -68,9 +72,18 @@ export default function BriefingView({
         aria-label="돌아가기"
         className="flex size-9 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
       >
-        <span aria-hidden="true" className="text-base">
-          ‹
-        </span>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          className="size-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M9.5 4.8 6.5 8 9.5 11.2" />
+        </svg>
       </button>
 
       <div className="my-5 h-[2px] w-full rounded-[1px] bg-brief-rule" />
@@ -130,11 +143,58 @@ export default function BriefingView({
       <h3 className="mb-3.5 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
         그동안 이런 이야기였어요
       </h3>
-      <div className="rounded-brief-panel bg-white p-6 font-dashSans text-[15px] leading-[1.75] text-[#3a352c] shadow-brief-soft-sm">
-        {view.kind === 'empty' ? <p className="m-0">{EMPTY_RECAP_MESSAGE}</p> : null}
-        {view.kind === 'recap' ? <p className="m-0">{briefing.recap}</p> : null}
-        {view.kind === 'fallback' ? (
-          <p className="m-0">{recapFailed ? '리캡을 불러오지 못했습니다' : (streamedRecap ?? '')}</p>
+      {/*
+        읽기 화면 리캡 탭(RecapTab.tsx)과 같은 형식으로 통일했다(2026-08-25, 사용자 요청) —
+        세리프 폰트·문단 분리·장식용 인용부호. "그동안 이런 이야기였어요" h3가 이미 이
+        섹션의 라벨 역할을 하므로 RecapTab의 작은 eyebrow 라벨("이전 이야기 요약")은
+        중복이라 가져오지 않았다. 인물 이름 강조(RecapTab의 characterNames)도 이 화면엔
+        해당 데이터(인물 관계도 조회) 자체가 없어 이번 범위에서 뺐다 — 필요하면 별도로
+        조회를 추가해야 한다.
+      */}
+      <div className="rounded-brief-panel bg-white p-6 shadow-brief-soft-sm">
+        {view.kind === 'empty' ? (
+          <p className="m-0 font-dashSerif text-[15px] leading-[1.85] text-brief-ink">
+            {EMPTY_RECAP_MESSAGE}
+          </p>
+        ) : null}
+
+        {view.kind === 'fallback' && recapFailed ? (
+          <p role="alert" className="m-0 font-dashSerif text-[15px] leading-[1.85] text-brief-ink">
+            리캡을 불러오지 못했습니다
+          </p>
+        ) : null}
+
+        {view.kind === 'recap' || (view.kind === 'fallback' && !recapFailed) ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="mb-4 block font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.45]"
+            >
+              “
+            </span>
+            {parseRecapParagraphs(
+              view.kind === 'recap' ? (briefing.recap ?? '') : (streamedRecap ?? '')
+            ).map((paragraph, i) => (
+              <p
+                key={i}
+                className="whitespace-pre-wrap font-dashSerif text-[15px] leading-[1.85] text-brief-ink [&:not(:first-child)]:mt-3"
+              >
+                {paragraph}
+              </p>
+            ))}
+            {view.kind === 'fallback' && recapStreaming ? (
+              <span aria-live="polite" className="mt-3 block text-[11px] text-brief-muted">
+                불러오는 중
+              </span>
+            ) : (
+              <span
+                aria-hidden="true"
+                className="mt-4 block text-right font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.45]"
+              >
+                ”
+              </span>
+            )}
+          </>
         ) : null}
       </div>
 

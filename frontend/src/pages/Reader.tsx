@@ -362,9 +362,18 @@ export default function Reader() {
           aria-label="뒤로 가기"
           className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
-          <span aria-hidden="true" className="text-base">
-            ‹
-          </span>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 16"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9.5 4.8 6.5 8 9.5 11.2" />
+          </svg>
         </button>
       </div>
 
