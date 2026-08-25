@@ -13,7 +13,12 @@ import {
   InvokeModelCommand,
   InvokeModelWithResponseStreamCommand,
 } from '@aws-sdk/client-bedrock-runtime';
-import { getModelForTask, validateModelVersions } from './model-config';
+import {
+  getModelForTask,
+  validateModelVersions,
+  DEFAULT_EFFORT,
+  EFFORT_ENABLED,
+} from './model-config';
 import { withRetry } from './retry';
 import dotenv from 'dotenv';
 
@@ -39,6 +44,13 @@ validateModelVersions();
  */
 export interface LLMCallOptions {
   maxTokens?: number;
+  /**
+   * 추론 강도. 생략하면 DEFAULT_EFFORT('medium').
+   *
+   * ⚠️ Sonnet 5 이상에서만 받는다 — Sonnet 4.5는 "Extra inputs are not permitted"로
+   *    요청 자체를 거절한다(2026-08-25 Bedrock 확인).
+   */
+  effort?: string;
 }
 
 /**
@@ -47,6 +59,18 @@ export interface LLMCallOptions {
 export interface LLMStreamUsage {
   inputTokens: number;
   outputTokens: number;
+}
+
+/**
+ * 요청 바디의 effort 부분.
+ *
+ * effort를 못 받는 모델로 되돌릴 수 있도록(`BEDROCK_EFFORT=` 빈 값) 필드 자체를 빼는
+ * 경로를 남긴다 — 넣은 채로 Sonnet 4.5를 부르면 "Extra inputs are not permitted"로 깨진다.
+ */
+function effortConfig(effort?: string): { output_config?: { effort: string } } {
+  const resolved = effort ?? DEFAULT_EFFORT;
+  if (!resolved || (effort === undefined && !EFFORT_ENABLED)) return {};
+  return { output_config: { effort: resolved } };
 }
 
 /**
@@ -78,6 +102,7 @@ export async function call(
         const requestBody = {
           anthropic_version: 'bedrock-2023-05-31',
           max_tokens: options.maxTokens || 4096,
+          ...effortConfig(options.effort),
           messages: [
             {
               role: 'user',
@@ -156,6 +181,7 @@ export async function* stream(
     const requestBody = {
       anthropic_version: 'bedrock-2023-05-31',
       max_tokens: options.maxTokens || 4096,
+      ...effortConfig(options.effort),
       messages: [
         {
           role: 'user',
@@ -250,9 +276,9 @@ export function getGatewayStats(): {
 } {
   return {
     modelConfig: {
-      chatbot_easy: process.env.BEDROCK_CLAUDE_HAIKU || 'not set',
-      chatbot_hard: process.env.BEDROCK_CLAUDE_SONNET || 'not set',
-      recap: process.env.BEDROCK_CLAUDE_HAIKU || 'not set',
+      chatbot: getModelForTask('chatbot'),
+      recap: getModelForTask('recap'),
+      effort: DEFAULT_EFFORT,
     },
   };
 }
