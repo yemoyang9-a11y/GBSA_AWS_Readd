@@ -15,8 +15,16 @@ const unread: BookSummary = {
 
 const fetchCatalogMock = vi.fn(async () => ({ books: [reading, unread] }));
 
+// 2026-08-25: Dashboard가 히어로 "N쪽"(전체 페이지 수)을 위해 GET /info도 부른다 —
+// 총 페이지는 목차 마지막 장 end_page에서 나온다.
 vi.mock('../services/bookService', () => ({
   fetchCatalog: () => fetchCatalogMock(),
+  fetchBookInfo: async () => ({
+    basic_info: { title: '탁류', author: '채만식', published_year: 1937, length_note: '' },
+    introduction: '',
+    background: '',
+    chapters: [{ chapter_no: 1, title: '1장', start_page: 1, end_page: 285 }],
+  }),
 }));
 vi.mock('../services/progressService', () => ({
   enterBook: async () => ({ route: 'briefing', page: 1, is_new_session: true, session_epoch: 1 }),

@@ -31,3 +31,14 @@ export const DEMO_SHELF_BOOKS: BookSummary[] = [
     progress: { current_page: 174, percent: 42.1 },
   },
 ];
+
+/**
+ * 데모 항목의 전체 페이지 수 — 실제 서버가 없어 GET /info로 물어볼 수 없다
+ * (2026-08-25, ContinueReadingHero의 "N쪽" 표시를 현재 페이지 대신 전체 페이지 수로
+ * 바꾸며 추가). 위 progress 값과 대략 맞아떨어지는 선에서 고정값을 둔다 — 실제 출간
+ * 페이지 수와는 무관한 데모용 값이다.
+ */
+export const DEMO_TOTAL_PAGES: Record<string, number> = {
+  '__demo-demian': 298,
+  '__demo-pachinko': 413,
+};

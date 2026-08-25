@@ -16,7 +16,7 @@ const reading: BookSummary = {
 describe('ContinueReadingHero', () => {
   it('진도 있는 책 — 제목·저자·진도·이어서 읽기 버튼을 보여준다', async () => {
     const onResume = vi.fn();
-    render(<ContinueReadingHero book={reading} onResume={onResume} />);
+    render(<ContinueReadingHero book={reading} onResume={onResume} totalPages={285} />);
 
     expect(screen.getByText('CONTINUE READING')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
@@ -24,13 +24,17 @@ describe('ContinueReadingHero', () => {
     // 히어로 본문 저자와 합쳐 두 곳에 나온다(Task 4·8과 동일한 사정).
     expect(screen.getAllByText('채만식')).toHaveLength(2);
     expect(screen.getByText('25.3% 완료')).toBeInTheDocument();
-    expect(screen.getByText('72쪽')).toBeInTheDocument();
-    // 총 페이지가 계약에 없으므로 분수를 만들지 않는다
-    expect(screen.queryByText(/\/\s*\d+쪽/)).not.toBeInTheDocument();
+    expect(screen.getByText('285쪽')).toBeInTheDocument();
 
     const button = screen.getByRole('button', { name: '이어서 읽기' });
     await userEvent.click(button);
     expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  it('2026-08-25: totalPages가 아직 없으면(조회 중) 현재 페이지로 되돌아가지 않고 비워 둔다', () => {
+    render(<ContinueReadingHero book={reading} onResume={() => {}} />);
+    // 옛 동작(current_page 표시)으로 되돌아가면 이 텍스트가 나온다 — 나오면 안 된다
+    expect(screen.queryByText('72쪽')).not.toBeInTheDocument();
   });
 
   it('진도 없는 책 — "새로 시작하기" 상태를 보여준다', () => {
