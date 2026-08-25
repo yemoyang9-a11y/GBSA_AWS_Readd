@@ -146,9 +146,15 @@ export default function RelationshipTab({
                 step={1}
                 value={Math.max(0, milestones.indexOf(at))}
                 onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`h-1.5 w-full cursor-pointer appearance-none bg-brief-accent
-                  ${unread > 0 ? 'rounded-l-full' : 'rounded-full'}
-                  [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+                className={`h-3.5 w-full cursor-pointer appearance-none bg-transparent
+                  [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
+                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
+                  ${
+                    unread > 0
+                      ? '[&::-webkit-slider-runnable-track]:rounded-l-full [&::-moz-range-track]:rounded-l-full'
+                      : '[&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:rounded-full'
+                  }
+                  [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full
                   [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
                   [&::-webkit-slider-thumb]:bg-brief-accent [&::-webkit-slider-thumb]:shadow
@@ -157,9 +163,7 @@ export default function RelationshipTab({
                   [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full
                   [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white
                   [&::-moz-range-thumb]:bg-brief-accent [&::-moz-range-thumb]:shadow
-                  [&::-moz-range-thumb]:cursor-pointer
-                  [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none
-                  [&::-moz-range-track]:bg-transparent`}
+                  [&::-moz-range-thumb]:cursor-pointer`}
               />
             </div>
             {unread > 0 ? (
