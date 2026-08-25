@@ -171,6 +171,17 @@ describe('브리핑 화면', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70');
   });
 
+  it('2026-08-25: 전체 페이지 수는 진도 바 위 우측에, 퍼센트는 진도 바 아래에 보여준다', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+    const bar = screen.getByRole('progressbar');
+
+    const totalPagesEl = screen.getByText('30쪽');
+    expect(totalPagesEl.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const percentEl = screen.getByText('70%');
+    expect(bar.compareDocumentPosition(percentEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('목차는 기본이 접힘이다 — 펼치기 전에는 화면에서 안 보인다(grid-rows-[0fr])', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
     expect(screen.getByTestId('toc-panel').className).toContain('grid-rows-[0fr]');

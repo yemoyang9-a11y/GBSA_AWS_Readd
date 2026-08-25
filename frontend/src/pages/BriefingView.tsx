@@ -100,9 +100,20 @@ export default function BriefingView({
       >
         <div className="mb-3 flex items-center justify-between font-dashSans text-sm">
           <b className="font-semibold text-brief-ink">{briefing.current_chapter.title}</b>
-          <span className="font-semibold text-brief-accent">{briefing.progress.percent}%</span>
+          {/* 전체 페이지 수 — 우상단(2026-08-25, 사용자 요청. 대시보드 히어로와 같은
+              정보를 보여주되, 이 화면은 챕터 제목이 이미 좌상단을 쓰고 있어 퍼센트를
+              바 아래로 내리고 이 자리를 전체 페이지 수로 채웠다). briefing.progress에
+              total_pages가 이미 있어(API_CONTRACT, 서버 계산값) 그대로 쓴다 — 대시보드와
+              달리 여기는 계약에서 뺀 적이 없는 필드다. */}
+          <span className="font-semibold text-brief-accent">
+            {briefing.progress.total_pages}쪽
+          </span>
         </div>
         <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" />
+        {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다) */}
+        <div className="mt-2 font-dashSans text-sm font-semibold text-brief-accent">
+          {briefing.progress.percent}%
+        </div>
         <div className="mt-4 flex justify-end">
           <button
             type="button"
