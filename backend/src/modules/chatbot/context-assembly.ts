@@ -28,7 +28,7 @@ import * as repo from './repository';
  * 질의는 검색(vector-search)에만 사용되며, 전량 주입분은 질의와 무관합니다.
  *
  * @param bookId - 도서 ID
- * @param K - 기준점 (cutoff = current_page - 1)
+ * @param K - 기준점 (진도 레코드가 없으면 0, 있으면 current_page)
  * @returns 챗봇 근거 컨텍스트
  *
  * @example

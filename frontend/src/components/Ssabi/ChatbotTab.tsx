@@ -111,6 +111,7 @@ export default function ChatbotTab({
   onSelectConversation,
   onDeleteConversation,
   onQuoteDismissed,
+  onRefreshCurrentPage,
 }: {
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
@@ -134,6 +135,8 @@ export default function ChatbotTab({
    *  요청). Reader.tsx가 본문 하이라이트를 이 콜백에 맞춰 같이 지운다 — "선택한 문장"
    *  카드와 본문 하이라이트가 서로 다른 상태로 갈라지지 않게 한다. */
   onQuoteDismissed?: () => void;
+  /** 현재 페이지 진도를 서버에 다시 커밋해, 다음 질문이 최신 cutoff을 쓰게 한다. */
+  onRefreshCurrentPage?: () => Promise<void>;
 }) {
   const [query, setQuery] = useState('');
   const [asked, setAsked] = useState('');
@@ -148,6 +151,9 @@ export default function ChatbotTab({
   /** 대화 목록 맨 위 "선택한 문장" 카드에 계속 띄워 둘 원문. 질문을 보내도 비우지 않는다 —
    *  후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여줘야 하기 때문. */
   const [pinnedQuote, setPinnedQuote] = useState<string | null>(null);
+  const [refreshState, setRefreshState] = useState<'idle' | 'refreshing' | 'done' | 'failed'>(
+    'idle'
+  );
   /** setPinnedQuote(null) 세 자리(×·새 채팅·다른 대화 선택) 모두 이걸로 통일한다 —
    *  onQuoteDismissed 호출을 한 곳에서만 관리해 빠뜨리는 자리가 생기지 않게 한다. */
   const clearPinnedQuote = () => {
@@ -231,8 +237,8 @@ export default function ChatbotTab({
 
   return (
     <div className="flex h-full flex-col">
-      {hasHistoryFeature ? (
-        historyOpen ? (
+      {hasHistoryFeature || onRefreshCurrentPage ? (
+        hasHistoryFeature && historyOpen ? (
           // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
           // 만든다(클래스 주석 "지난 대화 화면 재설계" 참고). 버튼 색 자체가 "지금 다른
           // 화면에 있다"는 신호이자 돌아가는 길이다.
@@ -259,29 +265,66 @@ export default function ChatbotTab({
             </span>
           </div>
         ) : (
-          <div className="mb-3 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onToggleHistory}
-              aria-pressed={false}
-              className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
-            >
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-              지난 대화
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                clearPinnedQuote();
-                onNewChat?.();
-              }}
-              className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
-            >
-              새 채팅
-            </button>
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            {onRefreshCurrentPage ? (
+              <button
+                type="button"
+                disabled={refreshState === 'refreshing'}
+                onClick={async () => {
+                  setRefreshState('refreshing');
+                  try {
+                    await onRefreshCurrentPage();
+                    setRefreshState('done');
+                  } catch {
+                    setRefreshState('failed');
+                  }
+                }}
+                className="rounded-full border border-progress bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-progress disabled:opacity-50"
+              >
+                {refreshState === 'refreshing' ? '반영 중…' : '현재 페이지 반영'}
+              </button>
+            ) : null}
+            {hasHistoryFeature ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onToggleHistory}
+                  aria-pressed={false}
+                  className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
+                >
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M12 8v4l3 2"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  지난 대화
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearPinnedQuote();
+                    onNewChat?.();
+                  }}
+                  className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
+                >
+                  새 채팅
+                </button>
+              </>
+            ) : null}
+            {refreshState === 'done' ? (
+              <span aria-live="polite" className="w-full text-right text-[11px] text-brief-muted">
+                현재 페이지가 반영됐어요.
+              </span>
+            ) : null}
+            {refreshState === 'failed' ? (
+              <span role="alert" className="w-full text-right text-[11px] text-brief-muted">
+                현재 페이지 반영에 실패했어요. 다시 시도해 주세요.
+              </span>
+            ) : null}
           </div>
         )
       ) : null}

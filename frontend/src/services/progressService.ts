@@ -40,8 +40,7 @@ export function sendProgress(bookId: string, page: number): Promise<number | nul
 
   if (USE_MOCK) {
     return import('../../mocks/server').then(({ mockRecordProgress }) => {
-      mockRecordProgress(page);
-      return null;
+      return mockRecordProgress(page);
     });
   }
   return api

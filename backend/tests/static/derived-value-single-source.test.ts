@@ -2,16 +2,15 @@
  * S1 게이트 테스트 — 파생값 단일 원천 정적 검색
  *
  * 근거: dev-spec-R2-core.md 4.5절 자가 검증 표 4번
- *       "결정기 외 코드에 `page - 1`·`/ total` 패턴 0건 (정적 검색). grep으로 확인하고 CI에 넣는다"
+ *       "결정기 외 코드에 cutoff·percent 재계산 0건 (정적 검색)"
  *
  * 조항: FR-BRF-005 🚦 · CLAUDE.md 절대 규칙 2번
- *       "기준점 결정기 밖에서 `page - 1` 또는 `%` 계산 (프론트 포함)"
+ *       "기준점 결정기 밖에서 cutoff 또는 `%` 계산 (프론트 포함)"
  *
  * FR-BRF-005의 "불일치 0건"은 검증으로 맞추는 것이 아니라 계산 지점 단일화로 달성한다
  * (architecture-r1.md 3.3절). 이 테스트가 그 단일화를 기계적으로 고정한다.
  *
- * 검사 대상에서 tests/ 를 제외한다 — 상한 테스트 자체가 `page - 1`을 기대값으로 계산하며,
- * 조항이 겨냥하는 것은 런타임 코드 경로다. 테스트용 우회가 아니라 검사 범위의 정의다.
+ * 검사 대상에서 tests/ 를 제외한다. 조항이 겨냥하는 것은 런타임 코드 경로다.
  */
 
 import * as fs from 'fs';
@@ -34,18 +33,25 @@ const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
 const FORBIDDEN_PATTERNS = [
   {
-    label: '기준점 재계산 (page - 1)',
+    label: '이전 기준점 재계산 (page - 1)',
     regex: /\b(current_?[Pp]age|page_?[Nn]o|page)\s*[-−]\s*1\b/,
+    requiredAtSolePoint: false,
+  },
+  {
+    label: '기준점 재계산 (진도 레코드 유무 조건식)',
+    regex: /\bstored\s*===?\s*null\s*\?\s*0\s*:\s*current_?[Pp]age\b/,
+    requiredAtSolePoint: true,
   },
   {
     label: '진도 % 재계산 (/ total_pages)',
     regex: /\/\s*\(?\s*(total_?[Pp]ages|total_?[Pp]age_?[Cc]ount)\b/,
+    requiredAtSolePoint: true,
   },
 ];
 
 /**
  * 주석을 공백으로 치환한다. 조항이 금지하는 것은 "계산"이므로 서술용 주석
- * (예: shared/types.ts의 `기준점 (current_page - 1)`)은 위반이 아니다.
+ * 은 위반이 아니다.
  */
 function stripComments(source: string): string {
   return source
@@ -78,7 +84,7 @@ describe('FR-BRF-005 🚦 파생값 단일 원천 — 정적 검색', () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
-  test('FR-BRF-005 🚦: 기준점 결정기 밖에 `page - 1` · `/ total_pages` 패턴이 0건', () => {
+  test('FR-BRF-005 🚦: 기준점 결정기 밖에 cutoff · percent 재계산 패턴이 0건', () => {
     const violations: string[] = [];
 
     for (const file of files) {
@@ -101,7 +107,8 @@ describe('FR-BRF-005 🚦 파생값 단일 원천 — 정적 검색', () => {
     // positive 쌍 — 결정기에서 패턴이 사라졌다면 계산이 다른 곳으로 옮겨간 것이다
     const source = stripComments(fs.readFileSync(SOLE_DERIVATION_POINT, 'utf8'));
 
-    for (const { label, regex } of FORBIDDEN_PATTERNS) {
+    for (const { label, regex, requiredAtSolePoint } of FORBIDDEN_PATTERNS) {
+      if (!requiredAtSolePoint) continue;
       expect({ label, found: regex.test(source) }).toEqual({ label, found: true });
     }
   });

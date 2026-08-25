@@ -12,7 +12,7 @@
  * (순서 무관 — 서로 다른 테이블).
  *
  * 이 스크립트가 하는 일:
- *   1. reading_position을 current_page = cutoff + 1로 직접 덮어쓴다
+ *   1. reading_position을 cutoff에 맞는 current_page로 직접 덮어쓴다
  *      (progressService.acceptProgressEvent가 아니라 리포지토리를 직접 써서 seq 단조
  *      증가 검사를 건너뛴다 — 리허설을 반복하면 이전 seq가 남아 있을 수 있다)
  *   2. reading_session 행을 지운다 — 다음 POST /entry가 "세션 레코드 없음"으로 판정해
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   const cutoffArg = process.argv[2];
   const cutoff = cutoffArg ? parseInt(cutoffArg, 10) : NaN;
   if (!Number.isInteger(cutoff) || cutoff < 0) {
-    console.error('[FAIL] 기준점(cutoff)을 정수로 지정할 것 — 예: run-seed-demo-state.ts 100');
+    console.error('[FAIL] 기준점(cutoff)을 0 이상 정수로 지정할 것 — 예: run-seed-demo-state.ts 100');
     process.exit(1);
   }
 
@@ -42,9 +42,19 @@ async function main(): Promise<void> {
     query: (sql, params) => pool.query(sql, params),
   });
 
-  // current_page = cutoff + 1 (R2 불변식: cutoff = current_page - 1, FR-PRG-003 🚦)
-  await positions.savePosition(DEVICE_ID, BOOK_ID, { current_page: cutoff + 1, event_seq: 1 });
-  console.log(`[OK] reading_position 주입 완료 — current_page=${cutoff + 1} (cutoff=${cutoff})`);
+  // cutoff = 레코드 없음 ? 0 : current_page 이므로 역산도 두 갈래다.
+  // cutoff=0은 "책을 한 번도 열지 않음"이라 레코드를 지워야 재현된다 —
+  // current_page=1을 써 넣으면 1페이지를 읽는 중(cutoff=1)이 되어 버린다.
+  if (cutoff === 0) {
+    await pool.query(`DELETE FROM reading_position WHERE device_id = $1 AND book_id = $2`, [
+      DEVICE_ID,
+      BOOK_ID,
+    ]);
+    console.log('[OK] reading_position 삭제 완료 — 책을 한 번도 열지 않은 상태 (cutoff=0)');
+  } else {
+    await positions.savePosition(DEVICE_ID, BOOK_ID, { current_page: cutoff, event_seq: 1 });
+    console.log(`[OK] reading_position 주입 완료 — current_page=${cutoff} (cutoff=${cutoff})`);
+  }
 
   // 세션 레코드 삭제 — 다음 POST /entry가 반드시 새 세션으로 판정하게 만든다 (R6)
   await pool.query(`DELETE FROM reading_session WHERE device_id = $1 AND book_id = $2`, [

@@ -3,10 +3,33 @@ import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
 describe('ChatbotTab', () => {
+  it('현재 페이지 반영 버튼을 누르면 서버 동기화 콜백을 호출한다', async () => {
+    const onRefreshCurrentPage = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        onRefreshCurrentPage={onRefreshCurrentPage}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '현재 페이지 반영' }));
+
+    expect(onRefreshCurrentPage).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('현재 페이지가 반영됐어요.')).toBeInTheDocument();
+  });
+
   it('싸비 답변 말풍선은 progress(남색) 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
     // 2026-08-25: brief-accent(남보라)에서 progress(남색, 진도 바와 통일)로 변경
     const { container } = render(
-      <ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />
+      <ChatbotTab
+        answer="정 주사에 대해 답합니다."
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+      />
     );
     expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-progress');
     // Vite가 빌드마다 파일명에 해시를 붙이므로(캐시 버스팅, 2026-08-25) 정확한 경로 대신
@@ -164,12 +187,24 @@ describe('ChatbotTab', () => {
 
   it('다른 문장을 다시 인용하면(token 증가) "선택한 문장" 카드를 새 인용문으로 갈아 끼운다', () => {
     const { rerender } = render(
-      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '첫 인용', token: 1 }} />
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        quote={{ text: '첫 인용', token: 1 }}
+      />
     );
     expect(screen.getByText('첫 인용', { exact: false })).toBeInTheDocument();
 
     rerender(
-      <ChatbotTab answer="" streaming={false} error={null} onAsk={() => {}} quote={{ text: '두 번째 인용', token: 2 }} />
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        quote={{ text: '두 번째 인용', token: 2 }}
+      />
     );
 
     expect(screen.getByText('두 번째 인용', { exact: false })).toBeInTheDocument();
@@ -279,7 +314,15 @@ describe('ChatbotTab — 대화 이력', () => {
         error={null}
         onAsk={() => {}}
         turns={[]}
-        conversations={[{ id: 42, conversation_date: '2026-08-24', title: '정주사가 누구야', created_at: '', updated_at: '' }]}
+        conversations={[
+          {
+            id: 42,
+            conversation_date: '2026-08-24',
+            title: '정주사가 누구야',
+            created_at: '',
+            updated_at: '',
+          },
+        ]}
         historyOpen={true}
         onToggleHistory={() => {}}
         onNewChat={() => {}}
@@ -303,7 +346,15 @@ describe('ChatbotTab — 대화 이력', () => {
         error={null}
         onAsk={() => {}}
         turns={[]}
-        conversations={[{ id: 42, conversation_date: '2026-08-24', title: '정주사가 누구야', created_at: '', updated_at: '' }]}
+        conversations={[
+          {
+            id: 42,
+            conversation_date: '2026-08-24',
+            title: '정주사가 누구야',
+            created_at: '',
+            updated_at: '',
+          },
+        ]}
         historyOpen={true}
         onToggleHistory={() => {}}
         onNewChat={() => {}}

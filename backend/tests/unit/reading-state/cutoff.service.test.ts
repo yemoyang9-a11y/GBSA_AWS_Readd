@@ -22,24 +22,27 @@ function serviceWith(currentPage: number | null) {
 }
 
 describe('기준점 결정기 — getCutoffSnapshot', () => {
-  test('FR-PRG-003 🚦: 모든 페이지에서 cutoff == current_page - 1', async () => {
-    // 시드 도서의 전 페이지를 훑는다. 예외 페이지가 하나도 없어야 한다.
+  test('FR-PRG-003 🚦: 진도가 있으면 모든 페이지에서 cutoff == current_page', async () => {
     for (let page = 1; page <= SEED_BOOK.total_pages; page++) {
       const snapshot = await serviceWith(page).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
 
       expect(snapshot.current_page).toBe(page);
-      expect(snapshot.cutoff).toBe(page - 1);
+      expect(snapshot.cutoff).toBe(page);
     }
   });
 
-  test('3.3절 경계값: current_page = 1 → cutoff = 0 (예외 없이 같은 규칙)', async () => {
+  test('1페이지도 예외가 아니다 — 펼쳐서 읽는 중이면 cutoff = 1', async () => {
+    // 화면에 이미 떠 있는 페이지는 새로운 노출이 아니다(R3). 1페이지를 읽는 독자도
+    // 그 페이지 기준의 리캡·관계도·챗봇 근거를 받아야 한다.
     const snapshot = await serviceWith(1).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
 
     expect(snapshot.current_page).toBe(1);
-    expect(snapshot.cutoff).toBe(0);
+    expect(snapshot.cutoff).toBe(1);
   });
 
-  test('3.3절 경계값: 저장 진도가 없는 첫 진입도 cutoff = 0 (별도 분기 없음)', async () => {
+  test('3.3절 경계값: 진도 레코드가 아예 없으면(책을 한 번도 열지 않음) cutoff = 0', async () => {
+    // 표시용 current_page는 1이지만 cutoff는 0이다 — 브리핑 화면이 1페이지 줄거리를
+    // 미리 흘리지 않게 한다. 두 상태는 current_page로 구별되지 않으므로 레코드 유무로 가른다.
     const snapshot = await serviceWith(null).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
 
     expect(snapshot.current_page).toBe(1);
@@ -53,12 +56,12 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     // 정방향 — p.25까지 읽었다
     positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 25, event_seq: 10 });
     const forward = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
-    expect(forward.cutoff).toBe(24);
+    expect(forward.cutoff).toBe(25);
 
     // 역방향 — 목차로 p.5로 되돌아갔다. watermark는 존재하지 않는다 (R2 불변식)
     positions.set(SEED_DEVICE_ID, SEED_BOOK_ID, { current_page: 5, event_seq: 11 });
     const backward = await service.getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
-    expect(backward.cutoff).toBe(4);
+    expect(backward.cutoff).toBe(5);
     expect(backward.cutoff).toBeLessThan(forward.cutoff);
   });
 
