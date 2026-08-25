@@ -126,6 +126,12 @@ export interface ChatRequest {
  * ⚠️ assembleChatbotContext 함수가 query를 인자로 받지 않음 (NFR-SEC-006 🚦)
  */
 export interface ChatbotContext {
+  /** 책 제목·저자 (상한 없음 — 배경지식과 같은 고정 메타데이터) */
+  book: {
+    title: string;
+    author: string;
+  };
+
   /** 장 요약 전량 */
   chapter_summaries: ChapterSummary[];
 

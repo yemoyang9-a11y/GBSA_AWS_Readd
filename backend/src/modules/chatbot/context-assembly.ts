@@ -43,6 +43,9 @@ export async function assembleContext(
   // ① 전량 주입분 (질의 비관여, 결정적)
   // 같은 K에서 질의를 바꿔도 이 부분은 동일해야 함
 
+  // ①-0 책 제목·저자 (상한 없음 — 배경지식과 동일한 방식)
+  const book = await getBookMeta(bookId);
+
   // ①-a 장 요약 전부 (종료 페이지 <= K)
   const chapterSummaries = await findChapterSummaries(bookId, K);
 
@@ -60,6 +63,7 @@ export async function assembleContext(
   const background = await getBackgroundKnowledge(bookId);
 
   return {
+    book,
     chapter_summaries: chapterSummaries,
     current_chapter_text: currentChapterText,
     entities: {
@@ -71,6 +75,15 @@ export async function assembleContext(
     },
     background,
   };
+}
+
+/**
+ * 책 제목·저자 조회
+ *
+ * 상한 없음 — 배경지식(getBackgroundKnowledge)과 같은 고정 메타데이터라 K를 받지 않는다.
+ */
+async function getBookMeta(bookId: string): Promise<{ title: string; author: string }> {
+  return repo.getBookMeta(bookId);
 }
 
 /**
@@ -165,6 +178,25 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
   // A10: 모델의 사전 지식 누설 방지 (유일한 수단, 100% 보장 아님)
 
   const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
+
+  // 책 정보 (상한 없음)
+  //
+  // ⚠️ 실사용 중 발견(2026-08-25) — 시스템 규칙이 "답변 시 페이지 번호를 명시하라"고
+  // 강제하다 보니, 페이지에 묶이지 않는 이 섹션(제목·저자)으로 답할 때도 모델이 "(p.1)"
+  // 같은 페이지 번호를 스스로 지어내는 걸 실제 Bedrock 호출로 재현 확인했다(드래그
+  // 인용문 페이지 지어내기 버그, 커밋 bc71b41과 같은 유형). "지어내지 마라"만 지시했더니
+  // 이번엔 "채만식이에요. (p.없음)"처럼 페이지가 없다는 말을 답변에 그대로 노출시키는
+  // 새 부작용이 실제 호출에서 나왔다 — "지어내지 말고 조용히 생략하라"까지 명시해서 막는다.
+  if (context.book.title || context.book.author) {
+    sections.push('## 책 정보');
+    if (context.book.title) sections.push(`- 제목: ${context.book.title}`);
+    if (context.book.author) sections.push(`- 저자: ${context.book.author}`);
+    sections.push(
+      '(위 책 정보는 특정 페이지에 속한 내용이 아닙니다. 이 정보로 답할 때는 페이지 번호를 붙이지 마세요 — ' +
+        '지어내지도 말고, "페이지 정보 없음"처럼 없다는 사실을 언급하지도 말고, 그냥 조용히 생략하세요.)'
+    );
+    sections.push('');
+  }
 
   // 장 요약
   if (context.chapter_summaries.length > 0) {

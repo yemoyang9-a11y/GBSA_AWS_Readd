@@ -36,6 +36,7 @@ describe('지금 보고 있는 페이지 본문 → 프롬프트 주입', () => 
     (repo.findTerms as jest.Mock).mockResolvedValue([]);
     (repo.findEvents as jest.Mock).mockResolvedValue([]);
     (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
     (vectorSearch as jest.Mock).mockResolvedValue([]);
 
     capturedPrompt = '';

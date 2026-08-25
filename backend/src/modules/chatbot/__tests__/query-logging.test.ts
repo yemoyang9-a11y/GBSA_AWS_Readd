@@ -26,6 +26,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
   const QUERY = '정주사가 누구인가요?';
 
   const mockContext = {
+    book: { title: '탁류', author: '채만식' },
     chapter_summaries: [
       { id: 'ch-1', book_id: BOOK_ID, chapter_no: 1, title: '1장', start_page: 1, end_page: 50, summary: '...' },
       { id: 'ch-2', book_id: BOOK_ID, chapter_no: 2, title: '2장', start_page: 51, end_page: 80, summary: '...' },
@@ -81,6 +82,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     (repo.findTerms as jest.Mock).mockResolvedValue(mockContext.entities.terms);
     (repo.findEvents as jest.Mock).mockResolvedValue(mockContext.entities.events);
     (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue(mockContext.background);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue(mockContext.book);
 
     // 벡터 검색 모킹
     (vectorSearch as jest.Mock).mockResolvedValue(mockSearchResults);

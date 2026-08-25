@@ -8,7 +8,7 @@
  * → 질의와 무관하게 항상 같은 근거를 반환
  */
 
-import { assembleContext } from '../context-assembly';
+import { assembleContext, buildPrompt } from '../context-assembly';
 import * as repo from '../repository';
 
 // Repository 모킹
@@ -78,6 +78,8 @@ describe('근거 조립 - 질의 비관여 (명세 5.5절 #7)', () => {
     },
   ];
 
+  const mockBookMeta = { title: '탁류', author: '채만식' };
+
   beforeEach(() => {
     // Repository 함수들 모킹
     (repo.findChapterSummaries as jest.Mock).mockResolvedValue(mockChapterSummaries);
@@ -88,6 +90,7 @@ describe('근거 조립 - 질의 비관여 (명세 5.5절 #7)', () => {
     (repo.findTerms as jest.Mock).mockResolvedValue([]);
     (repo.findEvents as jest.Mock).mockResolvedValue([]);
     (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue(mockBackground);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue(mockBookMeta);
   });
 
   afterEach(() => {
@@ -173,5 +176,65 @@ describe('근거 조립 - 질의 비관여 (명세 5.5절 #7)', () => {
 
     // getBackgroundKnowledge는 K 인자를 받지 않음
     expect(repo.getBackgroundKnowledge).toHaveBeenCalledWith(BOOK_ID);
+  });
+});
+
+describe('책 제목·저자 — 상한 없음 (배경지식과 동일한 방식)', () => {
+  const BOOK_ID = 'takryu-vol1';
+  const mockBookMeta = { title: '탁류', author: '채만식' };
+
+  beforeEach(() => {
+    (repo.findChapterSummaries as jest.Mock).mockResolvedValue([]);
+    (repo.getCurrentChapterText as jest.Mock).mockResolvedValue(null);
+    (repo.findCharacters as jest.Mock).mockResolvedValue([]);
+    (repo.findRelationships as jest.Mock).mockResolvedValue([]);
+    (repo.findCharacterNotes as jest.Mock).mockResolvedValue([]);
+    (repo.findTerms as jest.Mock).mockResolvedValue([]);
+    (repo.findEvents as jest.Mock).mockResolvedValue([]);
+    (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue('');
+    (repo.getBookMeta as jest.Mock).mockResolvedValue(mockBookMeta);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('assembleContext는 근거에 책 제목·저자를 담는다', async () => {
+    const context = await assembleContext(BOOK_ID, 80);
+
+    expect(context.book).toEqual(mockBookMeta);
+    expect(repo.getBookMeta).toHaveBeenCalledWith(BOOK_ID);
+  });
+
+  test('책 제목·저자는 K와 무관 (상한 없음)', async () => {
+    const context1 = await assembleContext(BOOK_ID, 10);
+    const context2 = await assembleContext(BOOK_ID, 200);
+
+    expect(context1.book).toEqual(context2.book);
+
+    // getBookMeta는 K 인자를 받지 않음
+    expect(repo.getBookMeta).toHaveBeenCalledWith(BOOK_ID);
+    expect((repo.getBookMeta as jest.Mock).mock.calls.every((args) => args.length === 1)).toBe(
+      true
+    );
+  });
+
+  test('buildPrompt는 책 제목·저자를 프롬프트에 포함한다', async () => {
+    const context = await assembleContext(BOOK_ID, 80);
+    const prompt = buildPrompt(context, '시스템 규칙');
+
+    expect(prompt).toContain('탁류');
+    expect(prompt).toContain('채만식');
+  });
+
+  test('buildPrompt는 책 정보에 페이지 번호를 지어내거나 "없음"을 언급하지 말라는 지시를 근거 옆에 둔다 (실사용 재현 — 2026-08-25)', async () => {
+    const context = await assembleContext(BOOK_ID, 80);
+    const prompt = buildPrompt(context, '시스템 규칙');
+
+    // 1차 수정("지어내지 마세요")만으로는 부족했다 — 실 Bedrock 호출에서
+    // "채만식이에요. (p.없음)"처럼 "없다"는 사실을 그대로 노출하는 새 부작용이 나왔다.
+    // 그래서 지어내기·언급 둘 다 막는 문구인지 확인한다.
+    expect(prompt).toContain('지어내');
+    expect(prompt).toContain('생략');
   });
 });

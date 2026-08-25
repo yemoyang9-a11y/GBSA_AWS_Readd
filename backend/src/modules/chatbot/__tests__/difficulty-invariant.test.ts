@@ -72,6 +72,7 @@ describe('난이도 분기 - 근거 집합 불변 (명세 5.5절 #15)', () => {
     (repo.findTerms as jest.Mock).mockResolvedValue([]);
     (repo.findEvents as jest.Mock).mockResolvedValue([]);
     (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue(mockBackground);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
   });
 
   afterEach(() => {

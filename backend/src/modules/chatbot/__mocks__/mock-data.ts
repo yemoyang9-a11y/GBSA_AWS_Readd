@@ -17,6 +17,7 @@ import type {
  */
 export function getMockContext(K: number): ChatbotContext {
   return {
+    book: { title: '탁류', author: '채만식' },
     chapter_summaries: getMockChapterSummaries(K),
     current_chapter_text: getMockCurrentChapter(K),
     entities: {
