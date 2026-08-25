@@ -53,6 +53,11 @@ describe('BookInfoModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('진도 배지에 "{percent}%까지 읽음" 문구를 보여준다', () => {
+    render(<BookInfoModal book={book} content={content} onClose={() => {}} />);
+    expect(screen.getByText('25.3%까지 읽음')).toBeInTheDocument();
+  });
+
   it('콘텐츠가 없으면(content undefined) 아무것도 렌더하지 않는다 — 지어낸 값을 보여주지 않는다', () => {
     const { container } = render(
       <BookInfoModal book={book} content={undefined} onClose={() => {}} />
