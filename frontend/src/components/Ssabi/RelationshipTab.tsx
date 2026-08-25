@@ -41,6 +41,8 @@ export default function RelationshipTab({
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [resultsOpen, setResultsOpen] = useState(false);
 
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
   const latest = milestones[milestones.length - 1] ?? 0;
@@ -56,6 +58,24 @@ export default function RelationshipTab({
 
   if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
+
+  // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
+  // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
+  // 기준점을 우회하는 별도 조회 경로가 된다(절대 규칙 7번과 같은 종류의 문제).
+  const normalizedQuery = query.trim().toLowerCase();
+  const searchResults = normalizedQuery
+    ? shown.nodes.filter(
+        (node) =>
+          node.name.toLowerCase().includes(normalizedQuery) ||
+          node.aliases.some((alias) => alias.toLowerCase().includes(normalizedQuery))
+      )
+    : [];
+
+  function focusOn(id: string) {
+    setSelected(id);
+    setQuery('');
+    setResultsOpen(false);
+  }
 
   const relationsOf = (id: string) =>
     shown.edges
@@ -104,7 +124,84 @@ export default function RelationshipTab({
       ) : null}
 
       <section aria-label="인물" className="space-y-3">
-        <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-xs font-bold text-brief-muted">인물 {shown.nodes.length}</h3>
+
+          {/* 시안(첫 번째 스크린샷)의 알약형 검색창 — 클릭 후 포커싱은 그래프가 이미
+              selectedId 로 하고 있어(RelationshipGraph.tsx), 여기서는 검색 결과를 골라
+              그 setSelected 를 그대로 호출하기만 한다. */}
+          <div className="relative">
+            <div className="flex items-center gap-1.5 rounded-pill border border-brief-rule bg-brief-page px-3 py-1.5">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                className="shrink-0 text-brief-muted"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <line x1="15.3" y1="15.3" x2="20" y2="20" />
+              </svg>
+              <label htmlFor="character-search" className="sr-only">
+                인물 검색
+              </label>
+              <input
+                id="character-search"
+                type="text"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setResultsOpen(true);
+                }}
+                onFocus={() => setResultsOpen(true)}
+                onBlur={() => setResultsOpen(false)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && searchResults.length > 0) {
+                    event.preventDefault();
+                    focusOn(searchResults[0].id);
+                  }
+                  if (event.key === 'Escape') setQuery('');
+                }}
+                placeholder="검색"
+                className="w-20 bg-transparent text-[11px] text-brief-ink outline-none placeholder:text-brief-muted"
+              />
+            </div>
+
+            {resultsOpen && normalizedQuery ? (
+              <ul
+                role="listbox"
+                aria-label="인물 검색 결과"
+                className="absolute right-0 top-full z-10 mt-1 max-h-48 w-44 overflow-y-auto rounded-xl border border-brief-rule bg-white py-1 shadow-brief-soft-sm"
+              >
+                {searchResults.length > 0 ? (
+                  searchResults.map((node) => (
+                    <li key={node.id} role="option" aria-selected={node.id === activeSelected}>
+                      {/* mousedown 시점에 preventDefault 하지 않으면 input 의 onBlur 가
+                          먼저 일어나 목록이 닫혀버려 클릭이 아무 데도 안 먹는다. */}
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => focusOn(node.id)}
+                        className="block w-full px-3 py-1.5 text-left text-xs text-brief-ink hover:bg-brief-accent-soft"
+                      >
+                        {node.name}
+                        {node.aliases.length > 0 ? (
+                          <span className="ml-1.5 text-[10px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))
+                ) : (
+                  <li className="px-3 py-1.5 text-xs text-brief-muted">일치하는 인물 없음</li>
+                )}
+              </ul>
+            ) : null}
+          </div>
+        </div>
         <ul className="space-y-3">
           {shown.nodes.map((node) => {
             const isOpen = node.id === activeSelected;

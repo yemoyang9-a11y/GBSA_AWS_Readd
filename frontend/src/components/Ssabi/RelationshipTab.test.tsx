@@ -108,4 +108,60 @@ describe('RelationshipTab', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
     expect(screen.getByLabelText('시점 되감기').className).toContain('accent-brief-accent');
   });
+
+  describe('인물 검색', () => {
+    it('이름으로 검색하면 일치하는 인물이 검색 결과에 나온다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '초봉' } });
+
+      const results = screen.getByRole('listbox', { name: '인물 검색 결과' });
+      expect(within(results).getByText('초봉')).toBeInTheDocument();
+      expect(within(results).queryByText('정주사')).not.toBeInTheDocument();
+    });
+
+    it('별칭으로도 검색된다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '정 주사' } });
+
+      const results = screen.getByRole('listbox', { name: '인물 검색 결과' });
+      expect(within(results).getByText('정주사')).toBeInTheDocument();
+    });
+
+    it('검색 결과를 선택하면 그 인물이 포커스(선택)된다 — 관계 라벨이 카드에 나온다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '정주사' } });
+
+      const results = screen.getByRole('listbox', { name: '인물 검색 결과' });
+      fireEvent.click(within(results).getByText('정주사'));
+
+      const people = screen.getByRole('region', { name: '인물' });
+      expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+    });
+
+    it('선택 후에는 검색창이 비워지고 결과 목록이 닫힌다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      const input = screen.getByLabelText('인물 검색');
+      fireEvent.change(input, { target: { value: '정주사' } });
+      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('정주사'));
+
+      expect(input).toHaveValue('');
+      expect(screen.queryByRole('listbox', { name: '인물 검색 결과' })).not.toBeInTheDocument();
+    });
+
+    it('일치하는 인물이 없으면 안내 문구가 나온다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '없는이름' } });
+
+      expect(screen.getByText('일치하는 인물 없음')).toBeInTheDocument();
+    });
+
+    it('되감아 아직 등장하지 않은 인물은 검색되지 않는다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+      // 1페이지 시점으로 되감기 — 정주사만 있고 초봉은 아직 없다
+      fireEvent.change(screen.getByLabelText('시점 되감기'), { target: { value: '0' } });
+
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '초봉' } });
+      expect(screen.getByText('일치하는 인물 없음')).toBeInTheDocument();
+    });
+  });
 });
