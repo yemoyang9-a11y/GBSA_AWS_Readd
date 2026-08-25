@@ -15,10 +15,17 @@ describe('RecapTab', () => {
     expect(screen.getByText('불러오는 중')).toHaveClass('text-brief-muted');
   });
 
-  it('"이전 이야기 요약" eyebrow 라벨과 장식용 인용부호 아이콘을 보여준다', () => {
-    const { container } = render(<RecapTab text="정 주사는" streaming={false} failed={false} />);
+  it('"이전 이야기 요약" eyebrow 라벨과 여는·닫는 인용부호를 보여준다 — 닫는 쪽은 스트리밍이 끝난 뒤에만', () => {
+    render(<RecapTab text="정 주사는" streaming={false} failed={false} />);
     expect(screen.getByText('이전 이야기 요약')).toBeInTheDocument();
-    expect(container.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+    expect(screen.getByText('“', { exact: true })).toBeInTheDocument();
+    expect(screen.getByText('”', { exact: true })).toBeInTheDocument();
+  });
+
+  it('스트리밍 중에는(아직 문장이 안 끝났으니) 닫는 인용부호를 보여주지 않는다', () => {
+    render(<RecapTab text="정 주사는" streaming={true} failed={false} />);
+    expect(screen.getByText('“', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText('”', { exact: true })).not.toBeInTheDocument();
   });
 
   it('본문 첫 줄이 백엔드 고정 소제목("이전 이야기 요약")과 일치하면 본문에서는 걷어낸다', () => {

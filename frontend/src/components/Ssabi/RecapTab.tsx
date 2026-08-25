@@ -66,22 +66,18 @@ export default function RecapTab({
   return (
     <div ref={containerRef}>
       <QuotePopover popover={popover} onQuote={onQuote} onDone={clearPopover} />
-      {/* 장식용 인용부호 (2026-08-25, 사용자 요청 — 참고 이미지 스타일) — 글자 "가 아니라
-          아이콘으로 그린다. 폰트 글리프에 기대면 브라우저마다 모양이 달라지고, 곧은따옴표는
-          디자인 의도(연 인용부호처럼 도입부에 놓인 장식)와 안 맞았다. Material "format_quote"
-          아이콘은 닫는 인용부호("99" 모양 — 방울이 위, 꼬리가 오른쪽 아래)라서, 이 카드
-          맨 위 도입부에 그대로 쓰면 방향이 거꾸로 보인다(사용자 지적) — 좌우 반전해서
-          여는 인용부호("66" 모양)로 바꿔 쓴다. */}
-      <svg
+      {/* 장식용 인용부호 (2026-08-25, 사용자 요청) — 손으로 그린 아이콘 대신 폰트 자체의
+          정식 타이포그래피 곱따옴표 글리프(U+201C/U+201D)를 큼직하게 쓴다. 아이콘은
+          모양이 어색했다(사용자 피드백 "좀 못생겼어") — 세리프 폰트가 원래 잘 그려 둔
+          곱따옴표를 그대로 쓰는 쪽이 더 낫다. 여는 부호는 카드 맨 위에, 닫는 부호는
+          본문이 다 온 뒤(스트리밍 중엔 아직 안 끝난 문장에 마침표 찍는 셈이라 숨김)
+          끝에 오른쪽 정렬로 놓는다. 본문과의 간격도 넓혔다(사용자 요청). */}
+      <span
         aria-hidden="true"
-        viewBox="0 0 24 24"
-        width="34"
-        height="34"
-        fill="currentColor"
-        className="-mb-1 -scale-x-100 text-brief-accent opacity-[.28]"
+        className="mb-4 block font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.28]"
       >
-        <path d="M7.17 6A5.17 5.17 0 0 0 2 11.17c0 2.85 2.32 5.17 5.17 5.17.3 0 .6-.03.88-.08A5.2 5.2 0 0 1 4.5 20H7a8 8 0 0 0 3-6.25V11.2A5.17 5.17 0 0 0 7.17 6Zm10 0A5.17 5.17 0 0 0 12 11.17c0 2.85 2.32 5.17 5.17 5.17.3 0 .6-.03.88-.08A5.2 5.2 0 0 1 14.5 20H17a8 8 0 0 0 3-6.25V11.2A5.17 5.17 0 0 0 17.17 6Z" />
-      </svg>
+        “
+      </span>
       <p className="mb-2.5 font-dashMono text-[10.5px] font-semibold uppercase tracking-[.06em] text-brief-muted">
         이전 이야기 요약
       </p>
@@ -105,7 +101,14 @@ export default function RecapTab({
         <span aria-live="polite" className="mt-3 block text-[11px] text-brief-muted">
           불러오는 중
         </span>
-      ) : null}
+      ) : (
+        <span
+          aria-hidden="true"
+          className="mt-4 block text-right font-dashSerif text-[52px] leading-none text-brief-accent opacity-[.28]"
+        >
+          ”
+        </span>
+      )}
     </div>
   );
 }
