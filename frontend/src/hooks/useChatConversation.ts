@@ -61,7 +61,18 @@ export function useChatConversation(bookId: string) {
           }
           // done
           if (typeof frame.applied_cutoff === 'number') setAppliedCutoff(frame.applied_cutoff);
-          if (typeof frame.conversation_id === 'number') setConversationId(frame.conversation_id);
+          // conversation_id는 백엔드 BIGINT 컬럼에서 나온 값이라 pg가 문자열로 반환하고
+          // ("279"), SSE JSON도 그 문자열을 그대로 싣는다 — `typeof === 'number'`로만
+          // 걸러내면 항상 걸려서(문자열이니까) conversationId가 절대 채워지지 않고, 다음
+          // 질문마다 "안 보냄"으로 나가 서버가 매번 새 대화를 만들었다. 서버 쪽 같은 종류의
+          // 버그(routes.ts parseConversationId)는 고쳤는데, 여기 수신부는 그대로 남아 있어서
+          // 결과적으로 여전히 매번 새 대화로 갈라지고 있었다(2026-08-25, 사용자 재보고 —
+          // "아직도 챗봇 대화가 분리되어 저장되는 문제가 있어"). 숫자든 숫자 문자열이든
+          // 정수로 정규화해서 받는다.
+          if (frame.conversation_id !== undefined) {
+            const parsedConversationId = Number(frame.conversation_id);
+            if (Number.isInteger(parsedConversationId)) setConversationId(parsedConversationId);
+          }
           return;
         }
       } finally {

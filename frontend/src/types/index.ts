@@ -50,8 +50,13 @@ export interface SseDoneFrame {
   /**
    * 이 문답이 기록된 대화 ID (2026-08-24 대화 이력 기능). 챗봇 스트림에만 실린다 —
    * 다음 질문부터 이 값을 그대로 요청에 실어 보내면 같은 대화로 이어진다.
+   *
+   * 실제로는 항상 문자열로 온다 — DB의 BIGINT 컬럼을 pg가 문자열로 반환하기
+   * 때문이다(number 타입만 믿고 typeof로 걸렀다가 값이 절대 안 채워지는 버그가
+   * 있었다, 2026-08-25 — useChatConversation.ts 참고). 그대로 되돌려 보내면 되므로
+   * 여기선 number | string 그대로 두고, 쓰는 쪽에서 정수로 정규화한다.
    */
-  conversation_id?: number;
+  conversation_id?: number | string;
 }
 
 export interface SseErrorFrame {
