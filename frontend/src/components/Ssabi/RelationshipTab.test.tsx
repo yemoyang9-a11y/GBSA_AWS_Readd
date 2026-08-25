@@ -244,6 +244,45 @@ describe('RelationshipTab', () => {
       expect(within(people).queryByText('제중당 주인')).not.toBeInTheDocument();
     });
 
+    it('연결 수(degree)가 두드러진 인물이 8명보다 많으면 8명에서 안 잘린다', () => {
+      // center 1명 + rim 8명, rim은 원형으로 거리1·거리2 이웃과도 이어져 전부 degree 4
+      // 이상이다(center degree 8, rim 각각 degree 5) — 총 9명이 기본 임계값(minDegree
+      // 4)을 넘는다. "상위 8명 고정" 방식이었다면 9번째가 잘렸을 것이다(사용자 피드백
+      // — "중요한 인물이 8명 이상인 경우도 많을 텐데").
+      const RIM = 8;
+      const nodes: GraphResponse['nodes'] = [
+        { id: 'center', name: '센터', first_appearance_page: 1, aliases: [] },
+        ...Array.from({ length: RIM }, (_, i) => ({
+          id: `rim${i}`,
+          name: `림${i}`,
+          first_appearance_page: i + 2,
+          aliases: [],
+        })),
+      ];
+      const rawEdges: GraphResponse['edges'] = [];
+      for (let i = 0; i < RIM; i++) {
+        rawEdges.push({ source: 'center', target: `rim${i}`, label: '지인', established_page: 1 });
+        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 1) % RIM}`, label: '지인', established_page: 1 });
+        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 2) % RIM}`, label: '지인', established_page: 1 });
+      }
+      const seen = new Set<string>();
+      const edges = rawEdges.filter((e) => {
+        const key = [e.source, e.target].sort().join('|');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      render(<RelationshipTab graph={{ nodes, edges }} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(within(people).getByText('인물 9')).toBeInTheDocument();
+    });
+
     it('"전체"를 누르면 걸러졌던 인물이 다 보인다', () => {
       render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });

@@ -48,27 +48,33 @@ export function graphUpTo(graph: GraphResponse, page: number): GraphResponse {
 }
 
 /**
- * "주요인물" 표시 필터가 남기는 인원 상한.
+ * "주요인물" 표시 필터가 최소한 보장하는 인원 — 이 아래로는 안 줄어든다.
  *
- * 처음엔 "연결 수(degree) 4 미만은 뺀다"는 고정 임계값이었다(2026-08-25 1차) — 그런데
- * 이 값을 못 넘는 인물이 아직 아무도 없을 때(진도 초반 등) "전체를 대신 보여주는"
- * 폴백을 같이 뒀더니, 딱 첫 번째 인물이 임계값을 넘는 순간 **화면이 "전체 N명"에서
- * "겨우 1~2명"으로 뚝 떨어지는** 문제가 실사용 중 발견됐다(2026-08-25 재보고 — "사람이
- * 많다가 어느 순간 확 줄어드는 현상"). 절대 임계값은 근본적으로 이 문제를 만든다 — 통과
- * 여부가 이분법이라 통과자가 0명에서 1명으로 바뀌는 순간 표시가 "전체"에서 "필터링됨"으로
- * 전환되기 때문이다.
+ * 1차 구현("연결 수(degree) 4 미만은 뺀다"는 절대 임계값)은, 아무도 그 값을 못 넘을 때
+ * 전체를 대신 보여주는 폴백을 같이 뒀더니 **첫 인물이 임계값을 넘는 순간 "전체"에서
+ * "1~2명"으로 뚝 떨어지는** 문제가 있었다(2026-08-25 1차 보고 — "사람이 많다가 어느
+ * 순간 확 줄어드는 현상"). 2차로 절대 임계값을 버리고 "연결 수 상위 N명"만 쓰자 이번엔
+ * 반대 문제가 나왔다 — 나중에 중요 인물이 이 N명보다 많아지는 시점에도 무조건 N에서
+ * 잘렸다(2026-08-25 2차 보고 — "중요한 인물이 8명 이상인 경우도 많을 텐데").
  *
- * 그래서 절대 임계값을 버리고 **"연결 수 상위 N명"** 으로 바꿨다. 인물·관계는 되감기
- * 방향으로만 늘어나므로(그래프가 통째로 다시 줄어드는 일은 없다 — 3.3절) 이 아래
- * 화면에 보이는 인원 수는 항상 `min(N, 그 시점 전체 인물 수)`다 — 전체가 N을 넘기
- * 전까진 "주요인물"과 "전체"가 정확히 같은 인원을 보여주다가, N을 넘는 순간부터 딱
- * N명에서 멈추고 그 뒤로는 구성(누가 상위 N에 드는지)만 서서히 바뀐다. 단계 없이
- * 뚝 떨어지는 지점 자체가 없다.
+ * 그래서 두 방식을 **최솟값·최댓값이 아니라 최소 보장선으로** 섞는다(아래 `filterMajorCharacters`
+ * 참고). `MAJOR_CHARACTER_MIN_DEGREE`(4) 이상인 인물은 몇 명이든 전부 남기고, 그 인원이
+ * 이 값보다 적을 때만 상위 N명이 되도록 채운다 — 즉 실제 상한은 `max(FLOOR, degree
+ * 4 이상인 인원 수)`다. degree 4 이상인 인물은 정의상 항상 상위 등수에 있으므로(그 아래
+ * 등수는 전부 degree 4 미만이다) 이 둘을 섞어도 새로운 "뚝 떨어지는" 지점이 생기지
+ * 않는다 — 인원이 늘 때 상한도 같이 매끄럽게 늘 뿐이다.
  */
-export const MAJOR_CHARACTER_TOP_N = 8;
+export const MAJOR_CHARACTER_FLOOR = 8;
 
 /**
- * "주요인물" 표시 필터 — 연결 수(degree) 상위 `topN`명만 남긴다.
+ * "주요인물" 무조건 포함 기준 — 연결 수(degree)가 이 값 이상이면 상한(`MAJOR_CHARACTER_FLOOR`)
+ * 을 넘어서도 절대 잘리지 않는다. 위 `MAJOR_CHARACTER_FLOOR` 주석 참고.
+ */
+export const MAJOR_CHARACTER_MIN_DEGREE = 4;
+
+/**
+ * "주요인물" 표시 필터 — 연결 수(degree) 상위 `max(floor, minDegree 이상인 인원 수)`명만
+ * 남긴다.
  *
  * graphUpTo와 같은 성격의 **표시 필터**다: 서버가 이미 컷오프 이하로 걸러 보낸 데이터
  * 안에서 클라이언트가 한 번 더 추리는 것뿐이고, 어느 인물이 기준점을 넘었는지는 판별하지
@@ -79,14 +85,18 @@ export const MAJOR_CHARACTER_TOP_N = 8;
  * 정렬은 등수를 매기는 데만 쓰고, 반환하는 `nodes`는 원본 순서를 그대로 유지한다.
  *
  * degree는 넘겨받은 그래프(되감기로 걸러진 뒤일 수 있다) 안에서 다시 계산한다 — 되감아서
- * 아직 드러나지 않은 관계는 애초에 graph.edges에 없으므로, 과거 시점으로 갈수록 등수
- * 자체가 그 시점 기준으로 다시 매겨진다(따로 연동할 필요가 없다).
+ * 아직 드러나지 않은 관계는 애초에 graph.edges에 없으므로, 과거 시점으로 갈수록 등수·
+ * 상한 둘 다 그 시점 기준으로 다시 매겨진다(따로 연동할 필요가 없다).
  */
 export function filterMajorCharacters(
   graph: GraphResponse,
-  topN: number = MAJOR_CHARACTER_TOP_N
+  floor: number = MAJOR_CHARACTER_FLOOR,
+  minDegree: number = MAJOR_CHARACTER_MIN_DEGREE
 ): GraphResponse {
   const degree = computeDegrees(graph.nodes, graph.edges);
+  const qualifyingCount = graph.nodes.filter((node) => (degree.get(node.id) ?? 0) >= minDegree).length;
+  const topN = Math.max(floor, qualifyingCount);
+
   const ranked = [...graph.nodes].sort((a, b) => {
     const diff = (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0);
     return diff !== 0 ? diff : a.first_appearance_page - b.first_appearance_page;
