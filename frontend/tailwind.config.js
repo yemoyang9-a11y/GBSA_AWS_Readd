@@ -15,10 +15,12 @@ export default {
         faint: '#76726e', // 비활성 탭 라벨
         accent: '#3b3db2', // 통계 숫자 강조
         active: '#111111', // 활성 탭 배경
-        // 진도 바 채움 전용 통일 색(2026-08-25, 사용자 결정) — 대시보드는 ink,
-        // 브리핑은 brief-accent(남보라)로 서로 다르던 것을 시안 5종 비교 후 이 남색으로
-        // 합쳤다. ProgressBar.tsx의 tone="dash"·"brief" 둘 다 이 색을 쓴다 — 각 화면의
-        // 트랙(빈 배경) 색은 여전히 dash-line/brief-line으로 남겨 뒀다.
+        // 공용 강조 남색(2026-08-25, 사용자 결정) — 원래 진도 바 채움 통일 목적으로
+        // 골랐다(대시보드 ink · 브리핑 brief-accent 남보라, 시안 5종 비교 후 이 색으로
+        // 합침. ProgressBar.tsx tone="dash"·"brief" 둘 다 사용, 트랙 색은 여전히
+        // dash-line/brief-line 유지). 같은 날 챗봇 답변 말풍선 테두리(ChatbotTab.tsx,
+        // 기존 brief-accent)에도 재사용해 화면 간 강조색을 맞췄다 — 이름은 progress지만
+        // 진도 바 전용이 아니다.
         progress: '#35536b',
         ssabi: {
           // 싸비 전용 강조색. accent(남보라)와 별개다 — 시안이 진도·통계는 남보라로,

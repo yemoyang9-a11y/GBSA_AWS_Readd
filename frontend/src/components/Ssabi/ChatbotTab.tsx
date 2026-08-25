@@ -51,6 +51,10 @@ import ssabiFace from '../../assets/images/ssabi-face.png';
  * ×버튼(2026-08-25, 사용자 요청)으로도 직접 해제할 수 있다 — 아직 안 보낸 인용
  * (`attachedQuote`)도 같이 지워서, 해제한 뒤 보내는 질문엔 그 문장이 조용히 딸려가지
  * 않는다.
+ *
+ * 답변 말풍선 테두리는 brief-accent(남보라) 대신 `progress` 토큰(남색 #35536b)을
+ * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
+ * 화면 간 강조색을 맞췄다.
  */
 const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
 
@@ -217,7 +221,7 @@ export default function ChatbotTab({
                   aria-hidden="true"
                   className="h-9 w-auto shrink-0 translate-y-3 object-contain"
                 />
-                <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
                   {DEFAULT_GREETING}
                 </p>
               </div>
@@ -238,7 +242,7 @@ export default function ChatbotTab({
                       aria-hidden="true"
                       className="h-9 w-auto shrink-0 translate-y-3 object-contain"
                     />
-                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-brief-accent bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
                       {turn.text}
                     </p>
                   </div>

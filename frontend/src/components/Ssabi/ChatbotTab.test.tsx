@@ -3,11 +3,12 @@ import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
 describe('ChatbotTab', () => {
-  it('싸비 답변 말풍선은 accent 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
+  it('싸비 답변 말풍선은 progress(남색) 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
+    // 2026-08-25: brief-accent(남보라)에서 progress(남색, 진도 바와 통일)로 변경
     const { container } = render(
       <ChatbotTab answer="정 주사에 대해 답합니다." streaming={false} error={null} onAsk={() => {}} />
     );
-    expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-brief-accent');
+    expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-progress');
     // Vite가 빌드마다 파일명에 해시를 붙이므로(캐시 버스팅, 2026-08-25) 정확한 경로 대신
     // 파일명만 확인한다.
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
@@ -158,7 +159,7 @@ describe('ChatbotTab — 대화 이력', () => {
     );
 
     expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-brief-paper');
-    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-white', 'border-brief-accent');
+    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-white', 'border-progress');
   });
 
   it('"새 채팅" 버튼을 누르면 onNewChat이 호출된다', async () => {
