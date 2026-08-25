@@ -126,6 +126,43 @@ export default function RelationshipGraph({
     setViewBox({ x: base.x, y: base.y, width: base.width, height: base.height });
   }, [base]);
 
+  // 전체화면 — 그래프 원본 가로세로비(base)는 그대로 두고 화면에 맞는 크기만 계산한다.
+  // CSS의 aspect-ratio + max-width/max-height 조합은 둘 다 auto인 상태에서 "두 축을
+  // 동시에 만족하는 최대 크기"(contain)를 안정적으로 계산해주지 않아(요소가 아니라
+  // 이미지/비디오에만 있는 동작) 직접 계산한다.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenSize, setFullscreenSize] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    function computeSize() {
+      const marginPx = 32;
+      const maxW = window.innerWidth - marginPx * 2;
+      const maxH = window.innerHeight - marginPx * 2;
+      const ratio = base.width / base.height;
+      let width = maxW;
+      let height = width / ratio;
+      if (height > maxH) {
+        height = maxH;
+        width = height * ratio;
+      }
+      setFullscreenSize({ width, height });
+    }
+    computeSize();
+    window.addEventListener('resize', computeSize);
+    return () => window.removeEventListener('resize', computeSize);
+  }, [isFullscreen, base]);
+
+  // BookInfoModal.tsx 와 같은 관례 — Esc 로도 닫을 수 있게 한다
+  useEffect(() => {
+    if (!isFullscreen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsFullscreen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isFullscreen]);
+
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
   const neighborIds = useMemo(() => {
@@ -410,7 +447,7 @@ export default function RelationshipGraph({
     return candidates.filter((c) => kept.has(c.key));
   }, [validSelectedId, graph.nodes, graph.edges, positions, k, labelScale, nameLabelBoxes]);
 
-  return (
+  const graphBox = (
     <div
       ref={wrapRef}
       // 높이를 고정값(h-[280px])으로 두면 패널을 가로로 늘려도(usePanelResize) 세로는
@@ -418,9 +455,27 @@ export default function RelationshipGraph({
       // 늘어난다" 피드백). 그래프 내용(base)의 가로세로비로 aspect-ratio를 잡아 폭이
       // 늘면 높이도 같이 늘게 한다 — min/max로 극단적인 비율(인물이 한 줄로 쭉 이어진
       // 그래프 등)에서도 너무 짜부라지거나 과하게 늘어나지 않게 막는다.
-      className="relative w-full min-h-[220px] max-h-[420px] touch-none overflow-hidden rounded-xl border border-brief-rule bg-white"
-      style={{ aspectRatio: `${base.width} / ${base.height}` }}
+      //
+      // 전체화면 중엔 이 규칙 대신 fullscreenSize(위에서 화면에 맞춰 계산한 px)를 쓴다 —
+      // base의 가로세로비는 그대로 유지된 채 크기만 화면에 맞춰 커진다.
+      className={
+        isFullscreen
+          ? 'relative touch-none overflow-hidden rounded-xl border border-brief-rule bg-white'
+          : 'relative w-full min-h-[220px] max-h-[420px] touch-none overflow-hidden rounded-xl border border-brief-rule bg-white'
+      }
+      style={
+        isFullscreen && fullscreenSize
+          ? { width: fullscreenSize.width, height: fullscreenSize.height }
+          : { aspectRatio: `${base.width} / ${base.height}` }
+      }
       onPointerDown={handlePointerDown}
+      // 전체화면 오버레이의 배경(바깥)을 눌러야 닫힌다 — 그래프 안(빈 캔버스 포함)을
+      // 눌렀을 때는 안 닫혀야 하므로, svg 쪽 클릭(빈 캔버스 클릭 시 선택 해제)이 이
+      // 컨테이너를 넘어 배경까지 버블링하지 않게 여기서 막는다.
+      onClick={isFullscreen ? (event) => event.stopPropagation() : undefined}
+      role={isFullscreen ? 'dialog' : undefined}
+      aria-modal={isFullscreen ? true : undefined}
+      aria-label={isFullscreen ? '인물 관계도 전체화면' : undefined}
     >
       <svg
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
@@ -582,6 +637,44 @@ export default function RelationshipGraph({
       <span className="absolute bottom-2 left-2 rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
         {Math.round((base.width / viewBox.width) * 100)}%
       </span>
+
+      <div className="absolute bottom-2 right-2" data-graph-zoom-control>
+        <button
+          type="button"
+          aria-label={isFullscreen ? '전체화면 종료' : '전체화면'}
+          aria-pressed={isFullscreen}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+          onClick={() => setIsFullscreen((v) => !v)}
+        >
+          {isFullscreen ? (
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+              <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+              <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+              <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+            </svg>
+          ) : (
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!isFullscreen) return graphBox;
+
+  return (
+    <div
+      data-testid="relationship-graph-fullscreen-overlay"
+      onClick={() => setIsFullscreen(false)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+    >
+      {graphBox}
     </div>
   );
 }
