@@ -311,8 +311,10 @@ describe('리캡 호출 로그 — NFR-OBS-002 🚦', () => {
     expect(entry.trigger).toBe('realtime');
     expect(typeof entry.output_ref).toBe('string');
     expect(entry.output_ref.length).toBeGreaterThan(0);
-    // model은 태스크명 placeholder가 아니라 model-config.ts가 매핑한 실제 모델 ID다
-    expect(entry.model).toBe(process.env.BEDROCK_CLAUDE_HAIKU);
+    // model은 태스크명 placeholder가 아니라 model-config.ts가 매핑한 실제 모델 ID다.
+    // 2026-08-25부터 리캡도 단일 기본 모델(BEDROCK_MODEL)을 쓴다 — 난이도 분기 폐지와
+    // 함께 챗봇·리캡·배치를 하나로 통일했다.
+    expect(entry.model).toBe(process.env.BEDROCK_MODEL);
     expect(entry.model).not.toBe('recap');
   });
 

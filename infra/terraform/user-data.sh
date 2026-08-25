@@ -94,8 +94,14 @@ DB_PASSWORD=PLACEHOLDER
 
 AWS_REGION=${aws_region}
 
-BEDROCK_CLAUDE_SONNET=global.anthropic.claude-sonnet-4-5-20250929-v1:0
-BEDROCK_CLAUDE_HAIKU=global.anthropic.claude-haiku-4-5-20251001-v1:0
+# 단일 기본 모델 (2026-08-25) — 난이도 분기 폐지, 챗봇·리캡·배치 전부 이 하나를 쓴다.
+# 4개 구성 60회 실측으로 Haiku 4.5 선정: 전 구간 최속(요약 11초 vs Sonnet 5 18초)이고,
+# 근거 부재 질문에 고정 문구로 3/3 수렴한다(Sonnet 5는 매번 달라져 FR-QNA-004 🚦 위반).
+BEDROCK_MODEL=global.anthropic.claude-haiku-4-5-20251001-v1:0
+
+# 추론 강도. 비워 두면 output_config 자체를 안 싣는다.
+# ⚠️ Sonnet 5 이상에서만 유효하다 — Haiku 4.5·Sonnet 4.5는 이 필드를 거절한다.
+BEDROCK_EFFORT=
 BEDROCK_EMBED_MODEL=amazon.titan-embed-text-v2:0
 
 DEVICE_ID_HEADER=X-Device-Id
