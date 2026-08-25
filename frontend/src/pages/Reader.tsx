@@ -331,14 +331,9 @@ export default function Reader() {
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     setPanelAppliedCutoff(null);
     void syncPageProgress(currentPage).catch(() => {
-      // 자동 진도는 페이지 이동을 막지 않는다. 사용자는 챗봇의 반영 버튼으로 재시도할 수 있다.
+      // 자동 진도 실패는 페이지 이동을 막지 않으며, 확인 전 배지는 비워 둔다.
     });
   }, [currentPage, loadPage, syncPageProgress]);
-
-  const refreshChatCurrentPage = useCallback(async () => {
-    if (currentPage === null) throw new Error('PAGE_NOT_READY');
-    await syncPageProgress(currentPage);
-  }, [currentPage, syncPageProgress]);
 
   /**
    * 리캡 자동 생성 — 싸비가 닫혀 있다가 열리거나(패널 재마운트), 열린 채로 다른 탭에서
@@ -541,7 +536,6 @@ export default function Reader() {
                 pendingQuote={pendingQuote}
                 onRecapQuote={handleQuote}
                 onRecapRefresh={refreshRecap}
-                onChatRefresh={refreshChatCurrentPage}
                 onQuoteDismissed={() => setHighlightedQuote(null)}
                 onAsk={handleAsk}
                 onNewChat={startNewChat}

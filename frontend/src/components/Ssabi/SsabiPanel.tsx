@@ -57,7 +57,6 @@ export default function SsabiPanel({
   onQuoteDismissed,
   onRecapQuote,
   onRecapRefresh,
-  onChatRefresh,
 }: {
   sessionEpoch: number;
   /**
@@ -121,8 +120,6 @@ export default function SsabiPanel({
   /** 리캡 새로고침 버튼 클릭(2026-08-25, 사용자 요청) — Reader.tsx가 현재 페이지 기준으로
    *  리캡을 다시 스트리밍한다. 자동 재생성(페이지 이동)은 막고 이 버튼으로만 허용한다. */
   onRecapRefresh?: () => void;
-  /** 챗봇의 "현재 페이지 반영" — 서버 진도 커밋을 직접 확인한다. */
-  onChatRefresh?: () => Promise<void>;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -253,7 +250,6 @@ export default function SsabiPanel({
             onSelectConversation={onSelectChatConversation}
             onDeleteConversation={onDeleteChatConversation}
             onQuoteDismissed={onQuoteDismissed}
-            onRefreshCurrentPage={onChatRefresh}
           />
         ) : null}
       </div>

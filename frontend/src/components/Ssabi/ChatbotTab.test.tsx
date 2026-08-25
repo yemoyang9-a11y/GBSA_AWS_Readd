@@ -3,22 +3,19 @@ import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
 describe('ChatbotTab', () => {
-  it('현재 페이지 반영 버튼을 누르면 서버 동기화 콜백을 호출한다', async () => {
-    const onRefreshCurrentPage = vi.fn().mockResolvedValue(undefined);
+  it('폐기된 현재 페이지 반영 콜백이 전달돼도 페이지 반영 UI를 만들지 않는다', () => {
     render(
       <ChatbotTab
         answer=""
         streaming={false}
         error={null}
         onAsk={() => {}}
-        onRefreshCurrentPage={onRefreshCurrentPage}
+        {...({ onRefreshCurrentPage: vi.fn() } as object)}
       />
     );
 
-    await userEvent.click(screen.getByRole('button', { name: '현재 페이지 반영' }));
-
-    expect(onRefreshCurrentPage).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText('현재 페이지가 반영됐어요.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '현재 페이지 반영' })).not.toBeInTheDocument();
+    expect(screen.queryByText('현재 페이지가 반영됐어요.')).not.toBeInTheDocument();
   });
 
   it('싸비 답변 말풍선은 progress(남색) 테두리를 쓰고 옆에 마스코트 아바타 이미지가 있다', () => {
