@@ -165,6 +165,7 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
   // A10: 모델의 사전 지식 누설 방지 (유일한 수단, 100% 보장 아님)
 
   const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
+  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
 
   // 장 요약
   if (context.chapter_summaries.length > 0) {
@@ -192,20 +193,46 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     sections.push('');
   }
 
+  // 인물 노트
+  //
+  // ⚠️ 버그 수정(2026-08-25, 위 관계 버그와 같은 세션에서 발견) — assembleContext는
+  // findCharacterNotes로 인물 노트를 조회해 context.entities.character_notes에
+  // 담고 service.ts의 로그(input_records.character_notes)까지 "근거로 썼다"고
+  // 기록하는데, buildPrompt는 그동안 이 배열을 프롬프트 어디에도 렌더링하지 않았다
+  // — 장 요약·인물·관계·용어·사건은 전부 섹션이 있는데 인물 노트만 통째로 빠져
+  // 있었다. 인물 노트에만 있는 정보를 묻는 질문은 벡터 검색이 우연히 관련 본문을
+  // 찾아주지 않는 한 항상 [NO_EVIDENCE]였다. character_id도 관계와 같은 이유로
+  // uuidv4()라 이름 해석이 필요하다.
+  if (context.entities.character_notes.length > 0) {
+    sections.push('## 인물 노트');
+    context.entities.character_notes.forEach((note) => {
+      const name = nameById.get(note.character_id) ?? note.character_id;
+      sections.push(`- ${name}: ${note.note} (p.${note.source_page})`);
+    });
+    sections.push('');
+  }
+
   // 관계 (이력 전체, 페이지 병기 - A6)
+  //
+  // ⚠️ 버그 수정(2026-08-25, 사용자 제보 — "정주사 아들 누구야?"는 [NO_EVIDENCE]인데
+  // "병주 아버지 누구야?"는 맞히는 비대칭 발견) — character_a_id/character_b_id는
+  // uuidv4()로 생성되는 무의미한 문자열이다(accumulate.ts). 그런데 이 목록은 그동안
+  // rel.label과 established_page만 넣고 두 당사자가 누구인지는 프롬프트에 아예 넣지
+  // 않았다 — 즉 "부자 (확립: p.3)"처럼 "누구의" 관계인지 모델이 알 방법이 없는 상태로
+  // 근거를 만들고 있었다. 이전 수정(방향 반전 지시)은 이 근본 원인을 못 찾고 증상만
+  // 보고 잘못된 원인(라벨이 "A → B: 관계" 화살표 형식이라 방향을 뒤집어야 한다)을
+  // 추정해 지어낸 것이었다 — 실제 라벨은 "부자"·"부녀 관계(딸)"처럼 방향 없는
+  // 명사라 뒤집을 화살표 자체가 없었다. "병주 아버지 누구야?"가 맞았던 건 이 목록
+  // 덕이 아니라 벡터 검색이 우연히 본문 서술(병주가 "아버지"라 부르며 안기는 장면)을
+  // 찾아준 것뿐이었다. 근본 수정은 character_a_id/b_id를 (같은 K로 이미 조회한)
+  // characters 목록에서 이름으로 해석해 관계 줄에 실제로 넣는 것이다.
   if (context.entities.relationships.length > 0) {
     sections.push('## 인물 관계 (이력)');
     context.entities.relationships.forEach((rel) => {
-      sections.push(`- ${rel.label} (확립: p.${rel.established_page})`);
+      const nameA = nameById.get(rel.character_a_id) ?? rel.character_a_id;
+      const nameB = nameById.get(rel.character_b_id) ?? rel.character_b_id;
+      sections.push(`- ${nameA} - ${nameB}: ${rel.label} (확립: p.${rel.established_page})`);
     });
-    // 라벨은 "A → B: 관계" 한 방향으로만 저장된다. 질문이 반대 방향(예: "정주사 아들
-    // 누구야?"인데 저장된 라벨은 "정주사 → 병주: 아버지")으로 오면 방향을 못 뒤집어
-    // 답을 못 하는 걸 실사용 중 확인해서(2026-08-25) 지시를 목록 바로 옆에 추가한다.
-    sections.push(
-      '(위 관계는 "A → B: 관계" 한 방향으로만 저장돼 있습니다. 질문이 반대 방향에서 오면 ' +
-        '방향을 뒤집어 답하세요 — 예: "정주사 → 병주: 아버지"가 있으면 "정주사 아들 누구야?" ' +
-        '질문엔 "병주"로 답하세요(아버지↔아들/딸, 남편↔아내 등).)'
-    );
     sections.push('');
   }
 
@@ -235,12 +262,13 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
   // 있는데도 거절함). 지시를 근거 바로 옆에 다시 박아 넣는다.
   if (
     context.entities.characters.length > 0 ||
+    context.entities.character_notes.length > 0 ||
     context.entities.relationships.length > 0 ||
     context.entities.terms.length > 0 ||
     context.entities.events.length > 0
   ) {
     sections.push(
-      '(위 인물·인물 관계·용어·사건은 전부 지금까지 확인된 확정 근거입니다. 질문의 전제가 ' +
+      '(위 인물·인물 노트·인물 관계·용어·사건은 전부 지금까지 확인된 확정 근거입니다. 질문의 전제가 ' +
         '위 내용과 다르면(예: 실제로는 딸인데 "아들"이라고 물음) "[NO_EVIDENCE]" 대신 위 ' +
         '내용으로 정정해서 답하세요 — 단, "OO는 아들이 없어요"처럼 책 전체에 대한 단정적 ' +
         '부정은 쓰지 말고 "지금까지 읽은 부분에서는 ~"으로 범위를 한정하세요.)'
