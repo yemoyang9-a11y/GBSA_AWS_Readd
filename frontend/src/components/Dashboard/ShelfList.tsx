@@ -46,7 +46,7 @@ export default function ShelfList({
       <div className="mb-[18px] flex items-center justify-between">
         <div>
           <p className="font-dashMono text-[11px] font-medium uppercase tracking-[.06em] text-dash-muted">
-            YOUR SHELF
+            MY SHELF
           </p>
           <h3 className="mt-0 font-dashSerif text-2xl font-semibold tracking-[-.07em] text-dash-ink">
             내 서재 <span className="text-[#89918a]">({books.length})</span>
@@ -97,9 +97,9 @@ export default function ShelfList({
                     type="button"
                     aria-label={`${book.title} 정보 보기`}
                     onClick={() => onInfo(book)}
-                    className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-full text-dash-muted transition-[color,transform] duration-150 hover:scale-[1.2] hover:text-dash-ink"
+                    className="absolute right-4 top-4 flex size-[42px] items-center justify-center rounded-full text-dash-muted transition-[color,transform] duration-150 hover:scale-[1.2] hover:text-dash-ink"
                   >
-                    <svg viewBox="0 0 24 24" className="size-[15px]" fill="none" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" className="size-[22.5px]" fill="none" aria-hidden="true">
                       <circle cx="12" cy="12" r="8.4" stroke="currentColor" strokeWidth="1.6" />
                       <line
                         x1="12"
