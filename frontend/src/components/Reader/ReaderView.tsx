@@ -90,8 +90,8 @@ export default function ReaderView({
       {selectionPopover && onQuote ? (
         <button
           type="button"
-          style={{ top: selectionPopover.top - 44, left: selectionPopover.left }}
-          className="fixed z-20 -translate-x-1/2 whitespace-nowrap rounded-pill border border-brief-accent bg-brief-accent-soft px-3 py-1.5 text-[11px] font-bold text-brief-accent shadow-sm"
+          style={{ top: selectionPopover.top - 42, left: selectionPopover.left }}
+          className="fixed z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-pill border border-brief-accent bg-brief-accent-soft px-3 py-1.5 text-[11px] font-bold text-brief-accent shadow-sm"
           onMouseDown={(event) => {
             // mousedown 이 먼저 발생해 포커스가 옮겨가면 클릭 전에 선택이 풀린다 — 막는다.
             event.preventDefault();
@@ -102,7 +102,7 @@ export default function ReaderView({
             setSelectionPopover(null);
           }}
         >
-          싸비에게 질문하기
+          아모에게 물어보기
         </button>
       ) : null}
 

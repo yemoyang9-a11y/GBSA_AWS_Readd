@@ -262,7 +262,7 @@ export default function ChatbotTab({
                 }
               }}
               className="max-h-32 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-xs leading-[1.6] text-brief-ink outline-none placeholder:text-brief-muted"
-              placeholder="읽은 데까지의 내용으로 물어보세요"
+              placeholder="스포일러 없이 답해줄게요, 궁금한 걸 물어보세요"
             />
             <button
               type="submit"

@@ -128,7 +128,7 @@ describe('읽기 화면', () => {
       render(<ReaderView {...baseProps} onQuote={() => {}} />);
       selectArticleText(0, 4); // "정 주사"
 
-      expect(screen.getByRole('button', { name: '싸비에게 질문하기' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '아모에게 물어보기' })).toBeInTheDocument();
     });
 
     it('팝오버를 누르면 선택한 문장 그대로 onQuote로 전달한다', async () => {
@@ -136,7 +136,7 @@ describe('읽기 화면', () => {
       render(<ReaderView {...baseProps} onQuote={onQuote} />);
       selectArticleText(0, 4); // "정 주사"
 
-      await userEvent.click(screen.getByRole('button', { name: '싸비에게 질문하기' }));
+      await userEvent.click(screen.getByRole('button', { name: '아모에게 물어보기' }));
 
       expect(onQuote).toHaveBeenCalledWith('정 주사');
     });
@@ -144,19 +144,19 @@ describe('읽기 화면', () => {
     it('선택이 풀리면 팝오버도 사라진다', () => {
       render(<ReaderView {...baseProps} onQuote={() => {}} />);
       selectArticleText(0, 4);
-      expect(screen.getByRole('button', { name: '싸비에게 질문하기' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '아모에게 물어보기' })).toBeInTheDocument();
 
       window.getSelection()!.removeAllRanges();
       fireEvent(document, new Event('selectionchange'));
 
-      expect(screen.queryByRole('button', { name: '싸비에게 질문하기' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '아모에게 물어보기' })).not.toBeInTheDocument();
     });
 
     it('onQuote를 넘기지 않으면(부모가 아직 연결 안 함) 팝오버를 그리지 않는다', () => {
       render(<ReaderView {...baseProps} />);
       selectArticleText(0, 4);
 
-      expect(screen.queryByRole('button', { name: '싸비에게 질문하기' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '아모에게 물어보기' })).not.toBeInTheDocument();
     });
   });
 });
