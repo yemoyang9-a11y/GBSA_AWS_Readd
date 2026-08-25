@@ -105,6 +105,19 @@ describe('싸비 사이드창', () => {
     expect(screen.queryByText(/정주사/)).not.toBeInTheDocument();
   });
 
+  it('totalPages를 인물 관계도 탭(되감기 트랙)에 그대로 전달한다', () => {
+    const multiMilestoneGraph: GraphResponse = {
+      nodes: [
+        { id: 'jeong', name: '정주사', first_appearance_page: 1, aliases: [] },
+        { id: 'chobong', name: '초봉', first_appearance_page: 3, aliases: [] },
+      ],
+      edges: [],
+    };
+    render(<SsabiPanel {...baseProps} graph={multiMilestoneGraph} totalPages={20} />);
+
+    expect(screen.getByText('20p')).toBeInTheDocument();
+  });
+
   it('critique P1: 확인된 기준점이 있으면 헤더에 "Np까지 읽음" 배지를 보여준다', () => {
     render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
     expect(screen.getByText('79p까지 읽음')).toBeInTheDocument();

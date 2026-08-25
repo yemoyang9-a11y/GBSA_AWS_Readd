@@ -345,6 +345,7 @@ export default function Reader() {
                 onTabChange={handleTabChange}
                 graph={graph}
                 graphFailed={graphFailed}
+                totalPages={totalPages}
                 recapText={recapText}
                 recapStreaming={recapStreaming}
                 recapFailed={recapError !== null}

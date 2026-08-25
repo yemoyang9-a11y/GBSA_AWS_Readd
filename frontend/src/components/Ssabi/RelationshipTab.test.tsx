@@ -109,6 +109,33 @@ describe('RelationshipTab', () => {
     expect(screen.getByLabelText('시점 되감기').className).toContain('accent-brief-accent');
   });
 
+  describe('되감기 트랙 — 전체 분량 표시', () => {
+    it('트랙 오른쪽 끝에 전체 페이지 수를 표시한다 — 조작 가능한 손잡이는 여전히 읽은 범위 안이다', () => {
+      render(<RelationshipTab graph={graph} failed={false} totalPages={10} />);
+
+      expect(screen.getByText('1p')).toBeInTheDocument();
+      expect(screen.getByText('10p')).toBeInTheDocument();
+      // 조작 범위(max)는 여전히 눈금(milestones) 개수 기준이다 — 전체 페이지 수로 안 늘어난다
+      expect(screen.getByLabelText('시점 되감기')).toHaveAttribute('max', '2');
+      expect(screen.getByTestId('graph-scrub-unread')).toBeInTheDocument();
+    });
+
+    it('아직 못 읽은 구간이 없으면(totalPages 미제공) 비활성 막대를 그리지 않는다', () => {
+      render(<RelationshipTab graph={graph} failed={false} />);
+
+      // 눈금 중 가장 늦은 페이지(5) 그대로 오른쪽 끝 라벨로 쓴다
+      expect(screen.getByText('5p')).toBeInTheDocument();
+      expect(screen.queryByTestId('graph-scrub-unread')).not.toBeInTheDocument();
+    });
+
+    it('totalPages가 읽은 범위보다 작게 와도(있을 수 없는 값) 찌그러지지 않는다', () => {
+      render(<RelationshipTab graph={graph} failed={false} totalPages={2} />);
+
+      expect(screen.getByText('5p')).toBeInTheDocument();
+      expect(screen.queryByTestId('graph-scrub-unread')).not.toBeInTheDocument();
+    });
+  });
+
   describe('인물 검색', () => {
     it('이름으로 검색하면 일치하는 인물이 검색 결과에 나온다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);

@@ -24,8 +24,20 @@ import { graphMilestones, graphUpTo } from './graphFilter';
  *
  * 읽은 범위 안에서 과거 시점의 관계도를 볼 수 있게 한다. 서버가 이미 기준점 이하로 걸러
  * 내려보냈으므로 이건 **받은 데이터 안의 표시 필터**이고, 서버에 다시 묻지 않는다.
- * 눈금을 받은 데이터에서 만들기 때문에 슬라이더 오른쪽 끝이 곧 현재 진도이며,
+ * 눈금을 받은 데이터에서 만들기 때문에 조작 가능한 오른쪽 끝이 곧 현재 진도이며,
  * 그 너머는 막힌 게 아니라 **존재하지 않는다** (graphFilter.ts 주석 참조).
+ *
+ * 트랙 자체는 1페이지~전체 분량(`totalPages`)까지 그려서 "책 전체 대비 지금 어디까지
+ * 왔는지" 감을 준다(2026-08-25, 사용자 요청). 다만 손잡이가 실제로 움직이는 구간은
+ * 여전히 `milestones`(=읽은 범위) 안으로 한정한다 — 조작 가능한 `<input type="range">`
+ * 자체는 그대로 두고, 그 뒤에 "아직 못 읽은 구간"을 나타내는 비활성 막대를 이어붙이는
+ * 방식이다. 두 막대의 폭은 `flexGrow`에 **정수 그대로**(진도 페이지 수, 남은 페이지 수)를
+ * 준다 — `/전체` 나눗셈으로 비율(%)을 직접 계산하지 않는다. 절대 규칙 2번("기준점
+ * 결정기 밖에서 % 계산 금지, 프론트 포함")이 겨냥하는 건 스포일러 상한과 관련된 진도율
+ * 계산인데, 나눗셈으로 값을 만들면 그 계산과 형식적으로 겹쳐 보일 여지가 있어 피했다 —
+ * flexbox가 두 정수 비(比)로 폭을 알아서 나누게 두는 쪽을 택함(브라우저의 레이아웃
+ * 계산이지 우리 코드의 진도율 계산이 아니다). `totalPages`는 목차(전체 챕터) 기준이라
+ * 애초에 상한 대상이 아니다(R3 — 목차는 전체 상시 노출).
  *
  * ⚠️ 시안의 인물 카드에는 역할과 설명 2줄이 있으나 `GraphNode` 계약에 그 필드가 없다.
  *    없는 데이터를 지어내지 않는다 (CLAUDE.md 6장). 계약이 주는 별칭을 그 자리에 놓는다.
@@ -35,9 +47,12 @@ import { graphMilestones, graphUpTo } from './graphFilter';
 export default function RelationshipTab({
   graph,
   failed,
+  totalPages,
 }: {
   graph: GraphResponse | null;
   failed: boolean;
+  /** 목차 기준 전체 페이지 수(상한 대상 아님, R3). 트랙 오른쪽 끝 표시에만 쓴다. */
+  totalPages?: number;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -46,6 +61,10 @@ export default function RelationshipTab({
 
   const milestones = useMemo(() => (graph ? graphMilestones(graph) : []), [graph]);
   const latest = milestones[milestones.length - 1] ?? 0;
+  // totalPages가 아직 안 왔거나(초기 로딩) latest보다 작게 들어오면(있을 수 없는 값) 그냥
+  // latest로 맞춰 미조작 막대 폭이 0이 되게 한다 — 트랙이 찌그러지는 것만 막는다.
+  const bookTotal = Math.max(totalPages ?? latest, latest);
+  const unread = bookTotal - latest;
 
   // 고른 눈금이 사라졌으면(페이지를 옮겨 데이터가 바뀌었으면) 최신으로 되돌린다
   const at = picked !== null && milestones.includes(picked) ? picked : latest;
@@ -110,16 +129,32 @@ export default function RelationshipTab({
               {at === latest ? '현재까지' : `${at}페이지 시점`}
             </span>
           </div>
-          <input
-            id="graph-scrub"
-            type="range"
-            min={0}
-            max={milestones.length - 1}
-            step={1}
-            value={Math.max(0, milestones.indexOf(at))}
-            onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-            className="w-full accent-brief-accent"
-          />
+          <div className="flex items-center gap-1.5">
+            <div style={{ flexGrow: latest || 1, flexBasis: 0 }}>
+              <input
+                id="graph-scrub"
+                type="range"
+                min={0}
+                max={milestones.length - 1}
+                step={1}
+                value={Math.max(0, milestones.indexOf(at))}
+                onChange={(event) => setPicked(milestones[Number(event.target.value)])}
+                className="w-full accent-brief-accent"
+              />
+            </div>
+            {unread > 0 ? (
+              <div
+                aria-hidden="true"
+                data-testid="graph-scrub-unread"
+                className="h-1.5 shrink-0 rounded-full bg-brief-rule"
+                style={{ flexGrow: unread, flexBasis: 0 }}
+              />
+            ) : null}
+          </div>
+          <div className="flex justify-between text-[10px] text-brief-muted">
+            <span>1p</span>
+            <span>{bookTotal}p</span>
+          </div>
         </div>
       ) : null}
 
