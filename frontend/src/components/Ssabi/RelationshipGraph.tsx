@@ -381,14 +381,28 @@ export default function RelationshipGraph({
     animateViewBoxTo({ x: base.x, y: base.y, width: base.width, height: base.height });
   }
 
-  // 컨테이너 크기가 바뀌면(창 크기·반응형 레이아웃) k(줌 배율)도 다시 계산해야
-  // 폰트·선 굵기가 화면상 크기를 유지한다 — viewBox 값 자체는 안 바꾸고 재렌더만 강제한다
+  // 컨테이너 크기가 바뀌면(창 크기·반응형 레이아웃·싸비 패널 드래그 리사이즈) k(줌 배율)도
+  // 다시 계산해야 폰트·선 굵기가 화면상 크기를 유지한다 — viewBox 값 자체는 안 바꾸고
+  // 재렌더만 강제한다.
+  //
+  // 예전엔 window의 resize 이벤트만 들었다. 그런데 싸비 패널 폭 조절(usePanelResize,
+  // Reader.tsx)은 브라우저 창 크기가 아니라 이 컴포넌트를 감싼 <aside>의 CSS 폭만 바꾸는
+  // 것이라 window resize가 아예 안 일어난다 — 드래그 중엔 k가 갱신될 계기가 없어서, 다음
+  // 렌더에서 wrapRef.current.clientWidth를 읽어도 그 렌더 자신이 만든 DOM 변화가 아직
+  // 반영되기 전 값(한 스텝 뒤처진 값)을 읽게 된다. 그 결과 그래프 바깥 상자는 순수 CSS
+  // (aspect-ratio)로 즉시 폭을 따라가는데, k로 계산하는 글자·선 굵기는 뒤늦게 따라오는
+  // 것처럼 보였다(2026-08-25, 사용자 제보 — "관계도 창이 혼자 조절된 다음 전체 창 조절은
+  // 뒤늦게 따라온다"). ResizeObserver는 원인이 뭐든(창 크기·패널 드래그·다른 반응형 변화)
+  // 이 컨테이너 자체의 실제 렌더 크기가 바뀐 뒤에 콜백이 온다 — 그 시점엔 clientWidth가
+  // 이미 새 값이라 뒤처지지 않는다.
   useEffect(() => {
-    function handleResize() {
+    const el = wrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
       setViewBox((vb) => ({ ...vb }));
-    }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   const k = unit();

@@ -193,84 +193,142 @@ describe('RelationshipTab', () => {
   });
 
   describe('주요인물/전체 토글', () => {
-    // hub(정주사)만 연결 수 4로 임계값(MAJOR_CHARACTER_MIN_DEGREE=4)을 넘는다 —
-    // 초봉은 2(hub+고참봉), 나머지는 1이다.
-    const majorMinorGraph: GraphResponse = {
+    /**
+     * 인물 10명 — 기본 상한(MAJOR_CHARACTER_TOP_N=8)보다 많아야 "주요인물"이 실제로
+     * 뭔가를 걸러내는지 확인할 수 있다(6명짜리였던 예전 픽스처는 8 이하라 전부 통과해
+     * 걸러지는 게 없었다). 연결 수: hub=9, 유씨·형주=3(동점), 병주·박주사=2(동점),
+     * 고참봉·윤서기·한영감·최차부·제중당 주인=1(다섯 명 동점) — 상위 8명은
+     * hub·유씨·형주·병주·박주사·고참봉·윤서기·한영감이고, 동점 tie-break(먼저 등장한
+     * 인물 우선, graphFilter.test.ts 참고)으로 최차부·제중당 주인이 밀려난다.
+     */
+    const tenCharacterGraph: GraphResponse = {
       nodes: [
         { id: 'hub', name: '정주사', first_appearance_page: 1, aliases: [] },
-        { id: 'a', name: '초봉', first_appearance_page: 1, aliases: [] },
-        { id: 'b', name: '계봉', first_appearance_page: 1, aliases: [] },
-        { id: 'c', name: '형주', first_appearance_page: 1, aliases: [] },
-        { id: 'd', name: '병주', first_appearance_page: 1, aliases: [] },
-        { id: 'extra', name: '고참봉', first_appearance_page: 1, aliases: [] },
+        { id: 'byeongju', name: '병주', first_appearance_page: 2, aliases: [] },
+        { id: 'yuci', name: '유씨', first_appearance_page: 3, aliases: [] },
+        { id: 'hyeongju', name: '형주', first_appearance_page: 4, aliases: [] },
+        { id: 'parkjusa', name: '박주사', first_appearance_page: 5, aliases: [] },
+        { id: 'gochambong', name: '고참봉', first_appearance_page: 6, aliases: [] },
+        { id: 'yunseogi', name: '윤서기', first_appearance_page: 7, aliases: [] },
+        { id: 'hanyeonggam', name: '한영감', first_appearance_page: 8, aliases: [] },
+        { id: 'choichabu', name: '최차부', first_appearance_page: 9, aliases: [] },
+        { id: 'yakgukjuin', name: '제중당 주인', first_appearance_page: 10, aliases: [] },
       ],
       edges: [
-        { source: 'hub', target: 'a', label: '부녀', established_page: 1 },
-        { source: 'hub', target: 'b', label: '부녀', established_page: 1 },
-        { source: 'hub', target: 'c', label: '부자', established_page: 1 },
-        { source: 'hub', target: 'd', label: '부자', established_page: 1 },
-        { source: 'extra', target: 'a', label: '지인', established_page: 1 },
+        { source: 'hub', target: 'byeongju', label: '지인', established_page: 2 },
+        { source: 'hub', target: 'yuci', label: '지인', established_page: 3 },
+        { source: 'hub', target: 'hyeongju', label: '지인', established_page: 4 },
+        { source: 'hub', target: 'parkjusa', label: '지인', established_page: 5 },
+        { source: 'hub', target: 'gochambong', label: '지인', established_page: 6 },
+        { source: 'hub', target: 'yunseogi', label: '지인', established_page: 7 },
+        { source: 'hub', target: 'hanyeonggam', label: '지인', established_page: 8 },
+        { source: 'hub', target: 'choichabu', label: '지인', established_page: 9 },
+        { source: 'hub', target: 'yakgukjuin', label: '거래', established_page: 10 },
+        { source: 'byeongju', target: 'yuci', label: '지인', established_page: 3 },
+        { source: 'yuci', target: 'hyeongju', label: '지인', established_page: 4 },
+        { source: 'hyeongju', target: 'parkjusa', label: '지인', established_page: 5 },
       ],
     };
 
-    it('기본값은 "주요인물"이다 — 처음부터 연결 수 적은 인물이 걸러져 있다', () => {
-      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+    it('기본값은 "주요인물"이다 — 상한(8명)을 넘는 인물 수는 연결 수 하위부터 걸러진다', () => {
+      render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
 
       const people = screen.getByRole('region', { name: '인물' });
       expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('인물 1')).toBeInTheDocument();
+      expect(within(people).getByText('인물 8')).toBeInTheDocument();
       expect(within(people).getByText('정주사')).toBeInTheDocument();
-      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
-      expect(within(people).queryByText('초봉')).not.toBeInTheDocument();
+      expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
+      expect(within(people).queryByText('제중당 주인')).not.toBeInTheDocument();
+    });
+
+    it('연결 수(degree)가 두드러진 인물이 8명보다 많으면 8명에서 안 잘린다', () => {
+      // center 1명 + rim 8명, rim은 원형으로 거리1·거리2 이웃과도 이어져 전부 degree 4
+      // 이상이다(center degree 8, rim 각각 degree 5) — 총 9명이 기본 임계값(minDegree
+      // 4)을 넘는다. "상위 8명 고정" 방식이었다면 9번째가 잘렸을 것이다(사용자 피드백
+      // — "중요한 인물이 8명 이상인 경우도 많을 텐데").
+      const RIM = 8;
+      const nodes: GraphResponse['nodes'] = [
+        { id: 'center', name: '센터', first_appearance_page: 1, aliases: [] },
+        ...Array.from({ length: RIM }, (_, i) => ({
+          id: `rim${i}`,
+          name: `림${i}`,
+          first_appearance_page: i + 2,
+          aliases: [],
+        })),
+      ];
+      const rawEdges: GraphResponse['edges'] = [];
+      for (let i = 0; i < RIM; i++) {
+        rawEdges.push({ source: 'center', target: `rim${i}`, label: '지인', established_page: 1 });
+        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 1) % RIM}`, label: '지인', established_page: 1 });
+        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 2) % RIM}`, label: '지인', established_page: 1 });
+      }
+      const seen = new Set<string>();
+      const edges = rawEdges.filter((e) => {
+        const key = [e.source, e.target].sort().join('|');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      render(<RelationshipTab graph={{ nodes, edges }} failed={false} />);
+      const people = screen.getByRole('region', { name: '인물' });
+
+      expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(within(people).getByText('인물 9')).toBeInTheDocument();
     });
 
     it('"전체"를 누르면 걸러졌던 인물이 다 보인다', () => {
-      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
 
-      expect(within(people).getByText('인물 6')).toBeInTheDocument();
-      expect(within(people).getByText('고참봉')).toBeInTheDocument();
+      expect(within(people).getByText('인물 10')).toBeInTheDocument();
+      expect(within(people).getByText('최차부')).toBeInTheDocument();
     });
 
     it('다시 "주요인물"을 누르면 도로 걸러진다', () => {
-      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
       fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
 
-      expect(within(people).getByText('인물 1')).toBeInTheDocument();
-      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument();
+      expect(within(people).getByText('인물 8')).toBeInTheDocument();
+      expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
     });
 
     it('걸러진 인물도 검색으로 찾아 선택하면 "전체"로 전환되며 보인다 — 완전히 숨기지 않는다', () => {
-      render(<RelationshipTab graph={majorMinorGraph} failed={false} />);
+      render(<RelationshipTab graph={tenCharacterGraph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      expect(within(people).queryByText('고참봉')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
+      expect(within(people).queryByText('최차부')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
 
-      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '고참봉' } });
-      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('고참봉'));
+      fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '최차부' } });
+      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('최차부'));
 
       expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('고참봉')).toBeInTheDocument();
+      expect(within(people).getByText('최차부')).toBeInTheDocument();
       expect(within(people).getByText('지인', { exact: false })).toBeInTheDocument();
     });
 
-    it('아무도 임계값을 못 넘으면 "주요인물"에 눌린 채로 전체를 대신 보여준다', () => {
+    it('전체 인물 수가 상한 이하면 "주요인물"이어도 아무도 안 걸러진다', () => {
+      // graph 픽스처(정주사·초봉, 2명)는 상한(8)보다 적다 — 절대 임계값 방식(이전
+      // 구현)이었다면 아무도 기준을 못 넘어 화면이 텅 빌 수 있었는데, 상위 N 방식에선
+      // 그런 "전원 탈락" 상태 자체가 없다(2026-08-25, "많다가 어느 순간 확 줄어드는
+      // 현상" 재발 방지).
       render(<RelationshipTab graph={graph} failed={false} />);
       const people = screen.getByRole('region', { name: '인물' });
 
-      // graph 픽스처(정주사·초봉, degree 1)는 아무도 임계값(4)을 못 넘는다 — 그래도
-      // 토글을 누를 필요 없이 기본값(주요인물)에서 바로 전체가 대신 보여야 한다.
       expect(within(people).getByRole('button', { name: '주요인물' })).toHaveAttribute(
         'aria-pressed',
         'true'
@@ -278,7 +336,6 @@ describe('RelationshipTab', () => {
       expect(within(people).getByText('인물 2')).toBeInTheDocument();
       expect(within(people).getByText('정주사')).toBeInTheDocument();
       expect(within(people).getByText('초봉')).toBeInTheDocument();
-      expect(screen.getByText(/연결이 두드러진 인물이 없어 전체를 보여드립니다/)).toBeInTheDocument();
     });
 
     it('등장한 인물 자체가 없으면(진도 최초) 그 사실을 알린다', () => {

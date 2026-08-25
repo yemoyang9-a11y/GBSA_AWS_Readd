@@ -58,20 +58,25 @@ import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter
  * ## 주요인물 / 전체 토글 (2026-08-25)
  *
  * 진도가 쌓일수록 인물이 계속 늘어난다 — mock 30명 규모로 확인. `filterMajorCharacters`
- * (graphFilter.ts)로 연결 수(degree)가 낮은 인물을 걷어낸 "주요인물" 모드를 추가한다.
+ * (graphFilter.ts)로 연결 수(degree)가 두드러진 인물만 남긴 "주요인물" 모드를 추가한다.
  * 그래프·카드 리스트·"인물 N" 표시 개수가 전부 같은 `displayed` 값 하나를 공유한다 —
  * 그래프엔 8명, 목록엔 30개처럼 서로 다르게 보이지 않는다.
  *
- * **기본값은 "주요인물"이다** (2026-08-25 재조정 — 처음엔 "전체"를 기본으로 뒀었다).
- * 진도 초반처럼 임계값을 넘는 인물이 하나도 없는 시점엔, 걸러내기만 하고 아무것도
- * 안 보여주는 대신 **자동으로 전체를 대신 보여준다** (`usingMajorFallback`, 아래
- * `displayed` 계산 참고) — 토글은 여전히 "주요인물"에 눌린 채로 두고 안내 문구만
- * 붙인다. 인물이 늘어 임계값을 넘기기 시작하면 다시 저절로 좁혀진다.
+ * **기본값은 "주요인물"이다.** 두 번 조정을 거쳤다 —
+ * 1차(절대 임계값, degree 4 미만은 뺀다): 아무도 못 넘는 진도 초반엔 전체를 자동
+ * 대체하는 폴백을 뒀는데, 첫 인물이 임계값을 넘는 순간 "전체 N명"에서 "1~2명"으로
+ * 뚝 떨어졌다("사람이 많다가 어느 순간 확 줄어드는 현상").
+ * 2차(연결 수 상위 8명 고정): 뚝 떨어지는 문제는 없앴지만, 이번엔 진짜 주요 인물이
+ * 8명을 넘는 시점에도 무조건 8명에서 잘렸다("중요한 인물이 8명 이상인 경우도 많을
+ * 텐데").
+ * 지금은 그 둘을 최소 보장선으로 섞는다 — 상한은 `max(8, degree 4 이상인 인원 수)`다
+ * (`filterMajorCharacters`의 `MAJOR_CHARACTER_FLOOR`/`MAJOR_CHARACTER_MIN_DEGREE`
+ * 주석 참고). degree 4 이상인 인물은 등수상 항상 상위권이라 8명 아래에서도 위에서도
+ * 뚝 떨어지는 지점이 생기지 않는다. 그래서 폴백·안내 문구 분기는 여전히 필요 없다.
  *
  * 검색은 모드와 무관하게 항상 `shown.nodes`(되감긴 범위 전체) 대상이다 — "주요인물"에
  * 걸러진 인물도 검색으로는 찾아 포커싱할 수 있어야 완전히 숨겨지지 않는다(`focusOn`이
- * 걸러진 인물을 고르면 명시적으로 "전체"로 전환한다 — 위 자동 대체와 달리 이건 사용자
- * 선택이 바뀐 것이므로 토글 표시도 같이 옮긴다).
+ * 걸러진 인물을 고르면 "전체"로 전환한다).
  *
  * ## 토글 위치 기억 (2026-08-25, 사용자 요청)
  *
@@ -136,11 +141,7 @@ export default function RelationshipTab({
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
-  const majorFiltered = characterMode === 'major' ? filterMajorCharacters(shown) : null;
-  // 걸러낸 결과가 0명이면(진도 초반 등) 토글은 "주요인물"에 눌린 채로 두고 전체를
-  // 대신 보여준다 — 안내 문구(아래)로만 그 사실을 알린다.
-  const usingMajorFallback = majorFiltered !== null && majorFiltered.nodes.length === 0 && shown.nodes.length > 0;
-  const displayed = majorFiltered && majorFiltered.nodes.length > 0 ? majorFiltered : shown;
+  const displayed = characterMode === 'major' ? filterMajorCharacters(shown) : shown;
 
   // 검색 대상은 되감기로 지금 화면에 보이는 인물(shown.nodes)로만 한정한다 — 아직
   // 등장하지 않은 시점으로 되감아 놓고 그 이후 인물을 검색해 포커싱하면, 검색이 곧
@@ -355,11 +356,6 @@ export default function RelationshipTab({
             ) : null}
           </div>
         </div>
-        {usingMajorFallback ? (
-          <p className="text-[11px] text-brief-muted">
-            아직 연결이 두드러진 인물이 없어 전체를 보여드립니다.
-          </p>
-        ) : null}
         {displayed.nodes.length === 0 ? (
           <p className="text-[11px] text-brief-muted">아직 등장한 인물이 없습니다.</p>
         ) : null}
