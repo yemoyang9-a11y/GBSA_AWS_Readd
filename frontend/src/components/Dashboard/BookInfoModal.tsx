@@ -50,7 +50,8 @@ export default function BookInfoModal({
         aria-modal="true"
         aria-label={book.title}
         onClick={(e) => e.stopPropagation()}
-        className="grid w-full max-w-[720px] grid-cols-[220px_1fr] gap-8 rounded-dash-panel bg-white p-8 shadow-dash-soft"
+        // 156px = h-hero-cover(219px) × row-cover 비율(84/118) — 서재 카드 표지와 같은 세로형 비율로 맞춤(2026-08-25 요청)
+        className="grid w-full max-w-[720px] grid-cols-[156px_1fr] gap-8 rounded-dash-panel bg-white p-8 shadow-dash-soft"
       >
         <div>
           <TypographicCover size="hero" title={book.title} author={book.author} coverUrl={book.cover_url} />
