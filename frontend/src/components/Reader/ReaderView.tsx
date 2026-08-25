@@ -60,6 +60,11 @@ function highlightContent(content: string, highlight: string | null): ReactNode 
  * `highlightedQuote`로 받아 본문 안에서 강조한다. Reader.tsx가 카드와 같은 값을 들고
  * 있다가 카드가 지워지면(×·새 채팅·다른 대화 선택) 이것도 같이 지운다 — 두 표시가
  * 서로 다른 상태로 갈라지지 않게 한다.
+ *
+ * 장 시작 표시(2026-08-25, 사용자 요청) — 이 페이지가 어느 장의 start_page와 정확히
+ * 일치할 때만 본문 위에 장 제목을 보여준다. 목차와 마찬가지로 상한 대상이 아니다
+ * (FR-NAV-001) — Reader.tsx가 이미 cutoff 없이 전량 받아둔 chapters에서 찾은 값을
+ * 그대로 넘겨줄 뿐, 여기서 페이지 산술을 하지 않는다(절대 규칙 2번).
  */
 export default function ReaderView({
   content,
@@ -70,6 +75,7 @@ export default function ReaderView({
   onMove,
   onQuote,
   highlightedQuote,
+  chapterStart,
 }: {
   content: string;
   currentPage: number;
@@ -81,6 +87,8 @@ export default function ReaderView({
   /** 챗봇 "선택한 문장" 카드에 지금 떠 있는 원문(2026-08-25, 사용자 요청) — 이 페이지
    *  본문 안에 있으면 강조한다. */
   highlightedQuote?: string | null;
+  /** 이 페이지에서 새로 시작하는 장(있으면). Reader.tsx가 chapters에서 미리 찾아 넘긴다. */
+  chapterStart?: { chapter_no: number; title: string } | null;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -118,6 +126,14 @@ export default function ReaderView({
           role="article"
           className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-brief-ink"
         >
+          {chapterStart ? (
+            <header className="mb-8 flex items-center gap-3 whitespace-normal">
+              <span className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-brief-paper font-dashMono text-[12px] font-semibold text-brief-muted">
+                {chapterStart.chapter_no}
+              </span>
+              <h2 className="font-dashSerif text-[16px] font-bold text-brief-ink">{chapterStart.title}</h2>
+            </header>
+          ) : null}
           {highlightContent(content, highlightedQuote ?? null)}
         </article>
       </div>
