@@ -1,4 +1,4 @@
-import { MAJOR_CHARACTER_MIN_DEGREE, filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
+import { MAJOR_CHARACTER_TOP_N, filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
 import type { GraphResponse } from '../../types';
 
 /**
@@ -73,17 +73,18 @@ describe('graphUpTo — 과거 시점의 관계도', () => {
   });
 });
 
-describe('filterMajorCharacters — 주요인물 표시 필터', () => {
-  // hub는 4명과 이어져 degree=4, 나머지(a~d)는 hub 하나뿐이라 degree=1, e는 a와만
-  // 이어져 degree=1이다 — 임계값 4에서 hub만 남아야 한다.
+describe('filterMajorCharacters — 주요인물 표시 필터 (연결 수 상위 N명)', () => {
+  // 연결 수: hub=4(a·b·c·d), a=2(hub·e), b=c=d=e=1. first_appearance_page를 서로 다르게
+  // 둬서(1~6) 동점 tie-break(등장 순서)이 정렬 안정성에 기대지 않고 명시적으로 검증되게 한다.
+  // 등수: hub(4) > a(2) > b(3p) > c(4p) > d(5p) > e(6p) — 뒤 넷은 전부 degree 1 동점.
   const hubGraph: GraphResponse = {
     nodes: [
       { id: 'hub', name: '허브', first_appearance_page: 1, aliases: [] },
-      { id: 'a', name: 'A', first_appearance_page: 1, aliases: [] },
-      { id: 'b', name: 'B', first_appearance_page: 1, aliases: [] },
-      { id: 'c', name: 'C', first_appearance_page: 1, aliases: [] },
-      { id: 'd', name: 'D', first_appearance_page: 1, aliases: [] },
-      { id: 'e', name: 'E', first_appearance_page: 1, aliases: [] },
+      { id: 'a', name: 'A', first_appearance_page: 2, aliases: [] },
+      { id: 'b', name: 'B', first_appearance_page: 3, aliases: [] },
+      { id: 'c', name: 'C', first_appearance_page: 4, aliases: [] },
+      { id: 'd', name: 'D', first_appearance_page: 5, aliases: [] },
+      { id: 'e', name: 'E', first_appearance_page: 6, aliases: [] },
     ],
     edges: [
       { source: 'hub', target: 'a', label: '지인', established_page: 1 },
@@ -94,29 +95,47 @@ describe('filterMajorCharacters — 주요인물 표시 필터', () => {
     ],
   };
 
-  it('연결 수가 임계값 미만인 인물을 뺀다', () => {
-    expect(filterMajorCharacters(hubGraph, 4).nodes.map((n) => n.id)).toEqual(['hub']);
+  it('상위 N명만 남긴다 — N=1이면 연결 수가 가장 많은 인물 하나뿐', () => {
+    expect(filterMajorCharacters(hubGraph, 1).nodes.map((n) => n.id)).toEqual(['hub']);
+  });
+
+  it('N을 늘리면 더 많이 남는다 (positive — 위 N=1과 짝)', () => {
+    expect(filterMajorCharacters(hubGraph, 3).nodes.map((n) => n.id)).toEqual(['hub', 'a', 'b']);
+  });
+
+  it('연결 수가 같으면 먼저 등장한 인물을 우선한다 — b(3p)가 c·d·e(4~6p)보다 앞선다', () => {
+    // b·c·d·e 전부 degree 1 동점. N=3은 hub·a 다음 한 자리만 더 있어 그중 가장 먼저
+    // 등장한 b만 들어가야 한다 — c·d·e가 대신 들어가면 tie-break이 안 먹힌 것이다.
+    const nodes = filterMajorCharacters(hubGraph, 3).nodes.map((n) => n.id);
+    expect(nodes).toContain('b');
+    expect(nodes).not.toContain('c');
+    expect(nodes).not.toContain('d');
+    expect(nodes).not.toContain('e');
   });
 
   it('걸러진 인물이 걸린 간선도 같이 뺀다 — 한쪽만 남는 간선은 그릴 수 없다', () => {
-    expect(filterMajorCharacters(hubGraph, 4).edges).toHaveLength(0);
+    // N=2: hub·a만 남는다. hub-b/c/d와 e-a는 상대가 빠져 같이 빠지고, hub-a만 남는다.
+    const edges = filterMajorCharacters(hubGraph, 2).edges;
+    expect(edges).toHaveLength(1);
+    expect(edges[0]).toMatchObject({ source: 'hub', target: 'a' });
   });
 
-  it('임계값을 낮추면 더 많이 남는다 (positive — 위 negative와 짝)', () => {
-    expect(filterMajorCharacters(hubGraph, 1).nodes).toHaveLength(6);
+  it('N을 지정하지 않으면 기본값(MAJOR_CHARACTER_TOP_N)을 쓴다', () => {
+    expect(filterMajorCharacters(hubGraph)).toEqual(filterMajorCharacters(hubGraph, MAJOR_CHARACTER_TOP_N));
   });
 
-  it('임계값을 지정하지 않으면 기본값(MAJOR_CHARACTER_MIN_DEGREE)을 쓴다', () => {
-    expect(filterMajorCharacters(hubGraph)).toEqual(filterMajorCharacters(hubGraph, MAJOR_CHARACTER_MIN_DEGREE));
-  });
-
-  it('아무도 임계값을 못 넘으면 빈 그래프를 낸다 — 부분 표시로 넘어가지 않는다', () => {
+  it('전체 인물 수가 N 이하면 아무도 걸러지지 않는다 — "주요인물"과 "전체"가 같아진다', () => {
+    // 절대 임계값 방식(이전 구현)이었다면 아무도 기준을 못 넘어 전부 빠질 수 있었다 —
+    // 상위 N 방식에선 애초에 그런 "전원 탈락" 상태 자체가 없다(2026-08-25, "많다가
+    // 어느 순간 확 줄어드는 현상" 재발 방지 — graphFilter.ts MAJOR_CHARACTER_TOP_N 주석).
     const sparse: GraphResponse = {
-      nodes: [{ id: 'x', name: 'X', first_appearance_page: 1, aliases: [] }],
+      nodes: [
+        { id: 'x', name: 'X', first_appearance_page: 1, aliases: [] },
+        { id: 'y', name: 'Y', first_appearance_page: 2, aliases: [] },
+      ],
       edges: [],
     };
-    const filtered = filterMajorCharacters(sparse, 4);
-    expect(filtered.nodes).toHaveLength(0);
-    expect(filtered.edges).toHaveLength(0);
+    const filtered = filterMajorCharacters(sparse, 8);
+    expect(filtered.nodes).toHaveLength(2);
   });
 });
