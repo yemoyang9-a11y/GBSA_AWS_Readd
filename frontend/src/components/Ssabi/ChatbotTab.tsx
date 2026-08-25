@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
 import ssabiFace from '../../assets/images/ssabi-face.png';
 import { splitMarkdownBold } from './parseMarkdownBold';
+import { formatConversationTimestamp } from './formatConversationTime';
 
 /**
  * 챗봇 탭 — SSE 스트리밍 (NFR-PERF-008) — 재설계 2026-08-23 (`.reader-scr .a-thread`)
@@ -72,6 +73,27 @@ import { splitMarkdownBold } from './parseMarkdownBold';
  * 싸비 답변의 "**굵게**"를 실제로 굵게 렌더한다(2026-08-25, 사용자 요청 — 별표가
  * 글자 그대로 보이던 문제). parseMarkdownBold.ts 참고. 사용자 말풍선(turn.text 그대로)
  * 에는 적용하지 않는다 — 사용자가 입력한 텍스트를 마크다운으로 재해석할 이유가 없다.
+ *
+ * ## 지난 대화 화면 재설계 (2026-08-25, 사용자 요청 — "지난 대화-챗봇의 구분을 줘야
+ * 하겠어")
+ *
+ * 예전엔 헤더의 "지난 대화"/"새 채팅" 버튼 두 개가 historyOpen과 무관하게 항상 그대로
+ * 있었다 — 아래 목록 내용만 바뀌어서, 버튼만 봐서는 지금 어느 화면인지 구분이 안 됐다.
+ * 지금은 헤더 자체가 상태에 따라 달라진다: 채팅 화면에선 "지난 대화"/"새 채팅" 버튼
+ * 쌍이, 이력 화면에선 그 대신 accent 색 "← 채팅으로" 버튼 하나 + "지난 대화 N" 라벨이
+ * 뜬다. 색이 바뀐 버튼 자체가 "지금 다른 화면에 있다"는 신호이자 돌아가는 길이다.
+ *
+ * 목록 항목도 인물 카드(RelationshipTab.tsx)와 같은 카드 레시피(rounded-xl border
+ * bg-white)로 맞췄다 — 예전엔 테두리 없는 밋밋한 행이었다.
+ *
+ * 시간 표시는 `conversation_date`(날짜만) 대신 `updated_at`(실제 타임스탬프) 기준
+ * 상대 시간을 쓴다(2026-08-25, 사용자 요청 — "최근 대화는 분 또는 시간으로"). 자세한
+ * 규칙·폴백은 formatConversationTime.ts 참고.
+ *
+ * 삭제는 두 단계다 — 처음 누르면 그 버튼만 "삭제?"로 바뀌고(accent 색), 3초 안에 다시
+ * 누르면 실제로 지운다. 시간이 지나면 원래 아이콘으로 되돌아간다. 이 앱 팔레트엔 별도
+ * "위험" 색(빨강 등)이 없어서 새 색을 끌어오는 대신 기존 accent 톤을 재사용했다 — 즉시
+ * 삭제되던 예전 동작은 되돌릴 방법이 없어 실수로 누르기 쉬웠다.
  */
 const DEFAULT_GREETING = '안녕하세요, 아모예요. 지금까지 읽은 내용 안에서 궁금한 걸 물어보세요.';
 
@@ -147,6 +169,27 @@ export default function ChatbotTab({
     el.style.height = `${el.scrollHeight}px`;
   }, [query]);
 
+  /**
+   * 삭제 2단계 확인 — 처음 누른 항목의 id만 담아둔다. 같은 id를 다시 누르면 실제
+   * 삭제를, 다른 항목을 누르면 그 항목이 새로 무장(armed)된다(이전 무장은 자동 해제).
+   * 3초 안에 다시 안 누르면 타이머로 스스로 풀린다.
+   */
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+  }, []);
+  function handleDeleteClick(id: number) {
+    if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+    if (confirmDeleteId === id) {
+      setConfirmDeleteId(null);
+      onDeleteConversation?.(id);
+      return;
+    }
+    setConfirmDeleteId(id);
+    confirmDeleteTimerRef.current = setTimeout(() => setConfirmDeleteId(null), 3000);
+  }
+
   const hasHistoryFeature = Boolean(onToggleHistory && onNewChat);
   /**
    * turns가 오면 그게 유일한 진실이다 — 부모(useChatConversation)가 스트리밍 중인
@@ -161,74 +204,120 @@ export default function ChatbotTab({
   return (
     <div className="flex h-full flex-col">
       {hasHistoryFeature ? (
-        <div className="mb-3 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onToggleHistory}
-            aria-pressed={historyOpen}
-            className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
-          >
-            지난 대화
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              clearPinnedQuote();
-              onNewChat?.();
-            }}
-            className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
-          >
-            새 채팅
-          </button>
-        </div>
+        historyOpen ? (
+          // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
+          // 만든다(클래스 주석 "지난 대화 화면 재설계" 참고). 버튼 색 자체가 "지금 다른
+          // 화면에 있다"는 신호이자 돌아가는 길이다.
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={onToggleHistory}
+              aria-pressed={true}
+              className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-accent"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                <path
+                  d="M15 5 8 12l7 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              채팅으로
+            </button>
+            <span className="font-dashSans text-[11px] font-bold text-brief-muted">
+              지난 대화 {conversations?.length ?? 0}
+            </span>
+          </div>
+        ) : (
+          <div className="mb-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onToggleHistory}
+              aria-pressed={false}
+              className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+              지난 대화
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearPinnedQuote();
+                onNewChat?.();
+              }}
+              className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-muted"
+            >
+              새 채팅
+            </button>
+          </div>
+        )
       ) : null}
 
       {historyOpen ? (
         <div className="brief-scroll flex-1 overflow-y-auto">
           {conversations && conversations.length > 0 ? (
-            <ul className="space-y-1.5">
-              {conversations.map((c) => (
-                <li key={c.id} className="flex items-center gap-1 rounded-xl hover:bg-white">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clearPinnedQuote();
-                      onSelectConversation?.(c.id);
-                    }}
-                    className="flex min-w-0 flex-1 flex-col px-3 py-2 text-left"
+            <ul className="space-y-2">
+              {conversations.map((c) => {
+                const confirming = confirmDeleteId === c.id;
+                return (
+                  // 인물 카드(RelationshipTab.tsx)와 같은 카드 레시피 — 클래스 주석
+                  // "지난 대화 화면 재설계" 참고.
+                  <li
+                    key={c.id}
+                    className="flex items-center gap-1 rounded-xl border border-brief-rule bg-white"
                   >
-                    <span className="truncate font-dashSans text-xs text-brief-ink">
-                      {c.title || '(질문 없음)'}
-                    </span>
-                    {/* 서버는 'YYYY-MM-DD'를 주는 게 계약이지만, 혹시 타임스탬프가 섞여 와도
-                        날짜 10자만 보이게 방어적으로 자른다(2026-08-25, 사용자 요청). */}
-                    <span className="font-dashMono text-[10px] text-brief-muted">
-                      {c.conversation_date.slice(0, 10)}
-                    </span>
-                  </button>
-                  {onDeleteConversation ? (
                     <button
                       type="button"
-                      aria-label="대화 삭제"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDeleteConversation(c.id);
+                      onClick={() => {
+                        clearPinnedQuote();
+                        onSelectConversation?.(c.id);
                       }}
-                      className="shrink-0 rounded-full p-1.5 text-brief-muted hover:bg-brief-paper hover:text-brief-ink"
+                      className="flex min-w-0 flex-1 flex-col px-3.5 py-2.5 text-left"
                     >
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
-                        <path
-                          d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.867 12.142A2 2 0 0 1 14.138 21H9.862a2 2 0 0 1-1.995-1.858L7 7"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <span className="truncate font-dashSerif text-sm font-bold text-brief-ink">
+                        {c.title || '(질문 없음)'}
+                      </span>
+                      <span className="font-dashMono text-[10px] text-brief-muted">
+                        {formatConversationTimestamp(c.conversation_date, c.updated_at)}
+                      </span>
                     </button>
-                  ) : null}
-                </li>
-              ))}
+                    {onDeleteConversation ? (
+                      <button
+                        type="button"
+                        aria-label={confirming ? '정말 삭제하려면 다시 누르세요' : '대화 삭제'}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteClick(c.id);
+                        }}
+                        className={
+                          confirming
+                            ? 'mr-1.5 shrink-0 rounded-full bg-brief-accent px-2.5 py-1 font-dashSans text-[10px] font-bold text-white'
+                            : 'mr-1.5 shrink-0 rounded-full p-1.5 text-brief-muted hover:bg-brief-paper hover:text-brief-ink'
+                        }
+                      >
+                        {confirming ? (
+                          '삭제?'
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                            <path
+                              d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.867 12.142A2 2 0 0 1 14.138 21H9.862a2 2 0 0 1-1.995-1.858L7 7"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="text-xs text-brief-muted">아직 나눈 대화가 없습니다</p>

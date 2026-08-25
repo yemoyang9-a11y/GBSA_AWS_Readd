@@ -239,7 +239,10 @@ describe('ChatbotTab — 대화 이력', () => {
     expect(onSelectConversation).toHaveBeenCalledWith(42);
   });
 
-  it('2026-08-25: 대화 항목의 삭제 버튼을 누르면 onDeleteConversation만 호출되고 onSelectConversation은 호출되지 않는다', async () => {
+  it('2026-08-25: 삭제는 두 번 눌러야 실제로 지워진다 — 한 번은 확인 대기만', async () => {
+    // 정책 변경(2026-08-25, 사용자 요청) — 예전엔 한 번 눌러 바로 삭제됐는데, 되돌릴
+    // 방법이 없어 실수로 누르기 쉬웠다. 지금은 첫 클릭이 확인 대기 상태로 바꾸고,
+    // onDeleteConversation은 같은 항목을 다시 눌러야 호출된다.
     const onSelectConversation = vi.fn();
     const onDeleteConversation = vi.fn();
     render(
@@ -258,9 +261,125 @@ describe('ChatbotTab — 대화 이력', () => {
     );
 
     await userEvent.click(screen.getByRole('button', { name: '대화 삭제' }));
+    expect(onDeleteConversation).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: '정말 삭제하려면 다시 누르세요' }));
 
     expect(onDeleteConversation).toHaveBeenCalledWith(42);
     expect(onSelectConversation).not.toHaveBeenCalled();
+  });
+
+  it('2026-08-25: 다른 항목을 삭제하려고 누르면 이전 확인 대기는 풀린다', async () => {
+    const onDeleteConversation = vi.fn();
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[
+          { id: 1, conversation_date: '2026-08-24', title: '첫 번째', created_at: '', updated_at: '' },
+          { id: 2, conversation_date: '2026-08-23', title: '두 번째', created_at: '', updated_at: '' },
+        ]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+        onDeleteConversation={onDeleteConversation}
+      />
+    );
+
+    const [firstDelete, secondDelete] = screen.getAllByRole('button', { name: '대화 삭제' });
+    await userEvent.click(firstDelete);
+    await userEvent.click(secondDelete);
+
+    // 두 번째 항목을 눌렀을 때 첫 번째의 확인 대기가 풀려 있어야 하고, 두 번째는
+    // 아직 확인 대기 상태라 삭제가 호출되지 않아야 한다.
+    expect(onDeleteConversation).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: '대화 삭제' })).toBeInTheDocument(); // 첫 번째는 원상태
+  });
+
+  it('2026-08-25: 채팅 화면과 이력 화면의 헤더가 서로 다르다 — 상태 구분', () => {
+    const { rerender } = render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[{ id: 1, conversation_date: '2026-08-24', title: '첫 대화', created_at: '', updated_at: '' }]}
+        historyOpen={false}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+    expect(screen.getByRole('button', { name: '지난 대화' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '새 채팅' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '채팅으로' })).not.toBeInTheDocument();
+
+    rerender(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[{ id: 1, conversation_date: '2026-08-24', title: '첫 대화', created_at: '', updated_at: '' }]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+    expect(screen.getByRole('button', { name: '채팅으로' })).toBeInTheDocument();
+    expect(screen.getByText('지난 대화 1')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '지난 대화' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '새 채팅' })).not.toBeInTheDocument();
+  });
+
+  it('2026-08-25: "채팅으로" 버튼을 누르면 onToggleHistory가 호출된다 — 이력 화면에서 돌아가는 길', async () => {
+    const onToggleHistory = vi.fn();
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[]}
+        historyOpen={true}
+        onToggleHistory={onToggleHistory}
+        onNewChat={() => {}}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '채팅으로' }));
+    expect(onToggleHistory).toHaveBeenCalled();
+  });
+
+  it('2026-08-25: 최근 대화는 updated_at 기준 상대 시간으로 보여준다', () => {
+    const now = new Date('2026-08-25T12:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[
+          {
+            id: 1,
+            conversation_date: '2026-08-25',
+            title: '방금 물어본 것',
+            created_at: '',
+            updated_at: '2026-08-25T11:45:00.000Z',
+          },
+        ]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+
+    expect(screen.getByText('15분 전')).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('2026-08-25: conversation_date에 타임스탬프가 섞여 와도 날짜만 보여준다', () => {
