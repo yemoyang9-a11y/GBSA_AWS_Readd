@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import TocPanel from '../components/Reader/TocPanel';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -35,9 +35,21 @@ import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../t
  */
 export default function Reader() {
   const { bookId = '' } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
-  const entry = (location.state as { entry?: EntryResponse } | null)?.entry;
+  /**
+   * ⚠️ `location.state.entry`를 시작 페이지로 쓰지 않는다 (2026-08-26, 사용자 제보 —
+   * "30페이지에서 F5를 누르면 25페이지로 되돌아간다").
+   *
+   * React Router v6는 navigate state를 `window.history.state`에 싣고, 브라우저는 그것을
+   * 새로고침 후에도 복원한다. 그래서 F5를 하면 "읽기 화면에 처음 들어왔을 때의 page"가
+   * 되살아난다 — 언제 만들어진 값인지 알 수 없는 값이다. 예전엔 그 값으로 화면을 그리고
+   * (낡은 페이지로 되돌아감) 진도까지 보내서(서버의 올바른 위치를 덮어씀) 두 번 틀렸다.
+   *
+   * 어디까지 읽었는지의 원천은 서버가 저장한 진도 하나뿐이므로, 진입할 때마다
+   * enterBook()으로 물어본다. 이 호출은 서버의 event_seq도 0으로 되돌려(session.service.ts)
+   * 새로고침으로 0부터 다시 시작한 로컬 seq와 다시 맞춰 준다 — 그러지 않으면 이후 진도가
+   * FR-PRG-002의 "더 새로운 seq만 수용"에 막혀 통째로 버려진다.
+   */
 
   const [page, setPage] = useState<PageResponse | null>(null);
   const [totalPages, setTotalPages] = useState(0);
@@ -180,8 +192,8 @@ export default function Reader() {
    * 브리핑을 거쳐 왔으면 그 결과를 그대로 받고, URL 로 바로 들어왔으면 여기서 판정을 받는다.
    * 클라이언트가 1페이지라고 가정하면 그 값으로 진도가 발신되어 기준점이 되감긴다.
    */
-  const [session, setSession] = useState<EntryResponse | null>(entry ?? null);
-  const [currentPage, setCurrentPage] = useState<number | null>(entry?.page ?? null);
+  const [session, setSession] = useState<EntryResponse | null>(null);
+  const [currentPage, setCurrentPage] = useState<number | null>(null);
   const previousPageRef = useRef<number | null>(currentPage);
 
   /**
@@ -249,10 +261,11 @@ export default function Reader() {
       .catch(() => setEntryError(true));
   }, [bookId]);
 
+  // 진입할 때마다 서버에 위치를 묻는다 — 새로고침으로 되살아난 낡은 state를 믿지 않기
+  // 위해서다(위 주석). loadEntry는 bookId에만 의존하므로 책당 1회 실행된다.
   useEffect(() => {
-    if (session) return;
     loadEntry();
-  }, [session, loadEntry]);
+  }, [loadEntry]);
 
   const {
     text: recapText,

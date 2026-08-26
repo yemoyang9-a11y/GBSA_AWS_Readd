@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
 import { fetchBriefing, streamRecap } from '../services/recapService';
@@ -9,7 +9,7 @@ import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
 import { BOOK_ROUTES } from '../utils/routes';
-import type { BriefingResponse, ChapterSummary, EntryResponse } from '../types';
+import type { BriefingResponse, ChapterSummary } from '../types';
 
 /**
  * 브리핑 화면 컨테이너 — S6
@@ -21,8 +21,6 @@ import type { BriefingResponse, ChapterSummary, EntryResponse } from '../types';
 export default function Briefing() {
   const { bookId = '' } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const entry = (location.state as { entry?: EntryResponse } | null)?.entry;
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -73,10 +71,14 @@ export default function Briefing() {
 
   const handleContinue = useCallback(() => {
     // '마저 읽기'는 리캡 상태와 무관하게 즉시 동작한다 (UC-28 E1, FR-SPL-005 🚦).
-    // 진입 판정 결과를 그대로 넘긴다 — 넘기지 않으면 읽기 화면이 시작 페이지를 몰라
-    // 1페이지로 진도를 보내고, 기준점이 통째로 되감긴다 (FR-PRG-003 🚦).
-    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { state: { entry } });
-  }, [navigate, bookId, entry]);
+    //
+    // 진입 판정 결과를 state로 넘기지 않는다 (2026-08-26) — 읽기 화면은 이제 스스로
+    // enterBook()으로 서버에 위치를 묻는다. 넘기면 그 값이 history에 남아 새로고침 때
+    // 되살아나고, 읽기 화면이 낡은 페이지로 되돌아간다(Reader.tsx 상단 주석).
+    // "넘기지 않으면 1페이지로 진도를 보낸다"던 옛 우려는 해당하지 않는다 — 서버가
+    // 저장된 위치를 돌려주므로 시작 페이지를 모르는 상태 자체가 없다.
+    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
+  }, [navigate, bookId]);
 
   if (!briefing) return <Loading />;
 
