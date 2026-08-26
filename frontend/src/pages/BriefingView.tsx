@@ -126,8 +126,14 @@ export default function BriefingView({
         aria-label="진도"
         className="mt-6 rounded-brief-panel bg-white p-5 shadow-brief-soft-sm"
       >
-        <div className="mb-3 flex items-center justify-between font-dashSans text-sm">
-          <b className="font-semibold text-brief-ink">{briefing.current_chapter.title}</b>
+        {/* 2026-08-26, 사용자 제보 — 장 제목 앞에 "제N장"이 안 붙어 있었다(실제 백엔드는
+            title에 장 번호를 안 섞어 보낸다, mock만 우연히 title에 미리 박아 둬서 로컬에서는
+            안 드러났었다 — mocks/fixtures.ts 주석 참고). chapter_no로 직접 접두어를 만든다.
+            아래쪽 여백(mb-6)도 같이 늘렸다 — 러너 아모가 위로 튈 때 이 줄과 겹쳤다. */}
+        <div className="mb-6 flex items-center justify-between font-dashSans text-sm">
+          <b className="font-semibold text-brief-ink">
+            제{briefing.current_chapter.chapter_no}장 {briefing.current_chapter.title}
+          </b>
           {/* 전체 페이지 수 — 우상단(2026-08-25, 사용자 요청. 대시보드 히어로와 같은
               정보를 보여주되, 이 화면은 챕터 제목이 이미 좌상단을 쓰고 있어 퍼센트를
               바 아래로 내리고 이 자리를 전체 페이지 수로 채웠다). briefing.progress에
@@ -143,7 +149,9 @@ export default function BriefingView({
         {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다).
             색은 대시보드 히어로의 "N% 완료"(ContinueReadingHero.tsx, text-[#555])와
             맞췄다(2026-08-26, 사용자 요청 — 브리핑만 초록으로 튀어 보인다고 함). */}
-        <div className="mt-2 font-dashSans text-sm font-semibold text-[#555]">
+        {/* 2026-08-26, 사용자 제보 — 러너 아모가 아래로 겹치며 이 줄도 가렸다. 여백을
+            mt-2 → mt-6으로 늘렸다. */}
+        <div className="mt-6 font-dashSans text-sm font-semibold text-[#555]">
           {briefing.progress.percent}%
         </div>
         <div className="mt-4 flex justify-end">

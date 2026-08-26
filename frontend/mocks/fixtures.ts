@@ -37,10 +37,15 @@ export const mockCatalog: BookSummary[] = [
   },
 ];
 
+// title에는 "제N장"을 안 섞는다 — 실제 원문(backend/data/raw/takryu.txt 5행 "1
+// 인간기념물")도 장 번호와 제목이 별개 토큰이고, 실제 백엔드도 그대로 나눠 내려준다.
+// 예전엔 title에 "제N장 "을 미리 박아 둬서(2026-08-26, 사용자 제보로 발견 — 실제
+// 백엔드로는 BriefingView.tsx의 장 제목 줄에 "제N장"이 아예 안 붙어 있었다) 화면
+// 쪽에서 chapter_no로 직접 접두어를 안 만들어도 로컬에서만 우연히 맞아 보였다.
 export const mockChapters: ChapterSummary[] = [
-  { chapter_no: 1, title: '제1장 인간기념물', start_page: 1, end_page: 10 },
-  { chapter_no: 2, title: '제2장 생활 제일과', start_page: 11, end_page: 20 },
-  { chapter_no: 3, title: '제3장 신판 흥부전', start_page: 21, end_page: 30 },
+  { chapter_no: 1, title: '인간기념물', start_page: 1, end_page: 10 },
+  { chapter_no: 2, title: '생활 제일과', start_page: 11, end_page: 20 },
+  { chapter_no: 3, title: '신판 흥부전', start_page: 21, end_page: 30 },
 ];
 
 /** 인물 — first_page 가 상한 필터의 기준이다 (FR-SPL-002 🚦) */

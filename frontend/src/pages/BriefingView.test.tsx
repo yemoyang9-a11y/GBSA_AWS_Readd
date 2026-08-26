@@ -3,17 +3,19 @@ import userEvent from '@testing-library/user-event';
 import BriefingView from './BriefingView';
 import type { BriefingResponse, ChapterSummary } from '../types';
 
+// title에는 "제N장"을 안 섞는다 — 실제 백엔드 계약과 같다(mocks/fixtures.ts 주석 참고).
+// BriefingView.tsx가 chapter_no로 직접 접두어를 만든다.
 const chapters: ChapterSummary[] = [
-  { chapter_no: 1, title: '제1장 인간기념물', start_page: 1, end_page: 10 },
-  { chapter_no: 2, title: '제2장 생활 제일과', start_page: 11, end_page: 20 },
-  { chapter_no: 3, title: '제3장 신판 흥부전', start_page: 21, end_page: 30 },
+  { chapter_no: 1, title: '인간기념물', start_page: 1, end_page: 10 },
+  { chapter_no: 2, title: '생활 제일과', start_page: 11, end_page: 20 },
+  { chapter_no: 3, title: '신판 흥부전', start_page: 21, end_page: 30 },
 ];
 
 function briefing(overrides: Partial<BriefingResponse> = {}): BriefingResponse {
   return {
     applied_cutoff: 20,
     recap: '정주사는 미두장에서 재산을 잃었다.',
-    current_chapter: { chapter_no: 3, title: '제3장 신판 흥부전' },
+    current_chapter: { chapter_no: 3, title: '신판 흥부전' },
     progress: { current_page: 21, total_pages: 30, percent: 70 },
     ...overrides,
   };
@@ -36,6 +38,11 @@ describe('브리핑 화면', () => {
   it('저장 리캡이 있으면 그대로 보여준다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
     expect(screen.getByText(/미두장에서 재산을 잃었다/)).toBeInTheDocument();
+  });
+
+  it('2026-08-26 사용자 제보: 진도 패널의 장 제목 앞에 "제N장"이 붙는다 — 백엔드는 title에 장 번호를 안 섞어 보낸다', () => {
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+    expect(screen.getByText('제3장 신판 흥부전')).toBeInTheDocument();
   });
 
   it('자가 검증 20 / D13 ①: 첫 진입은 빈 상태 문구를 띄우고 폴백을 호출하지 않는다', () => {
@@ -95,9 +102,9 @@ describe('브리핑 화면', () => {
     );
 
     const toc = screen.getByRole('list', { name: '목차' });
-    expect(toc).toHaveTextContent('제2장 생활 제일과');
+    expect(toc).toHaveTextContent('생활 제일과');
 
-    await userEvent.click(within(toc).getByRole('button', { name: /제2장 생활 제일과/ }));
+    await userEvent.click(within(toc).getByRole('button', { name: /생활 제일과/ }));
 
     expect(onSelectChapter).toHaveBeenCalledTimes(1);
     expect(onSelectChapter).toHaveBeenCalledWith(chapters[1].start_page);
@@ -258,11 +265,12 @@ describe('브리핑 화면', () => {
 
   it('현재 장 행만 강조된다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
-    // "제3장 신판 흥부전"은 진도 패널의 장 제목과 목차 항목 두 곳에 나오므로 목차로 좁힌다.
-    // 강조는 이동 버튼이 들고 있다 — 2026-08-26 목차 이동 추가로 `<li>`에서 옮겨졌다.
+    // 진도 패널의 장 제목은 "제3장 신판 흥부전"(접두어 포함)이라 텍스트가 다르지만,
+    // 그래도 목차로 좁혀서 의도를 분명히 한다 — 강조는 이동 버튼이 들고 있다
+    // (2026-08-26 목차 이동 추가로 `<li>`에서 옮겨졌다).
     const toc = screen.getByRole('list', { name: '목차' });
-    const current = within(toc).getByText('제3장 신판 흥부전').closest('button')!;
-    const other = within(toc).getByText('제1장 인간기념물').closest('button')!;
+    const current = within(toc).getByText('신판 흥부전').closest('button')!;
+    const other = within(toc).getByText('인간기념물').closest('button')!;
     expect(current.className).toContain('bg-brief-accent-soft');
     expect(other.className).not.toContain('bg-brief-accent-soft');
   });
