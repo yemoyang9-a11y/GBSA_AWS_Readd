@@ -11,9 +11,14 @@ import { handleQuery } from '../service';
 import * as repo from '../repository';
 import { vectorSearch } from '../vector-search';
 import { stream as llmStream } from '../../llm-gateway/gateway';
+import { getConversationContext } from '../conversation-service';
 
 jest.mock('../repository');
 jest.mock('../vector-search');
+jest.mock('../conversation-service', () => ({
+  getConversationContext: jest.fn(),
+  recordTurns: jest.fn(),
+}));
 // 팩토리로 모킹한다 — 자동모킹은 실제 gateway.ts를 먼저 로드해야 해서, 그 파일의
 // dotenv.config() 부작용으로 로컬 backend/.env의 MOCK_MODE=true가 process.env에 새어
 // 들어가 service.ts가 실제 경로 대신 mock-data 경로를 타 버린다 (이 테스트가 검증하려는
@@ -79,5 +84,33 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
     }
 
     expect(vectorSearch).toHaveBeenCalledWith(BOOK_ID, QUERY, K);
+  });
+
+  // 2026-08-26 사용자 제보: "선택된 문장이 바뀌면 이전에 선택됐던 문장 기준으로
+  // 답하는 경우가 있다" — 대화가 이어지는 동안 인용문이 A→B로 바뀌면, "이전 대화"
+  // 속 답변엔 옛 인용문 A 관련 내용이 남아 있다. 그게 "본문 인용"(새 인용문 B)보다
+  // "사용자 질문"에 더 가까이 있으면 모델이 최신 인용 대신 그쪽으로 쏠린다. 새
+  // 인용문이 이전 대화보다 질문에 더 가까운 자리(뒤)에 오는지로 이 순서를 고정한다.
+  test('새 인용문 섹션은 "이전 대화"보다 뒤, "사용자 질문" 바로 앞에 온다 (순서 회귀)', async () => {
+    (getConversationContext as jest.Mock).mockResolvedValue([
+      { role: 'user', text: '이 문장 무슨 뜻이야?' },
+      { role: 'assistant', text: '"내가 벌써 이십 년 전에..." 이 문장은 형보가 예전 얘기를 하는 장면이에요 (p.10).' },
+    ]);
+
+    const NEW_QUOTE = '이건 완전히 새로 선택한 다른 문장이다';
+
+    for await (const _ of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID, 1, NEW_QUOTE)) {
+      // 소비만 한다
+    }
+
+    const priorTurnIdx = capturedPrompt.indexOf('## 이전 대화');
+    const newQuoteIdx = capturedPrompt.indexOf(NEW_QUOTE);
+    const questionIdx = capturedPrompt.indexOf('# 사용자 질문');
+
+    expect(priorTurnIdx).toBeGreaterThan(-1);
+    expect(newQuoteIdx).toBeGreaterThan(-1);
+    expect(questionIdx).toBeGreaterThan(-1);
+    expect(priorTurnIdx).toBeLessThan(newQuoteIdx);
+    expect(newQuoteIdx).toBeLessThan(questionIdx);
   });
 });
