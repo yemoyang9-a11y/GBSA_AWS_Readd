@@ -72,10 +72,17 @@ export async function ratchetCutoff(conversationId: number, K: number): Promise<
 }
 
 export async function setTitleIfMissing(conversationId: number, title: string): Promise<void> {
-  await pool.query(
-    `UPDATE chatbot_conversation SET title = $2 WHERE id = $1 AND title IS NULL`,
-    [conversationId, title]
-  );
+  await pool.query(`UPDATE chatbot_conversation SET title = $2 WHERE id = $1 AND title IS NULL`, [
+    conversationId,
+    title,
+  ]);
+}
+
+/** 마지막 문답이 끝난 시각을 지난 대화 목록의 실제 활동 시각으로 쓴다. */
+export async function touchConversation(conversationId: number): Promise<void> {
+  await pool.query(`UPDATE chatbot_conversation SET updated_at = now() WHERE id = $1`, [
+    conversationId,
+  ]);
 }
 
 export async function getMaxTurnNo(conversationId: number): Promise<number> {
@@ -117,7 +124,7 @@ export async function listConversations(
     `SELECT id, device_id, book_id, conversation_date, cutoff_page, title, created_at, updated_at
      FROM chatbot_conversation
      WHERE device_id = $1 AND book_id = $2 AND cutoff_page <= $3
-     ORDER BY conversation_date DESC, created_at DESC`,
+     ORDER BY updated_at DESC, created_at DESC`,
     [deviceId, bookId, K]
   );
   return result.rows;

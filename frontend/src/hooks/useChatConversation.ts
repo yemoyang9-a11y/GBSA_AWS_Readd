@@ -6,6 +6,11 @@ import {
   fetchChatConversations,
 } from '../services/chatbotService';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../types';
+import {
+  clearActiveChatConversationId,
+  getActiveChatConversationId,
+  setActiveChatConversationId,
+} from '../utils/storage';
 
 /**
  * 챗봇 대화 이력 (2026-08-24, 사용자·R2 조율 결정)
@@ -20,7 +25,9 @@ import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../typ
  */
 export function useChatConversation(bookId: string) {
   const [turns, setTurns] = useState<ChatbotConversationTurn[]>([]);
-  const [conversationId, setConversationId] = useState<number | null>(null);
+  const [conversationId, setConversationId] = useState<number | null>(() =>
+    getActiveChatConversationId(bookId)
+  );
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [appliedCutoff, setAppliedCutoff] = useState<number | null>(null);
@@ -71,7 +78,10 @@ export function useChatConversation(bookId: string) {
           // 정수로 정규화해서 받는다.
           if (frame.conversation_id !== undefined) {
             const parsedConversationId = Number(frame.conversation_id);
-            if (Number.isInteger(parsedConversationId)) setConversationId(parsedConversationId);
+            if (Number.isInteger(parsedConversationId) && parsedConversationId > 0) {
+              setConversationId(parsedConversationId);
+              setActiveChatConversationId(bookId, parsedConversationId);
+            }
           }
           return;
         }
@@ -95,9 +105,10 @@ export function useChatConversation(bookId: string) {
   const newChat = useCallback(() => {
     setTurns([]);
     setConversationId(null);
+    clearActiveChatConversationId(bookId);
     setError(null);
     setHistoryOpen(false);
-  }, []);
+  }, [bookId]);
 
   const toggleHistory = useCallback(() => {
     setHistoryOpen((open) => {
@@ -121,6 +132,7 @@ export function useChatConversation(bookId: string) {
         const detail = await fetchChatConversationDetail(bookId, id);
         setTurns(detail.turns);
         setConversationId(detail.id);
+        setActiveChatConversationId(bookId, detail.id);
         setHistoryOpen(false);
         setError(null);
       } catch {
@@ -146,6 +158,7 @@ export function useChatConversation(bookId: string) {
         if (conversationId === id) {
           setTurns([]);
           setConversationId(null);
+          clearActiveChatConversationId(bookId);
         }
       } catch {
         setConversations(previous);
