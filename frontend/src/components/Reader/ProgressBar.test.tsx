@@ -48,16 +48,16 @@ describe('brief 톤·size (2026-08-23 브리핑 재설계)', () => {
   });
 });
 
-describe('진도 바 채움색 (2026-08-26, 브리핑만 회색으로 분리 — 사용자 요청)', () => {
+describe('진도 바 채움색 (2026-08-26, 브리핑→회색 분리 뒤 대시보드도 재요청으로 다시 통일)', () => {
   it('tone="brief"는 회색(#555) 채움·brief-line 트랙을 쓴다', () => {
     render(<ProgressBar percent={50} tone="brief" />);
     expect(screen.getByTestId('progress-fill').className).toContain('bg-[#555]');
     expect(screen.getByRole('progressbar').className).toContain('bg-brief-line');
   });
 
-  it('tone="dash"는 여전히 progress 채움을 쓴다 — 트랙만 dash-line으로 구분된다', () => {
+  it('tone="dash"도 이제 같은 회색(#555) 채움을 쓴다 — 트랙만 dash-line으로 구분된다', () => {
     render(<ProgressBar percent={50} tone="dash" />);
-    expect(screen.getByTestId('progress-fill').className).toContain('bg-progress');
+    expect(screen.getByTestId('progress-fill').className).toContain('bg-[#555]');
     expect(screen.getByRole('progressbar').className).toContain('bg-dash-line');
   });
 });

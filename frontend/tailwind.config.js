@@ -119,22 +119,28 @@ export default {
           '0%': { opacity: '0', scale: '.92' },
           '100%': { opacity: '1', scale: '1' },
         },
-        // 진도 바 위 아모(2026-08-26, 사용자 요청 — "뛰어가는 느낌"). 가로 중앙 정렬
-        // (translateX(-50%))을 각 스텝 transform 안에 같이 넣는다 — pop-in과 같은
+        // 진도 바 위 아모(2026-08-26, 사용자 요청 — "뛰어가는 느낌"). 가로 중앙 정렬을
+        // translateX(-50% ± Npx)로 각 스텝 transform 안에 같이 넣는다 — pop-in과 같은
         // 이유로, 위치용 transform과 애니메이션용 transform이 서로 다른 자리(유틸리티
         // 클래스 vs 키프레임)에 있으면 뒤엣것이 앞엣것을 덮어써 버린다.
-        // 바로 딱 붙이니(translateY 2px 기준선) "너무 붙었다"는 재요청 — 이제 바
-        // 위엔 고정 마커(다이아몬드)만 붙여 두고, 아모는 그 위 6~10px에서 떠서
-        // 뛴다. 마커와 아모 사이 빈틈이 "그 지점을 따라간다"는 느낌을 준다.
+        // 3차 조정 — "바 위에서 이끌어가는 느낌 + 더 뛰는 모션"(2026-08-26 재요청)으로
+        // 발판 마커를 없애고 아모가 직접 그 지점을 딛게 했다(translateY 기준선 0).
+        // 좌우로 calc(-50% ± px) 스텝을 넣어 제자리 통통이 아니라 발걸음처럼 보이게
+        // 했다.
+        // 4차 조정 — 420ms는 "너무 빠르다"는 재요청으로 720ms로 늦추고, 회전·좌우
+        // 스텝 폭도 살짝 줄여 더 차분한 발걸음으로 다듬었다.
         'amo-run': {
-          '0%, 100%': { transform: 'translateX(-50%) translateY(-6px) rotate(-6deg)' },
-          '50%': { transform: 'translateX(-50%) translateY(-10px) rotate(6deg)' },
+          '0%, 100%': { transform: 'translateX(calc(-50% - 2px)) translateY(0) rotate(-9deg)' },
+          '25%': { transform: 'translateX(calc(-50% + 1px)) translateY(-6px) rotate(6deg)' },
+          '50%': { transform: 'translateX(-50%) translateY(-1px) rotate(9deg)' },
+          '75%': { transform: 'translateX(calc(-50% - 1px)) translateY(-6px) rotate(-6deg)' },
         },
       },
       animation: {
         'tab-in': 'tab-in 200ms ease-out',
         'pop-in': 'pop-in 160ms ease-out',
-        'amo-run': 'amo-run 550ms ease-in-out infinite',
+        // 720ms도 "더 느리게"(2026-08-26 재요청)로 1100ms로 더 늦췄다.
+        'amo-run': 'amo-run 1100ms ease-in-out infinite',
       },
     },
   },
