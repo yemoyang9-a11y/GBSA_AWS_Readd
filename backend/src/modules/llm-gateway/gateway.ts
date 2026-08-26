@@ -18,8 +18,11 @@ import {
   validateModelVersions,
   DEFAULT_EFFORT,
   EFFORT_ENABLED,
+  FALLBACK_MODEL_ID,
+  FALLBACK_ENABLED,
+  getModelFamily,
 } from './model-config';
-import { withRetry } from './retry';
+import { withRetry, withFallback } from './retry';
 import dotenv from 'dotenv';
 
 // 환경 변수 로드 (gateway가 먼저 로드될 수 있으므로)
@@ -74,6 +77,89 @@ function effortConfig(effort?: string): { output_config?: { effort: string } } {
 }
 
 /**
+ * 모델 계열별 요청 바디 조립.
+ *
+ * Nova는 Claude Messages API(`anthropic_version`/`messages[].content: string`)와
+ * 스키마가 다르다 — `schemaVersion`/`inferenceConfig`, content가 파트 배열이다.
+ * FALLBACK_MODEL_ID 배선(model-config.ts 참고, 2026-08-26)을 위해 분기한다.
+ */
+function buildRequestBody(modelId: string, prompt: string, options: LLMCallOptions): object {
+  if (getModelFamily(modelId) === 'nova') {
+    return {
+      schemaVersion: 'messages-v1',
+      messages: [{ role: 'user', content: [{ text: prompt }] }],
+      inferenceConfig: { maxTokens: options.maxTokens || 4096 },
+    };
+  }
+
+  return {
+    anthropic_version: 'bedrock-2023-05-31',
+    max_tokens: options.maxTokens || 4096,
+    ...effortConfig(options.effort),
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  };
+}
+
+/**
+ * 모델 계열별 (비스트리밍) 응답 파싱.
+ */
+function parseResponseBody(
+  modelId: string,
+  responseBody: any
+): { text: string; inputTokens: number; outputTokens: number } {
+  if (getModelFamily(modelId) === 'nova') {
+    return {
+      text: responseBody.output?.message?.content?.[0]?.text || '',
+      inputTokens: responseBody.usage?.inputTokens || 0,
+      outputTokens: responseBody.usage?.outputTokens || 0,
+    };
+  }
+
+  return {
+    text: responseBody.content[0].text,
+    inputTokens: responseBody.usage?.input_tokens || 0,
+    outputTokens: responseBody.usage?.output_tokens || 0,
+  };
+}
+
+/**
+ * 모델 계열별 스트리밍 청크 파싱.
+ */
+function parseStreamChunk(
+  modelId: string,
+  chunk: any
+): { text?: string; inputTokens?: number; outputTokens?: number } {
+  if (getModelFamily(modelId) === 'nova') {
+    if (chunk.contentBlockDelta?.delta?.text) {
+      return { text: chunk.contentBlockDelta.delta.text };
+    }
+    if (chunk.metadata?.usage) {
+      return {
+        inputTokens: chunk.metadata.usage.inputTokens,
+        outputTokens: chunk.metadata.usage.outputTokens,
+      };
+    }
+    return {};
+  }
+
+  if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+    return { text: chunk.delta.text };
+  }
+  if (chunk.type === 'message_start' && chunk.message?.usage?.input_tokens) {
+    return { inputTokens: chunk.message.usage.input_tokens };
+  }
+  if (chunk.type === 'message_delta' && chunk.delta?.usage?.output_tokens) {
+    return { outputTokens: chunk.delta.usage.output_tokens };
+  }
+  return {};
+}
+
+/**
  * LLM 호출 (동기)
  *
  * @param task - 작업 유형 (예: "recap", "chatbot", "generate_summary")
@@ -91,27 +177,13 @@ export async function call(
 ): Promise<string> {
   const startTime = Date.now();
 
-  try {
-    // 모델 매핑 (D13 ②, NFR-AI-001)
-    const modelId = getModelForTask(task);
-
-    // 재시도 로직 포함 호출 (NFR-AI-003)
-    const result = await withRetry(
+  // 모델별 1회 호출 (재시도 포함, NFR-AI-003) — 폴백 배선(withFallback)이 이 함수를
+  // primary/fallback 모델 ID로 각각 부른다.
+  const invokeModel = (modelId: string) =>
+    withRetry(
       async () => {
-        // 프롬프트 포맷 (Claude Messages API)
-        const requestBody = {
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: options.maxTokens || 4096,
-          ...effortConfig(options.effort),
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-        };
+        const requestBody = buildRequestBody(modelId, prompt, options);
 
-        // Bedrock 호출
         const command = new InvokeModelCommand({
           modelId,
           contentType: 'application/json',
@@ -120,27 +192,32 @@ export async function call(
         });
 
         const response = await client.send(command);
-
-        // 응답 파싱
         const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-        return responseBody;
+        return { modelId, ...parseResponseBody(modelId, responseBody) };
       },
       { task, modelId }
     );
 
-    const text = result.content[0].text;
+  try {
+    // 모델 매핑 (D13 ②, NFR-AI-001)
+    const primaryModelId = getModelForTask(task);
+
+    // 폴백 배선(NFR-AI-003, model-config.ts 참고) — 기본은 꺼짐, 검증 전까지 primary만 탄다
+    const result = FALLBACK_ENABLED
+      ? await withFallback(primaryModelId, FALLBACK_MODEL_ID, invokeModel)
+      : await invokeModel(primaryModelId);
 
     // 토큰 계측 (NFR-OBS-004)
     const duration = Date.now() - startTime;
     logMetrics({
       task,
-      modelId,
-      inputTokens: result.usage?.input_tokens || 0,
-      outputTokens: result.usage?.output_tokens || 0,
+      modelId: result.modelId,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
       durationMs: duration,
     });
 
-    return text;
+    return result.text;
   } catch (error) {
     console.error('LLM Gateway Error:', { task, error });
     throw new Error(`LLM call failed for task "${task}": ${error}`);
@@ -174,21 +251,9 @@ export async function* stream(
   let inputTokens = 0;
   let outputTokens = 0;
 
-  try {
-    // 모델 매핑 (D13 ②, NFR-AI-001)
-    const modelId = getModelForTask(task);
-
-    const requestBody = {
-      anthropic_version: 'bedrock-2023-05-31',
-      max_tokens: options.maxTokens || 4096,
-      ...effortConfig(options.effort),
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    };
+  // 모델 하나로 스트리밍 (재시도는 연결 자체에만 적용 — NFR-AI-003)
+  async function* invokeStream(modelId: string): AsyncGenerator<string> {
+    const requestBody = buildRequestBody(modelId, prompt, options);
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId,
@@ -197,33 +262,49 @@ export async function* stream(
       body: JSON.stringify(requestBody),
     });
 
-    // 재시도 로직 포함 (NFR-AI-003)
     const response = await withRetry(() => client.send(command), { task, modelId });
 
     if (!response.body) {
       throw new Error('No response stream');
     }
 
-    // 스트림 파싱
     for await (const event of response.body) {
       if (event.chunk?.bytes) {
         const chunk = JSON.parse(new TextDecoder().decode(event.chunk.bytes));
+        const delta = parseStreamChunk(modelId, chunk);
 
-        if (chunk.type === 'content_block_delta') {
-          if (chunk.delta?.type === 'text_delta') {
-            yield chunk.delta.text;
-          }
-        } else if (chunk.type === 'message_start') {
-          // 입력 토큰은 message_start에 포함
-          if (chunk.message?.usage?.input_tokens) {
-            inputTokens = chunk.message.usage.input_tokens;
-          }
-        } else if (chunk.type === 'message_delta') {
-          // 출력 토큰은 message_delta에 포함
-          if (chunk.delta?.usage?.output_tokens) {
-            outputTokens = chunk.delta.usage.output_tokens;
-          }
-        }
+        if (delta.text) yield delta.text;
+        if (delta.inputTokens) inputTokens = delta.inputTokens;
+        if (delta.outputTokens) outputTokens = delta.outputTokens;
+      }
+    }
+  }
+
+  try {
+    // 모델 매핑 (D13 ②, NFR-AI-001)
+    const primaryModelId = getModelForTask(task);
+    let usedModelId = primaryModelId;
+    let yieldedAny = false;
+
+    try {
+      for await (const text of invokeStream(primaryModelId)) {
+        yieldedAny = true;
+        yield text;
+      }
+    } catch (error) {
+      // 폴백 배선(NFR-AI-003, model-config.ts 참고) — 기본은 꺼짐, 검증 전까지 안 탄다.
+      // 이미 일부 텍스트를 클라이언트로 내보낸 뒤라면 처음부터 다시 스트리밍하는 순간
+      // 화면에 두 응답이 이어 붙는 꼴이 되므로, 그 경우엔 폴백하지 않고 그대로 실패시킨다.
+      if (!FALLBACK_ENABLED || yieldedAny) throw error;
+
+      console.warn('Primary model stream failed before any output, trying fallback', {
+        primary: primaryModelId,
+        fallback: FALLBACK_MODEL_ID,
+        error,
+      });
+      usedModelId = FALLBACK_MODEL_ID;
+      for await (const text of invokeStream(FALLBACK_MODEL_ID)) {
+        yield text;
       }
     }
 
@@ -231,7 +312,7 @@ export async function* stream(
     const duration = Date.now() - startTime;
     logMetrics({
       task,
-      modelId,
+      modelId: usedModelId,
       inputTokens,
       outputTokens,
       durationMs: duration,

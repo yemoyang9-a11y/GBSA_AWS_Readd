@@ -35,6 +35,45 @@
 const DEFAULT_MODEL = process.env.BEDROCK_MODEL || process.env.BEDROCK_CLAUDE_HAIKU || '';
 
 /**
+ * 폴백 모델 배선 (2026-08-26, 사용자 결정 — Nova Lite로 "일단 배선만 해두기")
+ *
+ * Claude(Bedrock/Anthropic)가 장애로 응답 불가능할 경우를 대비한 타 벤더 폴백. Nova는
+ * Bedrock InvokeModel에서 Claude와 요청·응답 스키마 자체가 다르므로(gateway.ts의
+ * buildRequestBody/parseResponse가 modelId로 계열을 구분해 분기한다), 모델 ID만 바꿔
+ * 끼우는 걸로는 안 되고 게이트웨이가 두 스키마를 모두 알아야 한다.
+ *
+ * Micro/Lite/Pro 중 Lite를 골랐다 — Micro는 이 프로젝트의 정교한 시스템 규칙(스포일러
+ * 차단, 고정 거절 문구 등)을 지시 준수력 부족으로 못 지킬 위험이 Sonnet 5와 비슷하게
+ * 있어 보였고, Pro는 상시 대기하는 폴백치고 과분하다고 판단했다. 이 판단은 실측이
+ * 아니라 추정이다 — 아래 검증 전엔 근거로 쓰지 말 것.
+ *
+ * ⚠️ 기본은 항상 꺼짐(`ENABLE_MODEL_FALLBACK` 미설정) — 아직 R10/FR-QNA-004 🚦 검증
+ *    (근거 부재 질문에 고정 문구로 수렴하는지, Sonnet 5 배제 때와 같은 기준) 전이다.
+ *    이 검증 없이 켜면 실제 트래픽이 검증 안 된 모델로 새어 나갈 수 있다. 켜기 전에
+ *    Haiku 4.5를 배제한 것과 동일한 절차(질문 5종×3회 이상, 근거 부재 응답 수렴 확인)를
+ *    Nova Lite로도 거쳐야 한다.
+ *
+ * ⚠️ .env.example의 BEDROCK_FALLBACK_MODEL 기본값(`amazon.nova-lite-v1:0`)은 미검증
+ *    추정 ID다 — Claude가 ap-northeast-2에서 "us." 추론 프로파일이 안 먹혀 "global."로
+ *    바꾼 전례가 있다(model-routing 관련 .env.example 참고). Nova도 리전 접두사 붙은
+ *    추론 프로파일이 필요할 수 있으니, 켜기 전 Bedrock 콘솔 Model access에서 확인할 것.
+ */
+export const FALLBACK_MODEL_ID = process.env.BEDROCK_FALLBACK_MODEL || '';
+export const FALLBACK_ENABLED =
+  process.env.ENABLE_MODEL_FALLBACK === 'true' && FALLBACK_MODEL_ID !== '';
+
+/**
+ * Bedrock 모델 ID로 요청/응답 스키마 계열을 구분한다.
+ *
+ * gateway.ts가 이 값으로 Claude Messages API 형식과 Nova 형식 중 무엇을 쓸지 정한다.
+ */
+export type ModelFamily = 'anthropic' | 'nova';
+
+export function getModelFamily(modelId: string): ModelFamily {
+  return modelId.includes('nova') ? 'nova' : 'anthropic';
+}
+
+/**
  * 기본 추론 강도 (effort) — **기본값은 꺼짐**
  *
  * ⚠️ effort를 받는 모델이 제한적이다. Sonnet 4.5·Haiku 4.5는 `output_config.effort`를
@@ -118,5 +157,6 @@ export function validateModelVersions(): void {
   console.log('[LLM Gateway] 기본 모델', {
     model: DEFAULT_MODEL,
     effort: DEFAULT_EFFORT || '(사용 안 함)',
+    fallback: FALLBACK_ENABLED ? FALLBACK_MODEL_ID : '(꺼짐 — 미검증)',
   });
 }

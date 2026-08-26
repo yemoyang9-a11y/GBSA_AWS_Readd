@@ -40,7 +40,11 @@ resource "aws_iam_role_policy" "bedrock" {
           "arn:aws:bedrock:${var.aws_region}:*:foundation-model/amazon.titan-embed-text-v2:0",
           # Allow routing to underlying foundation models
           "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
-          "arn:aws:bedrock:*::foundation-model/amazon.titan-*"
+          "arn:aws:bedrock:*::foundation-model/amazon.titan-*",
+          # Nova 폴백 배선 (2026-08-26, 미검증·기본 비활성 — model-config.ts의
+          # FALLBACK_ENABLED 참고). 권한만 미리 열어 두고, 실제 라우팅은 검증 후 켠다.
+          "arn:aws:bedrock:${var.aws_region}:*:inference-profile/*.amazon.nova-*",
+          "arn:aws:bedrock:*::foundation-model/amazon.nova-*"
         ]
       }
     ]
