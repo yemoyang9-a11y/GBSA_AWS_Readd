@@ -26,6 +26,7 @@ const baseProps = {
   onContinue: () => {},
   onRequestFallback: () => {},
   onBack: () => {},
+  onSelectChapter: () => {},
 };
 
 /**
@@ -81,12 +82,36 @@ describe('브리핑 화면', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('자가 검증 23 / FR-BRF-004 · D12: 목차는 표시 전용이라 이동 가능한 요소가 없다', () => {
-    render(<BriefingView {...baseProps} briefing={briefing()} />);
+  /**
+   * 2026-08-26 사용자 결정 — FR-BRF-004·D12("목차는 표시 전용")를 뒤집었다.
+   * 원래 이 자리에는 `querySelectorAll('a, button')`이 0개인지 보는 "자가 검증 23"이 있었다.
+   * 이동하면 진도가 갱신되어 방금 띄운 리캡이 무효가 되는 비용(R8)을 알고도, 읽기 화면
+   * 목차로도 어차피 같은 무효화가 일어나므로 추가하기로 했다.
+   */
+  it('목차에서 장을 고르면 그 장의 start_page로 이동을 요청한다', async () => {
+    const onSelectChapter = vi.fn();
+    render(
+      <BriefingView {...baseProps} briefing={briefing()} onSelectChapter={onSelectChapter} />
+    );
 
     const toc = screen.getByRole('list', { name: '목차' });
     expect(toc).toHaveTextContent('제2장 생활 제일과');
-    expect(toc.querySelectorAll('a, button')).toHaveLength(0);
+
+    await userEvent.click(within(toc).getByRole('button', { name: /제2장 생활 제일과/ }));
+
+    expect(onSelectChapter).toHaveBeenCalledTimes(1);
+    expect(onSelectChapter).toHaveBeenCalledWith(chapters[1].start_page);
+  });
+
+  it('접혀 있는 동안에는 목차 버튼이 탭 순서에 들어오지 않는다', () => {
+    // 시각적으로만 숨겨져 있어(grid-rows-[0fr]) 그대로 두면 보이지 않는 버튼에
+    // 키보드 포커스가 걸린다. 목차는 기본이 접힌 상태다.
+    render(<BriefingView {...baseProps} briefing={briefing()} />);
+
+    const toc = screen.getByRole('list', { name: '목차' });
+    for (const button of within(toc).getAllByRole('button')) {
+      expect(button).toHaveAttribute('tabindex', '-1');
+    }
   });
 
   it("자가 검증 22 / UC-28 E1: 리캡이 실패해도 '이어서 읽기'는 동작한다", async () => {
@@ -233,10 +258,11 @@ describe('브리핑 화면', () => {
 
   it('현재 장 행만 강조된다', () => {
     render(<BriefingView {...baseProps} briefing={briefing()} />);
-    // "제3장 신판 흥부전"은 진도 패널의 장 제목과 목차 항목 두 곳에 나오므로 목차로 좁힌다
+    // "제3장 신판 흥부전"은 진도 패널의 장 제목과 목차 항목 두 곳에 나오므로 목차로 좁힌다.
+    // 강조는 이동 버튼이 들고 있다 — 2026-08-26 목차 이동 추가로 `<li>`에서 옮겨졌다.
     const toc = screen.getByRole('list', { name: '목차' });
-    const current = within(toc).getByText('제3장 신판 흥부전').closest('li')!;
-    const other = within(toc).getByText('제1장 인간기념물').closest('li')!;
+    const current = within(toc).getByText('제3장 신판 흥부전').closest('button')!;
+    const other = within(toc).getByText('제1장 인간기념물').closest('button')!;
     expect(current.className).toContain('bg-brief-accent-soft');
     expect(other.className).not.toContain('bg-brief-accent-soft');
   });

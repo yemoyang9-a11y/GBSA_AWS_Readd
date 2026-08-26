@@ -32,10 +32,11 @@ describe('관통 흐름 (mock 기준)', () => {
     await waitFor(() => {
       expect(screen.getByRole('list', { name: '목차' })).toBeInTheDocument();
     });
-    // 브리핑의 목차는 표시 전용이라 이동 요소가 없다 (FR-BRF-004, D12)
-    expect(screen.getByRole('list', { name: '목차' }).querySelectorAll('a, button')).toHaveLength(
-      0
-    );
+    // 브리핑 목차도 장을 눌러 이동할 수 있다 (2026-08-26, FR-BRF-004·D12 뒤집음 —
+    // BriefingView.tsx 상단 ⚠️ 주석). 읽기 화면 목차와 같은 이동 요소를 만든다.
+    expect(
+      screen.getByRole('list', { name: '목차' }).querySelectorAll('button').length
+    ).toBeGreaterThan(0);
 
     // '이어서 읽기' → 읽기 화면
     await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
