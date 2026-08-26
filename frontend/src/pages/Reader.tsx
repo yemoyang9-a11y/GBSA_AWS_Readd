@@ -442,7 +442,7 @@ export default function Reader() {
           // 사이트에서 바로 들어왔거나 새 탭으로 열었을 때 뒤로 갈 곳이 없거나 엉뚱한
           // 곳으로 간다. Briefing.tsx의 "뒤로" 버튼(`onBack={() => navigate('/')}`)과
           // 같은 패턴으로 맞춘다 — 이 앱에서 "뒤로"는 항상 홈(대시보드)을 뜻한다.
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/', { viewTransition: true })}
           aria-label="뒤로 가기"
           className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >

@@ -78,7 +78,7 @@ export default function Briefing() {
     // 되살아나고, 읽기 화면이 낡은 페이지로 되돌아간다(Reader.tsx 상단 주석).
     // "넘기지 않으면 1페이지로 진도를 보낸다"던 옛 우려는 해당하지 않는다 — 서버가
     // 저장된 위치를 돌려주므로 시작 페이지를 모르는 상태 자체가 없다.
-    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
+    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
   }, [navigate, bookId]);
 
   /**
@@ -95,7 +95,7 @@ export default function Briefing() {
   const handleSelectChapter = useCallback(
     async (startPage: number) => {
       await sendProgress(bookId, startPage);
-      navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
+      navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
     },
     [navigate, bookId]
   );
@@ -112,7 +112,7 @@ export default function Briefing() {
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
       onSelectChapter={handleSelectChapter}
-      onBack={() => navigate('/')}
+      onBack={() => navigate('/', { viewTransition: true })}
       streamedRecap={streamedRecap}
       recapFailed={recapError !== null}
       recapStreaming={recapStreaming}

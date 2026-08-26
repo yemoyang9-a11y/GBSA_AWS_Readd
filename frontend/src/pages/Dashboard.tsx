@@ -142,7 +142,7 @@ export default function Dashboard() {
       // entry는 어느 화면으로 갈지 정하는 데만 쓰고 state로 싣지 않는다 (2026-08-26).
       // navigate state는 history에 남아 새로고침 때 되살아나므로, 그걸 시작 페이지의
       // 출처로 쓰면 낡은 위치로 되돌아간다 — 각 화면이 서버에 직접 묻는다.
-      navigate(routePathFor(selectedBook.book_id, entry));
+      navigate(routePathFor(selectedBook.book_id, entry), { viewTransition: true });
     } catch {
       setEnteringId(null);
     }

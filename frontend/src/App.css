@@ -1,1 +1,49 @@
 /* 앱 단위 스타일. 전역 토큰은 assets/styles/index.css 에 둔다. */
+
+/*
+ * 라우트 전환 크로스페이드 (2026-08-26, 사용자 요청 — "화면 넘어가는게 좀 더
+ * smooth했으면"). 대시보드→브리핑→읽기 화면 전환이 순간 전환이라 뚝뚝 끊겨
+ * 보였다. 라이브러리 없이 브라우저 View Transitions API로 처리한다 — 각 페이지
+ * 컴포넌트를 안 건드리고 navigate() 호출부에 `viewTransition: true`만 추가하면
+ * react-router가 알아서 document.startViewTransition으로 감싼다(App.tsx의 각
+ * navigate 호출부 참고). 미지원 브라우저(Safari·Firefox 구버전)에서는 그냥
+ * 순간 전환으로 조용히 폴백된다 — 에러 없음.
+ *
+ * 기본 크로스페이드에 살짝 위로 떠오르는 느낌을 더했다 — 싸비 탭 전환(tab-in,
+ * tailwind.config.js)과 같은 결로 화면 간 톤을 맞췄다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 240ms;
+    animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  ::view-transition-old(root) {
+    animation-name: route-fade-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: route-fade-in;
+  }
+}
+
+@keyframes route-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes route-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
