@@ -4,6 +4,7 @@ import BriefingView from './BriefingView';
 import Loading from '../components/common/Loading';
 import { fetchBriefing, streamRecap } from '../services/recapService';
 import { fetchGraph } from '../services/ssabiService';
+import { sendProgress } from '../services/progressService';
 import { useSSE } from '../hooks/useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
@@ -80,6 +81,25 @@ export default function Briefing() {
     navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
   }, [navigate, bookId]);
 
+  /**
+   * 목차에서 장을 고르면 그 장의 start_page로 읽기 화면을 연다 (2026-08-26).
+   *
+   * 읽기 화면은 서버가 저장한 위치로만 시작하므로(Reader.tsx 상단 주석 — 새로고침으로
+   * 되살아난 값을 믿지 않기 위해서다), 갈 페이지를 **진도로 먼저 확정한 뒤** 넘어간다.
+   * 응답을 기다리는 이유는 순서 때문이다 — 저장이 끝나기 전에 읽기 화면이 진입 판정을
+   * 물으면 예전 위치가 돌아온다. 실패해도(sendProgress는 던지지 않고 null을 준다) 이동은
+   * 막지 않는다. 그때는 저장된 위치에서 열리고, 목차로 다시 고르면 된다.
+   *
+   * start_page는 서버가 내려준 값 그대로다 — 프론트에서 페이지 산술을 하지 않는다(절대 규칙 2번).
+   */
+  const handleSelectChapter = useCallback(
+    async (startPage: number) => {
+      await sendProgress(bookId, startPage);
+      navigate(BOOK_ROUTES.reader.replace(':bookId', bookId));
+    },
+    [navigate, bookId]
+  );
+
   if (!briefing) return <Loading />;
 
   return (
@@ -91,6 +111,7 @@ export default function Briefing() {
       coverUrl={resolveCoverUrl(bookId, null)}
       onContinue={handleContinue}
       onRequestFallback={handleFallback}
+      onSelectChapter={handleSelectChapter}
       onBack={() => navigate('/')}
       streamedRecap={streamedRecap}
       recapFailed={recapError !== null}

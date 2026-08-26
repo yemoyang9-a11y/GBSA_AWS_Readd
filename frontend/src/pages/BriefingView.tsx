@@ -12,8 +12,14 @@ import TypographicCover from '../components/common/TypographicCover';
  *
  * 분기 판정은 utils/briefingView 가 한다 — 첫 진입(cutoff = 0)과 저장분 부재(recap: null)를
  * 같은 분기로 묶으면 첫 진입에서 LLM 이 호출된다 (자가 검증 20·21번).
- * 목차는 표시 전용이라 이동 요소를 만들지 않는다 (FR-BRF-004, D12) — 읽기 화면의 목차만
- * 이동 가능하다. '이어서 읽기'는 리캡 상태와 무관하게 항상 동작한다 (UC-28 E1, FR-SPL-005 🚦).
+ * '이어서 읽기'는 리캡 상태와 무관하게 항상 동작한다 (UC-28 E1, FR-SPL-005 🚦).
+ *
+ * ⚠️ 목차 이동 (2026-08-26, 사용자 결정 — FR-BRF-004·D12 뒤집음)
+ *    원래 이 목차는 표시 전용이었다. 이동하면 진도가 갱신되어 방금 띄운 리캡이 무효가 되고
+ *    (R8 — 저장 리캡은 기준점이 정확히 일치할 때만 재사용), 다음 브리핑 진입에서 LLM으로
+ *    다시 만들어야 하기 때문이다. 그 비용을 알고도 추가하기로 했다 — 읽기 화면 목차로 장을
+ *    건너뛰어도 똑같이 무효화되므로 원래 규칙의 보호 효과가 이미 부분적이었다.
+ *    동작·스타일은 읽기 화면 목차(components/Reader/TocPanel.tsx)와 같은 것을 쓴다.
  */
 
 /**
@@ -34,6 +40,7 @@ export default function BriefingView({
   onContinue,
   onRequestFallback,
   onBack,
+  onSelectChapter,
   streamedRecap,
   recapFailed,
   recapStreaming = false,
@@ -47,6 +54,8 @@ export default function BriefingView({
   onContinue: () => void;
   onRequestFallback: () => void;
   onBack: () => void;
+  /** 장을 고르면 그 장의 start_page로 읽기 화면을 연다 — 서버가 준 값을 그대로 넘긴다 */
+  onSelectChapter: (startPage: number) => void;
   streamedRecap?: string;
   recapFailed?: boolean;
   /** 폴백(실시간 생성) 스트림이 아직 진행 중인지 — RecapTab과 같은 "불러오는 중" 표시에 쓴다 */
@@ -241,10 +250,11 @@ export default function BriefingView({
       </button>
 
       {/*
-        aria-hidden 을 두지 않는다 — 목차는 인터랙티브 요소가 0개라(FR-BRF-004) 접혔을 때
-        포커스가 걸리는 위험이 없다. aria-hidden 을 걸면 접힌 동안 스크린리더 접근성 트리
-        전체에서 사라져 getByRole('list') 로도 못 찾게 된다(자가 검증 23 테스트가 그 사정을
-        모른 채 항상 찾을 수 있다고 가정한다). 시각적 숨김(grid-rows-[0fr])만으로 충분하다.
+        aria-hidden 을 두지 않는다 — 걸면 접힌 동안 스크린리더 접근성 트리 전체에서 사라져
+        getByRole('list') 로도 못 찾게 된다(자가 검증 23 테스트가 그 사정을 모른 채 항상
+        찾을 수 있다고 가정한다). 접힌 목차의 이동 버튼이 키보드 포커스를 먹는 문제는
+        각 버튼의 tabIndex 로 따로 막는다(아래) — 목차에 이동 요소가 생긴 뒤로는
+        "인터랙티브 요소 0개라 안전하다"는 예전 전제가 더 이상 성립하지 않는다.
 
         max-height 상한을 추측하는 방식(예: max-h-[1000px])은 쓰지 않는다 — 실제 장이 많은
         책(탁류 19장)에서 목록 총높이가 상한을 넘어 마지막 항목이 잘렸다(2026-08-23 실측
@@ -259,30 +269,48 @@ export default function BriefingView({
         }`}
       >
         <div className="overflow-hidden">
-          {/* 표시 전용 목차 — 이동 요소(a·button)를 만들지 않는다 (FR-BRF-004, D12) */}
+          {/* 장을 누르면 그 장의 start_page로 읽기 화면을 연다 (2026-08-26 — 위 ⚠️ 주석).
+              hover·focus 처리는 읽기 화면 목차(TocPanel.tsx)와 같은 것을 쓰고, 카드 형태만
+              이 화면의 것을 유지한다. */}
           <ul aria-label="목차" className="flex flex-col gap-2.5 pt-0.5">
             {chapters.map((chapter) => {
               const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
               return (
-                <li
-                  key={chapter.chapter_no}
-                  aria-current={isNow ? 'true' : undefined}
-                  className={`flex items-center gap-3.5 rounded-brief-card px-[18px] py-3.5 shadow-[0_1px_2px_rgba(42,38,32,0.05)] ${
-                    isNow ? 'bg-brief-accent-soft shadow-brief-soft-sm' : 'bg-white'
-                  }`}
-                >
-                  <span
-                    className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
-                      isNow ? 'bg-brief-accent text-white' : 'bg-brief-paper text-brief-muted'
+                <li key={chapter.chapter_no}>
+                  <button
+                    type="button"
+                    aria-current={isNow ? 'true' : undefined}
+                    // 접힌 동안에는 탭 순서에서 뺀다 — 시각적으로만 숨겨져 있어(grid-rows-[0fr])
+                    // 그대로 두면 보이지 않는 버튼에 키보드 포커스가 걸린다. React 18이라
+                    // inert를 못 써서 tabIndex로 처리한다. 토글 버튼의 aria-expanded·
+                    // aria-controls가 접힘 상태 자체는 이미 알려 준다.
+                    tabIndex={tocOpen ? 0 : -1}
+                    onClick={() => onSelectChapter(chapter.start_page)}
+                    className={`group flex w-full items-center gap-3.5 rounded-brief-card px-[18px] py-3.5 text-left shadow-[0_1px_2px_rgba(42,38,32,0.05)] transition-[background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent/40 focus-visible:ring-offset-2 ${
+                      isNow
+                        ? 'bg-brief-accent-soft shadow-brief-soft-sm'
+                        : 'bg-white hover:translate-x-0.5 hover:bg-brief-accent/10 hover:shadow-brief-soft-sm'
                     }`}
                   >
-                    {chapter.chapter_no}
-                  </span>
-                  <span
-                    className={`font-dashSans text-[14.5px] ${isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'}`}
-                  >
-                    {chapter.title}
-                  </span>
+                    <span
+                      className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
+                        isNow
+                          ? 'bg-brief-accent text-white'
+                          : 'bg-brief-paper text-brief-muted transition-colors group-hover:bg-white group-hover:text-brief-accent'
+                      }`}
+                    >
+                      {chapter.chapter_no}
+                    </span>
+                    <span
+                      className={`font-dashSans text-[14.5px] ${
+                        isNow
+                          ? 'font-semibold text-brief-accent'
+                          : 'text-brief-ink transition-colors group-hover:text-brief-accent'
+                      }`}
+                    >
+                      {chapter.title}
+                    </span>
+                  </button>
                 </li>
               );
             })}
