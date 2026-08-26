@@ -1,8 +1,50 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import type { ChatbotConversationSummary, ChatbotConversationTurn } from '../../types';
 import ssabiFace from '../../assets/images/ssabi-face.png';
-import { splitMarkdownBold } from './parseMarkdownBold';
 import { formatConversationTimestamp } from './formatConversationTime';
+
+/**
+ * 답변 마크다운 렌더링 — 굵게만 파싱하던 parseMarkdownBold.ts로는 "##" 같은 헤더가
+ * 글자 그대로 보였다(2026-08-26, 사용자 제보). 헤더·리스트까지 다뤄야 해서 라이브러리로
+ * 바꿨다 — remark-breaks로 단일 개행도 줄바꿈으로 살린다(마크다운 기본은 빈 줄이 있어야
+ * 문단이 나뉜다 — 그대로 두면 이전엔 보이던 줄바꿈이 사라진다). 요소별 스타일은 말풍선
+ * 크기(text-xs)에 맞춰 여기서 좁혀 잡는다 — 기본 h1~h6는 채팅창엔 너무 크다.
+ */
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0">{children}</strong>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="mb-1 mt-2 block text-[13px] font-bold first:mt-0">{children}</strong>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="mb-1 mt-2 block text-xs font-bold first:mt-0">{children}</strong>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="mb-2 list-disc pl-4 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="mb-2 list-decimal pl-4 last:mb-0">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => <li className="mb-0.5">{children}</li>,
+  strong: ({ children }: { children?: React.ReactNode }) => <b className="font-bold">{children}</b>,
+  em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="rounded bg-brief-paper px-1 py-0.5 font-dashMono text-[11px]">{children}</code>
+  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-brief-accent underline">
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="border-l-2 border-brief-rule pl-2 text-brief-muted">{children}</blockquote>
+  ),
+};
 
 /**
  * 챗봇 탭 — SSE 스트리밍 (NFR-PERF-008) — 재설계 2026-08-23 (`.reader-scr .a-thread`)
@@ -70,9 +112,9 @@ import { formatConversationTimestamp } from './formatConversationTime';
  * 쓴다(2026-08-25, 사용자 요청) — 진도 바 색상 통일 때 고른 색을 챗봇에도 재사용해
  * 화면 간 강조색을 맞췄다.
  *
- * 싸비 답변의 "**굵게**"를 실제로 굵게 렌더한다(2026-08-25, 사용자 요청 — 별표가
- * 글자 그대로 보이던 문제). parseMarkdownBold.ts 참고. 사용자 말풍선(turn.text 그대로)
- * 에는 적용하지 않는다 — 사용자가 입력한 텍스트를 마크다운으로 재해석할 이유가 없다.
+ * 싸비 답변을 마크다운으로 렌더한다(2026-08-25 "**굵게**"만 → 2026-08-26 헤더·리스트까지,
+ * markdownComponents 참고). 사용자 말풍선(turn.text 그대로)에는 적용하지 않는다 —
+ * 사용자가 입력한 텍스트를 마크다운으로 재해석할 이유가 없다.
  *
  * ## 지난 대화 화면 재설계 (2026-08-25, 사용자 요청 — "지난 대화-챗봇의 구분을 줘야
  * 하겠어")
@@ -448,17 +490,14 @@ export default function ChatbotTab({
                       aria-hidden="true"
                       className="h-9 w-auto shrink-0 translate-y-3 object-contain"
                     />
-                    <p className="w-fit max-w-[76%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
-                      {splitMarkdownBold(turn.text).map((segment, j) =>
-                        segment.bold ? (
-                          <b key={j} className="font-bold">
-                            {segment.text}
-                          </b>
-                        ) : (
-                          segment.text
-                        )
-                      )}
-                    </p>
+                    <div className="w-fit max-w-[76%] rounded-2xl rounded-bl-md border border-progress bg-white px-[13px] py-[9px] text-xs leading-[1.6] text-brief-ink">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                        components={markdownComponents}
+                      >
+                        {turn.text}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 )
               )

@@ -28,7 +28,10 @@ describe('ChatbotTab', () => {
         onAsk={() => {}}
       />
     );
-    expect(screen.getByText(/정 주사에 대해/)).toHaveClass('border-progress');
+    // 2026-08-26: 답변이 마크다운(ReactMarkdown)으로 렌더되며 텍스트가 그 안의
+    // <p>로 한 겹 더 감싸였다 — 테두리 클래스는 이제 바로 위 부모가 아니라
+    // 말풍선 컨테이너(closest)에 있다.
+    expect(screen.getByText(/정 주사에 대해/).closest('.border-progress')).not.toBeNull();
     // Vite가 빌드마다 파일명에 해시를 붙이므로(캐시 버스팅, 2026-08-25) 정확한 경로 대신
     // 파일명만 확인한다.
     expect(container.querySelector('img')?.getAttribute('src')).toMatch(/ssabi-face/);
@@ -45,6 +48,20 @@ describe('ChatbotTab', () => {
     );
     expect(screen.getByText('기본 정보:', { selector: 'b' })).toBeInTheDocument();
     expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  });
+
+  it('2026-08-26: 답변의 "## 헤더"·목록도 마크다운으로 렌더한다 — "#"이 글자로 남지 않는다 (사용자 제보)', () => {
+    render(
+      <ChatbotTab
+        answer={'## 인물 정보\n- 정주사: 하바꾼\n- 초봉: 정주사의 딸'}
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+      />
+    );
+    expect(screen.getByText('인물 정보')).toBeInTheDocument();
+    expect(screen.queryByText(/^##/)).not.toBeInTheDocument();
+    expect(screen.getByText(/하바꾼/).closest('li')).not.toBeNull();
   });
 
   it('2026-08-25: 사용자 말풍선은 "**"를 마크다운으로 재해석하지 않고 그대로 보여준다', async () => {
@@ -345,7 +362,11 @@ describe('ChatbotTab — 대화 이력', () => {
     );
 
     expect(screen.getByText('정주사가 누구야')).toHaveClass('bg-brief-paper');
-    expect(screen.getByText('고무신 장사입니다.')).toHaveClass('bg-white', 'border-progress');
+    // 2026-08-26: 답변이 마크다운으로 렌더되며 텍스트가 <p>로 한 겹 더 감싸였다
+    expect(screen.getByText('고무신 장사입니다.').closest('.border-progress')).toHaveClass(
+      'bg-white',
+      'border-progress'
+    );
   });
 
   it('"새 채팅" 버튼을 누르면 onNewChat이 호출된다', async () => {
