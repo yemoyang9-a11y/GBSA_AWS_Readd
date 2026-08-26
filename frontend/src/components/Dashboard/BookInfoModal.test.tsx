@@ -24,9 +24,10 @@ describe('BookInfoModal', () => {
     render(<BookInfoModal book={book} content={content} onClose={() => {}} />);
 
     expect(screen.getByRole('dialog', { name: '탁류' })).toBeInTheDocument();
-    expect(screen.getByText('채만식')).toBeInTheDocument();
-    expect(screen.getByText('한국 근대문학')).toBeInTheDocument();
-    expect(screen.getByText('풍자')).toBeInTheDocument();
+    // 저자는 "OOO 지음" 바이라인으로, 태그는 " · "로 이어붙인 한 줄 라벨로 렌더된다
+    // (2026-08-26, "에디토리얼 바이라인" 시안 적용) — 개별 span이 아니라 한 텍스트 노드다.
+    expect(screen.getByText('채만식 지음')).toBeInTheDocument();
+    expect(screen.getByText('한국 근대문학 · 풍자')).toBeInTheDocument();
     expect(screen.getByText('탁류는 채만식의 장편소설이다.')).toBeInTheDocument();
     expect(screen.getByText('첫 번째 배경 지식')).toBeInTheDocument();
     expect(screen.getByText('두 번째 배경 지식')).toBeInTheDocument();
