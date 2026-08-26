@@ -10,12 +10,15 @@
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildPrompt } from './context-assembly';
 import { vectorSearch } from './vector-search';
-import { selectModel, logModelSelection, recordSelection } from './difficulty-router';
+import { selectModel, logModelSelection, recordSelection, CHATBOT_TASK } from './difficulty-router';
 import { stream as llmStream } from '../llm-gateway/gateway';
 import { getMockContext, getMockSearchResults, getMockLLMResponse } from './__mocks__/mock-data';
 import { recordTurns, getConversationContext } from './conversation-service';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
+
+/** 챗봇 LLM 호출 task 이름 — 실제 정의는 difficulty-router.ts (테스트가 이 경로로 검증한다) */
+export { CHATBOT_TASK };
 
 /**
  * `text`의 꼬리 중 `token`의 접두사와 일치하는 가장 긴 길이를 구한다. 스트리밍 청크
@@ -275,13 +278,16 @@ export async function* handleQuery(
     // 사용자 질의 추가
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
 
-    // 4. 난이도 분기 (규칙 기반)
+    // 4. 모델 선택 (단일 기본 모델 — 2026-08-25 난이도 분기 폐지)
     const modelSelection = selectModel(query);
     logModelSelection(modelSelection, query);
     recordSelection(modelSelection.model);
 
     // 5. LLM 호출 (스트리밍)
-    const task = `chatbot_${modelSelection.model}`;
+    // ⚠️ task 이름은 반드시 MODEL_CONFIG의 키여야 한다 — 예전엔 `chatbot_${model}`로
+    // 조립해 "chatbot_sonnet"이라는 없는 이름을 넘겼고, 그래서 전 질의가 조용히 폴백
+    // 모델로 호출됐다(2026-08-25 발견). 상수를 그대로 쓰고 테스트로 고정한다.
+    const task = CHATBOT_TASK;
     let responseText = '';
 
     const streamSource = MOCK_MODE ? getMockLLMResponse(query) : llmStream(task, fullPrompt);
