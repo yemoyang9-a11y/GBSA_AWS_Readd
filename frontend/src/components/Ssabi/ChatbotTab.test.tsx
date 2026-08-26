@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatbotTab from './ChatbotTab';
 
@@ -106,6 +106,23 @@ describe('ChatbotTab', () => {
     const bubble = screen.getByText('정주사가 누구야');
     expect(bubble).toHaveClass('bg-brief-paper');
     expect(bubble).toHaveClass('border-brief-rule');
+  });
+
+  it('2026-08-26: 한글 조합 중(IME) Enter는 제출하지 않는다 — 사용자 제보("마지막 글자가 다시 남는다")', () => {
+    const onAsk = vi.fn();
+    render(<ChatbotTab answer="" streaming={false} error={null} onAsk={onAsk} />);
+
+    const textarea = screen.getByLabelText('질문');
+    fireEvent.change(textarea, { target: { value: '야' } });
+    // 한글 자모가 조합되는 도중 Enter가 눌린 상황 — isComposing이 true다.
+    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true });
+
+    expect(onAsk).not.toHaveBeenCalled();
+    expect(textarea).toHaveValue('야');
+
+    // 조합이 끝난 뒤 다시 Enter를 누르면 그때는 정상 제출된다.
+    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: false });
+    expect(onAsk).toHaveBeenCalledWith('야', undefined);
   });
 
   it('2026-08-25: 본문에서 인용한 문장이 오면(quote) "선택한 문장" 카드로만 보여주고 입력창은 비워 둔다', () => {

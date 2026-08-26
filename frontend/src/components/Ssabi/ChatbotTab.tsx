@@ -490,7 +490,14 @@ export default function ChatbotTab({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
+                // 한글(IME) 조합 중 Enter — 사용자 제보(2026-08-26, "마지막 글자가 다시
+                // 남는다"): 한글은 자모를 조합해서 한 음절을 완성하는데, 조합이 끝나기
+                // 전에 Enter를 누르면 그 keydown이 "조합 확정"과 겹친다. isComposing 체크
+                // 없이 바로 제출하면 아직 textarea DOM/React 상태에 반영되지 않은 마지막
+                // 음절이 제출 이후(setQuery('') 뒤)에 뒤늦게 커밋되면서 입력창에 남는다.
+                // isComposing이 true인 동안은 이 Enter를 조합 확정으로만 두고 제출하지
+                // 않는다 — 한 번 더 Enter를 누르면(조합이 끝난 뒤) 그때 제출된다.
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                   event.preventDefault();
                   event.currentTarget.form?.requestSubmit();
                 }
