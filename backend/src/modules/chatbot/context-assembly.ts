@@ -10,7 +10,7 @@
 
 import type {
   ChatbotContext,
-  ChapterSummary,
+  ChatbotChapterSummary,
   Character,
   Relationship,
   CharacterNote,
@@ -91,7 +91,7 @@ async function getBookMeta(bookId: string): Promise<{ title: string; author: str
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
-async function findChapterSummaries(bookId: string, K: number): Promise<ChapterSummary[]> {
+async function findChapterSummaries(bookId: string, K: number): Promise<ChatbotChapterSummary[]> {
   return repo.findChapterSummaries(bookId, K);
 }
 
@@ -200,10 +200,22 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
   }
 
   // 장 요약
+  //
+  // ⚠️ 버그 수정(2026-08-26, 사용자 제보) — 예전에는 `### {title} (종료: p.{end_page})`로만
+  // 렌더링해 **장 번호를 프롬프트에 넣지 않았다.** 그래서 현재 페이지가 60이어도(=1장은
+  // 진작 읽은 범위) "1장까지 요약해줘"가 근거 부재로 거절됐다 — 모델 눈에는 "인간기념물"
+  // 이라는 제목만 보이지 그게 1장인지 알 방법이 없었기 때문이다. 같은 질문을 제목으로
+  // 물으면 곧바로 답하는 것으로 원인을 확정했다(인물 노트·관계 이름 미렌더링에 이은 같은
+  // 유형의 세 번째 버그).
+  //
+  // 시작 페이지까지 범위로 병기하는 건 "15페이지까지 요약해줘" 같은 범위 한정 요청을
+  // 모델이 판단할 근거를 주기 위해서다(시스템 규칙 7번). 여기 실리는 장은 이미 K로 걸러진
+  // 것뿐이므로 상한은 그대로 데이터 선택 단계가 강제한다 — 범위 한정은 그 안에서 어느
+  // 부분을 쓸지 고르는 것일 뿐, 프롬프트로 상한을 거는 게 아니다(절대 규칙 3번 무관).
   if (context.chapter_summaries.length > 0) {
     sections.push('## 장 요약');
     context.chapter_summaries.forEach((ch) => {
-      sections.push(`### ${ch.title} (종료: p.${ch.end_page})`);
+      sections.push(`### ${ch.chapter_no}장 ${ch.title} (p.${ch.start_page}~${ch.end_page})`);
       sections.push(ch.content);
       sections.push('');
     });

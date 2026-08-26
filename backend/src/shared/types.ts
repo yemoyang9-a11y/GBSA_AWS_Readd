@@ -125,6 +125,17 @@ export interface ChatRequest {
  *
  * ⚠️ assembleChatbotContext 함수가 query를 인자로 받지 않음 (NFR-SEC-006 🚦)
  */
+/**
+ * 챗봇 프롬프트용 장 요약 — 공용 `ChapterSummary`에 시작 페이지를 더한다 (R3 전용).
+ *
+ * 프롬프트에 "1장 인간기념물 (p.1~17)"처럼 범위를 병기해야 "15페이지까지 요약해줘" 같은
+ * 범위 한정 요청을 모델이 판단할 수 있다(시스템 규칙 7번). 리캡(R1·R2)은 이 필드가
+ * 필요 없으므로 공용 타입은 건드리지 않는다.
+ */
+export interface ChatbotChapterSummary extends ChapterSummary {
+  start_page: number;
+}
+
 export interface ChatbotContext {
   /** 책 제목·저자 (상한 없음 — 배경지식과 같은 고정 메타데이터) */
   book: {
@@ -132,8 +143,8 @@ export interface ChatbotContext {
     author: string;
   };
 
-  /** 장 요약 전량 */
-  chapter_summaries: ChapterSummary[];
+  /** 장 요약 전량 (장 번호·페이지 범위 병기) */
+  chapter_summaries: ChatbotChapterSummary[];
 
   /** 현재 장 원문 */
   current_chapter_text: string | null;
