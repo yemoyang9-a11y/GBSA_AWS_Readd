@@ -54,7 +54,11 @@ export default function ContinueReadingHero({
   return (
     <section
       aria-live="polite"
-      className="grid min-h-[265px] grid-cols-[182px_1fr_180px] items-center gap-[34px] rounded-dash-panel border border-dash-line bg-white p-[23px] shadow-dash-soft"
+      // 156px = h-hero-cover(219px) × row-cover 비율(84/118) — BookInfoModal.tsx와 같은 계산.
+      // 예전 182px는 표지 실제 이미지 없이 문구형 placeholder만 쓰던 시절 값이라 세로형
+      // 책 표지 비율보다 넓어서, 실제 이미지(takryu.jpg 등)가 채워지자 object-cover가
+      // 위아래를 잘라냈다(2026-08-26 사용자 제보) — 모달과 같은 폭으로 맞춰 해결.
+      className="grid min-h-[265px] grid-cols-[156px_1fr_180px] items-center gap-[34px] rounded-dash-panel border border-dash-line bg-white p-[23px] shadow-dash-soft"
     >
       <TypographicCover
         size="hero"
