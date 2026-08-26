@@ -21,8 +21,22 @@ export default function Header() {
         <button
           type="button"
           disabled
-          className="font-dashSans text-[19px] text-dash-muted disabled:opacity-40"
+          className="flex items-center gap-2 font-dashSans text-[19px] text-dash-muted disabled:opacity-40"
         >
+          <svg
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           도서 검색
         </button>
       </div>
