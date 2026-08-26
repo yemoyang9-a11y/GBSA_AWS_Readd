@@ -394,12 +394,22 @@ export default function RelationshipTab({
                     isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
                   }`}
                 >
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  {/* 별칭 정렬 — `justify-between`이 아니라 별칭 쪽 `grow`로 오른쪽에 붙인다
+                      (2026-08-26, 사용자 제보). justify-between은 **줄마다** 따로 적용돼서,
+                      별칭이 길어 다음 줄로 넘어가면 그 줄에는 별칭 하나뿐이라 flex-start(왼쪽)로
+                      떨어졌다 — 한 줄일 때는 오른쪽, 넘어가면 왼쪽이 되어 정렬이 어긋났다
+                      (실측: 한 줄이면 우여백 0px, 줄바뀌면 좌여백 0px·우여백 52px).
+                      별칭 span이 남은 공간을 채우게(grow) 하고 그 안에서 text-right로 붙이면,
+                      한 줄일 때는 남은 폭 안에서, 줄이 넘어가면 그 줄 전체 폭 안에서 오른쪽
+                      끝에 붙어 두 경우가 같아진다. */}
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                     <span className="shrink-0 whitespace-nowrap font-dashSerif text-sm font-bold text-brief-ink">
                       {node.name}
                     </span>
                     {node.aliases.length > 0 ? (
-                      <span className="min-w-0 text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                      <span className="min-w-0 grow text-right text-[11px] text-brief-muted">
+                        {node.aliases.join(' · ')}
+                      </span>
                     ) : null}
                   </div>
                   {isOpen && relations.length > 0 ? (
