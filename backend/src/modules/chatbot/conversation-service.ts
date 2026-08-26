@@ -90,6 +90,7 @@ export async function recordTurns(
   await repo.insertTurn(conversationId, base + 1, 'user', query, K);
   await repo.insertTurn(conversationId, base + 2, 'assistant', answer, K);
   await repo.setTitleIfMissing(conversationId, query.slice(0, 40));
+  await repo.touchConversation(conversationId);
 }
 
 /**

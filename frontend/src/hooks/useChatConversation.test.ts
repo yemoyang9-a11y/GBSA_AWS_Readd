@@ -14,6 +14,11 @@ async function* frames(...items: SseFrame[]): AsyncGenerator<SseFrame> {
   for (const item of items) yield item;
 }
 
+beforeEach(() => {
+  askChatbotMock.mockReset();
+  localStorage.clear();
+});
+
 /**
  * conversation_id는 백엔드 BIGINT 컬럼에서 나와 항상 문자열로 온다("279") — 숫자만
  * 믿고 typeof로 걸렀다가 conversationId가 절대 안 채워져 매 질문이 새 대화로 갈라지던

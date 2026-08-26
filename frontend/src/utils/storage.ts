@@ -14,3 +14,24 @@ export function getDeviceId(): string | null {
 export function setDeviceId(deviceId: string): void {
   localStorage.setItem(STORAGE_KEYS.deviceId, deviceId);
 }
+
+function activeConversationKey(bookId: string): string {
+  return `ssabi.chat_conversation.${bookId}`;
+}
+
+/** 책별로 마지막으로 이어가던 챗봇 대화 세션을 보관한다. */
+export function getActiveChatConversationId(bookId: string): number | null {
+  const raw = localStorage.getItem(activeConversationKey(bookId));
+  if (raw === null) return null;
+
+  const conversationId = Number(raw);
+  return Number.isInteger(conversationId) && conversationId > 0 ? conversationId : null;
+}
+
+export function setActiveChatConversationId(bookId: string, conversationId: number): void {
+  localStorage.setItem(activeConversationKey(bookId), String(conversationId));
+}
+
+export function clearActiveChatConversationId(bookId: string): void {
+  localStorage.removeItem(activeConversationKey(bookId));
+}

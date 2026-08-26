@@ -496,6 +496,31 @@ describe('ChatbotTab — 대화 이력', () => {
     expect(screen.queryByRole('button', { name: '새 채팅' })).not.toBeInTheDocument();
   });
 
+  it('2026-08-26: 이력 화면 헤더는 "지난 대화 N"이 왼쪽, "채팅으로" 버튼이 오른쪽이다', async () => {
+    // 사용자 요청(2026-08-26)으로 두 요소의 좌우를 맞바꿨다. 순서를 고정하는 테스트가
+    // 없어서 스타일 정리 중에 조용히 되돌아갈 수 있었다 — DOM 순서로 못박는다.
+    render(
+      <ChatbotTab
+        streaming={false}
+        error={null}
+        onAsk={() => {}}
+        turns={[]}
+        conversations={[
+          { id: 1, conversation_date: '2026-08-24', title: '첫 대화', created_at: '', updated_at: '' },
+        ]}
+        historyOpen={true}
+        onToggleHistory={() => {}}
+        onNewChat={() => {}}
+      />
+    );
+
+    const count = screen.getByText('지난 대화 1');
+    const back = screen.getByRole('button', { name: '채팅으로' });
+
+    // compareDocumentPosition: count가 back보다 문서상 앞이면 FOLLOWING 비트가 선다
+    expect(count.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('2026-08-25: "채팅으로" 버튼을 누르면 onToggleHistory가 호출된다 — 이력 화면에서 돌아가는 길', async () => {
     const onToggleHistory = vi.fn();
     render(

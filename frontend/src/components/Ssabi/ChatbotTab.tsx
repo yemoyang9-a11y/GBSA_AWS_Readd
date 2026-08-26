@@ -249,27 +249,36 @@ export default function ChatbotTab({
           // 이력 화면 헤더 — accent 색 "뒤로" 버튼 하나로 채팅 화면과 시각적으로 다르게
           // 만든다(클래스 주석 "지난 대화 화면 재설계" 참고). 버튼 색 자체가 "지금 다른
           // 화면에 있다"는 신호이자 돌아가는 길이다.
+          //
+          // 좌우 배치(2026-08-26, 사용자 요청) — "지난 대화 N"이 왼쪽, "채팅으로" 버튼이
+          // 오른쪽이다. 순서는 테스트로 고정돼 있다(ChatbotTab.test.tsx "이력 화면 헤더는
+          // ... 왼쪽 ... 오른쪽").
+          //
+          // 셰브런은 오른쪽을 향하고 글자 뒤에 온다("채팅으로 →", 2026-08-26 사용자 결정).
+          // 처음엔 왼쪽 셰브런(←)을 유지했었다 — 뒤로 가기 관례상 "이전 화면으로 돌아간다"는
+          // 이동 방향을 뜻한다고 봤기 때문인데, 사용자가 버튼이 헤더 오른쪽 끝에 있는 지금
+          // 배치에선 오른쪽을 향하는 편이 낫다고 판단했다. 되돌리지 말 것.
           <div className="mb-3 flex items-center justify-between gap-2">
+            <span className="font-dashSans text-[11px] font-bold text-brief-muted">
+              지난 대화 {conversations?.length ?? 0}
+            </span>
             <button
               type="button"
               onClick={onToggleHistory}
               aria-pressed={true}
               className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft px-3 py-1.5 font-dashSans text-[11px] font-bold text-brief-accent"
             >
+              채팅으로
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
                 <path
-                  d="M15 5 8 12l7 7"
+                  d="M9 5 16 12l-7 7"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
-              채팅으로
             </button>
-            <span className="font-dashSans text-[11px] font-bold text-brief-muted">
-              지난 대화 {conversations?.length ?? 0}
-            </span>
           </div>
         ) : (
           <div className="mb-3 flex items-center justify-end gap-2">
