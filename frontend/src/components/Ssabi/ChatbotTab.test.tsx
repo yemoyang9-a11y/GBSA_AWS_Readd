@@ -141,6 +141,31 @@ describe('ChatbotTab', () => {
     expect(onAsk).toHaveBeenCalledWith('이 사람 누구야', '정 주사는 여전히 미두장 앞을');
   });
 
+  it('2026-08-25: "선택한 문장" 카드가 떠 있는 동안은 후속 질문에도 인용문이 계속 딸려간다 (사용자 제보 — "왜?"만 물으면 답을 못함)', async () => {
+    const onAsk = vi.fn();
+    render(
+      <ChatbotTab
+        answer=""
+        streaming={false}
+        error={null}
+        onAsk={onAsk}
+        quote={{ text: '정 주사는 여전히 미두장 앞을', token: 1 }}
+      />
+    );
+
+    await userEvent.type(screen.getByLabelText('질문'), '왜?');
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+    expect(onAsk).toHaveBeenNthCalledWith(1, '왜?', '정 주사는 여전히 미두장 앞을');
+
+    // 카드를 안 지웠으니 두 번째 질문에도 여전히 같은 인용문이 실려야 한다 —
+    // 예전엔 attachedQuote가 제출할 때마다 초기화돼서 이 두 번째 호출의 인용문이
+    // undefined였다(카드는 떠 있는데 실제로는 인용문 없이 전송됨).
+    expect(screen.getByText('선택한 문장')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('질문'), '더 자세히 설명해줘');
+    await userEvent.click(screen.getByRole('button', { name: '질문 보내기' }));
+    expect(onAsk).toHaveBeenNthCalledWith(2, '더 자세히 설명해줘', '정 주사는 여전히 미두장 앞을');
+  });
+
   it('2026-08-25: "선택한 문장" 카드의 ×를 누르면 카드가 사라지고, 그 뒤 질문에는 인용이 딸려가지 않는다', async () => {
     const onAsk = vi.fn();
     render(

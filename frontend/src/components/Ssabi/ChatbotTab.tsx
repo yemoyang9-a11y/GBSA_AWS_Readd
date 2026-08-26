@@ -149,9 +149,18 @@ export default function ChatbotTab({
    *  후속 질문들이 여전히 이 문장을 두고 하는 대화라는 걸 보여줘야 하기 때문. */
   const [pinnedQuote, setPinnedQuote] = useState<string | null>(null);
   /** setPinnedQuote(null) 세 자리(×·새 채팅·다른 대화 선택) 모두 이걸로 통일한다 —
-   *  onQuoteDismissed 호출을 한 곳에서만 관리해 빠뜨리는 자리가 생기지 않게 한다. */
+   *  onQuoteDismissed 호출을 한 곳에서만 관리해 빠뜨리는 자리가 생기지 않게 한다.
+   *
+   *  ⚠️ 버그 수정(2026-08-25, 사용자 제보 — 인용문 선택 후 "왜?"만 물으면 답을 못하는데
+   *  같은 내용을 완전한 문장으로 물으면 맞힘) — attachedQuote가 제출할 때마다
+   *  초기화돼서, "선택한 문장" 카드는 계속 떠 있는데 실제로 서버로 가는 인용문은
+   *  첫 질문 이후로 전부 비어 있었다. 146행 주석의 원래 의도("후속 질문들이 여전히
+   *  이 문장을 두고 하는 대화")대로 attachedQuote도 pinnedQuote와 같은 생명주기를
+   *  갖도록 여기서 같이 지운다 — 화면에 카드가 떠 있는 동안은 항상 실제로 인용문이
+   *  같이 전송된다. */
   const clearPinnedQuote = () => {
     setPinnedQuote(null);
+    setAttachedQuote(null);
     onQuoteDismissed?.();
   };
 
@@ -467,7 +476,8 @@ export default function ChatbotTab({
               onAsk(query.trim(), attachedQuote ?? undefined);
               setAsked(query.trim());
               setQuery('');
-              setAttachedQuote(null);
+              // attachedQuote는 여기서 지우지 않는다 — "선택한 문장" 카드가 떠 있는 한
+              // (clearPinnedQuote가 불리기 전까지) 후속 질문에도 계속 실려 나가야 한다.
             }}
           >
             <label htmlFor="chat-query" className="sr-only">
