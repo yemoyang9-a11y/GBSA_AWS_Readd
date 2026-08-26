@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
@@ -166,6 +166,16 @@ export default function RelationshipTab({
     setQuery('');
     setResultsOpen(false);
   }
+
+  // 검색으로 고른(또는 그래프에서 고른) 인물의 카드로 하단 목록을 스크롤한다 — 그래프는
+  // 선택 즉시 카메라를 옮겨 보이지만(RelationshipGraph.tsx), 카드 목록은 길면 선택된
+  // 카드가 화면 밖에 남아 "설명이 그대로다"로 보였다(사용자 제보). 카드 자체(`isOpen`)는
+  // activeSelected로 이미 갱신되고 있었으니, 그 카드로 스크롤만 맞춰주면 된다.
+  const cardRefs = useRef(new Map<string, HTMLLIElement>());
+  useEffect(() => {
+    if (!activeSelected) return;
+    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [activeSelected]);
 
   const relationsOf = (id: string) =>
     shown.edges
@@ -365,7 +375,13 @@ export default function RelationshipTab({
             const isOpen = node.id === activeSelected;
             const relations = isOpen ? relationsOf(node.id) : [];
             return (
-              <li key={node.id}>
+              <li
+                key={node.id}
+                ref={(el) => {
+                  if (el) cardRefs.current.set(node.id, el);
+                  else cardRefs.current.delete(node.id);
+                }}
+              >
                 <button
                   type="button"
                   aria-expanded={isOpen}
