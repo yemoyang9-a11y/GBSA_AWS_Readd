@@ -6,7 +6,7 @@
 
 import type {
   ChatbotContext,
-  ChapterSummary,
+  ChatbotChapterSummary,
   Character,
   Relationship,
   SearchChunk,
@@ -31,27 +31,36 @@ export function getMockContext(K: number): ChatbotContext {
   };
 }
 
-function getMockChapterSummaries(K: number): ChapterSummary[] {
+function getMockChapterSummaries(K: number): ChatbotChapterSummary[] {
   const all = [
     {
       chapter_no: 1,
       title: '1장',
       content: '정주사가 고무신 장사로 돈을 모으는 이야기',
+      start_page: 1,
       end_page: 20,
     },
     {
       chapter_no: 2,
       title: '2장',
       content: '초봉이가 등장하고 정주사와 만나는 이야기',
+      start_page: 21,
       end_page: 50,
     },
     {
       chapter_no: 3,
       title: '3장',
       content: '정주사와 초봉이의 관계가 복잡해지는 이야기',
+      start_page: 51,
       end_page: 80,
     },
-    { chapter_no: 4, title: '4장', content: '초봉이가 선택의 기로에 서는 이야기', end_page: 120 },
+    {
+      chapter_no: 4,
+      title: '4장',
+      content: '초봉이가 선택의 기로에 서는 이야기',
+      start_page: 81,
+      end_page: 120,
+    },
   ];
 
   return all.filter((ch) => ch.end_page <= K);

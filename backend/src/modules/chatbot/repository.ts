@@ -7,7 +7,7 @@
 
 import { pool } from '../../config/database';
 import type {
-  ChapterSummary,
+  ChatbotChapterSummary,
   Character,
   Relationship,
   CharacterNote,
@@ -37,12 +37,13 @@ export async function getBookMeta(bookId: string): Promise<{ title: string; auth
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
-export async function findChapterSummaries(bookId: string, K: number): Promise<ChapterSummary[]> {
+export async function findChapterSummaries(bookId: string, K: number): Promise<ChatbotChapterSummary[]> {
   const query = `
     SELECT
       cs.chapter_no,
       c.title,
       cs.summary as content,
+      c.start_page,
       c.end_page
     FROM chapter_summaries cs
     JOIN chapters c ON cs.book_id = c.book_id AND cs.chapter_no = c.chapter_no
