@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { GraphResponse } from '../../types';
 import {
   boundingBox,
@@ -731,13 +732,22 @@ export default function RelationshipGraph({
 
   if (!isFullscreen) return graphBox;
 
-  return (
+  // document.body로 포털한다 — QuotePopover.tsx와 같은 이유(그 파일 주석 참고)다.
+  // 이 오버레이는 SsabiPanel의 tabpanel(`relative z-0`) 안에서 그려지는데, 그 형제인
+  // 탭 바(`relative z-10`)가 자기 스태킹 컨텍스트 전체보다 위에 온다. `fixed`로 화면에
+  // 붙여도 스태킹 비교는 DOM상 조상 컨텍스트 안에서만 일어나므로, z-50을 줘도 탭 바·
+  // 패널 리사이즈 손잡이·싸비 여닫기 버튼 등 tabpanel 밖에 있는 UI에 가려 전체화면이
+  // 전체화면처럼 안 보이고 뒤에 깔렸다(2026-08-26, 사용자 제보 — elementFromPoint로
+  // 확인: 탭 바 자리를 눌러도 오버레이가 아니라 탭 버튼이 잡힘). body로 포털하면 그
+  // 조상 스태킹 컨텍스트를 벗어나 z-index 비교가 페이지 최상위에서 의도대로 동작한다.
+  return createPortal(
     <div
       data-testid="relationship-graph-fullscreen-overlay"
       onClick={() => setIsFullscreen(false)}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
     >
       {graphBox}
-    </div>
+    </div>,
+    document.body
   );
 }
