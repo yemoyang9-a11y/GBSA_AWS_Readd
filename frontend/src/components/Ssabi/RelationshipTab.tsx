@@ -394,20 +394,26 @@ export default function RelationshipTab({
                     isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
                   }`}
                 >
-                  {/* 별칭 정렬 — `justify-between`이 아니라 별칭 쪽 `grow`로 오른쪽에 붙인다
-                      (2026-08-26, 사용자 제보). justify-between은 **줄마다** 따로 적용돼서,
-                      별칭이 길어 다음 줄로 넘어가면 그 줄에는 별칭 하나뿐이라 flex-start(왼쪽)로
-                      떨어졌다 — 한 줄일 때는 오른쪽, 넘어가면 왼쪽이 되어 정렬이 어긋났다
-                      (실측: 한 줄이면 우여백 0px, 줄바뀌면 좌여백 0px·우여백 52px).
-                      별칭 span이 남은 공간을 채우게(grow) 하고 그 안에서 text-right로 붙이면,
-                      한 줄일 때는 남은 폭 안에서, 줄이 넘어가면 그 줄 전체 폭 안에서 오른쪽
-                      끝에 붙어 두 경우가 같아진다. */}
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                  {/* 이름과 별칭을 **두 개의 열**로 둔다 — 별칭이 아무리 길어도 이름의 가로
+                      범위를 침범하지 않는다 (2026-08-26, 사용자 요청).
+                      이름은 shrink-0·whitespace-nowrap 으로 항상 한 줄을 온전히 차지하고,
+                      별칭은 grow 로 **남은 폭만** 차지한 뒤 그 안에서 줄바꿈한다. 오른쪽
+                      끝 정렬은 text-right 가 맡는다.
+                      ⚠️ flex-wrap 을 쓰지 않는다. wrap 을 주면 별칭이 통째로 다음 줄로
+                         내려가 이름 아래(=이름의 가로 범위)까지 퍼진다. 그 방식은 정렬은
+                         맞출 수 있어도 "이름 밑으로 글자가 흘러 보기 안 좋다"는 문제가
+                         남았다 — 열을 고정하는 지금 방식이 그 문제까지 없앤다.
+
+                      별칭 쪽 break-keep(word-break: keep-all) — 한글은 기본값이 글자 단위로
+                      끊어서 "태수씨"가 "태수"/"씨"로 쪼개져 마지막 줄에 한 글자만 떨어졌다.
+                      keep-all 이면 공백에서만 끊겨 별칭 구분자(·) 자리에서 줄이 바뀐다.
+                      이름 쪽에 whitespace-nowrap 을 준 것과 같은 이유다. */}
+                  <div className="flex items-baseline gap-x-3">
                     <span className="shrink-0 whitespace-nowrap font-dashSerif text-sm font-bold text-brief-ink">
                       {node.name}
                     </span>
                     {node.aliases.length > 0 ? (
-                      <span className="min-w-0 grow text-right text-[11px] text-brief-muted">
+                      <span className="min-w-0 grow break-keep text-right text-[11px] text-brief-muted">
                         {node.aliases.join(' · ')}
                       </span>
                     ) : null}
