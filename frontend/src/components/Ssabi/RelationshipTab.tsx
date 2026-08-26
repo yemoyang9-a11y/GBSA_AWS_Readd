@@ -156,26 +156,30 @@ export default function RelationshipTab({
       )
     : [];
 
+  // 검색으로 고른 인물의 카드로 하단 목록을 스크롤한다 — 검색 결과는 그래프처럼 카메라가
+  // 옮겨가는 걸로 안 보이니(사용자 제보), 카드 목록이 길면 선택된 카드가 화면 밖에 남아
+  // "설명이 그대로다"로 보였다. 그래프에서 직접 인물을 눌렀을 때는 이미 그 화면을 보고
+  // 누른 것이라 스크롤이 필요 없다(오히려 화면이 갑자기 움직여 방해된다, 사용자 재제보) —
+  // 그래서 focusOn(검색 전용 경로)에서만 스크롤 대상을 표시해 둔다.
+  const cardRefs = useRef(new Map<string, HTMLLIElement>());
+  const scrollTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
+    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scrollTargetRef.current = null;
+  }, [activeSelected]);
+
   function focusOn(id: string) {
     // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
     // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
     if (characterMode === 'major' && !displayed.nodes.some((node) => node.id === id)) {
       setCharacterMode('all');
     }
+    scrollTargetRef.current = id;
     setSelected(id);
     setQuery('');
     setResultsOpen(false);
   }
-
-  // 검색으로 고른(또는 그래프에서 고른) 인물의 카드로 하단 목록을 스크롤한다 — 그래프는
-  // 선택 즉시 카메라를 옮겨 보이지만(RelationshipGraph.tsx), 카드 목록은 길면 선택된
-  // 카드가 화면 밖에 남아 "설명이 그대로다"로 보였다(사용자 제보). 카드 자체(`isOpen`)는
-  // activeSelected로 이미 갱신되고 있었으니, 그 카드로 스크롤만 맞춰주면 된다.
-  const cardRefs = useRef(new Map<string, HTMLLIElement>());
-  useEffect(() => {
-    if (!activeSelected) return;
-    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [activeSelected]);
 
   const relationsOf = (id: string) =>
     shown.edges
