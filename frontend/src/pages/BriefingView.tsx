@@ -96,7 +96,8 @@ export default function BriefingView({
       <div className="flex items-start gap-[30px]">
         <TypographicCover size="brief" title={title} author={author} coverUrl={coverUrl} />
         <div>
-          <p className="m-0 font-dashSans text-base font-bold text-brief-accent">
+          {/* 2026-08-26, 사용자 요청 — 초록 액센트 대신 대시보드와 같은 회색(#555)으로 */}
+          <p className="m-0 font-dashSans text-base font-bold text-[#555]">
             {MOCK_DAYS_SINCE_LABEL}
           </p>
           <h2 className="mt-3 font-dashSerif text-[28px] font-semibold leading-[1.35] tracking-[-.03em] text-brief-ink">
@@ -123,13 +124,16 @@ export default function BriefingView({
               바 아래로 내리고 이 자리를 전체 페이지 수로 채웠다). briefing.progress에
               total_pages가 이미 있어(API_CONTRACT, 서버 계산값) 그대로 쓴다 — 대시보드와
               달리 여기는 계약에서 뺀 적이 없는 필드다. */}
-          <span className="font-semibold text-brief-accent">
+          {/* 2026-08-26, 사용자 요청 — 위 날짜 라벨·아래 퍼센트와 같은 회색으로 */}
+          <span className="font-semibold text-[#555]">
             {briefing.progress.total_pages}쪽
           </span>
         </div>
         <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" />
-        {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다) */}
-        <div className="mt-2 font-dashSans text-sm font-semibold text-brief-accent">
+        {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다).
+            색은 대시보드 히어로의 "N% 완료"(ContinueReadingHero.tsx, text-[#555])와
+            맞췄다(2026-08-26, 사용자 요청 — 브리핑만 초록으로 튀어 보인다고 함). */}
+        <div className="mt-2 font-dashSans text-sm font-semibold text-[#555]">
           {briefing.progress.percent}%
         </div>
         <div className="mt-4 flex justify-end">

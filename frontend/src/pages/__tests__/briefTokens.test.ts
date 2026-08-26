@@ -12,8 +12,9 @@ describe('브리핑 재설계 — 신규 토큰', () => {
     expect(brief.muted).toBe('#86847c');
     expect(brief.line).toBe('#ebe8e1');
     expect(brief.rule).toBe('#e4e0d5');
-    expect(brief.accent).toBe('#4b3fd6');
-    expect(brief['accent-soft']).toBe('#f1effc');
+    // 2026-08-25, 사용자 요청 — 보라/남색 액센트를 세이지그린으로 교체
+    expect(brief.accent).toBe('#4f7052');
+    expect(brief['accent-soft']).toBe('#e8ecdd');
   });
 
   it('brief 라운드·그림자·표지 크기 토큰이 있다', () => {
