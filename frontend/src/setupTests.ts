@@ -10,3 +10,9 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     disconnect() {}
   } as unknown as typeof ResizeObserver;
 }
+
+// jsdom엔 Element.scrollIntoView도 없다 — RelationshipTab.tsx가 선택된 인물 카드로
+// 스크롤하기 시작한 뒤(6b919ba, 검색/선택 시 하단 카드 목록 스크롤) 같은 이유로 깨진다.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
