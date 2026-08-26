@@ -238,7 +238,7 @@ describe('RelationshipTab', () => {
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('인물 8')).toBeInTheDocument();
+      expect(within(people).getByText('8명')).toBeInTheDocument();
       expect(within(people).getByText('정주사')).toBeInTheDocument();
       expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
       expect(within(people).queryByText('제중당 주인')).not.toBeInTheDocument();
@@ -280,7 +280,7 @@ describe('RelationshipTab', () => {
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('인물 9')).toBeInTheDocument();
+      expect(within(people).getByText('9명')).toBeInTheDocument();
     });
 
     it('"전체"를 누르면 걸러졌던 인물이 다 보인다', () => {
@@ -289,7 +289,7 @@ describe('RelationshipTab', () => {
 
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
 
-      expect(within(people).getByText('인물 10')).toBeInTheDocument();
+      expect(within(people).getByText('10명')).toBeInTheDocument();
       expect(within(people).getByText('최차부')).toBeInTheDocument();
     });
 
@@ -300,7 +300,7 @@ describe('RelationshipTab', () => {
       fireEvent.click(within(people).getByRole('button', { name: '전체' }));
       fireEvent.click(within(people).getByRole('button', { name: '주요인물' }));
 
-      expect(within(people).getByText('인물 8')).toBeInTheDocument();
+      expect(within(people).getByText('8명')).toBeInTheDocument();
       expect(within(people).queryByText('최차부')).not.toBeInTheDocument();
     });
 
@@ -333,7 +333,7 @@ describe('RelationshipTab', () => {
         'aria-pressed',
         'true'
       );
-      expect(within(people).getByText('인물 2')).toBeInTheDocument();
+      expect(within(people).getByText('2명')).toBeInTheDocument();
       expect(within(people).getByText('정주사')).toBeInTheDocument();
       expect(within(people).getByText('초봉')).toBeInTheDocument();
     });

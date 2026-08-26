@@ -259,7 +259,7 @@ export default function RelationshipTab({
       <section aria-label="인물" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-brief-muted">인물 {displayed.nodes.length}</h3>
+            <h3 className="text-xs font-bold text-brief-muted">{displayed.nodes.length}명</h3>
 
             {/* 주요인물/전체 토글 — 그래프·카드 리스트가 공유하는 displayed를 바꾼다
                 (클래스 주석 "주요인물 / 전체 토글" 참고). */}
