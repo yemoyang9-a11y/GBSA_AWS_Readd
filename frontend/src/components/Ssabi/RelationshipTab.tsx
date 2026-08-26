@@ -394,10 +394,12 @@ export default function RelationshipTab({
                     isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
                   }`}
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-dashSerif text-sm font-bold text-brief-ink">{node.name}</span>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <span className="shrink-0 whitespace-nowrap font-dashSerif text-sm font-bold text-brief-ink">
+                      {node.name}
+                    </span>
                     {node.aliases.length > 0 ? (
-                      <span className="text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                      <span className="min-w-0 text-[11px] text-brief-muted">{node.aliases.join(' · ')}</span>
                     ) : null}
                   </div>
                   {isOpen && relations.length > 0 ? (
