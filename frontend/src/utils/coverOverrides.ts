@@ -9,6 +9,11 @@
  */
 const COVER_OVERRIDES: Record<string, string> = {
   takryu: '/covers/takryu.jpg',
+  // 배포 카탈로그의 자리표시자 행을 실제 도서로 채우며 추가(2026-08-26, 사용자 제공 이미지).
+  // 제목·저자는 표시만 바꿀 수 없어 RDS 쪽을 직접 갱신했고, 표지는 이 표에 둔다 —
+  // cover_url을 DB에 넣으면 정적 파일 경로가 DB에 박혀 프론트 배포와 어긋날 수 있다.
+  'test-book-1': '/covers/tonight-this-love.webp',
+  'test-book-2': '/covers/sherlock-holmes.webp',
 };
 
 export function resolveCoverUrl(
