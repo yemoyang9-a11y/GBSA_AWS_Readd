@@ -138,7 +138,8 @@ export default function BriefingView({
             {briefing.progress.total_pages}쪽
           </span>
         </div>
-        <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" />
+        {/* 2026-08-26, 사용자 요청 — 진도 바 위에서 아모가 뛰어가는 느낌 */}
+        <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" runner />
         {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다).
             색은 대시보드 히어로의 "N% 완료"(ContinueReadingHero.tsx, text-[#555])와
             맞췄다(2026-08-26, 사용자 요청 — 브리핑만 초록으로 튀어 보인다고 함). */}

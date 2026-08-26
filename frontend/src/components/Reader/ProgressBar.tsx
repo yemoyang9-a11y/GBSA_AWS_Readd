@@ -1,3 +1,5 @@
+import ssabiFace from '../../assets/images/ssabi-face.png';
+
 /**
  * 진도 바 — 브리핑·대시보드 전용이다.
  * 읽기 화면에는 두지 않는다. 읽기 화면은 페이지 번호만 표시한다 (FR-PRG-004).
@@ -16,15 +18,26 @@
  *
  * ⚠️ 막대 폭은 표시상 0~100으로 자르되 `aria-valuenow` 는 **서버 값 그대로** 둔다.
  *    값을 보정해서 내보내면 그 순간 프론트가 파생값을 만든 게 된다 (절대 규칙 2번).
+ *
+ * `runner` — 채움 끝에 아모가 뛰어가는 모습(2026-08-26, 사용자 요청, 브리핑에 우선
+ * 적용). role="progressbar" 트랙 자체는 overflow-hidden이라 그 안에 두면 위로
+ * 튀어나오는 부분이 잘린다 — 트랙 밖, 같은 relative 래퍼 안의 형제로 절대배치한다.
+ *
+ * 아모를 바에 딱 붙이니(이전 버전) "너무 붙었다"는 재요청 — 대신 말풍선 꼬리 같은
+ * 작은 마름모 마커를 바 위 그 지점에 고정해 두고, 아모는 그 마커 위에서 살짝 띄워
+ * 통통 튄다. 마커는 애니메이션 없이 항상 정확한 위치를 짚고, 아모만 움직여서
+ * "그 지점을 따라가며 뛰는" 느낌을 낸다 — 위치와 애니메이션을 분리했다.
  */
 export default function ProgressBar({
   percent,
   tone = 'ink',
   size = 'sm',
+  runner = false,
 }: {
   percent: number;
   tone?: 'ink' | 'accent' | 'dash' | 'brief';
   size?: 'sm' | 'md';
+  runner?: boolean;
 }) {
   const width = Math.min(Math.max(percent, 0), 100);
   const fillClass =
@@ -39,18 +52,42 @@ export default function ProgressBar({
   const heightClass = size === 'md' ? 'h-1.5' : 'h-1';
 
   return (
-    <div
-      role="progressbar"
-      aria-valuenow={percent}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      className={`${heightClass} w-full overflow-hidden rounded-full ${trackClass}`}
-    >
+    <div className={runner ? 'relative' : undefined}>
+      {runner ? (
+        <>
+          {/* 말풍선 꼬리 같은 마커 — 애니메이션 없이 항상 그 지점 바로 위, 바에 딱 붙어
+              있는다. 크기는 pop-in 등과 통일한 8px(size-2). */}
+          <div
+            aria-hidden="true"
+            className="absolute bottom-full size-2 -translate-x-1/2 translate-y-1 rotate-45 rounded-[2px] border border-brief-rule bg-white"
+            style={{ left: `${width}%` }}
+          />
+          {/* 아모 — 마커 위에서 통통 뛴다. bottom:100%는 가장 가까운 relative 조상의
+              패딩 박스 위쪽 끝 기준이라, 래퍼에 padding을 주면 그만큼 바에서 멀어진다
+              (이전 버전에서 겪은 문제) — 래퍼는 패딩 없이 relative만 준다. */}
+          <img
+            src={ssabiFace}
+            alt=""
+            aria-hidden="true"
+            data-testid="progress-runner"
+            className="absolute bottom-full h-7 w-auto origin-bottom animate-amo-run object-contain"
+            style={{ left: `${width}%` }}
+          />
+        </>
+      ) : null}
       <div
-        data-testid="progress-fill"
-        className={`h-full ${fillClass}`}
-        style={{ width: `${width}%` }}
-      />
+        role="progressbar"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className={`${heightClass} w-full overflow-hidden rounded-full ${trackClass}`}
+      >
+        <div
+          data-testid="progress-fill"
+          className={`h-full ${fillClass}`}
+          style={{ width: `${width}%` }}
+        />
+      </div>
     </div>
   );
 }

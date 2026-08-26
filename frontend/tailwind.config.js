@@ -119,10 +119,22 @@ export default {
           '0%': { opacity: '0', scale: '.92' },
           '100%': { opacity: '1', scale: '1' },
         },
+        // 진도 바 위 아모(2026-08-26, 사용자 요청 — "뛰어가는 느낌"). 가로 중앙 정렬
+        // (translateX(-50%))을 각 스텝 transform 안에 같이 넣는다 — pop-in과 같은
+        // 이유로, 위치용 transform과 애니메이션용 transform이 서로 다른 자리(유틸리티
+        // 클래스 vs 키프레임)에 있으면 뒤엣것이 앞엣것을 덮어써 버린다.
+        // 바로 딱 붙이니(translateY 2px 기준선) "너무 붙었다"는 재요청 — 이제 바
+        // 위엔 고정 마커(다이아몬드)만 붙여 두고, 아모는 그 위 6~10px에서 떠서
+        // 뛴다. 마커와 아모 사이 빈틈이 "그 지점을 따라간다"는 느낌을 준다.
+        'amo-run': {
+          '0%, 100%': { transform: 'translateX(-50%) translateY(-6px) rotate(-6deg)' },
+          '50%': { transform: 'translateX(-50%) translateY(-10px) rotate(6deg)' },
+        },
       },
       animation: {
         'tab-in': 'tab-in 200ms ease-out',
         'pop-in': 'pop-in 160ms ease-out',
+        'amo-run': 'amo-run 550ms ease-in-out infinite',
       },
     },
   },

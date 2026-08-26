@@ -6,6 +6,7 @@ import type {
   SsabiTab,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
+import ssabiFace from '../../assets/images/ssabi-face.png';
 import RecapTab from './RecapTab';
 import RelationshipTab from './RelationshipTab';
 import ChatbotTab from './ChatbotTab';
@@ -174,7 +175,13 @@ export default function SsabiPanel({
          * 고정 위치로 그린다(size-9=36px). px-6만 쓰면 이 배지의 오른쪽 끝이 버튼과 정확히
          * 같은 x좌표에서 겹친다 — 버튼 폭(36px) + 여유(20px)만큼 오른쪽을 비워 겹침을 막는다.
          */}
-        <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
+        {/* 헤더에 아모 얼굴 추가(2026-08-26, 사용자 요청 — 캐릭터를 디자인 전반에 더
+            드러내고 싶다고 함). 챗봇 탭 답변 아바타·여닫기 버튼과 같은 이미지를 써서
+            패널 전체에서 "아모"가 하나의 캐릭터로 일관되게 보이게 한다. */}
+        <div className="flex items-center gap-2">
+          <img src={ssabiFace} alt="" aria-hidden="true" className="h-7 w-auto object-contain" />
+          <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
+        </div>
         {appliedCutoff !== null ? (
           <span className="shrink-0 rounded-full bg-brief-accent-soft px-2.5 py-1 font-dashMono text-[11px] font-bold text-brief-accent">
             {appliedCutoff}p까지 읽음
