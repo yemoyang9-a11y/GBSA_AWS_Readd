@@ -90,4 +90,37 @@ describe('장 요약 렌더링 (2026-08-26 회귀)', () => {
 
     expect(prompt).not.toContain('## 장 요약');
   });
+
+  /**
+   * 실사용 회귀(2026-08-28, 데모 당일) — 장 번호·페이지 범위가 프롬프트에 정확히
+   * 렌더링돼 있는데도(위 테스트들 통과 확인) Haiku가 "1장까지 요약해줘"·"30페이지까지
+   * 요약해줘"에 반복적으로 [NO_EVIDENCE]를 반환하는 걸 실제 배포본에서 재현했다(같은
+   * 질문 4회 연속 거절, MOCK_MODE 아님). 시스템 규칙 7번(범위 한정 요약)이 프롬프트
+   * 맨 앞부분에 있고, 실제 "장 요약" 데이터는 인물·관계·용어·사건 등 수십~수백 건의
+   * 다른 근거보다 앞서 나오지만 그 사이 거리가 멀어 다른 ⚠️ 지시들(2026-08-24
+   * currentPageText, 2026-08-25 quote, 2026-08-25 인물·관계)과 같은 이유로 규칙을
+   * 놓치는 것으로 보인다 — 이 파일의 기존 관례대로 "지시는 근거 바로 옆에 있어야
+   * 모델이 놓치지 않는다"를 장 요약에도 적용한다.
+   */
+  test('장 요약 바로 뒤에 범위 한정 요청을 상기시키는 문구가 있다', () => {
+    const prompt = buildPrompt(makeContext(), '(규칙)');
+
+    const reminder = '장 번호·페이지 범위를 보고 답하세요';
+    expect(prompt).toContain(reminder);
+
+    const lastChapterContentIdx = prompt.indexOf('초봉이가 제중당에서 일한다.');
+    const reminderIdx = prompt.indexOf(reminder);
+
+    expect(lastChapterContentIdx).toBeGreaterThanOrEqual(0);
+    expect(reminderIdx).toBeGreaterThan(lastChapterContentIdx);
+    // 마지막 장 요약 내용 바로 뒤에 붙어 있어야 한다 (근거 옆에 지시) — 다른 섹션이
+    // 끼어들 만큼 멀지 않은지 문자 거리로 확인
+    expect(reminderIdx - lastChapterContentIdx).toBeLessThan(200);
+  });
+
+  test('장 요약이 없으면 범위 한정 리마인더도 없다', () => {
+    const prompt = buildPrompt(makeContext({ chapter_summaries: [] }), '(규칙)');
+
+    expect(prompt).not.toContain('장 번호·페이지 범위를 보고 답하세요');
+  });
 });
