@@ -121,6 +121,124 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
   });
 });
 
+describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
+  const BOOK_ID = 'takryu-vol1';
+  const DEVICE_ID = 'device-123';
+  const K = 130; // 마지막 페이지까지 읽음 (완독)
+
+  function seedThinContext(): void {
+    // 근거에 없는 대상을 묻는 시나리오 — 엔티티/요약/검색결과 모두 비어 있음
+    (repo.findChapterSummaries as jest.Mock).mockResolvedValue([{ title: '1장', end_page: 40 }]);
+    (repo.getCurrentChapterText as jest.Mock).mockResolvedValue('본문...');
+    (repo.findCharacters as jest.Mock).mockResolvedValue([]);
+    (repo.findRelationships as jest.Mock).mockResolvedValue([]);
+    (repo.findCharacterNotes as jest.Mock).mockResolvedValue([]);
+    (repo.findTerms as jest.Mock).mockResolvedValue([]);
+    (repo.findEvents as jest.Mock).mockResolvedValue([]);
+    (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
+    (vectorSearch as jest.Mock).mockResolvedValue([]);
+  }
+
+  beforeEach(() => {
+    process.env.MOCK_MODE = 'false';
+    jest.spyOn(console, 'log').mockImplementation();
+    seedThinContext();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('FR-QNA-004 🚦: 완독(isComplete=true)이면 프롬프트에 완독 태도 지시가 실린다', async () => {
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '그건 이 책에 나오지 않아요.';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(
+      BOOK_ID,
+      '승재랑 계봉이 결혼해?',
+      K,
+      DEVICE_ID,
+      undefined,
+      undefined,
+      undefined,
+      true
+    )) {
+      chunks.push(chunk);
+    }
+
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    expect(prompt).toContain('독자 상태: 완독');
+  });
+
+  test('FR-QNA-004 🚦: 완독 상태에서 근거 없는 질문에 모델의 단정 부정이 고정 문구로 치환되지 않고 그대로 나간다', async () => {
+    // positive — 완독이면 "그건 이 책에 나오지 않아요"가 통과한다
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '그건 이 책에 나오지 않아요.';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(
+      BOOK_ID,
+      '승재랑 계봉이 결혼해?',
+      K,
+      DEVICE_ID,
+      undefined,
+      undefined,
+      undefined,
+      true
+    )) {
+      chunks.push(chunk);
+    }
+
+    const output = chunks.join('');
+    expect(output).toBe('그건 이 책에 나오지 않아요.');
+    expect(output).not.toBe(NO_EVIDENCE_MESSAGE);
+  });
+
+  test('FR-QNA-004 🚦: 완독이 아니면(isComplete=false) 같은 질문·같은 빈 근거에 완독 태도 지시가 실리지 않는다', async () => {
+    // negative 짝 — 완독 예외는 is_complete=true에서만 열린다
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '[NO_EVIDENCE]';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(BOOK_ID, '승재랑 계봉이 결혼해?', 40, DEVICE_ID)) {
+      chunks.push(chunk);
+    }
+
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    expect(prompt).not.toContain('독자 상태: 완독');
+    expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+  });
+
+  test('FR-QNA-004 🚦: 완독이어도 모델이 [NO_EVIDENCE]를 반환하면 고정 문구로 폴백한다', async () => {
+    // 완독 예외가 열려도 근거 부재 토큰 경로 자체는 유지된다 — 완독 독자에겐 아무것도
+    // 새로 노출하지 않으므로 안전한 폴백이다
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '[NO_EVIDENCE]';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(
+      BOOK_ID,
+      '오늘 날씨 어때',
+      K,
+      DEVICE_ID,
+      undefined,
+      undefined,
+      undefined,
+      true
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+  });
+});
+
 describe('챗봇 전체 플로우 - FR-QNA-006 🚦', () => {
   test('FR-QNA-006: handleQuery는 K를 모든 단계에 전파', async () => {
     // TODO: Mock repository 추가 후 구현

@@ -181,6 +181,7 @@ export async function mockGetCutoffSnapshot(_deviceId: string, _bookId: string) 
     current_page: 81,
     cutoff: 80,
     percent: 23.5,
+    is_complete: false,
     chapter: {
       chapter_no: 3,
       title: '3장',

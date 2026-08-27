@@ -101,6 +101,10 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
 
     // 기준점 스냅샷 가져오기
     let K: number;
+    // 완독 여부 — 기준점 결정기가 파생한 값을 그대로 받는다(재계산 금지, 절대 규칙 2번).
+    // 완독이면 챗봇이 근거에 없는 대상을 "이 책에 안 나온다"고 단정할 수 있다
+    // (D14, 절대 규칙 7번·R10의 완독 예외 — FR-QNA-004 🚦).
+    let isComplete = false;
     // 대화 이력 기록 대상 — MOCK_MODE는 DB 없이 도는 화면 개발 경로라 이력 기록을 생략한다
     let conversationId: number | undefined;
     // 지금 보고 있는 페이지 본문 (2026-08-24, 사용자 요청) — K로 자르는 근거 조립과
@@ -113,6 +117,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // Mock 모드: 테스트용 고정 K 값
       const mockSnapshot = await mockGetCutoffSnapshot(deviceId, bookId);
       K = mockSnapshot.cutoff;
+      isComplete = mockSnapshot.is_complete;
       console.log('[Mock] Using mock cutoff:', K);
     } else {
       // 진도 이벤트 동봉 처리 (R4 요청)
@@ -128,6 +133,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // FR-PRG-003 🚦: K = 진도 레코드 없음 ? 0 : current_page
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       K = snapshot.cutoff;
+      isComplete = snapshot.is_complete;
 
       // 첫 페이지 예외(K=0)에서는 페이지 1 본문을 별도 섹션으로 우회 주입하지 않는다.
       if (pageIsIncludedInCutoff(snapshot.current_page, K)) {
@@ -167,7 +173,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         deviceId,
         conversationId,
         quoteText,
-        currentPageText
+        currentPageText,
+        isComplete
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
         // 근거 부재 거절도 일반 delta로 흘려보냄

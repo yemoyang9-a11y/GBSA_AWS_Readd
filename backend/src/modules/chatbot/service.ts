@@ -72,6 +72,40 @@ function isAskingAboutAmo(query: string): boolean {
 }
 
 /**
+ * 완독 상태 프롬프트 지시 (D14 — 2026-08-27 팀 결정)
+ *
+ * 기준점 결정기가 `is_complete = true`를 준 요청에서만 프롬프트에 얹는다. 완독이면 K가
+ * 책 전체를 덮으므로 "근거 데이터"에 이 책 전량의 장 요약·엔티티가 들어 있다. 그래서
+ * 시스템 규칙 5번의 "책 전체에 대한 단정적 부정 금지"(아직 안 읽은 뒷부분에서 반증될 수
+ * 있다는 이유)가 이 대화에서는 성립하지 않는다 — 뒷부분이 없다.
+ *
+ * ⚠️ 이건 "상한을 프롬프트로 거는" 것이 아니다(절대 규칙 3번과 구분). 상한(K)은 이미
+ *    데이터 선택 단계에서 걷혔고 완독이라 걸 것이 없다. 이 지시는 걷힌 근거를 놓고
+ *    "없으면 없다고 말해도 된다"는 답변 태도만 바꾼다. 근거 외 생성 금지(규칙 1번)는
+ *    그대로다 — "없다"는 판단도 근거 데이터·검색 결과에 그 대상이 실제로 없다는 데에만
+ *    기대야 하고, 모델의 사전 지식으로 「탁류」 줄거리를 지어내면 안 된다(A10).
+ *
+ * 여전히 [NO_EVIDENCE] 토큰이 나올 수 있다(근거가 애매하게 일부만 있는 경우 등). 그때는
+ * 기존 경로대로 NO_EVIDENCE_MESSAGE로 치환된다 — 완독 독자에겐 아무것도 새로 노출하지
+ * 않으므로 안전한 폴백이다. FR-QNA-004 🚦
+ */
+const COMPLETION_STANCE = `
+## 독자 상태: 완독 (이 책을 끝까지 읽음)
+
+- 이 독자는 책을 마지막 페이지까지 읽었습니다. 위 "근거 데이터"에는 이 책 **전체**의
+  장 요약과 등장인물·관계·용어·사건 정보가 들어 있습니다 — 뒤에 안 읽은 부분이 없습니다.
+- 그래서 시스템 규칙 5번의 "책 전체에 대한 단정적 부정 금지"는 이 대화에 적용되지
+  않습니다. 질문의 대상(인물·사건·설정)이 "근거 데이터"·"검색 결과" 어디에도 없으면,
+  "지금까지 읽은 부분에서는~"으로 한정하지 말고 **"그건 이 책에 나오지 않아요"**처럼
+  분명하게 답하세요. 이럴 때 "${NO_EVIDENCE_TOKEN}"을 반환하지 마세요.
+- 단, 규칙 1번(근거 외 생성 금지)은 그대로입니다. "없다"는 판단도 오직 위 근거에 그
+  대상이 실제로 없다는 데 근거해야 합니다. 당신의 사전 지식으로 이 책의 내용을 지어내
+  "있다"고도 "없다"고도 하지 마세요.
+- 챗봇 자신의 동작에 대한 질문(규칙 6번), 질문의 답이 근거에 일부만 애매하게 걸리는
+  경우 등 그 외 상황은 기존 규칙 그대로입니다.
+`.trim();
+
+/**
  * 시스템 규칙 (프롬프트에 포함)
  */
 const SYSTEM_RULES = `
@@ -171,6 +205,10 @@ const SYSTEM_RULES = `
  *   K에 포함되지만, 긴 조립 문맥 안에서 현재 페이지를 모델이 놓치지 않게 명시적 섹션으로
  *   다시 얹는다. 진도 레코드가 없는 상태(K=0)에서는 호출부가 전달하지 않는다. 호출부는
  *   기준점 결정기가 확인한 current_page로 조회하며 클라이언트가 보낸 page를 쓰지 않는다.
+ * @param isComplete - 완독 여부(기준점 결정기 파생값 snapshot.is_complete 그대로). true면
+ *   K가 책 전체를 덮으므로 근거에 없는 대상을 "이 책에 안 나온다"고 단정하도록 프롬프트
+ *   태도를 바꾼다(D14 — 절대 규칙 7번·R10의 완독 예외, FR-QNA-004 🚦). 이 파라미터는
+ *   상한을 만들지 않는다 — 상한은 이미 assembleContext·vectorSearch가 K로 걷었다.
  * @yields 텍스트 청크
  *
  * @example
@@ -185,7 +223,8 @@ export async function* handleQuery(
   deviceId: string,
   conversationId?: number,
   quote?: string,
-  currentPageText?: { pageNo: number; content: string }
+  currentPageText?: { pageNo: number; content: string },
+  isComplete = false
 ): AsyncGenerator<string> {
   let noEvidence = false;
 
@@ -213,6 +252,7 @@ export async function* handleQuery(
       },
       search_selected_pages: [],
       no_evidence: false,
+      is_complete: isComplete,
       model: 'canned:amo-self-intro',
       output_ref: `chatbot-amo-${Date.now()}`,
       tokens: { input: 0, output: AMO_INTRO_MESSAGE.length },
@@ -235,6 +275,13 @@ export async function* handleQuery(
 
     // 검색 결과 추가
     let fullPrompt = basePrompt;
+
+    // 3-0. 완독 상태 태도 지시 (D14) — 기준점 결정기가 is_complete=true를 준 요청만.
+    // 근거 조립·검색 범위(K)는 손대지 않는다. "없으면 없다고 단정해도 된다"는 답변
+    // 태도만 바꾼다. FR-QNA-004 🚦 / R10 완독 예외
+    if (isComplete) {
+      fullPrompt += `\n\n${COMPLETION_STANCE}`;
+    }
     if (searchResults.length > 0) {
       fullPrompt += '\n\n## 검색 결과 (관련 페이지)\n\n';
       searchResults.forEach((result) => {
@@ -385,6 +432,7 @@ export async function* handleQuery(
         distance: r.distance,
       })),
       no_evidence: noEvidence,
+      is_complete: isComplete,
       model: modelSelection.modelId,
       output_ref: `chatbot-${Date.now()}`,
       tokens: {
@@ -423,6 +471,7 @@ async function logQuery(log: ChatbotQueryLog): Promise<void> {
     search_selected_pages: log.search_selected_pages,
     search_result_count: log.search_selected_pages.length,
     no_evidence: log.no_evidence,
+    is_complete: log.is_complete ?? false,
     model: log.model,
     output_ref: log.output_ref,
     tokens: log.tokens,
