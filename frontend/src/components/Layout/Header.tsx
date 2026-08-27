@@ -11,9 +11,12 @@
  * 계정 개념이 없으므로 "OOO님의 서재" 같은 인칭 제목은 두지 않는다 (team-sync §4.8).
  *
  * 콜론 자리에 실제 로고 이미지(2026-08-26, 사용자 제공)를 넣었다 — 북마크 리본을
- * 반으로 접어 콜론처럼 쓴 마크다. 래스터 파일 없이 인라인 SVG로 재현했다 — RE/ADD
- * 글자와 같은 색(dash-ink, currentColor)을 자동으로 따라가고, 아모 얼굴(ssabi-face.png)
- * 과 같은 북마크 실루엣이라 워드마크·캐릭터가 한 가족처럼 읽힌다.
+ * 반으로 접어 콜론처럼 쓴 마크다. 래스터 파일 없이 인라인 SVG로 재현했다 — 아모
+ * 얼굴(ssabi-face.png)과 같은 북마크 실루엣이라 워드마크·캐릭터가 한 가족처럼 읽힌다.
+ *
+ * 오렌지/잉크 두 톤이 "색이 튄다"는 피드백으로, 시안 7종 비교 후 올리브 단색
+ * (#6e6b42)으로 교체했다(2026-08-27) — RE/ADD 글자색(dash-ink)을 따라가던 currentColor
+ * 연동은 이제 없고, 실루엣과 무관하게 고정된 색이다.
  */
 function ReaddMark() {
   return (
@@ -24,13 +27,7 @@ function ReaddMark() {
       aria-hidden="true"
       className="mx-[1px] inline-block shrink-0 align-[-4px]"
     >
-      <clipPath id="readd-mark-clip">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-      </clipPath>
-      <g clipPath="url(#readd-mark-clip)">
-        <rect x="0" y="0" width="24" height="12" fill="#f2994a" />
-        <rect x="0" y="12" width="24" height="12" fill="currentColor" />
-      </g>
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="#6e6b42" />
     </svg>
   );
 }
@@ -47,7 +44,7 @@ export default function Header() {
         <button
           type="button"
           disabled
-          className="flex items-center gap-2 font-dashSans text-[19px] text-dash-muted disabled:opacity-40"
+          className="flex items-center gap-2 border-b border-transparent pb-0.5 font-dashSans text-[19px] text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink disabled:opacity-40 disabled:hover:border-transparent disabled:hover:text-dash-muted"
         >
           <svg
             aria-hidden="true"

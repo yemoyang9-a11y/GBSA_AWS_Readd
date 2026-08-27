@@ -7,8 +7,9 @@ describe('Header', () => {
     // 노드에는 더 이상 ":"가 없다("READD"). 마크 자체는 별도로 확인한다.
     const { container } = render(<Header />);
     expect(screen.getByText((_, el) => el?.textContent === 'READD')).toBeInTheDocument();
-    // clipPath id는 워드마크 북마크 SVG에만 있다 — 검색 버튼 아이콘과 구분해서 짚는다.
-    expect(container.querySelector('#readd-mark-clip')).not.toBeNull();
+    // 올리브 단색(#6e6b42, 2026-08-27 교체)으로 채워진 path는 워드마크 북마크 SVG에만
+    // 있다 — 검색 버튼 아이콘(stroke 기반, fill 없음)과 구분해서 짚는다.
+    expect(container.querySelector('path[fill="#6e6b42"]')).not.toBeNull();
   });
 
   it('도서 검색은 대응 엔드포인트가 없어 비활성이다 (스펙 §7 #3)', () => {
