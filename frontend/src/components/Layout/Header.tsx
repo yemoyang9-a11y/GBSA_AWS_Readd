@@ -44,12 +44,12 @@ export default function Header() {
         <button
           type="button"
           disabled
-          className="flex items-center gap-2 border-b border-transparent pb-0.5 font-dashSans text-[19px] text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink disabled:opacity-40 disabled:hover:border-transparent disabled:hover:text-dash-muted"
+          className="flex items-center gap-2 border-b border-transparent pb-0.5 font-dashSans text-[15px] text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink disabled:opacity-40 disabled:hover:border-transparent disabled:hover:text-dash-muted"
         >
           <svg
             aria-hidden="true"
-            width="18"
-            height="18"
+            width="15"
+            height="15"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
