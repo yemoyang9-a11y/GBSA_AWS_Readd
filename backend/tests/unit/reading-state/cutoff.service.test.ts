@@ -102,6 +102,36 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     });
   });
 
+  describe('is_complete — 완독 여부 (D14, FR-QNA-004 🚦)', () => {
+    test('FR-QNA-004 🚦: 마지막 페이지에 도달하면 is_complete == true', async () => {
+      const snapshot = await serviceWith(SEED_BOOK.total_pages).getCutoffSnapshot(
+        SEED_DEVICE_ID,
+        SEED_BOOK_ID
+      );
+      expect(snapshot.is_complete).toBe(true);
+    });
+
+    test('FR-QNA-004 🚦: 마지막 페이지 직전(K=29)에서는 is_complete == false', async () => {
+      // negative 짝 — 완독 예외가 K=30에서만 열리고 그 앞에서는 닫혀 있어야 한다
+      const snapshot = await serviceWith(SEED_BOOK.total_pages - 1).getCutoffSnapshot(
+        SEED_DEVICE_ID,
+        SEED_BOOK_ID
+      );
+      expect(snapshot.is_complete).toBe(false);
+    });
+
+    test('중간 지점(K=15)에서는 is_complete == false', async () => {
+      const snapshot = await serviceWith(15).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+      expect(snapshot.is_complete).toBe(false);
+    });
+
+    test('진도 레코드가 없으면(책을 한 번도 열지 않음) is_complete == false', async () => {
+      // cutoff=0 상태는 완독이 아니다 — 표시용 current_page(1)로 재계산하면 안 된다
+      const snapshot = await serviceWith(null).getCutoffSnapshot(SEED_DEVICE_ID, SEED_BOOK_ID);
+      expect(snapshot.is_complete).toBe(false);
+    });
+  });
+
   describe('데이터 정합성 결함은 조용히 삼키지 않는다 (실패 = 미노출 — FR-SPL-005 🚦)', () => {
     test('도서가 없으면 스냅샷을 만들지 않는다', async () => {
       const { positions, books } = makeSeededFakes();

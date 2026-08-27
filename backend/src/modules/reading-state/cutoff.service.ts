@@ -11,9 +11,10 @@
  * ┌ 저장값 (유일) ────────────────────────────────────────────────┐
  * │  reading_position.current_page   ← 마지막으로 열어본 페이지      │
  * └───────────────────────────────────────────────────────────────┘
- *      cutoff  = 진도 레코드 없음 ? 0 : current_page   (FR-PRG-003 🚦)
- *      percent = current_page / total_pages     (R2 불변식, MVP 1장)
- *      chapter = current_page가 속한 장           (장 경계 테이블)
+ *      cutoff      = 진도 레코드 없음 ? 0 : current_page   (FR-PRG-003 🚦)
+ *      percent     = current_page / total_pages     (R2 불변식, MVP 1장)
+ *      is_complete = 진도 레코드 있음 && current_page >= total_pages  (D14, FR-QNA-004 🚦)
+ *      chapter     = current_page가 속한 장           (장 경계 테이블)
  *
  * ⚠️ **이 파일 밖에서 cutoff나 `%`를 계산하는 코드는 존재해서는 안 된다** (프론트 포함).
  *    FR-BRF-005의 "불일치 0건"은 검증이 아니라 계산 지점 단일화로 달성한다.
@@ -97,12 +98,19 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService {
         (currentPage / totalPages) * 100, // FR-BRF-005 🚦 — 단일 원천
         PERCENT_DECIMALS
       );
+      // 완독 여부도 파생값이다 — 이 블록이 유일한 계산 지점이다(FR-BRF-005 🚦, 절대
+      // 규칙 2번). 진도 레코드가 있고 마지막 페이지 이상에 도달했을 때만 참이다. 레코드
+      // 없음(cutoff=0)은 완독이 아니다. 완독이면 K가 책 전체를 덮으므로, 챗봇이 근거에
+      // 없는 대상을 "이 책에 안 나온다"고 단정할 수 있다(D14, 2026-08-27 팀 결정 —
+      // 절대 규칙 7번·R10의 완독 예외). FR-QNA-004 🚦
+      const isComplete = stored !== null && currentPage >= totalPages;
       // ───────────────────────────────────────────────────────────────────────
 
       return {
         current_page: currentPage,
         cutoff,
         percent,
+        is_complete: isComplete,
         chapter: {
           chapter_no: chapter.chapter_no,
           title: chapter.title,

@@ -38,6 +38,7 @@ const SNAPSHOT: CutoffSnapshot = {
   current_page: 80,
   cutoff: 79,
   percent: 23.5,
+  is_complete: false,
   chapter: { chapter_no: 3, title: '제3장' },
 };
 

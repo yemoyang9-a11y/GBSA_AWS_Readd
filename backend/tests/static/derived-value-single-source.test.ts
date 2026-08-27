@@ -47,6 +47,14 @@ const FORBIDDEN_PATTERNS = [
     regex: /\/\s*\(?\s*(total_?[Pp]ages|total_?[Pp]age_?[Cc]ount)\b/,
     requiredAtSolePoint: true,
   },
+  {
+    // D14 — 완독 여부(is_complete)도 파생값이다. 결정기 밖에서 마지막 페이지 도달을
+    // 다시 계산하면(예: 프론트가 percent === 100 으로 완독을 흉내내거나 라우트가
+    // page >= total_pages 를 재판정) 그 지점이 곧 우회 표면이 된다. FR-QNA-004 🚦
+    label: '완독 여부 재계산 (page >= total_pages)',
+    regex: /\b(current_?[Pp]age|page)\s*>=?\s*\(?\s*total_?[Pp]ages\b/,
+    requiredAtSolePoint: true,
+  },
 ];
 
 /**

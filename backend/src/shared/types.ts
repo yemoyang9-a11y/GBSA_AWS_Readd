@@ -26,6 +26,16 @@ export interface CutoffSnapshot {
   /** 진도 퍼센트 (current_page / total_pages) */
   percent: number;
 
+  /**
+   * 완독 여부 — 진도 레코드가 있고 마지막 페이지 이상에 도달했는가.
+   *
+   * cutoff·percent와 같은 파생값이므로 기준점 결정기(cutoff.service.ts)에서만 계산한다
+   * (CLAUDE.md 절대 규칙 2번). 완독 상태에서는 K가 책 전체를 덮으므로 챗봇이 "그건 이
+   * 책에 나오지 않아요"처럼 단정적으로 답할 수 있다 — D14(2026-08-27 팀 결정)로
+   * 절대 규칙 7번·R10에 완독 예외를 뒀다. FR-QNA-004 🚦
+   */
+  is_complete: boolean;
+
   /** 현재 장 정보 */
   chapter: {
     chapter_no: number;
@@ -422,6 +432,10 @@ export interface ChatbotQueryLog {
 
   /** 근거 부재 여부 */
   no_evidence: boolean;
+
+  /** 완독 상태에서 처리된 질의인지 — D14. 완독 예외로 단정 부정이 허용된 답변을
+   *  CP5에서 되짚을 수 있게 남긴다. FR-QNA-004 🚦 */
+  is_complete?: boolean;
 
   /** 선택된 모델 */
   model: string;
