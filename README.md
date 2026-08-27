@@ -1,6 +1,6 @@
 # Re:Add
 
-**전자책 독자를 위한 진도 인식 사이드바 — 스포일러 완전 차단**
+**더하지만(+), 더 하지는 않는 독서 서비스**
 
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
