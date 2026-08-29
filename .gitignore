@@ -66,3 +66,6 @@ dump/
 # impeccable 탐지기용 디자인 컨텍스트 미러 (생성물, 정본은 루트)
 frontend/DESIGN.md
 frontend/.impeccable/
+
+# Claude Code 로컬 작업 공간 (git worktree 체크아웃 사본 등)
+.claude/
