@@ -411,9 +411,92 @@ PM2가 2프로세스를 띄웠으므로, 요청이 어느 워커로 가느냐에
 나와 챗봇 브랜치의 커밋 `21ab176`(테스트 3파일 추가)을 포함하지 않기 때문이다.
 회귀가 아니다.
 
-## Phase 2 — 배포 설정
+## Phase 2 — 배포 설정 (2026-08-30)
 
-<!-- Phase 2 완료 시 기록 -->
+### 무엇을 만들었나
+
+| 파일 | 역할 |
+| --- | --- |
+| `backend/Dockerfile` | 2단계 빌드 — builder(`npm ci` + `tsc`) → runtime(prod 의존성만) |
+| `backend/.dockerignore` | `.env`·`node_modules`·테스트·`data/` 제외 |
+| `backend/fly.toml` | 도쿄(`nrt`), 스케일-투-제로, 256MB, `/health` 체크 |
+| `frontend/public/_redirects` | Cloudflare Pages SPA fallback |
+| `.github/workflows/deploy-backend.yml` | SSM+PM2 → Fly 배포로 교체 |
+| `.github/workflows/ci-frontend.yml` | 배포 제거, 빌드·테스트만 (신규) |
+| `.github/workflows/deploy-frontend.yml` | 삭제 |
+
+코드 변경은 `backend/src/index.ts` 두 곳이다 — CORS 오리진 허용 목록과 `0.0.0.0` 바인딩.
+
+### 왜 그렇게 정했나
+
+**프론트 배포를 GitHub Actions에서 걷어냈다.** 예전 `deploy-frontend.yml`은 빌드 시
+`VITE_API_URL`을 **워크플로 파일에 하드코딩**해 번들에 구웠다
+(CloudFront 도메인 + `/api` 접두사). Vite는 이 값을 빌드 시점에 굽기 때문에
+주소가 바뀌면 워크플로를 고쳐 다시 빌드해야 한다. Cloudflare Pages의 Git 연동을 쓰면
+그 값이 Pages 대시보드의 빌드 환경변수로 가서 배포 설정과 한 곳에 모이고, 프리뷰
+배포도 자동으로 붙는다. Actions에는 빌드·테스트만 남겼다.
+
+**⚠️ 주소 형태가 바뀐다.** CloudFront 구성에서는 프론트와 API가 같은 오리진이라
+`/api` 접두사를 붙였는데, Fly는 별도 오리진이고 접두사가 없다. Pages 환경변수에
+`/api`를 붙이면 **전 요청이 404**가 된다. `.env.example`에 경고를 적어 뒀다.
+
+**CORS를 실제로 배선했다.** `CORS_ORIGIN`은 프로덕션 `.env`에 값이 있었는데
+**코드가 읽지 않고 있었다** — `SESSION_TIMEOUT_MS`와 똑같은 패턴이다(선언은 있는데
+사용처가 없음). 예전엔 CloudFront 하나가 `/`(S3)와 `/api`(ALB)를 함께 서빙해 같은
+오리진이었으므로 CORS가 사실상 무의미했고, 그래서 `*`로 열린 채 "개발용"이라고만
+적혀 있었다. 이제 프론트(Pages)와 백엔드(Fly)가 다른 오리진이라 실제로 동작하는
+설정이 됐다. 허용 목록에 없으면 CORS 헤더를 아예 붙이지 않고, 목록을 쓸 때는
+`Vary: Origin`을 함께 보낸다(없으면 CDN이 한 오리진의 응답을 다른 오리진에 재사용해
+산발적으로 깨진다).
+
+**`0.0.0.0`을 명시했다.** Node 기본값도 전 인터페이스지만, 컨테이너에서 루프백에만
+붙으면 프록시가 도달하지 못하고 **헬스체크만 계속 실패하는** 형태로 조용히 깨진다.
+
+**`data/`를 이미지에서 뺐다.** 「탁류」 원문 970KB는 배치 파이프라인(장 요약·임베딩
+생성)에서만 쓰고 API 서버 런타임에는 필요 없다. 배치는 로컬에서 Supabase를 향해 돌린다.
+
+### 검증 (로컬에서 실제로 확인한 것)
+
+배포는 안 했지만 이미지가 실제로 도는지는 여기서 확인할 수 있다.
+
+- `docker build` 성공 — 이미지 **263MB**
+- 컨테이너 기동 성공 — Node 22.23.2, 게이트웨이가 `claude-haiku-4-5` / 폴백 없음으로 뜸
+- `/health` 200
+- `/books` — 로컬 DB까지 관통해 실데이터 반환(「탁류」, 411페이지, 100%)
+- CORS **허용 오리진** → `Access-Control-Allow-Origin` + `Vary: Origin` 정상
+- CORS **비허용 오리진** → CORS 헤더 없음(브라우저가 차단) 정상
+
+**`NODE_ENV=production`에서 로컬 DB 연결이 거부되는 것도 확인했다** —
+`The server does not support SSL connections`. Phase 1에서 SSL 인증서 검증을 켠 것이
+의도대로 동작한다는 뜻이다(로컬 Docker Postgres는 SSL 미지원, Supabase는 지원).
+로컬에서 컨테이너를 띄울 때는 `NODE_ENV=development`로 둬야 한다.
+
+### 아직 못 한 것 — 사람이 해야 하는 부분
+
+flyctl이 이 PC에 설치돼 있지 않고, **앱 생성은 계정에 리소스를 만드는 작업이라
+실행하지 않았다.** 아래는 사람이 직접 한다.
+
+1. `fly launch --no-deploy` (backend/ 에서) — 앱 이름이 이미 쓰이면 다른 이름을 고르고
+   `fly.toml`의 `app` 값도 함께 고칠 것
+2. `fly secrets set` 으로 비밀값 주입 — `ANTHROPIC_API_KEY` `COHERE_API_KEY`
+   `DATABASE_URL` `CORS_ORIGIN` (값은 코드·문서에 남기지 않는다)
+3. GitHub 저장소에 `FLY_API_TOKEN` 시크릿 등록
+   (`fly tokens create deploy -x 999999h`)
+4. Cloudflare Pages 프로젝트 생성 — Root `frontend`, Build `npm run build`,
+   Output `dist`, 환경변수 `VITE_API_URL`(Fly 주소) · `VITE_USE_MOCK=false`
+
+### Phase 4로 넘기는 확인 사항
+
+- **SSE 버퍼링** — 예전엔 nginx `proxy_buffering off`와 CloudFront TTL 0 **두 계층**에
+  의존했다. Fly 프록시에서 같은 동작이 나는지는 배포해야 안다. 버퍼링이 켜져 있으면
+  첫 토큰이 안 나오고 응답이 끝날 때 한꺼번에 오는데, **로컬에서는 재현되지 않는다.**
+- **메모리 256MB** — 리캡 입력이 2만 토큰을 넘는 경우가 있어(실측: cutoff=400에서
+  19,228 토큰) 모자라면 OOM으로 죽는다.
+- **스케일-투-제로가 실제로 정지하는지** — 안 켜져 있으면 상시 과금이다. 대시보드에서
+  확인할 것.
+- **콜드스타트 시간** — 스케일-투-제로의 대가다.
+
+---
 
 ## Phase 3 — 데이터 이전
 
