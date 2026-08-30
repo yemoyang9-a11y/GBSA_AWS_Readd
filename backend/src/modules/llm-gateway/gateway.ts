@@ -37,10 +37,27 @@ dotenv.config();
 const MAX_RETRIES = 3;
 const TIMEOUT_MS = 120_000;
 
+/**
+ * 워크스페이스 ID (2026-08-30).
+ *
+ * **identity-linked API 키는 이 헤더가 없으면 400을 낸다** —
+ * "anthropic-workspace-id is required when authenticating with an identity-linked
+ * API key". SDK가 인증·버전·content-type 헤더는 자동으로 붙여 주지만 이건 아니다.
+ *
+ * 키 종류에 따라 필요 여부가 갈린다:
+ *   - 워크스페이스에 묶인 일반 키 → 불필요 (키 자체가 워크스페이스를 결정한다)
+ *   - identity-linked / 다중 워크스페이스 키 → **필수**
+ * 그래서 값이 있을 때만 싣는다. 불필요한 키에 억지로 넣으면 그쪽이 깨진다.
+ *
+ * 값은 Console → Settings → Workspaces 에서 확인한다 (`wrkspc_` 로 시작).
+ */
+const WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID?.trim();
+
 // Anthropic 클라이언트 초기화 — 인증은 ANTHROPIC_API_KEY 환경변수 (Bedrock의 IAM 서명 대체)
 const client = new Anthropic({
   maxRetries: MAX_RETRIES,
   timeout: TIMEOUT_MS, // TypeScript SDK의 timeout 단위는 밀리초다
+  ...(WORKSPACE_ID ? { defaultHeaders: { 'anthropic-workspace-id': WORKSPACE_ID } } : {}),
 });
 
 // 모델 버전 검증 (NFR-AI-002)
