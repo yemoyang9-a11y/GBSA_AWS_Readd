@@ -115,6 +115,60 @@ AccessDeniedException: ... explicit deny in a service control policy
 있어도, 판정식이 그 값을 참조하지 않으면 아무 의미가 없다. 이전 후 구성에서 환경변수
 목록을 옮길 때도 **키가 실제로 읽히는 경로가 있는지**를 함께 확인해야 한다.
 
+### 재검증 (2026-08-30)
+
+Phase 1까지 진행한 뒤 백업 항목을 처음부터 다시 확인했다. 되돌릴 수 없는 단계라
+"했다고 기억하는 것"과 "실제로 남아 있는 것"이 같은지 대조할 가치가 있다.
+
+| 항목 | 결과 |
+| --- | --- |
+| `.env` 키 이름 (17개) | 8/29과 동일. `SESSION_TIMEOUT_MS` 부재 재확인(`grep -c` = 0) |
+| 로컬 덤프 | `backup/ssabi.dump` 2,882,480 bytes. 매직바이트 `PGDMP` 확인 |
+| 덤프 내용 | `pg_restore --list`로 20개 테이블 전부 + `vector` 확장 확인 |
+| 덤프 커밋 여부 | `.gitignore:64` (`*.dump`)로 제외됨 — 저장소에 안 올라간다 |
+| 임베딩 적재 | 누락 0건 / 411건 |
+| Route53 | 호스팅 존 0건, 등록 도메인 0건 — **잃을 도메인 없음** |
+| S3 자산 | 아래 참조 — **전부 저장소에 정본 있음** |
+| RDS 수동 스냅샷 | `ssabi-final-before-aws-exit-20260830` 생성 완료(available, 20GB, 16.15) |
+
+**테이블별 행 수** (덤프에 담긴 실제 데이터 규모)
+
+```
+chatbot_conversation_turn 812   terms                246   aliases        101
+recap_call_log            450   relationships        195   characters      52
+pages                     411   character_notes      173   reading_session 52
+session_recap_cache       370   chatbot_conversation 172   reading_position 41
+                                events               151   chapters        19
+                                                           chapter_summaries 19
+                                                           books            3
+                                                           background_and_intro 2
+review_records 0 · saved_recap 0 · conversation_history 0
+```
+
+`saved_recap`이 0건인 것이 D-3에서 확인한 내용과 맞물린다 — 진입 판정이 매번 새 세션을
+만들고 스위퍼가 미동작이라 저장 리캡이 한 번도 쌓이지 않았다. 브리핑이 항상 실시간
+스트리밍이었다는 서술의 데이터 쪽 증거다.
+
+**S3 자산 — 잃을 것이 없는지 실제로 대조했다.** 8/29에는 버킷 목록만 보고 "고유 자산
+없음"이라고 적었는데, 근거가 약한 판단이었다. 객체를 전부 나열해 보니 보존 가치가 있는
+것이 실제로 있었다.
+
+| S3 객체 | 저장소 정본 | 판정 |
+| --- | --- | --- |
+| `data/raw/takryu.txt` (970 KiB) | `backend/data/raw/takryu.txt` | 커밋됨 |
+| `covers/*.jpg\|webp` (5개, ~550 KiB) | `frontend/public/covers/` | 5개 전부 커밋됨 |
+| `assets/ssabi-face-*.png` | `frontend/src/assets/images/ssabi-face.png` | 커밋됨 (S3 쪽은 Vite 빌드 산출물) |
+| `assets/index-*.js\|css` | — | 빌드 산출물, 재생성 가능 |
+| `deploy/*` | — | 구 배포 산출물, 이관으로 폐기 |
+
+`git ls-files --error-unmatch`로 7개 파일을 하나씩 대조해 전부 추적 중임을 확인했다.
+**S3에만 있는 고유 자산은 없다** — 이번엔 근거를 갖고 말할 수 있다.
+
+**스냅샷을 새로 만든 이유** — 기존 수동 스냅샷 2개는 8/24·8/27 시점이라 현재 상태가
+아니었다. 자동 스냅샷은 8/29까지 있지만 **인스턴스를 삭제하면 자동 스냅샷도 함께
+사라지고 수동 스냅샷만 남는다.** Phase 5에서 RDS를 지우기 전에 최신 수동 스냅샷이
+반드시 있어야 한다.
+
 ---
 
 ## Phase 0.5 — AWS 구성 기록 (2026-08-29)
