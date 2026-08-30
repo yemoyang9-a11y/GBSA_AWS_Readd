@@ -6,37 +6,41 @@
  *
  * @see architecture-r1.md 4.3절
  * @see dev-spec-R3-ai.md 1장, 2장
+ * @see docs/migration.md — Phase 1 (Bedrock → Anthropic API 이관, 2026-08-29)
+ *
+ * ⚠️ 이 파일이 교체 지점이다 — 4.3절 의존 규칙상 모든 LLM 호출이 게이트웨이를 경유하므로,
+ *    Bedrock에서 Anthropic API로 옮기면서 호출부(chatbot/service.ts, reading-state/
+ *    recap.service.ts, batch/pipeline/*)는 한 줄도 건드리지 않았다. `call`/`stream`의
+ *    시그니처와 반환 형태를 그대로 유지한 이유다.
  */
 
-import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-  InvokeModelWithResponseStreamCommand,
-} from '@aws-sdk/client-bedrock-runtime';
-import {
-  getModelForTask,
-  validateModelVersions,
-  DEFAULT_EFFORT,
-  EFFORT_ENABLED,
-  FALLBACK_MODEL_ID,
-  FALLBACK_ENABLED,
-  getModelFamily,
-} from './model-config';
-import { withRetry, withFallback } from './retry';
+import Anthropic from '@anthropic-ai/sdk';
+import { getModelForTask, validateModelVersions, DEFAULT_EFFORT, EFFORT_ENABLED } from './model-config';
 import dotenv from 'dotenv';
 
 // 환경 변수 로드 (gateway가 먼저 로드될 수 있으므로)
 dotenv.config();
 
 /**
- * 게이트웨이 인터페이스
- * - 8/19 오전: 최소 구현 ✅
- * - 8/19~8/20: 완성 (모델 매핑, 재시도, Rate Limit)
+ * 재시도·타임아웃 정책 (NFR-AI-003, D-2로 재정의 — 폴백 모델 없이 재시도만)
+ *
+ * SDK 내장 재시도를 쓴다. 직접 구현하지 않는 이유 — SDK는 408/409/429/5xx와 연결 오류를
+ * Anthropic의 실제 에러 타입으로 판별해 지수 백오프로 재시도한다. 예전 retry.ts의
+ * `isRetryableError`는 'ThrottlingException' 같은 **AWS 에러 이름**을 문자열 매칭했는데,
+ * 그 이름들은 Anthropic SDK에서 절대 나오지 않는다 — 그대로 뒀다면 모든 오류가
+ * "재시도 불가"로 분류돼 재시도가 조용히 죽었을 것이다.
+ *
+ * 타임아웃은 스트리밍 여부와 무관하게 넉넉히 잡는다. 리캡은 완결 장이 많이 쌓이면
+ * 입력이 2만 토큰을 넘고(실측: cutoff=400에서 19,228 토큰), 챗봇 전량 주입도 8천 토큰
+ * 규모라 첫 토큰까지 시간이 걸린다.
  */
+const MAX_RETRIES = 3;
+const TIMEOUT_MS = 120_000;
 
-// Bedrock 클라이언트 초기화
-const client = new BedrockRuntimeClient({
-  region: process.env.AWS_REGION || 'us-east-1',
+// Anthropic 클라이언트 초기화 — 인증은 ANTHROPIC_API_KEY 환경변수 (Bedrock의 IAM 서명 대체)
+const client = new Anthropic({
+  maxRetries: MAX_RETRIES,
+  timeout: TIMEOUT_MS, // TypeScript SDK의 timeout 단위는 밀리초다
 });
 
 // 모델 버전 검증 (NFR-AI-002)
@@ -48,10 +52,9 @@ validateModelVersions();
 export interface LLMCallOptions {
   maxTokens?: number;
   /**
-   * 추론 강도. 생략하면 DEFAULT_EFFORT('medium').
+   * 추론 강도. 생략하면 DEFAULT_EFFORT(기본은 꺼짐).
    *
-   * ⚠️ Sonnet 5 이상에서만 받는다 — Sonnet 4.5는 "Extra inputs are not permitted"로
-   *    요청 자체를 거절한다(2026-08-25 Bedrock 확인).
+   * ⚠️ Sonnet 5 이상에서만 받는다 — Haiku 4.5·Sonnet 4.5는 이 필드를 거절한다.
    */
   effort?: string;
 }
@@ -65,98 +68,52 @@ export interface LLMStreamUsage {
 }
 
 /**
- * 요청 바디의 effort 부분.
- *
- * effort를 못 받는 모델로 되돌릴 수 있도록(`BEDROCK_EFFORT=` 빈 값) 필드 자체를 빼는
- * 경로를 남긴다 — 넣은 채로 Sonnet 4.5를 부르면 "Extra inputs are not permitted"로 깨진다.
+ * SDK가 받는 effort 값 — 이 다섯 개 밖은 요청 자체가 거절된다.
  */
-function effortConfig(effort?: string): { output_config?: { effort: string } } {
+const VALID_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+type Effort = (typeof VALID_EFFORTS)[number];
+
+function isValidEffort(value: string): value is Effort {
+  return (VALID_EFFORTS as readonly string[]).includes(value);
+}
+
+/**
+ * 요청의 effort 부분.
+ *
+ * effort를 못 받는 모델(현재 기본값 Haiku 4.5)로 되돌릴 수 있도록 필드 자체를 빼는
+ * 경로를 남긴다 — 넣은 채로 Haiku를 부르면 요청이 400으로 깨진다.
+ *
+ * 환경변수에서 온 문자열은 오타가 있을 수 있어 검증한다. 예전엔 그대로 실어 보내서
+ * 잘못된 값이면 전 호출이 400으로 깨졌는데, 원인이 환경변수 오타라는 게 에러 메시지에
+ * 드러나지 않았다. 여기서 걸러 경고를 남기고 필드를 빼는 편이 낫다 — effort는 품질
+ * 조절 옵션이지 정확성에 관여하는 값이 아니라, 빠져도 응답 자체는 정상이다.
+ */
+function effortConfig(effort?: string): { output_config?: { effort: Effort } } {
   const resolved = effort ?? DEFAULT_EFFORT;
   if (!resolved || (effort === undefined && !EFFORT_ENABLED)) return {};
+
+  if (!isValidEffort(resolved)) {
+    console.warn(
+      `[LLM Gateway] 알 수 없는 effort 값 "${resolved}" — 무시하고 요청에 싣지 않는다. ` +
+        `가능한 값: ${VALID_EFFORTS.join(', ')}`
+    );
+    return {};
+  }
+
   return { output_config: { effort: resolved } };
 }
 
 /**
- * 모델 계열별 요청 바디 조립.
+ * 응답 content 블록에서 텍스트만 이어붙인다.
  *
- * Nova는 Claude Messages API(`anthropic_version`/`messages[].content: string`)와
- * 스키마가 다르다 — `schemaVersion`/`inferenceConfig`, content가 파트 배열이다.
- * FALLBACK_MODEL_ID 배선(model-config.ts 참고, 2026-08-26)을 위해 분기한다.
+ * `content`는 판별 유니온이라 `.type`으로 좁히지 않고 `.text`를 읽을 수 없다. thinking
+ * 블록이 섞여 들어오는 모델로 올릴 때도 이 함수가 텍스트만 고르므로 호출부가 안 바뀐다.
  */
-function buildRequestBody(modelId: string, prompt: string, options: LLMCallOptions): object {
-  if (getModelFamily(modelId) === 'nova') {
-    return {
-      schemaVersion: 'messages-v1',
-      messages: [{ role: 'user', content: [{ text: prompt }] }],
-      inferenceConfig: { maxTokens: options.maxTokens || 4096 },
-    };
-  }
-
-  return {
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: options.maxTokens || 4096,
-    ...effortConfig(options.effort),
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  };
-}
-
-/**
- * 모델 계열별 (비스트리밍) 응답 파싱.
- */
-function parseResponseBody(
-  modelId: string,
-  responseBody: any
-): { text: string; inputTokens: number; outputTokens: number } {
-  if (getModelFamily(modelId) === 'nova') {
-    return {
-      text: responseBody.output?.message?.content?.[0]?.text || '',
-      inputTokens: responseBody.usage?.inputTokens || 0,
-      outputTokens: responseBody.usage?.outputTokens || 0,
-    };
-  }
-
-  return {
-    text: responseBody.content[0].text,
-    inputTokens: responseBody.usage?.input_tokens || 0,
-    outputTokens: responseBody.usage?.output_tokens || 0,
-  };
-}
-
-/**
- * 모델 계열별 스트리밍 청크 파싱.
- */
-function parseStreamChunk(
-  modelId: string,
-  chunk: any
-): { text?: string; inputTokens?: number; outputTokens?: number } {
-  if (getModelFamily(modelId) === 'nova') {
-    if (chunk.contentBlockDelta?.delta?.text) {
-      return { text: chunk.contentBlockDelta.delta.text };
-    }
-    if (chunk.metadata?.usage) {
-      return {
-        inputTokens: chunk.metadata.usage.inputTokens,
-        outputTokens: chunk.metadata.usage.outputTokens,
-      };
-    }
-    return {};
-  }
-
-  if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-    return { text: chunk.delta.text };
-  }
-  if (chunk.type === 'message_start' && chunk.message?.usage?.input_tokens) {
-    return { inputTokens: chunk.message.usage.input_tokens };
-  }
-  if (chunk.type === 'message_delta' && chunk.delta?.usage?.output_tokens) {
-    return { outputTokens: chunk.delta.usage.output_tokens };
-  }
-  return {};
+function extractText(content: Anthropic.ContentBlock[]): string {
+  return content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
 }
 
 /**
@@ -177,47 +134,28 @@ export async function call(
 ): Promise<string> {
   const startTime = Date.now();
 
-  // 모델별 1회 호출 (재시도 포함, NFR-AI-003) — 폴백 배선(withFallback)이 이 함수를
-  // primary/fallback 모델 ID로 각각 부른다.
-  const invokeModel = (modelId: string) =>
-    withRetry(
-      async () => {
-        const requestBody = buildRequestBody(modelId, prompt, options);
-
-        const command = new InvokeModelCommand({
-          modelId,
-          contentType: 'application/json',
-          accept: 'application/json',
-          body: JSON.stringify(requestBody),
-        });
-
-        const response = await client.send(command);
-        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-        return { modelId, ...parseResponseBody(modelId, responseBody) };
-      },
-      { task, modelId }
-    );
+  // 모델 매핑 (D13 ②, NFR-AI-001)
+  const modelId = getModelForTask(task);
 
   try {
-    // 모델 매핑 (D13 ②, NFR-AI-001)
-    const primaryModelId = getModelForTask(task);
-
-    // 폴백 배선(NFR-AI-003, model-config.ts 참고) — 기본은 꺼짐, 검증 전까지 primary만 탄다
-    const result = FALLBACK_ENABLED
-      ? await withFallback(primaryModelId, FALLBACK_MODEL_ID, invokeModel)
-      : await invokeModel(primaryModelId);
-
-    // 토큰 계측 (NFR-OBS-004)
-    const duration = Date.now() - startTime;
-    logMetrics({
-      task,
-      modelId: result.modelId,
-      inputTokens: result.inputTokens,
-      outputTokens: result.outputTokens,
-      durationMs: duration,
+    // 재시도는 SDK가 처리한다 (NFR-AI-003) — 폴백 모델은 두지 않는다 (D-2)
+    const response = await client.messages.create({
+      model: modelId,
+      max_tokens: options.maxTokens || 4096,
+      ...effortConfig(options.effort),
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    return result.text;
+    // 토큰 계측 (NFR-OBS-004)
+    logMetrics({
+      task,
+      modelId,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      durationMs: Date.now() - startTime,
+    });
+
+    return extractText(response.content);
   } catch (error) {
     console.error('LLM Gateway Error:', { task, error });
     throw new Error(`LLM call failed for task "${task}": ${error}`);
@@ -235,12 +173,15 @@ export async function call(
  * @yields 텍스트 청크
  * @returns 스트리밍 종료 시 토큰 사용량
  *
- * @example
- * const gen = stream('chatbot', '질문...', { maxTokens: 8192 });
- * for await (const chunk of gen) {
- *   console.log(chunk);
- * }
- * const usage = gen.return(await gen.next()).value; // 사용량 접근
+ * ⚠️ 반환 타입(`AsyncGenerator<string, LLMStreamUsage>`)을 Bedrock 시절 그대로 유지한다.
+ *    recap.service.ts가 `gen.next()`를 수동으로 돌려 마지막 반환값(usage)을 받아
+ *    NFR-OBS-002 🚦 로그에 적기 때문이다 — `for await`로는 이 값을 못 받는다.
+ *
+ * ⚠️ 하드 상한 도달 시 호출부가 `gen.return()`으로 스트림을 조기 취소한다
+ *    (recap.service.ts의 분량 상한). Bedrock에서는 그 취소가 AWS SDK 내부 예외로
+ *    번져 응답 전체를 500으로 만든 전례가 있어 호출부가 try/catch로 삼키고 있다.
+ *    그 방어는 그대로 두는 게 안전하다 — Anthropic SDK에서 같은 일이 나는지는
+ *    실배포에서 확인해야 한다.
  */
 export async function* stream(
   task: string,
@@ -248,79 +189,45 @@ export async function* stream(
   options: LLMCallOptions = {}
 ): AsyncGenerator<string, LLMStreamUsage> {
   const startTime = Date.now();
-  let inputTokens = 0;
-  let outputTokens = 0;
 
-  // 모델 하나로 스트리밍 (재시도는 연결 자체에만 적용 — NFR-AI-003)
-  async function* invokeStream(modelId: string): AsyncGenerator<string> {
-    const requestBody = buildRequestBody(modelId, prompt, options);
-
-    const command = new InvokeModelWithResponseStreamCommand({
-      modelId,
-      contentType: 'application/json',
-      accept: 'application/json',
-      body: JSON.stringify(requestBody),
-    });
-
-    const response = await withRetry(() => client.send(command), { task, modelId });
-
-    if (!response.body) {
-      throw new Error('No response stream');
-    }
-
-    for await (const event of response.body) {
-      if (event.chunk?.bytes) {
-        const chunk = JSON.parse(new TextDecoder().decode(event.chunk.bytes));
-        const delta = parseStreamChunk(modelId, chunk);
-
-        if (delta.text) yield delta.text;
-        if (delta.inputTokens) inputTokens = delta.inputTokens;
-        if (delta.outputTokens) outputTokens = delta.outputTokens;
-      }
-    }
-  }
+  // 모델 매핑 (D13 ②, NFR-AI-001)
+  const modelId = getModelForTask(task);
 
   try {
-    // 모델 매핑 (D13 ②, NFR-AI-001)
-    const primaryModelId = getModelForTask(task);
-    let usedModelId = primaryModelId;
-    let yieldedAny = false;
+    // 재시도는 SDK가 처리한다 (NFR-AI-003) — 폴백 모델은 두지 않는다 (D-2)
+    const messageStream = client.messages.stream({
+      model: modelId,
+      max_tokens: options.maxTokens || 4096,
+      ...effortConfig(options.effort),
+      messages: [{ role: 'user', content: prompt }],
+    });
 
-    try {
-      for await (const text of invokeStream(primaryModelId)) {
-        yieldedAny = true;
-        yield text;
-      }
-    } catch (error) {
-      // 폴백 배선(NFR-AI-003, model-config.ts 참고) — 기본은 꺼짐, 검증 전까지 안 탄다.
-      // 이미 일부 텍스트를 클라이언트로 내보낸 뒤라면 처음부터 다시 스트리밍하는 순간
-      // 화면에 두 응답이 이어 붙는 꼴이 되므로, 그 경우엔 폴백하지 않고 그대로 실패시킨다.
-      if (!FALLBACK_ENABLED || yieldedAny) throw error;
-
-      console.warn('Primary model stream failed before any output, trying fallback', {
-        primary: primaryModelId,
-        fallback: FALLBACK_MODEL_ID,
-        error,
-      });
-      usedModelId = FALLBACK_MODEL_ID;
-      for await (const text of invokeStream(FALLBACK_MODEL_ID)) {
-        yield text;
+    for await (const event of messageStream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        yield event.delta.text;
       }
     }
 
+    // 사용량은 완성된 메시지에서 읽는다 — message_start/message_delta 이벤트를 직접
+    // 주워 담던 Bedrock 방식 대신 SDK 헬퍼를 쓴다(부분 집계 누락이 없다).
+    const finalMessage = await messageStream.finalMessage();
+    const usage: LLMStreamUsage = {
+      inputTokens: finalMessage.usage.input_tokens,
+      outputTokens: finalMessage.usage.output_tokens,
+    };
+
     // 스트리밍 완료 후 메트릭 기록 (NFR-OBS-004)
-    const duration = Date.now() - startTime;
     logMetrics({
       task,
-      modelId: usedModelId,
-      inputTokens,
-      outputTokens,
-      durationMs: duration,
+      modelId,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      durationMs: Date.now() - startTime,
       streaming: true,
     });
 
     // 토큰 사용량 반환 (호출부가 로그에 기록 가능)
-    return { inputTokens, outputTokens };
+    return usage;
   } catch (error) {
     console.error('LLM Gateway Stream Error:', { task, error });
     throw new Error(`LLM stream failed for task "${task}": ${error}`);
@@ -342,7 +249,6 @@ interface LLMMetrics {
 }
 
 function logMetrics(metrics: LLMMetrics): void {
-  // TODO: 실제 운영에서는 CloudWatch나 별도 로그 시스템으로
   console.log('[LLM Metrics]', {
     timestamp: new Date().toISOString(),
     ...metrics,

@@ -250,7 +250,112 @@ const isNewSession =
 
 ## Phase 1 — 코드 변경
 
-<!-- Phase 1 완료 시 기록 -->
+### 무엇을 바꿨나
+
+**1-1. LLM 게이트웨이 → Anthropic API** (`modules/llm-gateway/`)
+
+의존성을 `@aws-sdk/client-bedrock-runtime` → `@anthropic-ai/sdk`(0.122.0)로 교체했다.
+**호출부는 한 줄도 안 고쳤다** — 4.3절 의존 규칙대로 모든 LLM 호출이 게이트웨이를
+경유하고 있었기 때문에, `call`/`stream`의 시그니처와 반환 형태만 유지하면 챗봇·리캡·
+배치가 그대로 돈다. 이 설계가 실제로 값을 한 지점이다.
+
+- `gateway.ts` — `InvokeModelWithResponseStreamCommand` → `client.messages.stream()`.
+  Nova/Claude 두 스키마를 분기하던 `buildRequestBody`·`parseResponseBody`·
+  `parseStreamChunk` 세 함수가 통째로 사라졌다(폴백 제거로 Nova가 없어져서).
+- `model-config.ts` — `BEDROCK_MODEL` → `ANTHROPIC_MODEL`, 기본값 `claude-haiku-4-5`.
+- `retry.ts` — `withFallback` 제거(D-2). `withRetry`는 임베딩 경로가 계속 쓴다.
+
+**1-2. 임베딩 → Cohere embed-v4** (`modules/llm-gateway/embedding.ts` 신규)
+
+적재(`batch/pipeline/embed.ts`)와 질의(`chatbot/vector-search.ts`)에 **따로 있던 임베딩
+호출을 한 파일로 합쳤다.** 지시서가 요구한 대로이기도 하지만, 합치면서 두 곳이 이미
+어긋나 있었다는 걸 발견했다 — 적재 쪽은 모델 ID가 없으면 예외를 던졌는데 질의 쪽은
+하드코딩된 기본값(`amazon.titan-embed-text-v2:0`)으로 조용히 넘어갔고, 차원 검증도
+적재에만 있었다. 질의 임베딩이 잘못된 차원으로 나가도 아무도 못 잡는 상태였다.
+
+**1-3. 실행 환경** — `ecosystem.config.js` 삭제(PM2 제거). `package.json`의 start는 이미
+`node dist/index.js`라 그대로 뒀다.
+
+**1-4. DB 연결** (`config/database.ts`) — 풀 크기 20 → 5, 연결 타임아웃 2초 → 10초,
+SSL 인증서 검증 활성화.
+
+### 왜 그렇게 정했나
+
+**모델 ID에 날짜를 붙이지 않는다.** 지시서는 `claude-haiku-4-5-20251001`을 쓰라고
+했는데 **그건 Bedrock 형식이고 Anthropic API에는 존재하지 않는 ID다.** Anthropic API의
+정식 ID는 `claude-haiku-4-5` 하나로 완결돼 있다.
+
+이게 NFR-AI-002(모델 버전 고정)의 근거를 흔든다 — 예전엔 "ID 문자열에 날짜가 박혀
+있으니 고정"이라고 말할 수 있었지만 이제 그 날짜가 없다. 조항을 버리는 대신 취지를
+세 가지로 옮겼다: ① 별칭(`-latest` 류)을 쓰지 않고 세대 고정 ID를 쓴다 ② 기동 로그에
+실제 모델을 남긴다 ③ 이 값을 바꾸면 가드레일을 재수행한다. ①은 테스트로 고정했다
+(`model-config.test.ts` — Bedrock 접두사·날짜 접미사·`latest`가 없는지 검사).
+
+**SDK 내장 재시도를 쓴다.** 직접 만든 `withRetry`를 게이트웨이에서 뺐다. Anthropic SDK가
+408/409/429/5xx와 연결 오류를 실제 에러 타입으로 판별해 지수 백오프로 재시도한다.
+직접 구현을 유지했다면 아래 버그를 그대로 안고 갔을 것이다.
+
+**부팅 가드를 API 키로 옮겼다.** Bedrock은 IAM 역할로 서명해서 별도 키가 없었고,
+`validateModelVersions`는 모델 ID 존재만 확인했다. Anthropic API는 키가 없으면 첫
+호출에서야 401로 터지는데, 조회 5종은 LLM을 안 부르므로 **데모 중 챗봇을 눌러야
+발견되는** 실패 모드가 된다. 그래서 기동 시 `ANTHROPIC_API_KEY` 부재를 예외로 막는다.
+
+**커넥션 풀 20 → 5.** 두 가지가 겹쳤다. Supabase 동시 연결 상한이 RDS보다 낮고,
+실행 단위가 PM2 2프로세스 → 컨테이너 1개로 줄었다. 예전 설정은 실제로 20 × 2 = 40을
+띄웠다는 뜻이기도 하다. 연결 타임아웃은 2초 → 10초로 늘렸다 — 같은 리전이어도 매니지드
+DB는 콜드 상태에서 첫 연결이 2초를 넘길 수 있다.
+
+### 막힌 것과 발견한 것
+
+**재시도가 조용히 죽어 있을 뻔했다.** `retry.ts`의 `isRetryableError`는
+`'ThrottlingException'`, `'NetworkingError'` 같은 **AWS 에러 이름**을 문자열 매칭했다.
+AWS를 떠나면 그 이름은 절대 안 나오므로, 그대로 뒀다면 **모든 오류가 "재시도 불가"로
+분류돼 재시도가 한 번도 안 도는** 상태가 됐을 것이다. 에러는 정상적으로 나고 로그도
+찍히기 때문에 겉으로는 아무 문제가 없어 보인다. HTTP 상태 코드 기준으로 바꿨다.
+
+이건 이관에서 반복되는 패턴이다 — **문자열 매칭으로 외부 시스템의 어휘에 의존한 코드는
+그 시스템을 떠날 때 조용히 무력화된다.** 타입 오류도, 테스트 실패도 안 난다.
+
+**`output_dimension`을 명시하지 않으면 차원이 틀어진다.** Cohere embed-v4의 기본 출력
+차원은 **1536**이다. 1024를 명시하지 않으면 `vector(1024)` 컬럼 적재가 실패한다.
+지시서가 경고한 지점이 실제로 그랬다. 런타임 차원 검증을 넣어 응답이 1024가 아니면
+적재 전에 예외로 잡는다.
+
+**테스트가 폐지된 task 이름을 검사하고 있었다.** `model-config.test.ts`는
+`chatbot_easy`·`chatbot_hard`를 조회하면서 "문자열이면 통과"만 확인했다. 그 두 이름은
+2026-08-25에 폐지됐고, 존재하지 않는 task는 조용히 폴백을 탄다 —
+`model-routing.test.ts`가 잡아낸 바로 그 회귀를 이 테스트는 통과시키고 있었다.
+실제 매핑 키와 ID 형식을 고정하도록 다시 썼다.
+
+**보안 훅이 SSL 검증 비활성화를 지적했다.** `rejectUnauthorized: false`는 RDS의 CA
+번들을 심지 않으려던 편법이었는데, 그 상태로는 중간자 공격을 막지 못한다. Supabase
+pooler는 공인 CA 인증서라 검증을 켤 수 있어 `true`로 바꿨다.
+
+**Rate limiter의 상한이 원래 명세대로 동작하지 않고 있었다.** 프로세스 메모리 `Map`인데
+PM2가 2프로세스를 띄웠으므로, 요청이 어느 워커로 가느냐에 따라 실제 상한이 분당 3회가
+아니라 최대 6회까지 늘어날 수 있었다(NFR-AI-017). 컨테이너 1개가 되면서 우연히
+명세값대로 맞았다 — 고친 게 아니라 실행 단위가 바뀌어 해소된 것이라 주석에 남겼다.
+
+### 아직 못 한 것
+
+- **A8-1 한국어 표본 검증** — `COHERE_API_KEY`가 없어 실행하지 못했다. 코드는 준비됐고,
+  키를 받으면 「탁류」의 고어체·방언 문장 20~30개로 유사도 비교를 돌린다.
+- **실제 호출 검증** — `ANTHROPIC_API_KEY`도 없어 스트리밍이 실제로 도는지 확인하지
+  못했다. 타입·빌드·테스트(363개)는 전부 통과하지만, 그건 실호출을 대신하지 못한다.
+  특히 SSE 첫 토큰 도착과 하드 상한 도달 시 `gen.return()` 조기 취소가 Anthropic SDK
+  에서도 안전한지는 Phase 4에서 확인해야 한다(Bedrock에서는 이 취소가 내부 예외로 번져
+  응답 전체를 500으로 만든 전례가 있어 호출부가 try/catch로 삼키고 있다).
+- **AWS 배포 산출물** — `.github/workflows/deploy-backend.yml`, `infra/terraform/`는
+  아직 그대로다. Phase 2에서 교체한다.
+
+### 검증
+
+`tsc --noEmit` 통과 · `npm run build` 통과 · 백엔드 테스트 45스위트 363개 전부 통과.
+소스에서 Bedrock·AWS SDK 참조 0건(테스트의 회귀 방지 검사 문구 제외).
+
+⚠️ 테스트 수가 이전 기록(365개)과 다른 것은 이 브랜치가 `origin/main`에서 갈라져
+나와 챗봇 브랜치의 커밋 `21ab176`(테스트 3파일 추가)을 포함하지 않기 때문이다.
+회귀가 아니다.
 
 ## Phase 2 — 배포 설정
 

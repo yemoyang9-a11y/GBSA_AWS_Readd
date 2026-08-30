@@ -5,6 +5,7 @@
  * D13 ②: 모델 배분
  *
  * @see dev-spec-R3-ai.md 2장
+ * @see docs/migration.md — Phase 1 (Bedrock → Anthropic API 이관, 2026-08-29)
  */
 
 /**
@@ -25,69 +26,38 @@
  *     Sonnet 5를 배제한 결정적 이유다. 쓰려면 프롬프트로 토큰 준수를 강제한 뒤
  *     재검증이 필요하다.
  *
- * ⚠️ 모델 교체는 `BEDROCK_MODEL` 환경변수로만 한다 (NFR-AI-001 — 코드 수정 없이 교체).
- *    바꾸면 NFR-AI-002에 따라 가드레일 재수행이 필요하고, 위 근거 부재 수렴성을
- *    반드시 다시 확인해야 한다.
+ * **모델 ID 형식이 바뀌었다 (2026-08-29, Bedrock → Anthropic API)** — Bedrock은
+ * `global.anthropic.claude-haiku-4-5-20251001-v1:0`처럼 리전 접두사·날짜·버전 접미사가
+ * 붙은 ID를 썼지만, Anthropic API의 정식 ID는 `claude-haiku-4-5` 하나로 완결돼 있다.
+ * **날짜 접미사를 붙이면 안 된다** — `claude-haiku-4-5-20251001`은 존재하지 않는 ID다.
  *
- * 폴백으로 `BEDROCK_CLAUDE_HAIKU`를 읽는다 — 기존 배포·팀원 .env에 이미 올바른 Haiku
- * 값이 들어 있어서, 그쪽을 안 고쳐도 같은 모델로 뜬다.
+ * ⚠️ NFR-AI-002(모델 버전 고정) 재해석 — Bedrock ID에 박혀 있던 날짜가 사라졌으므로
+ *    "ID 문자열에 날짜가 있으니 고정"이라는 근거는 더 이상 성립하지 않는다. 대신
+ *    ① 별칭(`claude-haiku-latest` 류)을 쓰지 않고 세대 고정 ID를 쓰며,
+ *    ② 기동 로그에 실제 모델을 남기고(validateModelVersions),
+ *    ③ 이 값을 바꾸면 가드레일(특히 아래 근거 부재 수렴성)을 재수행한다
+ *    는 세 가지로 조항의 취지를 지킨다.
+ *
+ * ⚠️ 모델 교체는 `ANTHROPIC_MODEL` 환경변수로만 한다 (NFR-AI-001 — 코드 수정 없이 교체).
  */
-const DEFAULT_MODEL = process.env.BEDROCK_MODEL || process.env.BEDROCK_CLAUDE_HAIKU || '';
-
-/**
- * 폴백 모델 배선 (2026-08-26, 사용자 결정 — Nova Lite로 "일단 배선만 해두기")
- *
- * Claude(Bedrock/Anthropic)가 장애로 응답 불가능할 경우를 대비한 타 벤더 폴백. Nova는
- * Bedrock InvokeModel에서 Claude와 요청·응답 스키마 자체가 다르므로(gateway.ts의
- * buildRequestBody/parseResponse가 modelId로 계열을 구분해 분기한다), 모델 ID만 바꿔
- * 끼우는 걸로는 안 되고 게이트웨이가 두 스키마를 모두 알아야 한다.
- *
- * Micro/Lite/Pro 중 Lite를 골랐다 — Micro는 이 프로젝트의 정교한 시스템 규칙(스포일러
- * 차단, 고정 거절 문구 등)을 지시 준수력 부족으로 못 지킬 위험이 Sonnet 5와 비슷하게
- * 있어 보였고, Pro는 상시 대기하는 폴백치고 과분하다고 판단했다. 이 판단은 실측이
- * 아니라 추정이다 — 아래 검증 전엔 근거로 쓰지 말 것.
- *
- * ⚠️ 기본은 항상 꺼짐(`ENABLE_MODEL_FALLBACK` 미설정) — 아직 R10/FR-QNA-004 🚦 검증
- *    (근거 부재 질문에 고정 문구로 수렴하는지, Sonnet 5 배제 때와 같은 기준) 전이다.
- *    이 검증 없이 켜면 실제 트래픽이 검증 안 된 모델로 새어 나갈 수 있다. 켜기 전에
- *    Haiku 4.5를 배제한 것과 동일한 절차(질문 5종×3회 이상, 근거 부재 응답 수렴 확인)를
- *    Nova Lite로도 거쳐야 한다.
- *
- * ⚠️ .env.example의 BEDROCK_FALLBACK_MODEL 기본값(`amazon.nova-lite-v1:0`)은 미검증
- *    추정 ID다 — Claude가 ap-northeast-2에서 "us." 추론 프로파일이 안 먹혀 "global."로
- *    바꾼 전례가 있다(model-routing 관련 .env.example 참고). Nova도 리전 접두사 붙은
- *    추론 프로파일이 필요할 수 있으니, 켜기 전 Bedrock 콘솔 Model access에서 확인할 것.
- */
-export const FALLBACK_MODEL_ID = process.env.BEDROCK_FALLBACK_MODEL || '';
-export const FALLBACK_ENABLED =
-  process.env.ENABLE_MODEL_FALLBACK === 'true' && FALLBACK_MODEL_ID !== '';
-
-/**
- * Bedrock 모델 ID로 요청/응답 스키마 계열을 구분한다.
- *
- * gateway.ts가 이 값으로 Claude Messages API 형식과 Nova 형식 중 무엇을 쓸지 정한다.
- */
-export type ModelFamily = 'anthropic' | 'nova';
-
-export function getModelFamily(modelId: string): ModelFamily {
-  return modelId.includes('nova') ? 'nova' : 'anthropic';
-}
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
 
 /**
  * 기본 추론 강도 (effort) — **기본값은 꺼짐**
  *
- * ⚠️ effort를 받는 모델이 제한적이다. Sonnet 4.5·Haiku 4.5는 `output_config.effort`를
- *    "Extra inputs are not permitted"로 거절한다(2026-08-25 Bedrock 직접 확인).
- *    Sonnet 5 이상에서만 유효하다. 그래서 명시적으로 켤 때만 요청에 실린다 — 기본을
- *    'medium'으로 두면 지금 기본 모델(Haiku)에서 전 호출이 400으로 깨진다.
+ * ⚠️ effort를 받는 모델이 제한적이다. Haiku 4.5는 `output_config.effort`를 거절한다
+ *    (Bedrock에서 "Extra inputs are not permitted"로 확인, 2026-08-25. Anthropic API도
+ *    동일하게 Haiku 4.5·Sonnet 4.5에서 effort가 에러다). Sonnet 5 이상에서만 유효하다.
+ *    그래서 명시적으로 켤 때만 요청에 실린다 — 기본을 'medium'으로 두면 지금 기본
+ *    모델(Haiku)에서 전 호출이 깨진다.
  */
-export const DEFAULT_EFFORT = process.env.BEDROCK_EFFORT ?? '';
+export const DEFAULT_EFFORT = process.env.ANTHROPIC_EFFORT ?? '';
 
 /**
  * effort를 요청에 실을지 여부.
  *
  * 값이 있을 때만 `output_config`를 싣는다. 지금 기본 모델(Haiku 4.5)은 이 필드를 못 받아
- * 기본은 꺼져 있고, Sonnet 5 계열로 올릴 때 `BEDROCK_EFFORT=medium`처럼 켠다.
+ * 기본은 꺼져 있고, Sonnet 5 계열로 올릴 때 `ANTHROPIC_EFFORT=medium`처럼 켠다.
  */
 export const EFFORT_ENABLED = DEFAULT_EFFORT !== '';
 
@@ -118,7 +88,7 @@ export const MODEL_CONFIG = {
  * 작업 유형에 따른 모델 선택
  *
  * @param task - 작업 유형
- * @returns Bedrock 모델 ID
+ * @returns Anthropic 모델 ID
  */
 export function getModelForTask(task: string): string {
   const model = MODEL_CONFIG[task as keyof typeof MODEL_CONFIG];
@@ -147,9 +117,12 @@ export function validateModelVersions(): void {
     return;
   }
 
-  // 단일 기본 모델만 필수다 — 난이도 분기 폐지(2026-08-25)로 두 번째 모델은 없다.
-  if (!DEFAULT_MODEL) {
-    throw new Error('Missing required environment variable: BEDROCK_MODEL (or BEDROCK_CLAUDE_HAIKU)');
+  // 모델 ID는 코드에 기본값이 있어 비지 않는다. 실제로 없으면 부팅을 막아야 하는 건
+  // API 키 쪽이다 — Bedrock은 IAM 역할로 서명해 별도 키가 없었지만, Anthropic API는
+  // 키가 없으면 첫 호출에서야 401로 터진다. 조회 5종은 LLM을 안 부르므로 그때까지
+  // 문제가 안 드러나고, 데모 중 챗봇을 눌러야 발견되는 실패 모드가 된다.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('Missing required environment variable: ANTHROPIC_API_KEY');
   }
 
   // NFR-AI-002 — 모델 버전 고정. 기동 시 실제로 무엇에 붙는지 한 줄 남겨 사후 추적이
@@ -157,6 +130,9 @@ export function validateModelVersions(): void {
   console.log('[LLM Gateway] 기본 모델', {
     model: DEFAULT_MODEL,
     effort: DEFAULT_EFFORT || '(사용 안 함)',
-    fallback: FALLBACK_ENABLED ? FALLBACK_MODEL_ID : '(꺼짐 — 미검증)',
+    // D-2 (2026-08-29) — 폴백 모델 없음. 단일 모델 + 재시도만(NFR-AI-003 재정의).
+    // 폴백을 두면 R10/FR-QNA-004 🚦(근거 부재 시 고정 문구 수렴)을 모델별로 다시
+    // 검증해야 하는데, 그 비용이 이 프로젝트 규모에 맞지 않는다. docs/migration.md D-2 참조.
+    fallback: '(없음 — 재시도만, D-2)',
   });
 }

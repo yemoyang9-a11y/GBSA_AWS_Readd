@@ -59,16 +59,16 @@ describe('단일 기본 모델 — 질의에 따라 모델이 갈리지 않는�
     });
   });
 
-  test('기본 모델은 BEDROCK_MODEL 설정값이다 (NFR-AI-001 — 코드 수정 없이 교체 가능)', () => {
-    expect(getModelForTask(CHATBOT_TASK)).toBe(process.env.BEDROCK_MODEL);
-    expect(getModelForTask('recap')).toBe(process.env.BEDROCK_MODEL);
+  test('기본 모델은 ANTHROPIC_MODEL 설정값이다 (NFR-AI-001 — 코드 수정 없이 교체 가능)', () => {
+    expect(getModelForTask(CHATBOT_TASK)).toBe(process.env.ANTHROPIC_MODEL);
+    expect(getModelForTask('recap')).toBe(process.env.ANTHROPIC_MODEL);
   });
 });
 
 describe('effort 설정', () => {
   // 기본 모델은 Haiku 4.5이고, Haiku·Sonnet 4.5는 output_config.effort를 거절한다
-  // ("Extra inputs are not permitted", 2026-08-25 Bedrock 확인). 그래서 기본은 꺼짐이며,
-  // Sonnet 5 계열로 올릴 때만 BEDROCK_EFFORT로 켠다. 기본이 켜져 있으면 전 호출이 깨진다.
+  // ("Extra inputs are not permitted", 2026-08-25 Bedrock 확인. Anthropic API도 동일).
+  // 그래서 기본은 꺼짐이며, Sonnet 5 계열로 올릴 때만 ANTHROPIC_EFFORT로 켠다.
   test('기본 effort는 꺼져 있다 — 켜져 있으면 Haiku 호출이 400으로 깨진다', () => {
     expect(DEFAULT_EFFORT).toBe('');
     expect(EFFORT_ENABLED).toBe(false);
