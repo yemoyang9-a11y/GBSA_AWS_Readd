@@ -4,6 +4,8 @@
  * PostgreSQL 15 + pgvector
  */
 
+import fs from 'fs';
+import path from 'path';
 import { Pool, types } from 'pg';
 
 /**
@@ -30,10 +32,52 @@ types.setTypeParser(1082, (value) => value);
  *
  * 2026-08-29 — 인증서 검증을 켰다(`rejectUnauthorized: true`). 예전 `false`는 RDS의
  * CA 번들을 따로 심지 않으려던 편법이었는데, 그 상태로는 중간자 공격을 막지 못한다.
- * Supabase의 pooler 엔드포인트는 공인 CA가 서명한 인증서를 쓰므로 Node 기본 신뢰
- * 저장소로 그대로 검증된다 — 편법을 유지할 이유가 사라졌다.
+ *
+ * 2026-08-30 정정 — "Supabase는 공인 CA를 쓰므로 Node 기본 신뢰 저장소로 검증된다"고
+ * 적었던 것은 **틀렸다.** 실제로 붙어 보니 `SELF_SIGNED_CERT_IN_CHAIN`으로 거부됐고,
+ * 체인을 열어 보니 Supabase 자체 CA였다:
+ *
+ *   0  CN=*.pooler.supabase.com      ← 서버
+ *   1  CN=Supabase Intermediate 2021 CA
+ *   2  CN=Supabase Root 2021 CA       ← self-signed 루트 (공개 CA 아님)
+ *
+ * 그래서 이 루트 CA를 저장소에 넣고 **신뢰 대상으로 명시**한다. 검증을 끄는
+ * (`rejectUnauthorized: false`) 대신 신뢰 범위를 이 CA 하나로 좁히는 방식이라,
+ * 공인 CA 검증보다 오히려 엄격하다 — 다른 어떤 CA가 서명한 인증서도 거부한다.
  */
 const useSSL = process.env.NODE_ENV === 'production';
+
+/**
+ * Supabase 루트 CA (`certs/supabase-root-2021-ca.crt`).
+ *
+ * 파일이 없으면 `undefined`를 넘겨 Node 기본 신뢰 저장소로 폴백한다 — Supabase가
+ * 아닌 관리형 Postgres(공인 CA를 쓰는 곳)로 옮길 때 코드를 안 고쳐도 되게 한다.
+ * 그 경우 Supabase에 붙으면 여전히 SELF_SIGNED_CERT_IN_CHAIN으로 **실패한다** —
+ * 조용히 검증을 건너뛰지 않는다는 뜻이라 이게 맞는 동작이다.
+ *
+ * ⚠️ 이 인증서는 서버가 제시한 체인에서 추출했다(2026-08-30). 대시보드
+ *    (Settings → Database → SSL Configuration)에서 받은 파일과 SHA-256 지문을
+ *    대조하면 검증이 완결된다:
+ *    80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA
+ *    유효기간 2021-04-28 ~ 2031-04-26.
+ */
+function loadDbCa(): string | undefined {
+  // dist/config/ 에서 실행되므로 ../../certs 가 backend/certs 를 가리킨다
+  const candidates = [
+    path.join(__dirname, '../../certs/supabase-root-2021-ca.crt'),
+    path.join(process.cwd(), 'certs/supabase-root-2021-ca.crt'),
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8');
+    } catch {
+      // 읽기 실패는 무시하고 다음 후보로 — 기본 신뢰 저장소 폴백이 남아 있다
+    }
+  }
+  return undefined;
+}
+
+const DB_CA = useSSL ? loadDbCa() : undefined;
 
 /**
  * 커넥션 풀 크기 (2026-08-29, Supabase 이관)
@@ -58,7 +102,7 @@ export const pool = new Pool({
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: useSSL ? { rejectUnauthorized: true } : false,
+  ssl: useSSL ? { rejectUnauthorized: true, ca: DB_CA } : false,
   max: POOL_MAX,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,

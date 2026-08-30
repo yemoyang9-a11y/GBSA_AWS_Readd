@@ -29,12 +29,58 @@ export const EMBEDDING_DIM = 1024;
 export const EMBEDDING_MODEL = 'embed-v4.0';
 
 /**
- * 한 번에 보낼 수 있는 텍스트 수 (Cohere v2/embed 상한 96).
+ * 한 번에 보낼 텍스트 수.
  *
- * 「탁류」 411페이지면 5회 호출로 끝난다 — 체험 티어(분당 100회·월 1000회)에서도
- * 여유가 크다. 페이지마다 1회씩 부르면 411회가 되어 분당 한도에 걸린다.
+ * Cohere v2/embed 의 구조적 상한은 96건이지만, **토큰 유량 한도가 먼저 걸린다.**
+ * 체험 티어는 분당 100,000 토큰이고, 「탁류」는 페이지당 평균 999자(실측)라
+ * 96건이면 한 번에 10만 토큰을 넘겨 429 가 난다(2026-08-30 실제로 겪음).
+ * 64건이면 대략 76,000 토큰이라 한 호출이 한도 안에 들어온다.
+ *
+ * 호출 수도 함께 봐야 한다 — 체험 티어는 월 1,000회다. 411페이지 ÷ 64 = 7회면
+ * 넉넉하다(페이지마다 1건씩 부르면 411회다).
  */
-export const EMBED_BATCH_SIZE = 96;
+export const EMBED_BATCH_SIZE = 64;
+
+/**
+ * 분당 토큰 한도 (체험 티어 100,000). 유료 전환 시 환경변수로 올린다.
+ */
+const TOKENS_PER_MINUTE = Number(process.env.COHERE_TPM_LIMIT || 100_000);
+
+/** 한국어 기준 글자당 토큰 어림 — 실제 사용량을 받기 전 사전 예측용 (보수적으로 잡는다) */
+const TOKENS_PER_CHAR_ESTIMATE = 1.2;
+
+/**
+ * 토큰 유량 페이서 (2026-08-30).
+ *
+ * 최근 60초 동안 쓴 토큰을 기억해 두고, 다음 호출이 한도를 넘길 것 같으면 창이 열릴
+ * 때까지 기다린다. 재시도(withRetry)만으로는 부족하다 — 백오프 상한이 10초라
+ * 분 단위 창이 회복되기 전에 재시도를 다 써 버린다. 여기서 미리 막는 편이 낫다.
+ *
+ * 사용량은 **응답이 알려 준 실측치**(`meta.billed_units.input_tokens`)로 갱신한다.
+ * 사전 예측은 어림이라 틀릴 수 있고, 실측으로 덮으면 오차가 누적되지 않는다.
+ */
+const tokenWindow: { at: number; tokens: number }[] = [];
+
+function tokensUsedInWindow(now: number): number {
+  while (tokenWindow.length > 0 && now - tokenWindow[0].at >= 60_000) tokenWindow.shift();
+  return tokenWindow.reduce((sum, e) => sum + e.tokens, 0);
+}
+
+async function waitForTokenBudget(estimatedTokens: number): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    const used = tokensUsedInWindow(now);
+    if (used + estimatedTokens <= TOKENS_PER_MINUTE || tokenWindow.length === 0) return;
+
+    // 가장 오래된 기록이 창 밖으로 나갈 때까지 기다린다
+    const waitMs = 60_000 - (now - tokenWindow[0].at) + 250;
+    console.log(
+      `[embedding] 분당 토큰 한도 대기 — 최근 60초 ${used.toLocaleString()} 토큰 사용, ` +
+        `${Math.ceil(waitMs / 1000)}초 후 재개`
+    );
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+}
 
 /**
  * Cohere는 용도별로 input_type을 나눈다 — 같은 문장이라도 "검색당하는 문서"와
@@ -51,6 +97,7 @@ const COHERE_EMBED_URL = 'https://api.cohere.com/v2/embed';
 
 interface CohereEmbedResponse {
   embeddings?: { float?: number[][] };
+  meta?: { billed_units?: { input_tokens?: number } };
 }
 
 /**
@@ -65,6 +112,12 @@ async function callCohereEmbed(texts: string[], inputType: string): Promise<numb
   if (!apiKey) {
     throw new Error('COHERE_API_KEY 환경변수가 설정되지 않음');
   }
+
+  // 분당 토큰 한도를 넘기지 않게 미리 기다린다 (429 를 맞고 재시도하는 것보다 낫다)
+  const estimatedTokens = Math.ceil(
+    texts.reduce((sum, t) => sum + t.length, 0) * TOKENS_PER_CHAR_ESTIMATE
+  );
+  await waitForTokenBudget(estimatedTokens);
 
   const body = await withRetry(
     async () => {
@@ -99,6 +152,12 @@ async function callCohereEmbed(texts: string[], inputType: string): Promise<numb
     },
     { task: 'embed', model: EMBEDDING_MODEL, inputType, count: texts.length }
   );
+
+  // 실제 사용량으로 창을 갱신한다 — 어림값이 틀려도 오차가 누적되지 않는다
+  tokenWindow.push({
+    at: Date.now(),
+    tokens: body.meta?.billed_units?.input_tokens ?? estimatedTokens,
+  });
 
   const embeddings = body.embeddings?.float;
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
