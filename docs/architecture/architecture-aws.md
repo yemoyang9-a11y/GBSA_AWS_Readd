@@ -3,7 +3,7 @@
 > 이 문서는 **인프라 계층**만 다룬다. 논리·애플리케이션·데이터 아키텍처는
 > [`architecture-r1.md`](architecture-r1.md)에 있으며 인프라와 독립적이다.
 > 이전 후 구성은 [`architecture-current.md`](architecture-current.md), 이전 과정과 판단
-> 근거는 [`migration.md`](migration.md)를 본다.
+> 근거는 [`migration.md`](../migration.md)를 본다.
 >
 > **작성 시점** 2026-08-29. AWS 리소스가 살아 있는 상태에서 CLI로 실제 설정을 조회해
 > 작성했다. 기억이나 추측으로 쓴 항목은 없으며, 조회하지 못한 항목은 그렇다고 명시했다.
@@ -277,7 +277,7 @@ AccessDeniedException: ... not authorized to perform: ce:GetCostAndUsage
 
 **상시 과금 항목이 비용의 대부분이다** — EC2 2대, Multi-AZ RDS, ALB, EIP 2개가 트래픽과
 무관하게 매시간 청구된다. 포트폴리오로 유지하려면 방문이 없는 시간에도 이 전부를
-계속 낸다. 이것이 이전 결정의 직접적인 동기다([`migration.md`](migration.md) 참조).
+계속 낸다. 이것이 이전 결정의 직접적인 동기다([`migration.md`](../migration.md) 참조).
 
 ---
 

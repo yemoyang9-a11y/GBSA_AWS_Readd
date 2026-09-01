@@ -1,7 +1,7 @@
 # migration.md — AWS 이탈 이전 기록
 
-> 이전 전 인프라는 [`architecture-aws.md`](architecture-aws.md), 이전 후 인프라는
-> [`architecture-current.md`](architecture-current.md)에 있다. 이 문서는 **그 사이에서
+> 이전 전 인프라는 [`architecture-aws.md`](architecture/architecture-aws.md), 이전 후 인프라는
+> [`architecture-current.md`](architecture/architecture-current.md)에 있다. 이 문서는 **그 사이에서
 > 무엇을 왜 그렇게 정했는가**를 다룬다.
 >
 > 각 Phase를 끝낼 때마다 한 항목씩 누적한다. 끝나고 몰아서 쓰지 않는다 — SSE 버퍼링이나
@@ -176,7 +176,7 @@ review_records 0 · saved_recap 0 · conversation_history 0
 ### 무엇을 했나
 
 인프라가 살아 있는 동안에만 정확히 쓸 수 있는 문서를 만들었다.
-[`architecture-aws.md`](architecture-aws.md) 신규 작성 — VPC·서브넷·보안 그룹·ALB·
+[`architecture-aws.md`](architecture/architecture-aws.md) 신규 작성 — VPC·서브넷·보안 그룹·ALB·
 EC2·nginx·PM2·RDS·CloudFront·배포 파이프라인을 전부 CLI로 실조회해 기록했다.
 
 문서 구조를 이렇게 나눴다. 기존 `architecture-r1.md`는 논리·앱·데이터 아키텍처라
@@ -211,6 +211,35 @@ RDS 전용이다.
 `http://127.0.0.1:3000/`(끝 슬래시)라 백엔드 라우트에는 `/api`가 없다. Fly에서
 프록시 없이 컨테이너가 직접 요청을 받으면 이 변환이 사라지므로, 프론트의 API
 베이스 URL 처리를 함께 손봐야 한다.
+
+### 정정 (2026-08-31)
+
+문서를 실제로 한 트리에 모으면서 위 구조에 오류 두 가지가 드러났다.
+
+**`architecture-r2.md`가 빠져 있었다.** `docs` 브랜치에 「아키텍처 2회차 · 배포 설계」가
+v0.7까지 개정돼 있는데 위 표에 없다. `architecture-aws.md`와 같은 인프라 층을 다루지만
+성격이 다르다 — r2는 **설계 의도**(무엇을 왜 하려 했나), `architecture-aws.md`는
+**실조회 기록**(실제로 무엇이 있었나)이다. AWS 종료로 r2의 서술은 전량 무효가 됐으나
+12장 「채택하지 않은 구성과 그 근거」·2.2절 「스위퍼를 Lambda로 만들지 않는다」는
+실측 기록이 대체할 수 없어 보존한다.
+
+**`architecture-r1.md`는 인프라 무관이 아니다.** "건드리지 않는다"고 적었으나 실제로는
+Amazon Titan Text Embeddings V2가 확정 사항으로 세 곳(406·605·760행)에 박혀 있다.
+Cohere embed-v4로 바꾼 D-1과 모순되므로 Phase 6 수정 대상에 포함한다.
+
+**위치도 갈라져 있었다.** r1·r2는 `docs` 브랜치에만, `architecture-aws.md`·`migration.md`는
+작업 브랜치에만 있어 상호참조가 브랜치를 건너뛰었다. `docs` 브랜치를 통째로 merge하면
+`15d567a`("Remove documentation files")에서 의도적으로 지운 26개 문서가 되살아나므로,
+r1·r2만 가져와 `docs/architecture/` 아래로 모았다(출처: `origin/docs` `6ab6dc0`).
+나머지 문서는 `origin/docs`에 그대로 둔다 — r2의 v0.5→v0.7 개정 이력도 그쪽에서 조회한다.
+
+```
+docs/architecture/architecture-r1.md       논리·앱·데이터 (Titan 3곳 수정 필요)
+docs/architecture/architecture-r2.md       이전 전 배포 설계 — 의도
+docs/architecture/architecture-aws.md      이전 전 인프라 — 실측     ← Phase 0.5
+docs/architecture/architecture-current.md  이전 후 인프라            ← Phase 6
+docs/migration.md                          이전 과정·판단 근거       ← 이 문서
+```
 
 ---
 
@@ -775,6 +804,165 @@ K=40에서 후반부 사건 6종을 물었다: 초봉이가 죽이는 사람 · 
 - **NFR-SEC-006 인젝션 10건** — 별도 시나리오 문서가 필요해 이번 범위에서 제외
 - **배포 후 확인** — Fly 프록시 SSE 버퍼링(`/diag/sse`), 조회형 API 실지연,
   콜드스타트 시간, 스케일-투-제로 실제 정지 여부
+
+---
+
+## 배포 실행 (2026-09-01)
+
+Phase 2에서 만들어만 두고 "사람이 해야 한다"고 남겨 둔 것을 실제로 실행했다.
+`https://ssabi-api.fly.dev` 가 live 다.
+
+### 막힌 것과 해결
+
+**flyctl 설치 — `pwsh` 를 못 찾는다.** Fly 문서가 안내하는
+`pwsh -Command "iwr https://fly.io/install.ps1 -useb | iex"` 가
+`CommandNotFoundException` 으로 죽었다. `pwsh` 는 PowerShell 7 의 실행 파일명인데
+이 PC 에는 Windows PowerShell 5.1 만 있다. **이미 PowerShell 안이므로 래퍼를 벗기고
+알맹이만 실행하면 된다.** 스크립트 자체는 5.1 을 명시적으로 지원한다(55행에
+`PSVersion.Major -lt 7` 분기가 있다).
+
+**Fly 는 카드가 없으면 앱을 못 만든다.** `We need your payment information to continue`.
+공식 문서상 Linked Organization 을 뺀 모든 조직이 카드를 요구하고, 2024 년에 영구
+무료 티어가 없어졌다. 제약 조건 2번("유휴 시 과금 없음")을 다시 재보면 —
+정지된 머신은 CPU·RAM 과금이 없고 rootfs 스토리지만 GB당 월 $0.15 다. 이미지가
+53MB 이고 **볼륨을 안 쓰므로**(`[mounts]` 없음) 유휴 비용은 월 $0.01 수준이다.
+정지 상태에서 계속 청구되는 유일한 항목이 볼륨인데 그 구멍을 피해 간 구성이다.
+
+**⚠️ `fly launch` 대신 `fly apps create` 를 썼다.** `fly launch` 는 fly.toml 을
+생성해 주는 스캐폴딩 명령이라, 이미 완성된 fly.toml 이 있는 상태에서 돌리면 덮어쓸지
+묻고 Postgres·Redis 를 붙일지 줄줄이 물어본다. DB 는 Supabase 를 쓰므로 전부 거절해야
+하고 하나라도 잘못 수락하면 원치 않는 리소스가 생긴다. `fly apps create` 는 이름만
+등록하고, 이후 `fly deploy` 가 fly.toml 을 그대로 읽는다.
+
+**⚠️ `DATABASE_URL` 재매핑 — `.env` 를 그대로 넣으면 프로덕션이 localhost 를 본다.**
+코드는 `DATABASE_URL` 하나만 읽는데(`database.ts:99`), 로컬 `.env` 의 그 값은 로컬
+Docker Postgres 를 가리키고 Supabase 주소는 `SUPABASE_DB_URL` 에 따로 들어 있다.
+`fly secrets import` 로 `.env` 를 통째로 밀어 넣었으면 조용히 잘못된 DB 를 봤을 것이다.
+`DATABASE_URL` ← `SUPABASE_DB_URL` 로 재매핑해 주입했다. `SUPABASE_DB_URL` 은 `src/`
+어디에서도 읽지 않는다 — 이전 작업용 보관 변수다.
+
+**PowerShell 5.1 이 stdin 에 BOM 을 붙인다.** `fly secrets import` 에 파이프로 넘기니
+첫 키가 `<BOM>ANTHROPIC_API_KEY` 가 돼 거부됐다. `$OutputEncoding` 을 바꿔도 안 잡힌다.
+인자 전달(`fly secrets set "K=V"`)로 우회했다. 상세는 `lessons.md` 2026-08-31 항목.
+
+### ⚠️ 배포를 막을 뻔한 버그 — `certs/` 가 이미지에 없었다
+
+Dockerfile 런타임 단계가 `dist`·`migrations`·`scripts`·`public` 만 복사하는데,
+`database.ts` 의 `loadDbCa()` 는 `certs/supabase-root-2021-ca.crt` 를 읽는다. 파일이
+없으면 `undefined` 를 돌려 Node 기본 신뢰 저장소로 폴백하고, Supabase 는 공인 CA 가
+아니라 자체 루트로 서명하므로 `SELF_SIGNED_CERT_IN_CHAIN` 으로 거부된다 — **DB 연결이
+통째로 실패한다.**
+
+Phase 2 에서 Dockerfile 을 만든 것이 8/30 오전이고 CA 요구사항은 같은 날 Phase 3 에서
+발견됐는데 Dockerfile 이 갱신되지 않았다. **Phase 2 의 로컬 컨테이너 검증이 이걸 못
+잡은 이유가 있다** — 로컬 Postgres 는 SSL 을 지원하지 않아 `NODE_ENV=development` 로
+띄웠고, `useSSL` 이 false 라 CA 로딩 경로 자체를 안 탔다. 즉 **프로덕션 SSL 경로는 한
+번도 실행된 적이 없었다.**
+
+`COPY certs ./certs` 를 추가했다. 인증서 지문은 코드 주석과 대조 확인했다
+(`80:70:25:AD:…:CA:FA`, 유효기간 2031-04-26).
+
+교훈 — 로컬 검증에서 `NODE_ENV` 를 낮춰 우회한 경로가 있다면, **그 경로는 검증되지
+않은 것**이다. 우회했다는 사실 자체를 배포 전 확인 목록에 남겨야 한다.
+
+### 예상과 달랐던 것 — 머신이 2개 생겼다
+
+`fly deploy` 가 "Creating a second machine for high availability" 로 HA 쌍을 자동
+생성했다. fly.toml 에 `min_machines_running = 0` 이 있어도 이건 별개다 — 그 값은
+"몇 개를 켜 둘 것인가"이고, 머신 개수 자체는 `fly scale count` 가 정한다. 목표 구성이
+"컨테이너 1개"였으므로 `fly scale count 1` 로 줄였다. 유휴 시엔 어차피 둘 다 멈추므로
+컴퓨트 차이는 없고 스토리지만 두 배였다.
+
+### 검증 (실측)
+
+| 항목 | 결과 |
+| --- | --- |
+| `/health` | 200 |
+| `/books` | 200, 「탁류」 실데이터 — **Supabase SSL 관통 확인** (한글 정상) |
+| **SSE 버퍼링** | **없음.** `/diag/sse` 청크 간 평균 **304ms** (서버 발신 300ms), 헤더 197ms 선도착 |
+| **리캡 (최악 조건)** | cutoff=400, **inputTokens 19,227** / output 373 / 5,536ms, delta 14개 점진 도착 |
+| **256MB OOM** | **없음.** 위 리캡을 통과했고 로그에 `Out of memory`·code 137·SIGKILL 전무 |
+| **스케일-투-제로** | **실제로 정지한다.** 04:49:00 자동 정지 → 04:50:26 요청으로 기동. 유휴 약 8분이면 `stopped` |
+| **콜드스타트** | **7.38초** (71분 유휴 후 클라이언트 실측, `/health`). 깨어난 뒤 재요청은 **41ms** |
+
+**SSE 는 이번 이전의 최대 미지수였는데 통과했다.** 예전 구성이 nginx `proxy_buffering
+off` 와 CloudFront TTL 0 **두 계층**에 의존해 겨우 흘리던 것을, Fly 프록시는 별도
+설정 없이 기본값으로 흘린다. `X-Accel-Buffering: no` 헤더는 Fly 가 읽지 않지만 애초에
+필요가 없었다.
+
+**스케일-투-제로 확인은 우연히 결정적으로 됐다.** 리캡 부하 테스트를 돌렸더니 헤더가
+8,576ms 에 왔는데, 로그를 보니 그 요청이 **정지돼 있던 머신을 깨운** 것이었다
+(04:49 정지 → 04:50:31 부팅 → 04:50:32 도달 가능). 즉 한 번의 호출로 "정지한다",
+"요청이 깨운다", "콜드스타트가 5.4초다" 셋이 동시에 증명됐다. 리캡 자체의 지연은
+LLM 5,536ms 이고 나머지가 콜드스타트다.
+
+**진도 상태는 건드리지 않았다.** 부하 테스트는 데모 디바이스가 아닌 새 UUID
+(`dcf4a484-…`)로 돌렸다. 「탁류」 데모 진도는 50페이지 그대로다.
+
+### 아직 못 한 것
+
+- **`FLY_API_TOKEN`** — 미발급. 현재는 로컬에서 `fly deploy` 로 배포했고, `main` push
+  자동 배포를 켜려면 필요하다
+- **NFR-SEC-006 인젝션 10건** — 여전히 범위 밖
+
+(`CORS_ORIGIN` 과 Cloudflare Pages 는 아래에서 마무리했다.)
+
+---
+
+## 프론트 배포 — Cloudflare Pages (2026-09-01)
+
+`https://ssabi-d4c.pages.dev` 가 live 다. 이로써 프론트·백엔드·DB 가 전부 AWS 밖에서 돈다.
+
+**도메인에 접미사가 붙었다.** 프로젝트 이름은 `ssabi` 로 만들었는데 배정된 주소는
+`ssabi-d4c.pages.dev` 다. `*.pages.dev` 서브도메인은 **전역 고유**라 `ssabi` 가 이미
+쓰이고 있었기 때문이다. 검증 중에 `ssabi.pages.dev` 를 우리 배포로 착각할 뻔했는데,
+`<html lang>` 이 `en`(우리는 `ko`)이고 `vendor-supabase` 청크가 있어(프론트에 supabase
+의존성이 없다) 남의 사이트임을 가려냈다. **배포 확인은 도메인 이름이 아니라 내용으로 한다.**
+
+**프로덕션 브랜치를 `main` 이 아니라 `chore/migrate-off-aws` 로 걸었다.** `main` 에는
+`frontend/public/_redirects` 가 없어 SPA 새로고침이 404 가 나고, 사라진 S3·CloudFront 로
+배포하는 옛 `deploy-frontend.yml` 이 남아 있다. main 병합 후 대시보드에서 브랜치만 바꾼다.
+
+### 막힌 것과 해결
+
+**Root directory 오타.** `frontdend` 로 입력해 `Cannot find cwd:
+/opt/buildhome/repo/frontdend` 로 죽었다. 모노레포라 이 값(`frontend`)은 필수다.
+
+**⚠️ `npm ci` 가 Cloudflare 에서만 실패했다.** `EUSAGE ... Missing: esbuild@0.28.2 from
+lock file`. lock 이 낡은 게 아니었다 — 재생성했더니 파일이 한 바이트도 안 바뀌었다.
+로컬 npm 11 과 Cloudflare npm 10.9.2 의 의존성 해석 차이였다. 환경변수
+**`NODE_VERSION = 24.15.0`** 으로 해결(Node 24 가 npm 11 을 번들한다).
+`NPM_VERSION` 은 Pages 가 지원하지 않는다. 상세는 `lessons.md` 2026-09-01 항목.
+
+**⚠️ `VITE_DEMO_DEVICE_ID` 가 37자로 구워져 전 요청이 500 이었다.** 손으로 입력하다
+마지막 그룹에 `1` 이 하나 더 들어갔다(UUID 는 `8-4-4-4-12`, 36자). Postgres uuid 캐스팅이
+실패해 빈 화면이 아니라 **500** 이 났다. 값을 고치고 **재빌드**했다 — Vite 는 `VITE_*` 를
+빌드 시점에 굽기 때문에 환경변수 저장만으로는 반영되지 않는다.
+
+### 검증 (실측)
+
+| 항목 | 결과 |
+| --- | --- |
+| 앱 정체 | `<title>싸비 — Reading Recap</title>`, `lang="ko"` |
+| `VITE_API_URL` | 번들에 `ssabi-api.fly.dev` 구워짐. `localhost`·`/api` 접두사 흔적 **없음** |
+| `VITE_DEMO_DEVICE_ID` | 재배포 후 번들에서 `8-4-4-4-12`, 36자 확인 |
+| CORS 허용 | Pages 오리진에 `Access-Control-Allow-Origin` + `Vary: Origin` |
+| CORS 차단 | 비허용 오리진에는 헤더 미부착 — 브라우저가 차단 |
+| **SPA fallback** | `/books/takryu/read`·`/books/takryu/briefing` 직접 접근 **200** — `_redirects` 동작 |
+| **리캡 관통** | Pages 오리진 + 데모 디바이스로 `POST /recap/stream` → 200, 첫 delta 2,072ms, **delta 18개 / 437자**, `applied_cutoff: 50` |
+
+마지막 줄이 이번 이전의 결승점이다 — **브라우저와 동일한 조건에서 리캡이 점진적으로
+도착한다.** Cloudflare 엣지 → Fly 프록시 → 컨테이너 → Anthropic API → Supabase 가
+한 줄로 이어졌다는 뜻이다.
+
+### 남은 것
+
+- **`FLY_API_TOKEN`** — 자동 배포 미연결. 지금은 로컬 `fly deploy` 로만 올린다
+- **`main` 병합** — 병합 후 Pages 프로덕션 브랜치를 `main` 으로 변경
+- **`frontend/.nvmrc`** — `NODE_VERSION` 이 대시보드에만 있어 프로젝트 재생성 시 유실된다.
+  저장소에 `24.15.0` 을 박아 두는 편이 견고하다
+
+---
 
 ## Phase 5 — AWS 정리
 
