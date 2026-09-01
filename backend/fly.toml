@@ -1,0 +1,73 @@
+# 싸비 백엔드 — Fly.io 배포 설정
+#
+# @see docs/migration.md — Phase 2 (2026-08-29)
+#
+# 배포는 이 파일이 있는 backend/ 에서 실행한다:
+#   fly deploy
+#
+# ⚠️ 앱 이름은 Fly 전역에서 유일해야 한다. `fly launch --no-deploy` 로 앱을 먼저
+#    만들 때 이름이 이미 쓰이고 있으면 다른 이름을 고르고 여기도 함께 고칠 것.
+
+app = 'ssabi-api'
+primary_region = 'nrt'  # 도쿄 — Supabase 도 같은 권역이어야 DB 왕복 지연이 안 붙는다
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '3000'
+  # MOCK_MODE 는 설정하지 않는다 — 켜지면 챗봇이 실제 기준점 대신 고정 K 를 쓰고
+  # 근거 조립·검색·LLM 이 전부 mock 으로 가서 상한 게이트 검증이 무의미해진다
+  # (routes.ts, chatbot/service.ts 참조).
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+
+  # 스케일-투-제로 (2026-08-29) — 이 세 줄이 이번 이전의 핵심이다.
+  # 트래픽이 없으면 머신이 멈춰 과금이 0 에 수렴하고, 요청이 오면 자동으로 깨어난다.
+  # "언제 볼지 모르는 포트폴리오"와 "상시 과금 회피"라는 두 제약을 동시에 만족시키는
+  # 유일한 방법이라 Fly 를 골랐다(migration.md 선택지 비교 참조).
+  #
+  # ⚠️ 배포 후 대시보드에서 실제로 정지하는지 확인할 것. 안 켜져 있으면 상시 과금이다.
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  processes = ['app']
+
+  # 헬스체크 — /health 는 DB·LLM 을 건드리지 않는 순수 응답이라 깨우기 비용이 싸다
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  # 최소 사양으로 시작한다. 부족하면 올린다 —
+  # 리캡 입력이 2만 토큰을 넘는 경우가 있어(실측: cutoff=400 에서 19,228 토큰)
+  # 메모리가 모자라면 OOM 으로 죽는다. Phase 4 검증에서 확인할 것.
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# ⚠️ 비밀값은 여기 적지 않는다. 아래를 사람이 직접 실행한다 (값은 코드나 문서에 남기지 않음):
+#
+#   fly secrets set ANTHROPIC_API_KEY=...
+#   fly secrets set ANTHROPIC_WORKSPACE_ID=...
+#   fly secrets set COHERE_API_KEY=...
+#   fly secrets set DATABASE_URL=...
+#   fly secrets set CORS_ORIGIN=https://<cloudflare-pages-도메인>
+#
+# ⚠️ ANTHROPIC_WORKSPACE_ID 는 identity-linked 키를 쓸 때 **필수**다 (2026-08-30 확인).
+#    이 헤더가 없으면 /v1/models 를 포함한 모든 엔드포인트가 400 이다. SDK 가 인증·버전·
+#    content-type 은 자동으로 붙이지만 이건 안 붙인다. 키의 워크스페이스 범위를 Default 로
+#    바꿔도 소용없다 — identity-linked 는 범위가 아니라 발급 방식의 속성이다.
+#    워크스페이스에 묶인 일반 키라면 비워 둔다 — 넣으면 오히려 깨진다
+#    (gateway.ts:54 에서 값이 있을 때만 헤더를 싣는 조건부 배선).
+#
+# 선택 — 기본값이 코드에 있어 없어도 뜬다:
+#   fly secrets set ANTHROPIC_MODEL=claude-haiku-4-5
+#   fly secrets set DB_POOL_MAX=5

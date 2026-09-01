@@ -51,6 +51,57 @@ router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+/**
+ * GET /diag/sse — SSE 버퍼링 진단 (2026-08-30, 이전 검증용)
+ *
+ * 이번 이전의 최대 미지수가 "스트리밍이 중간 계층에서 버퍼링되는가"다. 예전 구성은
+ * nginx `proxy_buffering off`와 CloudFront TTL 0 **두 계층**에 의존해 SSE를 흘렸는데,
+ * Fly 프록시에서 같은 동작이 나는지는 배포해야만 알 수 있다. 버퍼링이 걸리면 첫 토큰이
+ * 안 나오고 응답이 끝날 때 한꺼번에 도착하는데, **로컬에서는 재현되지 않아** 실배포
+ * 후에야 드러난다.
+ *
+ * 리캡·챗봇 SSE로 이걸 확인하려면 LLM 키가 필요하고 응답 시간도 들쭉날쭉하다. 이
+ * 엔드포인트는 **고정 간격으로 더미 청크만** 흘려서 버퍼링 여부 하나만 분리해 본다.
+ * DB·LLM·사용자 데이터를 일절 건드리지 않으므로 배포 후에도 남겨 둘 수 있다.
+ *
+ * 판정 — 각 청크의 도착 간격이 CHUNK_INTERVAL_MS에 가까우면 정상(스트리밍),
+ *        전부 마지막에 몰려 도착하면 어딘가에서 버퍼링되고 있다.
+ *
+ * 사용:
+ *   curl -N https://<host>/diag/sse
+ */
+router.get('/diag/sse', (_req: Request, res: Response) => {
+  const CHUNK_COUNT = 10;
+  const CHUNK_INTERVAL_MS = 300;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // nginx 계열 프록시용 (Fly는 이 헤더를 안 읽는다)
+  res.flushHeaders(); // 헤더를 먼저 내보낸다 — 첫 청크를 기다리지 않게
+
+  const startedAt = Date.now();
+  let sent = 0;
+
+  const timer = setInterval(() => {
+    sent += 1;
+    // 서버가 보낸 시각을 실어 보낸다 — 클라이언트 수신 시각과 대조하면
+    // "서버가 늦게 보낸 것"과 "중간에서 붙들고 있던 것"을 가를 수 있다
+    res.write(
+      `data: ${JSON.stringify({ seq: sent, sentAtMs: Date.now() - startedAt })}\n\n`
+    );
+
+    if (sent >= CHUNK_COUNT) {
+      clearInterval(timer);
+      res.write(`data: ${JSON.stringify({ done: true, totalMs: Date.now() - startedAt })}\n\n`);
+      res.end();
+    }
+  }, CHUNK_INTERVAL_MS);
+
+  // 클라이언트가 끊으면 타이머를 정리한다 — 안 하면 끊긴 응답에 계속 write 한다
+  res.on('close', () => clearInterval(timer));
+});
+
 // ============================================================================
 // R3 제공 API - 챗봇
 // ============================================================================

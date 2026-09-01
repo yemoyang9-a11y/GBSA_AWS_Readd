@@ -63,6 +63,15 @@ CLAUDE.local.md
 dump/
 *.dump
 
+# AWS 이탈 백업 일체 (2026-08-29~30)
+# ⚠️ 디렉터리 통째로 제외한다. DB 덤프뿐 아니라 AWS 구성 JSON도 들어가는데,
+#    거기엔 계정 ID·인스턴스 ID·VPC/서브넷 ID·공인 IP가 그대로 들어 있다.
+#    저장소를 포트폴리오로 공개할 것이므로 파일 단위로 걸러서는 안 된다.
+backup/
+
 # impeccable 탐지기용 디자인 컨텍스트 미러 (생성물, 정본은 루트)
 frontend/DESIGN.md
 frontend/.impeccable/
+
+# Claude Code 로컬 작업 공간 (git worktree 체크아웃 사본 등)
+.claude/

@@ -469,14 +469,19 @@ export interface ApiSuccess<T = unknown> {
 // 환경 변수 타입
 // ============================================================================
 
+/**
+ * 2026-08-29 (AWS 이탈 이전) — AWS·Bedrock 키를 Anthropic·Cohere로 교체했다.
+ *
+ * ⚠️ 이 타입은 **어디서도 참조되지 않는다**(실제 검증은 model-config.ts의
+ *    validateModelVersions와 database.ts가 각자 한다). 삭제하지 않고 갱신만 한 이유는
+ *    `src/shared/types.ts`가 팀 공유 계약 파일이라서다 — 없애는 건 합의가 필요하지만,
+ *    존재하지 않는 환경변수 이름을 남겨 두면 그게 정본인 줄 알고 따라 쓰게 된다.
+ */
 export interface EnvConfig {
   DATABASE_URL: string;
-  AWS_REGION: string;
-  AWS_ACCESS_KEY_ID: string;
-  AWS_SECRET_ACCESS_KEY: string;
-  BEDROCK_EMBED_MODEL: string;
-  BEDROCK_CLAUDE_SONNET: string;
-  BEDROCK_CLAUDE_HAIKU: string;
+  ANTHROPIC_API_KEY: string;
+  ANTHROPIC_MODEL: string;
+  COHERE_API_KEY: string;
   PORT: number;
   NODE_ENV: 'development' | 'production' | 'test';
 }

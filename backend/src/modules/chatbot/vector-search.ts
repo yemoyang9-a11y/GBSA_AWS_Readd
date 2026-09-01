@@ -9,14 +9,18 @@
 
 import type { SearchChunk } from '../../shared/types';
 import * as repo from './repository';
-import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { embedQuery, EMBEDDING_DIM, EMBEDDING_MODEL } from '../llm-gateway/embedding';
 
 /**
  * 검색 설정
+ *
+ * embeddingDim은 임베딩 모듈에서 가져온다 — 예전엔 여기 1024를 따로 적어 둬서, 모델을
+ * 바꾸면 두 곳이 어긋날 수 있었다 (2026-08-29).
  */
 const SEARCH_CONFIG = {
   topN: 6, // 고정 (FR-QNA-006)
-  embeddingDim: 1024, // Amazon Titan Text Embeddings V2
+  embeddingDim: EMBEDDING_DIM,
+  embeddingModel: EMBEDDING_MODEL,
 };
 
 /**
@@ -78,53 +82,6 @@ async function normalizeQuery(query: string, bookId: string, K: number): Promise
 
   console.log(`[VectorSearch] Normalized: "${query}" → "${normalizedQuery}"`);
   return normalizedQuery;
-}
-
-/**
- * 질의 임베딩
- *
- * Amazon Titan Text Embeddings V2 사용
- * FR-QNA-006 🚦: 벡터 검색을 위한 실제 임베딩 생성
- */
-async function embedQuery(query: string): Promise<number[]> {
-  const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
-
-  const modelId = process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2:0';
-
-  const requestBody = {
-    inputText: query,
-  };
-
-  const command = new InvokeModelCommand({
-    modelId,
-    contentType: 'application/json',
-    accept: 'application/json',
-    body: JSON.stringify(requestBody),
-  });
-
-  try {
-    const response = await client.send(command);
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-
-    // Titan 응답 형식: { embedding: [number[]], ... }
-    const embedding = responseBody.embedding || responseBody.embeddings?.[0];
-
-    if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
-      throw new Error('Failed to get embedding from Titan: Invalid response format');
-    }
-
-    console.log(
-      `[VectorSearch] Embedded query: "${query.substring(0, 50)}..." (${embedding.length}D)`
-    );
-    return embedding;
-  } catch (error) {
-    console.error('[VectorSearch] Embedding failed:', error);
-    throw new Error(
-      `Failed to embed query: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
-  }
 }
 
 /**

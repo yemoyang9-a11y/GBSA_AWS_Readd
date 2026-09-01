@@ -1,0 +1,14 @@
+# Cloudflare Pages — SPA 라우팅 fallback
+#
+# @see docs/migration.md — Phase 2 (S3 + CloudFront → Cloudflare Pages, 2026-08-29)
+#
+# React Router 가 클라이언트에서 경로를 처리하므로, 서버에는 /books/takryu/read 같은
+# 파일이 없다. 이 규칙이 없으면 그 주소를 **직접 열거나 새로고침할 때 404** 가 난다
+# (앱 안에서 이동할 때는 멀쩡해서 발견이 늦는다).
+#
+# 200 은 리다이렉트가 아니라 rewrite 다 — 주소창의 경로를 유지한 채 index.html 을
+# 돌려줘야 React Router 가 그 경로를 읽고 올바른 화면을 그린다. 301/302 로 두면
+# 주소가 / 로 바뀌어 항상 대시보드로 떨어진다.
+#
+# 이 파일은 public/ 에 있으므로 Vite 가 빌드 시 dist/ 로 그대로 복사한다.
+/*    /index.html   200

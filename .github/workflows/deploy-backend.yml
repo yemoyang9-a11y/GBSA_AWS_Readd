@@ -1,4 +1,18 @@
-name: Deploy Backend to EC2
+# 백엔드 배포 — Fly.io
+#
+# @see docs/migration.md — Phase 2 (EC2 + SSM + PM2 → Fly.io, 2026-08-29)
+#
+# 예전 워크플로는 S3 에 tar.gz 를 올리고 SSM RunCommand 로 EC2 두 대에서 압축을 풀어
+# PM2 를 재시작했다. 그 경로가 전부 사라졌다 — Fly 가 이미지를 빌드하고 머신을 굴린다.
+#
+# ⚠️ 필요한 시크릿: FLY_API_TOKEN
+#    발급: fly tokens create deploy -x 999999h
+#    등록: GitHub 저장소 → Settings → Secrets and variables → Actions
+#
+#    앱의 런타임 비밀값(ANTHROPIC_API_KEY 등)은 여기 두지 않는다 — `fly secrets set`
+#    으로 Fly 에 직접 넣고, 배포는 그걸 그대로 물려받는다.
+
+name: Deploy Backend to Fly.io
 
 on:
   push:
@@ -9,23 +23,25 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
+# 같은 브랜치의 배포가 겹치면 뒤엣것만 남긴다 — 앞선 배포를 취소해
+# 두 배포가 동시에 머신을 갈아치우는 상황을 막는다
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  test:
+    name: 테스트 (게이트 조항 검증)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      # deploy-frontend.yml 과 같은 이유 — Node 22 기본 번들 npm 10.x 의 `npm ci` +
-      # optionalDependencies EBADPLATFORM 회귀를 피한다(2026-08-23). backend lockfile은
-      # 지금 당장은 문제되는 항목이 없어 안 터졌을 뿐, 같은 npm 버전을 쓰는 한 같은
-      # 위험을 안고 있어 예방 차원에서 같이 고친다.
+      # Node 22 가 기본 번들하는 npm 10.x 에는 `npm ci` + optionalDependencies 조합에서
+      # EBADPLATFORM 오탐이 나는 회귀가 있다(2026-08-23 확인). npm 11 에서는 재현되지 않는다.
       - name: Update npm (npm 10.x npm-ci EBADPLATFORM 회귀 회피)
         run: npm install -g npm@11
 
@@ -33,57 +49,40 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Build backend
+      - name: Typecheck
         working-directory: backend
-        run: npm run build
+        run: npx tsc --noEmit
 
-      - name: Create deployment package
+      # 스포일러 차단이 이 프로젝트의 본질이다 — 게이트 테스트가 깨진 채로 배포하지 않는다
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+  deploy:
+    name: Fly.io 배포
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # --remote-only: Fly 빌더에서 이미지를 만든다. GitHub 러너에 Docker 를
+      # 세팅하지 않아도 되고, 빌드 캐시가 Fly 쪽에 남아 재배포가 빠르다.
+      - name: Deploy
+        working-directory: backend
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: 배포 요약
         working-directory: backend
         run: |
-          tar --exclude='node_modules' --exclude='.env*' --exclude='*.log' --exclude='.git' \
-            -czf backend-deploy.tar.gz \
-            dist/ scripts/ migrations/ package.json package-lock.json ecosystem.config.js
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
-
-      - name: Upload to S3
-        working-directory: backend
-        run: |
-          aws s3 cp backend-deploy.tar.gz \
-            s3://${{ secrets.S3_ASSETS_BUCKET }}/deploy/backend-deploy.tar.gz
-
-      - name: Deploy to EC2 instances
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids ${{ secrets.EC2_INSTANCE_1 }} ${{ secrets.EC2_INSTANCE_2 }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "cd /opt/ssabi",
-              "rm -rf dist scripts migrations ecosystem.config.js",
-              "aws s3 cp s3://${{ secrets.S3_ASSETS_BUCKET }}/deploy/backend-deploy.tar.gz . --region ap-northeast-2",
-              "tar -xzf backend-deploy.tar.gz",
-              "npm install --production",
-              "sudo -u deploy pm2 restart ssabi-api || sudo -u deploy pm2 start ecosystem.config.js",
-              "sleep 3",
-              "curl -s http://localhost:3000/health"
-            ]' \
-            --region ap-northeast-2 \
-            --output json | jq -r '.Command.CommandId')
-
-          echo "SSM Command ID: $COMMAND_ID"
-          echo "Waiting for deployment to complete..."
-          sleep 30
-
-      - name: Deployment summary
-        run: |
-          echo "### 🚀 Backend Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "### 백엔드 배포 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**API URL:** https://d2mqlo8j8xaid.cloudfront.net/api" >> $GITHUB_STEP_SUMMARY
-          echo "**Health Check:** https://d2mqlo8j8xaid.cloudfront.net/api/health" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 브랜치: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 커밋: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "스케일-투-제로가 켜져 있으므로 첫 요청에서 머신이 깨어난다(콜드스타트)." >> $GITHUB_STEP_SUMMARY
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
