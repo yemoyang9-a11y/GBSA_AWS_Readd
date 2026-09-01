@@ -23,3 +23,6 @@ export const EMPTY_RECAP_MESSAGE = '아직 읽은 내용이 없습니다';
 
 /** 싸비 최초 열기 기본 탭 (FR-SVB-002) */
 export const DEFAULT_SSABI_TAB = 'relationship' as const;
+
+/** 인물 관계도 최초 토글 값 (FR-CHR-001) */
+export const DEFAULT_CHARACTER_MODE = 'major' as const;
