@@ -56,9 +56,17 @@ primary_region = 'nrt'  # 도쿄 — Supabase 도 같은 권역이어야 DB 왕�
 # ⚠️ 비밀값은 여기 적지 않는다. 아래를 사람이 직접 실행한다 (값은 코드나 문서에 남기지 않음):
 #
 #   fly secrets set ANTHROPIC_API_KEY=...
+#   fly secrets set ANTHROPIC_WORKSPACE_ID=...
 #   fly secrets set COHERE_API_KEY=...
 #   fly secrets set DATABASE_URL=...
 #   fly secrets set CORS_ORIGIN=https://<cloudflare-pages-도메인>
+#
+# ⚠️ ANTHROPIC_WORKSPACE_ID 는 identity-linked 키를 쓸 때 **필수**다 (2026-08-30 확인).
+#    이 헤더가 없으면 /v1/models 를 포함한 모든 엔드포인트가 400 이다. SDK 가 인증·버전·
+#    content-type 은 자동으로 붙이지만 이건 안 붙인다. 키의 워크스페이스 범위를 Default 로
+#    바꿔도 소용없다 — identity-linked 는 범위가 아니라 발급 방식의 속성이다.
+#    워크스페이스에 묶인 일반 키라면 비워 둔다 — 넣으면 오히려 깨진다
+#    (gateway.ts:54 에서 값이 있을 때만 헤더를 싣는 조건부 배선).
 #
 # 선택 — 기본값이 코드에 있어 없어도 뜬다:
 #   fly secrets set ANTHROPIC_MODEL=claude-haiku-4-5
