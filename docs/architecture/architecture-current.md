@@ -355,5 +355,7 @@ JSON 21개)이 유일본이지만, **Supabase 가 이미 정본**이라 덤프 �
 | NFR-SEC-006 인젝션 10건 | 미검증 — 별도 시나리오 문서 필요 |
 | `fly scale count` | 재배포 시 머신이 2개로 늘어나는지 미확인 |
 | Supabase 무료 등급 한도 | 프로젝트 일시 정지 조건·백업 정책 미확인 |
+| `gen.return()` 조기 취소 | 하드 상한 도달 시 제너레이터 조기 종료가 Anthropic SDK 에서 안전한지 **미검증**. Bedrock 에서는 내부 예외로 번져 응답 전체를 500 으로 만든 전례가 있어 호출부가 try/catch 로 삼키고 있다 |
+| Elastic IP 불일치 | `architecture-aws.md` 는 EIP 2개를 기록하는데 `infra/terraform/` 에는 `aws_eip` 가 없다. 계정이 닫혀 확인 불가 |
 
 마지막 두 줄은 **확인하지 못한 것**이지 문제가 없다는 뜻이 아니다.
