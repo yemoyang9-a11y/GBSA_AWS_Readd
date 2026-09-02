@@ -37,7 +37,10 @@ export async function getBookMeta(bookId: string): Promise<{ title: string; auth
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
-export async function findChapterSummaries(bookId: string, K: number): Promise<ChatbotChapterSummary[]> {
+export async function findChapterSummaries(
+  bookId: string,
+  K: number
+): Promise<ChatbotChapterSummary[]> {
   const query = `
     SELECT
       cs.chapter_no,
@@ -82,7 +85,7 @@ export async function getCurrentChapterText(bookId: string, K: number): Promise<
 
   // 2. 현재 장의 페이지들 조회 (시작 ~ K)
   const pagesQuery = `
-    SELECT content
+    SELECT page_no, content
     FROM pages
     WHERE book_id = $1
       AND page_no >= $2
@@ -92,8 +95,14 @@ export async function getCurrentChapterText(bookId: string, K: number): Promise<
 
   const pagesResult = await pool.query(pagesQuery, [bookId, chapter.start_page, K]);
 
-  // 3. 페이지 내용 연결
-  return pagesResult.rows.map((row) => row.content).join('\n\n');
+  // 3. 페이지 내용 연결 — 페이지마다 [페이지 N] 표시를 단다. 배치 파이프라인의
+  // buildPageTaggedText(generate.ts)와 같은 표기다 — "N페이지까지 요약해줘"처럼
+  // 질문이 구체적 페이지 경계를 지정할 때(현재 진행 중인 장 범위 안이라면) 그 경계가
+  // 원문 어디인지 알 수 있어야 모델이 근거 없이 [NO_EVIDENCE]로 넘어가지 않는다
+  // (2026-08-27, 사용자 제보). 단, 이미 완결돼 요약만 저장된 장(장 요약)에는 이
+  // 태그가 없다 — 그건 배치 생성 프롬프트 자체를 바꿔야 하는 별도 작업이라 이번
+  // 범위에서 제외했다(현재 진행 중인 장만 우선 처리하기로 사용자와 합의).
+  return pagesResult.rows.map((row) => `[페이지 ${row.page_no}]\n${row.content}`).join('\n\n');
 }
 
 /**
