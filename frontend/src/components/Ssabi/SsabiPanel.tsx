@@ -6,6 +6,7 @@ import type {
   SsabiTab,
 } from '../../types';
 import { resolveSsabiTab } from '../../utils/ssabiTab';
+import { resolveCharacterMode } from '../../utils/characterMode';
 import ssabiFace from '../../assets/images/ssabi-face.png';
 import RecapTab from './RecapTab';
 import RelationshipTab from './RelationshipTab';
@@ -148,6 +149,14 @@ export default function SsabiPanel({
   );
   const previousCharacterModeEpoch = useRef<number | null>(initialCharacterModeEpoch);
 
+  // 탭(resolveSsabiTab)과 마찬가지로 **렌더 중에** 파생한다. 아래 useEffect 로만 리셋하면
+  // 자식이 첫 렌더에 useState 로 값을 고정한 뒤라 리셋을 보지 못한다 (characterMode.ts 참고).
+  const characterMode = resolveCharacterMode({
+    previousEpoch: previousCharacterModeEpoch.current,
+    currentEpoch: sessionEpoch,
+    lastMode: lastCharacterMode,
+  });
+
   useEffect(() => {
     if (previousCharacterModeEpoch.current !== sessionEpoch) {
       previousCharacterModeEpoch.current = sessionEpoch;
@@ -239,7 +248,7 @@ export default function SsabiPanel({
             graph={graph}
             failed={graphFailed}
             totalPages={totalPages}
-            initialCharacterMode={lastCharacterMode}
+            initialCharacterMode={characterMode}
             onCharacterModeChange={handleCharacterModeChange}
           />
         ) : null}
