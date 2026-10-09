@@ -276,3 +276,79 @@ describe('진도 이벤트 동봉', () => {
     // updateProgress가 올바른 인자로 호출되는지
   });
 });
+
+describe('장 번호·페이지 범위 재게시 (2026-08-28 데모 당일 회귀)', () => {
+  // 실사용 재현: "1장까지 요약해줘"처럼 "장 요약"과 정확히 매칭되는 요청조차, 인물·관계·
+  // 용어·사건이 수십~수백 건 끼어 있는 실제 배포 데이터에서는 [NO_EVIDENCE]로 거절됐다.
+  // 최소 프롬프트(노이즈 없음)로는 즉시 정답이 나오는 것으로 "장 요약"이 근거 데이터
+  // 맨 위쪽에만 있고 질문과 멀다는 것을 원인으로 확정했다 — currentPageText·quote처럼
+  // "사용자 질문" 바로 앞에도 요약 판단에 필요한 최소 정보(장 번호·제목·페이지 범위)를
+  // 다시 실어야 한다.
+  const BOOK_ID = 'takryu-vol1';
+  const DEVICE_ID = 'device-123';
+  const K = 50;
+
+  function seedWithChapters(): void {
+    (repo.findChapterSummaries as jest.Mock).mockResolvedValue([
+      { chapter_no: 1, title: '인간기념물', content: '정주사가 미두장에서 봉욕을 당한다.', start_page: 1, end_page: 17 },
+      { chapter_no: 2, title: '생활 제일과', content: '초봉이가 제중당에서 일한다.', start_page: 18, end_page: 39 },
+    ]);
+    (repo.getCurrentChapterText as jest.Mock).mockResolvedValue('현재 장 본문...');
+    (repo.findCharacters as jest.Mock).mockResolvedValue([]);
+    (repo.findRelationships as jest.Mock).mockResolvedValue([]);
+    (repo.findCharacterNotes as jest.Mock).mockResolvedValue([]);
+    (repo.findTerms as jest.Mock).mockResolvedValue([]);
+    (repo.findEvents as jest.Mock).mockResolvedValue([]);
+    (repo.getBackgroundKnowledge as jest.Mock).mockResolvedValue([]);
+    (repo.getBookMeta as jest.Mock).mockResolvedValue({ title: '탁류', author: '채만식' });
+    (vectorSearch as jest.Mock).mockResolvedValue([]);
+  }
+
+  beforeEach(() => {
+    process.env.MOCK_MODE = 'false';
+    jest.spyOn(console, 'log').mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('positive: 장 요약이 있으면 "사용자 질문" 바로 앞에 장 번호·페이지 범위 목록이 다시 실린다', async () => {
+    seedWithChapters();
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '1장 요약입니다.';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(BOOK_ID, '1장까지 요약해줘', K, DEVICE_ID)) {
+      chunks.push(chunk);
+    }
+
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    const reminderIdx = prompt.indexOf('장 번호·페이지 범위 (범위 한정 요약 판단용');
+    const questionIdx = prompt.indexOf('# 사용자 질문');
+
+    expect(reminderIdx).toBeGreaterThan(-1);
+    expect(prompt).toContain('1장 인간기념물 (p.1~17)');
+    expect(prompt).toContain('2장 생활 제일과 (p.18~39)');
+    // "사용자 질문" 바로 앞자리여야 한다 (currentPageText·quote와 동일한 배치)
+    expect(questionIdx).toBeGreaterThan(reminderIdx);
+    expect(questionIdx - reminderIdx).toBeLessThan(400);
+  });
+
+  test('negative: 장 요약이 없으면 재게시 섹션도 없다', async () => {
+    seedWithChapters();
+    (repo.findChapterSummaries as jest.Mock).mockResolvedValue([]);
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '[NO_EVIDENCE]';
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of handleQuery(BOOK_ID, '1장까지 요약해줘', K, DEVICE_ID)) {
+      chunks.push(chunk);
+    }
+
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    expect(prompt).not.toContain('장 번호·페이지 범위 (범위 한정 요약 판단용');
+  });
+});
