@@ -13,7 +13,10 @@ import { USE_MOCK } from '../utils/constants';
 import { nextSeq, resetSeq } from '../utils/seq';
 import type { EntryResponse } from '../types';
 
+let latestEntryRequest = 0;
+
 export async function enterBook(bookId: string): Promise<EntryResponse> {
+  const request = ++latestEntryRequest;
   const response = await (async () => {
     if (USE_MOCK) {
       const { mockEntry } = await import('../../mocks/server');
@@ -24,7 +27,8 @@ export async function enterBook(bookId: string): Promise<EntryResponse> {
   })();
 
   // 서버가 event_seq 를 0으로 되돌리므로 로컬 시퀀스도 함께 맞춘다 (team-sync-r4.md §1.6)
-  resetSeq();
+  // A late entry for a book already left must not rewind the active book's sequence.
+  if (request === latestEntryRequest) resetSeq();
   return response;
 }
 
