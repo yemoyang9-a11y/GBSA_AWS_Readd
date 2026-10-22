@@ -142,5 +142,6 @@ export function cleanupOldRecords(): void {
   }
 }
 
-// 5분마다 정리 실행
-setInterval(cleanupOldRecords, 5 * 60 * 1000);
+// Background housekeeping must not keep a finished CLI/test process alive.
+// The HTTP server keeps production alive while this timer still runs every five minutes.
+setInterval(cleanupOldRecords, 5 * 60 * 1000).unref();

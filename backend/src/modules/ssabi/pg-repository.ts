@@ -38,20 +38,26 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
     },
 
     async findLatestRelationships(bookId: string, cutoff: number): Promise<Relationship[]> {
-      // FR-SPL-002 🚦: 확립 페이지 <= cutoff
+      // FR-SPL-002 🚦: 관계와 양 끝 인물 모두 같은 책의 cutoff 안에서 선택한다.
       // A6: 같은 (character_a_id, character_b_id) 쌍의 최신 라벨만
       const { rows } = await db.query(
-        `SELECT DISTINCT ON (character_a_id, character_b_id)
-                id,
-                book_id,
-                character_a_id,
-                character_b_id,
-                label,
-                established_page
-           FROM relationships
-          WHERE book_id = $1
-            AND established_page <= $2
-          ORDER BY character_a_id, character_b_id, established_page DESC`,
+        `SELECT DISTINCT ON (r.character_a_id, r.character_b_id)
+                r.id,
+                r.book_id,
+                r.character_a_id,
+                r.character_b_id,
+                r.label,
+                r.established_page
+           FROM relationships r
+           JOIN characters ca ON ca.id = r.character_a_id
+           JOIN characters cb ON cb.id = r.character_b_id
+          WHERE r.book_id = $1
+            AND ca.book_id = $1
+            AND cb.book_id = $1
+            AND ca.first_appearance_page <= $2
+            AND cb.first_appearance_page <= $2
+            AND r.established_page <= $2
+          ORDER BY r.character_a_id, r.character_b_id, r.established_page DESC`,
         [bookId, cutoff]
       );
       return rows;
@@ -67,7 +73,8 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
         `SELECT a.character_id, a.alias, a.alias_type AS type, a.first_appearance_page
            FROM aliases a
            JOIN characters c ON a.character_id = c.id
-          WHERE c.book_id = $1
+          WHERE a.book_id = $1
+            AND c.book_id = $1
             AND c.first_appearance_page <= $2
             AND a.first_appearance_page <= $2
           ORDER BY a.first_appearance_page ASC`,
@@ -83,6 +90,7 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
            FROM character_notes cn
            JOIN characters c ON cn.character_id = c.id
           WHERE c.book_id = $1
+            AND cn.book_id = $1
             AND c.first_appearance_page <= $2
             AND cn.source_page <= $2
           ORDER BY c.first_appearance_page, cn.source_page ASC`,

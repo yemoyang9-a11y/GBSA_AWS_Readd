@@ -1,12 +1,4 @@
-/**
- * 챗봇 서비스 (⑤)
- *
- * R3 담당 - 챗봇 질의 처리
- *
- * @see dev-spec-R3-ai.md 3~5장
- * @see API_CONTRACT.md R3 제공 API
- */
-
+import { SYSTEM_RULES, COMPLETION_STANCE, buildQuoteSection } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
 import { assembleContext, buildPrompt } from './context-assembly';
 import { vectorSearch } from './vector-search';
@@ -17,205 +9,23 @@ import { recordTurns, getConversationContext } from './conversation-service';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
-/** 챗봇 LLM 호출 task 이름 — 실제 정의는 difficulty-router.ts (테스트가 이 경로로 검증한다) */
 export { CHATBOT_TASK };
 
-/**
- * `text`의 꼬리 중 `token`의 접두사와 일치하는 가장 긴 길이를 구한다. 스트리밍 청크
- * 경계가 토큰 중간을 가를 때, 아직 완성 여부를 판단할 수 없는 꼬리 부분을 얼마나
- * 보류해야 하는지 계산하는 데 쓴다 — 예: text="...[NO_EVIDENC", token="[NO_EVIDENCE]"
- * 이면 12를 반환한다("[NO_EVIDENC" 전체가 토큰 접두사와 겹친다).
- */
-function tokenPrefixOverlapLength(text: string, token: string): number {
-  const max = Math.min(text.length, token.length - 1);
-  for (let len = max; len > 0; len--) {
-    if (text.endsWith(token.slice(0, len))) return len;
-  }
-  return 0;
-}
-
-/**
- * 근거 부재 토큰 (FR-QNA-004 🚦)
- */
 const NO_EVIDENCE_TOKEN = '[NO_EVIDENCE]';
-/**
- * 문구는 "왜" 답을 못 하는지 이유를 말하지 않는다(2026-08-25, 사용자 지적 —
- * "아직 안 읽은 뒷부분 얘기라"는 스포일러가 원인이라고 단정하는 판별 문장이었다).
- * 실제로는 스포일러 때문인지, 근거 조립 범위에 그냥 없는 내용인지 시스템은 구분할
- * 방법이 없고 구분해서도 안 된다(R10 불변식, FR-QNA-004 🚦 "이유를 판별하지 않는다").
- * "지금까지 읽은 내용으로는 알 수 없다"는 이유를 대지 않는 사실 진술이라 어느 원인
- * 이든 항상 참이다.
- *
- * 뒷문장은 2026-08-26(사용자 요청)에 "스포 없이 여기까지만 도와줄게요"(안심시키는
- * 문구, 재시도 유도는 없음)에서 "다른 질문을 해보시겠어요?"(다음 행동 유도)로
- * 바꿨다 — 여전히 이유는 말하지 않는 사실 진술 + 제안이라 R10과 안 어긋난다.
- */
+
 export const NO_EVIDENCE_MESSAGE =
   '🔒 지금까지 읽은 내용으로는 알 수 없어요 🤔 다른 질문을 해보시겠어요?';
 
-/**
- * "아모"(챗봇 캐릭터 이름) 자기소개 — 고정 멘트
- *
- * "아모가 뭐야"처럼 챗봇 자신의 정체를 묻는 질문은 소설 근거와 무관하다. 근거 조립·검색
- * 없이 LLM에게 판단을 맡기면 시스템 규칙 6번(챗봇 동작 방식 질문)에 걸려
- * NO_EVIDENCE_MESSAGE가 나가는데, 이건 "지금까지 읽은 내용으로는 알 수 없다"는 스포일러
- * 성격 문구라 "네 이름이 뭐야"에는 맥락이 안 맞다. LLM 호출 자체를 생략하고 코드에서
- * 고정 멘트로 즉시 답한다 — difficulty-router.ts와 같은 키워드 매칭 스타일. 프론트
- * DEFAULT_GREETING(ChatbotTab.tsx)과 같은 자기소개 톤을 맞췄다.
- */
-const AMO_KEYWORD = '아모';
 export const AMO_INTRO_MESSAGE =
   '저는 아모예요. 지금까지 읽은 내용 안에서만, 스포일러 없이 답해드리는 도우미예요. 궁금한 거 편하게 물어보세요.';
 
 function isAskingAboutAmo(query: string): boolean {
-  return query.includes(AMO_KEYWORD);
+  // Only a pure introduction intent may skip retrieval; mixed story questions continue normally.
+  return /^(?:아모(?:가\s*뭐야|에\s*대해\s*알려줘|야)|너\s*이름이\s*아모야)[?!.]*$/u.test(
+    query.trim()
+  );
 }
 
-/**
- * 완독 상태 프롬프트 지시 (D14 — 2026-08-27 팀 결정)
- *
- * 기준점 결정기가 `is_complete = true`를 준 요청에서만 프롬프트에 얹는다. 완독이면 K가
- * 책 전체를 덮으므로 "근거 데이터"에 이 책 전량의 장 요약·엔티티가 들어 있다. 그래서
- * 시스템 규칙 5번의 "책 전체에 대한 단정적 부정 금지"(아직 안 읽은 뒷부분에서 반증될 수
- * 있다는 이유)가 이 대화에서는 성립하지 않는다 — 뒷부분이 없다.
- *
- * ⚠️ 이건 "상한을 프롬프트로 거는" 것이 아니다(절대 규칙 3번과 구분). 상한(K)은 이미
- *    데이터 선택 단계에서 걷혔고 완독이라 걸 것이 없다. 이 지시는 걷힌 근거를 놓고
- *    "없으면 없다고 말해도 된다"는 답변 태도만 바꾼다. 근거 외 생성 금지(규칙 1번)는
- *    그대로다 — "없다"는 판단도 근거 데이터·검색 결과에 그 대상이 실제로 없다는 데에만
- *    기대야 하고, 모델의 사전 지식으로 「탁류」 줄거리를 지어내면 안 된다(A10).
- *
- * 여전히 [NO_EVIDENCE] 토큰이 나올 수 있다(근거가 애매하게 일부만 있는 경우 등). 그때는
- * 기존 경로대로 NO_EVIDENCE_MESSAGE로 치환된다 — 완독 독자에겐 아무것도 새로 노출하지
- * 않으므로 안전한 폴백이다. FR-QNA-004 🚦
- */
-const COMPLETION_STANCE = `
-## 독자 상태: 완독 (이 책을 끝까지 읽음)
-
-- 이 독자는 책을 마지막 페이지까지 읽었습니다. 위 "근거 데이터"에는 이 책 **전체**의
-  장 요약과 등장인물·관계·용어·사건 정보가 들어 있습니다 — 뒤에 안 읽은 부분이 없습니다.
-- 그래서 시스템 규칙 5번의 "책 전체에 대한 단정적 부정 금지"는 이 대화에 적용되지
-  않습니다. 질문의 대상(인물·사건·설정)이 "근거 데이터"·"검색 결과" 어디에도 없으면,
-  "지금까지 읽은 부분에서는~"으로 한정하지 말고 **"그건 이 책에 나오지 않아요"**처럼
-  분명하게 답하세요. 이럴 때 "${NO_EVIDENCE_TOKEN}"을 반환하지 마세요.
-- 단, 규칙 1번(근거 외 생성 금지)은 그대로입니다. "없다"는 판단도 오직 위 근거에 그
-  대상이 실제로 없다는 데 근거해야 합니다. 당신의 사전 지식으로 이 책의 내용을 지어내
-  "있다"고도 "없다"고도 하지 마세요.
-- 챗봇 자신의 동작에 대한 질문(규칙 6번), 질문의 답이 근거에 일부만 애매하게 걸리는
-  경우 등 그 외 상황은 기존 규칙 그대로입니다.
-`.trim();
-
-/**
- * 시스템 규칙 (프롬프트에 포함)
- */
-const SYSTEM_RULES = `
-# 시스템 규칙
-
-당신은 전자책 독서 보조 챗봇입니다.
-
-## 중요 제약사항
-
-1. **근거 외 생성 금지** (NFR-AI-005):
-   - 오직 아래 "근거 데이터"·"검색 결과"·"지금 보고 있는 페이지 본문"·"사용자가 지금
-     보고 있는 본문 인용"(각각 있는 경우)에 포함된 정보만 사용하세요
-   - 당신의 사전 지식을 사용하지 마세요
-   - 그 네 곳에 없는 내용은 절대 추론하거나 생성하지 마세요
-
-2. **근거 부재 처리**:
-   - 질문에 답할 근거가 충분하지 않으면 "${NO_EVIDENCE_TOKEN}" 토큰을 응답하세요
-   - 이유를 설명하지 마세요. 토큰만 반환하세요
-
-3. **페이지 참조**:
-   - 답변 시 관련 페이지 번호를 명시하세요
-   - 예: "정주사는 고무신 장사로 돈을 모았습니다 (p.10)."
-
-4. **"이전 대화" 섹션의 용도** (있는 경우에만):
-   - 사용자가 "걔", "그거", "아까 말한" 등으로 무엇을 가리키는지 파악하는 데만 쓰세요
-   - "이전 대화"에 있는 문장을 답변의 근거로 인용하지 마세요 — 근거는 오직 "근거 데이터"와
-     "검색 결과"뿐입니다. 그쪽에 없으면 이전 대화에 언급이 있었어도 "${NO_EVIDENCE_TOKEN}"을
-     반환하세요
-   - **특히 페이지 번호·"지금 몇 페이지"류 질문은 절대로 "이전 대화"에서 답을 가져오지
-     마세요** — 사용자는 계속 페이지를 넘기고 있어서 예전 turn의 페이지 번호는 이미 낡은
-     값입니다(심지어 그 예전 답이 틀렸을 수도 있습니다). 이런 질문은 오직 아래 "지금 보고
-     있는 페이지 본문" 섹션의 p.번호로만 답하세요
-
-5. **질문의 전제가 틀렸을 때 (범위 한정 정정)**:
-   - 근거 데이터에 있는 내용과 질문의 전제가 다르면(예: 실제로는 딸인데 "아들이 누구야?"라고
-     물음) 근거로 정정해서 답변하세요
-   - 단, "OO는 아들이 없어요"처럼 책 전체에 대한 단정적 부정은 쓰지 마세요 — 아직 안 읽은
-     뒷부분에서 반증될 수 있는 문장입니다. 대신 "지금까지 읽은 부분에서는 ~"처럼 지금까지
-     확인된 범위로 한정해서 답하세요
-   - 정정할 근거 자체가 없으면(그 대상이 근거 데이터에 아예 없음) 2번 규칙대로
-     "${NO_EVIDENCE_TOKEN}"을 반환하세요
-
-6. **챗봇 자신의 동작 방식에 대한 질문**:
-   - "왜 이렇게 답해?", "지금부터는 다르게 답해줘" 처럼 이 챗봇의 내부 동작(근거를 어떻게
-     고르는지, 왜 특정 페이지를 인용했는지 등)을 묻거나 바꿔달라는 요청은 소설 내용이
-     아니므로 "근거 데이터"·"검색 결과"·그 어디에도 없는 질문입니다
-   - 내부 로직을 설명하지도, 사과하지도, 앞으로 답변 범위를 바꾸겠다고 약속하지도 마세요
-     (예: "이제부터는 최근 페이지 위주로 답할게요" 같은 말 금지 — 근거 조립 범위는 항상
-     고정이고 대화로 바뀌지 않습니다)
-   - 2번 규칙대로 "${NO_EVIDENCE_TOKEN}"을 반환하세요
-
-7. **범위를 한정한 요약 요청**:
-   - "1장까지 요약해줘", "15페이지까지 요약해줘", "2장 내용만 알려줘"처럼 범위를 좁혀
-     달라는 요청은 위 "장 요약"에 병기된 **장 번호와 페이지 범위**(예: "1장 인간기념물
-     (p.1~17)")를 보고, 그 범위에 드는 장 요약만 골라서 답하세요
-   - "15페이지까지"처럼 장 중간에서 끊기는 요청이면 그 페이지가 속한 장까지 포함해
-     답하되, 요약은 장 단위라 딱 그 페이지에서 잘리지는 않는다는 점을 감안해 자연스럽게
-     정리하세요
-   - 요청한 범위 중 "근거 데이터"에 없는 장·페이지가 있으면, **있는 범위까지만 답하고
-     없는 부분은 그냥 언급하지 마세요.** "그 장은 아직 안 읽으셨어요", "범위 밖이에요"
-     처럼 없는 이유를 설명하지 마세요 — 어디까지 읽었는지 알려주는 말이 됩니다
-   - 요청한 범위에 해당하는 장 요약이 하나도 없으면 2번 규칙대로
-     "${NO_EVIDENCE_TOKEN}"을 반환하세요
-
-## 응답 형식
-
-- 간결하고 명확하게 답변하세요
-- 근거가 명확한 경우에만 답변하세요
-- 불확실하면 "${NO_EVIDENCE_TOKEN}"을 반환하세요
-- 소제목이나 핵심 용어는 마크다운 굵게 문법(**이렇게**)으로 강조하세요 — 화면이
-  실제 굵은 글씨로 표시합니다
-
-## 말투
-
-- 반말이 아닌 친근한 해요체를 씁니다. "~예요", "~해요", "~돼요"처럼 편하게 끝맺으세요
-- 딱딱한 설명체("~함", "~임", "~됨") 금지. 옆에서 같이 책 읽어주는 친구처럼 말하세요
-- 문장은 짧게 끊고, 핵심 정보(이름·관계·사건)를 앞에 먼저 두세요
-- 과장된 감탄사나 이모지 남발은 피하고, 1개 정도만 자연스럽게 곁들이세요
-- 예시: "야간 알바생 독고가 손님한테 건넨 인사예요. 청량리역 노숙인 출신인데, 우연히
-  염영숙 여사한테 고용돼서 편의점을 지키고 있어요."
-`.trim();
-
-/**
- * 챗봇 질의 처리 (스트리밍)
- *
- * @param bookId - 도서 ID
- * @param query - 사용자 질의
- * @param K - 기준점 (cutoff)
- * @param deviceId - 디바이스 ID (로그용)
- * @param conversationId - 대화 이력에 기록할 대상 (resolveConversation이 미리 정한 값).
- *   생략하면 대화 이력에 기록하지 않는다 — 기존 호출부·테스트 하위 호환용.
- * @param quote - 본문 드래그 인용(신규 UX). 사용자가 읽기 화면에서 직접 선택한 문장 그대로다 —
- *   이미 화면에 떠 있는(R3: 본문 접근 무제한) 텍스트라 K 상한과 무관하게 프롬프트에
- *   "본문 인용" 섹션으로 별도 주입한다. K로 강제하는 근거 조립(assembleContext)·검색
- *   (vectorSearch) 범위는 그대로 두고 건드리지 않는다 — R1/FR-PRG-003 🚦은 불변.
- * @param currentPageText - 지금 보고 있는 페이지 전체 본문. 진도가 있으면 이 페이지는 이미
- *   K에 포함되지만, 긴 조립 문맥 안에서 현재 페이지를 모델이 놓치지 않게 명시적 섹션으로
- *   다시 얹는다. 진도 레코드가 없는 상태(K=0)에서는 호출부가 전달하지 않는다. 호출부는
- *   기준점 결정기가 확인한 current_page로 조회하며 클라이언트가 보낸 page를 쓰지 않는다.
- * @param isComplete - 완독 여부(기준점 결정기 파생값 snapshot.is_complete 그대로). true면
- *   K가 책 전체를 덮으므로 근거에 없는 대상을 "이 책에 안 나온다"고 단정하도록 프롬프트
- *   태도를 바꾼다(D14 — 절대 규칙 7번·R10의 완독 예외, FR-QNA-004 🚦). 이 파라미터는
- *   상한을 만들지 않는다 — 상한은 이미 assembleContext·vectorSearch가 K로 걷었다.
- * @yields 텍스트 청크
- *
- * @example
- * for await (const chunk of handleQuery(bookId, query, K, deviceId, conversationId)) {
- *   res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
- * }
- */
 export async function* handleQuery(
   bookId: string,
   query: string,
@@ -226,9 +36,17 @@ export async function* handleQuery(
   currentPageText?: { pageNo: number; content: string },
   isComplete = false
 ): AsyncGenerator<string> {
-  let noEvidence = false;
+  // This payload is loaded by the server route; still enforce K at the final boundary.
+  currentPageText =
+    currentPageText &&
+    Number.isInteger(currentPageText.pageNo) &&
+    currentPageText.pageNo >= 1 &&
+    currentPageText.pageNo <= K
+      ? currentPageText
+      : undefined;
+  let generationDeadline: ReturnType<typeof setTimeout> | undefined;
+  let generationController: AbortController | undefined;
 
-  // 0. 아모 자기소개 — 근거 조립·검색·LLM 호출 전부 건너뛰고 고정 멘트로 즉시 답한다
   if (isAskingAboutAmo(query)) {
     if (conversationId != null) {
       await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
@@ -262,23 +80,29 @@ export async function* handleQuery(
   }
 
   try {
-    // 1. 근거 조립 (질의 텍스트는 인자로 넘기지 않음! - NFR-SEC-006 🚦)
     const context = MOCK_MODE ? getMockContext(K) : await assembleContext(bookId, K);
 
-    // 2. 벡터 검색 (질의 관여, 범위는 K로 강제)
+    const priorTurns =
+      conversationId != null && !MOCK_MODE ? await getConversationContext(conversationId, K) : [];
+    // User wording is a retrieval hint only. Assistant turns never seed factual retrieval.
+    const lexicalHint = /(?:그\s*(?:사람|인물|분)|걔|그의|그녀|그는)/u.test(query)
+      ? priorTurns
+          .filter((turn) => turn.role === 'user')
+          .slice(-3)
+          .map((turn) => turn.text)
+          .join('\n')
+          .slice(-500)
+      : '';
     const searchResults = MOCK_MODE
       ? getMockSearchResults(query, K)
-      : await vectorSearch(bookId, query, K);
+      : lexicalHint
+        ? await vectorSearch(bookId, query, K, lexicalHint)
+        : await vectorSearch(bookId, query, K);
 
-    // 3. 프롬프트 구성
-    const basePrompt = buildPrompt(context, SYSTEM_RULES);
+    const basePrompt = buildPrompt(context, '');
 
-    // 검색 결과 추가
     let fullPrompt = basePrompt;
 
-    // 3-0. 완독 상태 태도 지시 (D14) — 기준점 결정기가 is_complete=true를 준 요청만.
-    // 근거 조립·검색 범위(K)는 손대지 않는다. "없으면 없다고 단정해도 된다"는 답변
-    // 태도만 바꾼다. FR-QNA-004 🚦 / R10 완독 예외
     if (isComplete) {
       fullPrompt += `\n\n${COMPLETION_STANCE}`;
     }
@@ -289,22 +113,7 @@ export async function* handleQuery(
       });
     }
 
-    // 2-1. 이전 대화 맥락 (conversationId가 있을 때만) — "지난 대화를 기억하는 답변"
-    // cutoff_page <= K 인 turn만 가져온다(005 마이그레이션 참조) — 대화 도중 뒤로 페이지
-    // 이동한 뒤에도 그보다 큰 K의 예전 답변이 새 프롬프트로 새어 들어가지 않게 막는다.
-    // "근거 데이터"와 분리된 섹션이다 — 위 시스템 규칙 4번이 이 섹션을 근거로 쓰지
-    // 말라고 명시한다(NFR-AI-005 유지).
-    //
-    // ⚠️ 순서 변경(2026-08-26, 사용자 제보 — "선택된 문장이 바뀌면 이전에 선택됐던
-    // 문장 기준으로 답하는 경우가 있다") — 예전엔 이 섹션이 "본문 인용"보다 뒤,
-    // "사용자 질문" 바로 앞에 있었다. 대화가 이어지는 동안 인용문이 바뀌면(문장 A →
-    // 문장 B), 이전 대화 속 답변엔 옛 인용문 A에 대한 내용이 그대로 남아있는데, 그게
-    // 새 인용문 B(아래 3-0)보다 질문에 더 가까이 있어서 모델이 최신 인용 대신 그
-    // 예전 맥락 쪽으로 쏠리는 걸 재현했다 — "근거 아님" 문구가 있어도 마찬가지였다.
-    // 이 섹션을 앞으로 옮겨서, 지금 이 순간의 확정 근거(현재 페이지·본문 인용)가
-    // 항상 "사용자 질문" 바로 앞자리를 지키게 한다.
     if (conversationId != null) {
-      const priorTurns = MOCK_MODE ? [] : await getConversationContext(conversationId, K);
       if (priorTurns.length > 0) {
         fullPrompt += '\n\n## 이전 대화 (맥락 파악용 — 근거 아님)\n\n';
         priorTurns.forEach((turn) => {
@@ -313,103 +122,65 @@ export async function* handleQuery(
       }
     }
 
-    // 2-2. 지금 보고 있는 페이지 본문 — 매 질문마다 자동으로 얹는다(2026-08-24, 사용자
-    // 요청: "다음 페이지도 근거로 써라"). K는 그대로 두고(R1 불변), 이미 화면에 떠 있는
-    // (R3: 본문 접근 무제한) 현재 페이지 전체만 별도 섹션으로 추가한다 — assembleContext·
-    // vectorSearch가 강제하는 K 상한과는 완전히 무관한 경로다. 페이지 번호는 라우트가
-    // 기준점 결정기로 확인한 값이라 프론트가 보낸 값을 믿지 않는다.
-    //
-    // ⚠️ 실사용 중 발견(2026-08-24) — 섹션을 추가하는 것만으로는 부족했다. "근거 데이터"에
-    // 실린 현재 장 원문(K까지, 수천~수만 자)이 프롬프트 대부분을 채우다 보니, Haiku가 이
-    // 훨씬 작은 섹션을 사실상 무시하고 [NO_EVIDENCE]를 반환하는 걸 실제 배포본에서 직접
-    // 재현해서 확인했다(EC2에서 실제 Bedrock 호출로 검증, mock 아님). 그래서 "근거 외
-    // 생성 금지" 규칙에 기대는 대신, 이 섹션 자체에 "여기 있으면 거절하지 마라"는 지시를
-    // 직접 박아 넣는다 — 근거가 프롬프트 어디에 있든 지시는 근거 바로 옆에 있어야 모델이
-    // 놓치지 않는다.
     if (currentPageText) {
       fullPrompt += `\n\n## ⚠️ 지금 보고 있는 페이지 본문 (p.${currentPageText.pageNo}) — 사용자가 실제로 읽고 있는 확정된 텍스트\n\n${currentPageText.content}\n\n(위는 사용자가 지금 화면에 띄워 놓은 페이지 전체입니다. 질문의 답이 이 안에 있으면 "${NO_EVIDENCE_TOKEN}"을 반환하지 말고 반드시 이 내용으로 답하세요 — 이 안의 단어·인명·지명·서술은 전부 이미 열람 가능한 확정된 근거입니다. "지금 몇 페이지야?", "현재 페이지 어디야?"처럼 사용자의 현재 위치를 묻는 질문에는 무조건 정확히 "p.${currentPageText.pageNo}"로만 답하세요 — "이전 대화"나 다른 근거에 있는 페이지 번호를 쓰지 말고, 다른 숫자를 지어내지도 마세요.)`;
     }
 
-    // 2-3. 본문 드래그 인용 — 사용자가 지금 화면에서 직접 고른 문장. K로 자르지 않는다
-    // (R3: 본문 접근 무제한). "근거 데이터"·"검색 결과"와는 출처가 다르므로 별도 섹션으로
-    // 둔다 — assembleContext/vectorSearch의 K 상한과는 완전히 무관한 경로다.
-    //
-    // ⚠️ 실사용 중 발견(2026-08-25) — 이 섹션에 페이지 번호가 아예 없었다. 화면에 보이는
-    // 문장은 항상 "지금 보고 있는 페이지"(currentPageText)에서 드래그한 것뿐인데도, 시스템
-    // 규칙 3번("답변 시 페이지 번호 명시")을 지키려던 모델이 페이지 번호를 아예 지어내
-    // 다른 장면(p.18)을 인용문 출처로 둔갑시키는 걸 실제 배포본에서 확인했다("이거 누가
-    // 말했어?" → 실제로는 p.107 인용인데 p.18라고 답함). currentPageText가 있으면 그
-    // 페이지 번호가 곧 인용문의 페이지이므로 그대로 박아 넣고, 없으면(드문 실패 경로)
-    // 페이지를 지어내지 말라고 명시한다.
-    //
-    // ⚠️ 2026-08-26 — 위 "이전 대화"에 다른(예전) 인용문에 대한 문답이 남아 있을 수
-    // 있어서, 지금 온 인용문이 그보다 최신이라는 걸 이 섹션 안에서도 다시 못박는다
-    // (순서만으로는 부족할 수 있어 지시를 근거 바로 옆에 중복해 둔다 — 이 파일의
-    // 다른 ⚠️ 주석들과 같은 이유).
     if (quote) {
-      const quotePageNote = currentPageText
-        ? `이 인용문은 p.${currentPageText.pageNo}에서 온 것입니다 — 답할 때 이 페이지 번호를 쓰세요. 다른 페이지 번호를 지어내지 마세요.`
-        : `이 인용문의 정확한 페이지 번호는 알 수 없습니다 — 페이지 번호를 지어내지 말고, 필요하면 페이지 언급 없이 답하세요.`;
-      fullPrompt += `\n\n## ⚠️ 사용자가 지금 보고 있는 본문 인용 — 확정된 근거\n\n"${quote}"\n\n(사용자가 읽기 화면에서 방금 새로 선택한 문장입니다. 위 "근거 데이터"·"검색 결과"에 없어도 이 인용문 자체는 "${NO_EVIDENCE_TOKEN}" 반환 없이 답변에 활용하세요. 위 "이전 대화"에 다른 문장에 대한 언급이 있어도, 지금 질문은 이 인용문 기준으로 답하세요 — 이게 지금 화면에 떠 있는 최신 인용문입니다. ${quotePageNote})`;
+      const quoteSources = [...searchResults];
+      if (currentPageText)
+        quoteSources.unshift({
+          page_no: currentPageText.pageNo,
+          content: currentPageText.content,
+          distance: 0,
+        });
+      fullPrompt += buildQuoteSection(quote, quoteSources, K);
     }
 
-    // 사용자 질의 추가
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
 
-    // 4. 모델 선택 (단일 기본 모델 — 2026-08-25 난이도 분기 폐지)
     const modelSelection = selectModel(query);
     logModelSelection(modelSelection, query);
     recordSelection(modelSelection.model);
 
-    // 5. LLM 호출 (스트리밍)
-    // ⚠️ task 이름은 반드시 MODEL_CONFIG의 키여야 한다 — 예전엔 `chatbot_${model}`로
-    // 조립해 "chatbot_sonnet"이라는 없는 이름을 넘겼고, 그래서 전 질의가 조용히 폴백
-    // 모델로 호출됐다(2026-08-25 발견). 상수를 그대로 쓰고 테스트로 고정한다.
     const task = CHATBOT_TASK;
+    const controller = new AbortController();
+    generationController = controller;
+    // One generation request, including SDK transport retries, shares this deadline.
+    generationDeadline = setTimeout(() => controller.abort(), 60_000);
+    const streamSource = MOCK_MODE
+      ? getMockLLMResponse(query)
+      : llmStream(task, fullPrompt, { system: SYSTEM_RULES, signal: controller.signal });
     let responseText = '';
-
-    const streamSource = MOCK_MODE ? getMockLLMResponse(query) : llmStream(task, fullPrompt);
-
-    // 청크 경계가 토큰(`[NO_EVIDENCE]`) 중간을 가를 수 있다 — 예: "[NO_EVIDENCE"까지 온
-    // 청크와 "]"만 온 다음 청크로 나뉘면, 완성 판정 전에 앞 조각이 그대로 클라이언트로
-    // 새어 나가 답변 앞에 깨진 토큰이 붙는다(FR-QNA-004 🚦 위반 — "항상 같은 문구"가
-    // 아니게 됨). 토큰과 겹칠 수 있는 꼬리는 다음 청크와 합쳐 보기 전까지 보류한다.
     let pending = '';
+
+    // Stream immediately. Only a possible split internal control token is held locally.
+    // FR-SPL-005: control tokens are errors, never canned answers or extra LLM calls.
     for await (const chunk of streamSource) {
+      controller.signal.throwIfAborted();
       pending += chunk;
-      responseText += chunk;
-
-      // 근거 부재 토큰 감지 (FR-QNA-004 🚦)
-      if (pending.includes(NO_EVIDENCE_TOKEN)) {
-        noEvidence = true;
-        pending = '';
-        break;
-      }
-
-      const holdback = tokenPrefixOverlapLength(pending, NO_EVIDENCE_TOKEN);
-      const safeToYield = pending.slice(0, pending.length - holdback);
-      if (safeToYield) {
-        yield safeToYield;
-        pending = pending.slice(safeToYield.length);
+      if (pending.includes(NO_EVIDENCE_TOKEN)) throw new Error('CHATBOT_INTERNAL_TOKEN');
+      let held = Math.min(pending.length, NO_EVIDENCE_TOKEN.length - 1);
+      while (held > 0 && !pending.endsWith(NO_EVIDENCE_TOKEN.slice(0, held))) held--;
+      const ready = pending.slice(0, pending.length - held);
+      pending = pending.slice(pending.length - held);
+      if (ready) {
+        responseText += ready;
+        yield ready;
       }
     }
-
-    // 6. 근거 부재 처리
-    if (noEvidence) {
-      // 서버 상수 문구로 치환 (FR-QNA-004 🚦)
-      yield NO_EVIDENCE_MESSAGE;
-    } else if (pending) {
-      // 스트림이 끝날 때까지 토큰과 안 겹친 보류분 — 정상 답변의 마지막 조각이다
+    controller.signal.throwIfAborted();
+    if (pending) {
+      responseText += pending;
       yield pending;
     }
+    if (!responseText.trim()) throw new Error('CHATBOT_EMPTY_RESPONSE');
+    clearTimeout(generationDeadline);
 
-    // 6-1. 대화 이력 기록 — conversationId가 있을 때만 (resolveConversation이 미리 정함)
     if (conversationId != null) {
-      const finalAnswer = noEvidence ? NO_EVIDENCE_MESSAGE : responseText;
-      await recordTurns(conversationId, query, finalAnswer, K);
+      await recordTurns(conversationId, query, responseText, K);
     }
 
-    // 7. 로그 기록 (NFR-OBS-005 🚦)
     await logQuery({
       timestamp: new Date(),
       device_id: deviceId,
@@ -431,9 +202,10 @@ export async function* handleQuery(
         page_no: r.page_no,
         distance: r.distance,
       })),
-      no_evidence: noEvidence,
+      no_evidence: false,
       is_complete: isComplete,
       model: modelSelection.modelId,
+      logical_model_calls: MOCK_MODE ? 0 : 1,
       output_ref: `chatbot-${Date.now()}`,
       tokens: {
         input: 0, // TODO: 실제 토큰 수
@@ -443,23 +215,13 @@ export async function* handleQuery(
   } catch (error) {
     console.error('[Chatbot] Query failed', { bookId, query, K, error });
     throw error;
+  } finally {
+    if (generationDeadline) clearTimeout(generationDeadline);
+    generationController?.abort();
   }
 }
 
-/**
- * 챗봇 질의 로그 기록
- *
- * NFR-OBS-005 🚦
- */
 async function logQuery(log: ChatbotQueryLog): Promise<void> {
-  // TODO: 실제 DB에 저장
-  // INSERT INTO chatbot_query_log (...)
-
-  // CP5 인젝션 판정은 "K 밖 콘텐츠가 어디서 들어왔는지"를 로그만 보고 되짚을 수 있어야
-  // 한다. 조립부는 input_records·search_selected_pages를 이미 채워 넘기는데 여기서
-  // 요약만 남기고 버리면 판정 자체가 불가능해진다 — 전달받은 필드를 그대로 싣는다.
-  // 부피 걱정은 없다: input_records는 ID·제목만, search_selected_pages는 페이지 번호와
-  // 거리만 담는다(본문 없음). 자유 텍스트인 query·quote만 앞부분으로 자른다.
   console.log('[Chatbot] Query log', {
     timestamp: log.timestamp.toISOString(),
     device_id: log.device_id,
@@ -473,14 +235,12 @@ async function logQuery(log: ChatbotQueryLog): Promise<void> {
     no_evidence: log.no_evidence,
     is_complete: log.is_complete ?? false,
     model: log.model,
+    logical_model_calls: log.logical_model_calls ?? 0,
     output_ref: log.output_ref,
     tokens: log.tokens,
   });
 }
 
-/**
- * 챗봇 통계 조회 (모니터링용)
- */
 export function getChatbotStats(): {
   noEvidenceToken: string;
   noEvidenceMessage: string;

@@ -1,11 +1,11 @@
 /**
  * 챗봇 서비스 테스트
  *
- * FR-QNA-004 🚦: 근거 부재 시 항상 같은 문구
+ * 근거 부재에도 질문에 맞는 답변을 사용하고 내부 토큰은 노출하지 않는다.
  * FR-QNA-006 🚦: 전체 플로우에서 K 필터 유지
  */
 
-import { handleQuery, NO_EVIDENCE_MESSAGE } from '../service';
+import { handleQuery } from '../service';
 import * as repo from '../repository';
 import { vectorSearch } from '../vector-search';
 import { stream as llmStream } from '../../llm-gateway/gateway';
@@ -16,20 +16,9 @@ jest.mock('../vector-search');
 // MOCK_MODE=true가 새어 들어간다(no-evidence-streaming.test.ts와 같은 이유).
 jest.mock('../../llm-gateway/gateway', () => ({ stream: jest.fn() }));
 
-describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
+describe('챗봇 서비스 - 내부 근거 부재 토큰 처리', () => {
   describe('근거 부재 처리', () => {
-    test('FR-QNA-004: NO_EVIDENCE_MESSAGE는 고정된 문구', () => {
-      // 메시지가 정확히 명세된 문구인지 확인 — "왜" 못 답하는지 이유를 대지 않는
-      // 문구여야 한다(R10 불변식, 2026-08-25 사용자 지적 — 예전 문구는 "아직 안 읽은
-      // 뒷부분 얘기라"고 스포일러가 원인이라 단정해 실질적으로 이유를 판별하고 있었다).
-      // 뒷문장은 2026-08-26(사용자 요청)에 다른 질문을 유도하는 문구로 바뀌었다 —
-      // 여전히 이유는 대지 않는다.
-      expect(NO_EVIDENCE_MESSAGE).toBe(
-        '🔒 지금까지 읽은 내용으로는 알 수 없어요 🤔 다른 질문을 해보시겠어요?'
-      );
-    });
-
-    describe('FR-QNA-004: 근거 부재 판정 이유는 구별하지 않음', () => {
+    describe('컨텍스트 양에 관계없이 내부 토큰은 답변으로 사용하지 않음', () => {
       const BOOK_ID = 'takryu-vol1';
       const DEVICE_ID = 'device-123';
       const K = 80;
@@ -43,7 +32,7 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         jest.clearAllMocks();
       });
 
-      test('근거 데이터가 두툼해도(엔티티·요약·검색결과 존재) 모델이 근거 부재 토큰을 반환하면 고정 문구만 나간다 (스포일러 질문 시나리오)', async () => {
+      test('근거 데이터가 두툼해도 내부 토큰은 오류로 처리하고 재생성하지 않는다', async () => {
         (repo.findChapterSummaries as jest.Mock).mockResolvedValue([
           { title: '1장', end_page: 40 },
         ]);
@@ -63,14 +52,18 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         });
 
         const chunks: string[] = [];
-        for await (const chunk of handleQuery(BOOK_ID, '결말이 어떻게 되나', K, DEVICE_ID)) {
-          chunks.push(chunk);
-        }
+        const consume = async (): Promise<void> => {
+          for await (const chunk of handleQuery(BOOK_ID, '결말이 어떻게 되나', K, DEVICE_ID)) {
+            chunks.push(chunk);
+          }
+        };
 
-        expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+        await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+        expect(chunks).toEqual([]);
+        expect(llmStream).toHaveBeenCalledTimes(1);
       });
 
-      test('근거 데이터가 전무해도(빈 컨텍스트·빈 검색결과) 고정 문구만 나간다 (오프토픽 질문 시나리오) — 위 시나리오와 바이트 단위로 동일한 출력', async () => {
+      test('근거 데이터가 전무해도 내부 토큰을 고정 거절문으로 대체하거나 재생성하지 않는다', async () => {
         (repo.findChapterSummaries as jest.Mock).mockResolvedValue([]);
         (repo.getCurrentChapterText as jest.Mock).mockResolvedValue('');
         (repo.findCharacters as jest.Mock).mockResolvedValue([]);
@@ -86,14 +79,18 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         });
 
         const chunks: string[] = [];
-        for await (const chunk of handleQuery(BOOK_ID, '오늘 날씨 어때', K, DEVICE_ID)) {
-          chunks.push(chunk);
-        }
+        const consume = async (): Promise<void> => {
+          for await (const chunk of handleQuery(BOOK_ID, '오늘 날씨 어때', K, DEVICE_ID)) {
+            chunks.push(chunk);
+          }
+        };
 
-        expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+        await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+        expect(chunks).toEqual([]);
+        expect(llmStream).toHaveBeenCalledTimes(1);
       });
 
-      test('positive 짝 — 근거가 있으면 고정 문구가 아니라 실제 답변이 그대로 나간다', async () => {
+      test('positive 짝 — 근거가 있으면 생성한 실제 답변이 그대로 나간다', async () => {
         (repo.findChapterSummaries as jest.Mock).mockResolvedValue([]);
         (repo.getCurrentChapterText as jest.Mock).mockResolvedValue('');
         (repo.findCharacters as jest.Mock).mockResolvedValue([{ id: 'char-1', name: '정주사' }]);
@@ -114,14 +111,13 @@ describe('챗봇 서비스 - FR-QNA-004 🚦', () => {
         }
 
         const output = chunks.join('');
-        expect(output).not.toBe(NO_EVIDENCE_MESSAGE);
         expect(output).toBe('정주사는 고무신 장사로 돈을 모았어요 (p.10).');
       });
     });
   });
 });
 
-describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
+describe('완독 상태에서도 근거 범위와 검색 불확실성 유지', () => {
   const BOOK_ID = 'takryu-vol1';
   const DEVICE_ID = 'device-123';
   const K = 130; // 마지막 페이지까지 읽음 (완독)
@@ -152,7 +148,7 @@ describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
 
   test('FR-QNA-004 🚦: 완독(isComplete=true)이면 프롬프트에 완독 태도 지시가 실린다', async () => {
     (llmStream as jest.Mock).mockImplementation(async function* () {
-      yield '그건 이 책에 나오지 않아요.';
+      yield '제공된 자료에서는 그 일을 확인하지 못했어요.';
     });
 
     const chunks: string[] = [];
@@ -173,10 +169,9 @@ describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
     expect(prompt).toContain('독자 상태: 완독');
   });
 
-  test('FR-QNA-004 🚦: 완독 상태에서 근거 없는 질문에 모델의 단정 부정이 고정 문구로 치환되지 않고 그대로 나간다', async () => {
-    // positive — 완독이면 "그건 이 책에 나오지 않아요"가 통과한다
+  test('완독 상태에서 검색 누락을 작품 전체 부재로 단정하지 않도록 지시한다 (mock 정책 검증)', async () => {
     (llmStream as jest.Mock).mockImplementation(async function* () {
-      yield '그건 이 책에 나오지 않아요.';
+      yield '제공된 자료에서는 그 일을 확인하지 못했어요.';
     });
 
     const chunks: string[] = [];
@@ -194,14 +189,16 @@ describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
     }
 
     const output = chunks.join('');
-    expect(output).toBe('그건 이 책에 나오지 않아요.');
-    expect(output).not.toBe(NO_EVIDENCE_MESSAGE);
+    expect(output).toBe('제공된 자료에서는 그 일을 확인하지 못했어요.');
+    const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
+    expect(prompt).toContain('검색 결과가 없다는 사실은 작품 전체에 없다는 증거가 아닙니다');
+    expect(prompt).not.toContain('그건 이 책에 나오지 않아요');
   });
 
   test('FR-QNA-004 🚦: 완독이 아니면(isComplete=false) 같은 질문·같은 빈 근거에 완독 태도 지시가 실리지 않는다', async () => {
-    // negative 짝 — 완독 예외는 is_complete=true에서만 열린다
+    // 완독 태도 지시는 is_complete=true에서만 들어간다.
     (llmStream as jest.Mock).mockImplementation(async function* () {
-      yield '[NO_EVIDENCE]';
+      yield '제공된 자료에서는 그 일을 확인하지 못했어요.';
     });
 
     const chunks: string[] = [];
@@ -211,31 +208,33 @@ describe('완독 예외 - D14 (FR-QNA-004 🚦 / R10 완독 예외)', () => {
 
     const prompt = (llmStream as jest.Mock).mock.calls[0][1] as string;
     expect(prompt).not.toContain('독자 상태: 완독');
-    expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+    expect(chunks.join('')).toBe('제공된 자료에서는 그 일을 확인하지 못했어요.');
   });
 
-  test('FR-QNA-004 🚦: 완독이어도 모델이 [NO_EVIDENCE]를 반환하면 고정 문구로 폴백한다', async () => {
-    // 완독 예외가 열려도 근거 부재 토큰 경로 자체는 유지된다 — 완독 독자에겐 아무것도
-    // 새로 노출하지 않으므로 안전한 폴백이다
+  test('완독이어도 내부 토큰은 고정 거절문이나 재생성 없이 오류를 반환한다', async () => {
     (llmStream as jest.Mock).mockImplementation(async function* () {
       yield '[NO_EVIDENCE]';
     });
 
     const chunks: string[] = [];
-    for await (const chunk of handleQuery(
-      BOOK_ID,
-      '오늘 날씨 어때',
-      K,
-      DEVICE_ID,
-      undefined,
-      undefined,
-      undefined,
-      true
-    )) {
-      chunks.push(chunk);
-    }
+    const consume = async (): Promise<void> => {
+      for await (const chunk of handleQuery(
+        BOOK_ID,
+        '오늘 날씨 어때',
+        K,
+        DEVICE_ID,
+        undefined,
+        undefined,
+        undefined,
+        true
+      )) {
+        chunks.push(chunk);
+      }
+    };
 
-    expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+    await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+    expect(chunks).toEqual([]);
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 });
 

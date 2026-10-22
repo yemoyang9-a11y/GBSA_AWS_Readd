@@ -58,6 +58,34 @@ export async function createConversation(
   return result.rows[0];
 }
 
+/** Parent visibility and turns share one SQL/MVCC snapshot, closing detail races. */
+export async function getConversationSnapshot(
+  deviceId: string,
+  bookId: string,
+  conversationId: number,
+  K: number
+): Promise<{ conversation: ConversationRow; turns: ConversationTurnRow[] } | null> {
+  const result = await pool.query(
+    `
+    SELECT c.id, c.device_id, c.book_id, c.conversation_date, c.cutoff_page,
+           c.title, c.created_at, c.updated_at,
+           COALESCE((
+             SELECT json_agg(t ORDER BY t.turn_no)
+             FROM chatbot_conversation_turn t
+             WHERE t.conversation_id = c.id AND t.cutoff_page <= $4
+           ), '[]'::json) AS turns
+    FROM chatbot_conversation c
+    WHERE c.id = $1 AND c.device_id = $2 AND c.book_id = $3
+      AND c.cutoff_page <= $4
+  `,
+    [conversationId, deviceId, bookId, K]
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  const { turns, ...conversation } = row;
+  return { conversation, turns };
+}
+
 /**
  * 대화의 봉인 기준점을 현재 K와 견주어 더 큰 값으로 갱신한다 (래칫 — 감소하지 않음).
  * 대화 중 사용자가 계속 읽어 K가 커지면, 그 대화는 그 최댓값까지의 정보를 담게 되기 때문.

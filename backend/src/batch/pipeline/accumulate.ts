@@ -9,7 +9,8 @@
  * 관계는 이력형(A6, FR-CHR-001 🚦) — 같은 쌍이라도 라벨이 바뀌면 새 행을 추가하고,
  * 라벨이 그대로면(같은 사실의 재서술) 중복 행을 만들지 않는다. 기존 행은 절대 덮어쓰지 않는다.
  */
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
+import { ReviewCandidate, SourceEvidence } from './grounding';
 
 export type AliasType = 'name' | 'title' | 'kinship' | 'nickname';
 
@@ -17,16 +18,24 @@ export interface AccumulatedAlias {
   alias: string;
   type: AliasType;
   first_appearance_page: number;
+  identity_established_page?: number;
+  mention_page?: number;
+  evidence?: SourceEvidence;
+  rationale?: string;
 }
 
 export interface AccumulatedNote {
   id: string;
   note: string;
   source_page: number;
+  evidence?: SourceEvidence;
+  rationale?: string;
 }
 
 export interface AccumulatedCharacter {
   id: string;
+  identity_status?: 'same' | 'distinct';
+  evidence?: SourceEvidence;
   name: string;
   first_appearance_page: number;
   aliases: AccumulatedAlias[];
@@ -35,6 +44,8 @@ export interface AccumulatedCharacter {
 
 export interface AccumulatedRelationship {
   id: string;
+  evidence?: SourceEvidence;
+  rationale?: string;
   character_a_id: string;
   character_b_id: string;
   label: string;
@@ -49,14 +60,28 @@ export interface AccumulatedTerm {
 }
 
 export interface GenerationState {
+  book_id: string;
+  review: ReviewCandidate[];
+  identity_evidence: { character_id: string; candidate: ChapterCharacterInput }[];
   characters: AccumulatedCharacter[];
   /** 쌍당 여러 행 허용 (이력형, A6) — 최신 라벨 선택은 R4 소비 시점의 몫 */
   relationships: AccumulatedRelationship[];
   terms: AccumulatedTerm[];
 }
 
-export function createEmptyState(): GenerationState {
-  return { characters: [], relationships: [], terms: [] };
+export function createEmptyState(bookId = 'unscoped'): GenerationState {
+  return {
+    book_id: bookId,
+    review: [],
+    identity_evidence: [],
+    characters: [],
+    relationships: [],
+    terms: [],
+  };
+}
+
+function stableId(state: GenerationState, ...parts: unknown[]): string {
+  return uuidv5(JSON.stringify([state.book_id, ...parts]), uuidv5.URL);
 }
 
 function normalize(text: string): string {
@@ -64,13 +89,22 @@ function normalize(text: string): string {
 }
 
 /** 대표명 또는 별칭 문자열로 기존 인물을 찾는다 (관계 추출이 별칭으로 인물을 지칭하는 경우 대응) */
-function findCharacter(
+function matchingCharacters(
   state: GenerationState,
-  nameOrAlias: string
-): AccumulatedCharacter | undefined {
+  nameOrAlias: string,
+  atPage = Infinity
+): AccumulatedCharacter[] {
   const target = normalize(nameOrAlias);
-  return state.characters.find(
-    (c) => c.name === target || c.aliases.some((a) => a.alias === target)
+  return state.characters.filter(
+    (c) =>
+      c.first_appearance_page <= atPage &&
+      (c.name === target ||
+        c.aliases.some(
+          (a) =>
+            a.alias === target &&
+            (a.type === 'name' || a.type === 'nickname') &&
+            a.first_appearance_page <= atPage
+        ))
   );
 }
 
@@ -79,11 +113,13 @@ export function knownCharacterNames(state: GenerationState): string[] {
   return state.characters.map((c) => c.name);
 }
 
-interface ChapterCharacterInput {
+export interface ChapterCharacterInput {
   name: string;
+  evidence?: SourceEvidence;
+  identity_status?: 'same' | 'distinct';
   first_appearance_page: number;
-  aliases: { alias: string; type: string; first_appearance_page: number }[];
-  notes: { note: string; source_page: number }[];
+  aliases: (Omit<AccumulatedAlias, 'type'> & { type: string })[];
+  notes: Omit<AccumulatedNote, 'id'>[];
 }
 
 /**
@@ -95,12 +131,119 @@ export function mergeCharacters(
   state: GenerationState,
   chapterCharacters: ChapterCharacterInput[]
 ): void {
-  for (const c of chapterCharacters) {
+  const chronological = [...chapterCharacters].sort(
+    (a, b) =>
+      a.first_appearance_page - b.first_appearance_page ||
+      (a.evidence?.start_char ?? 0) - (b.evidence?.start_char ?? 0) ||
+      a.aliases.length - b.aliases.length ||
+      a.name.localeCompare(b.name)
+  );
+  for (const c of chronological) {
     const name = normalize(c.name);
-    let existing = findCharacter(state, name);
+    const heldNames = state.review
+      .filter((r) => r.kind === 'identity')
+      .map((r) => {
+        const record = r.candidate as Record<string, unknown>;
+        return (record.character ?? record) as Record<string, unknown>;
+      });
+    const isHeld = (label: string, page: number): boolean =>
+      heldNames.some(
+        (candidate) =>
+          candidate.name === normalize(label) &&
+          (typeof candidate.first_appearance_page !== 'number' ||
+            candidate.first_appearance_page <= page)
+      );
+    if (
+      isHeld(name, c.first_appearance_page) ||
+      c.aliases.some(
+        (a) =>
+          (a.type === 'name' || a.type === 'nickname') &&
+          isHeld(a.alias, a.identity_established_page ?? a.first_appearance_page)
+      )
+    ) {
+      if (
+        !state.review.some(
+          (r) => r.kind === 'identity' && JSON.stringify(r.candidate) === JSON.stringify(c)
+        )
+      ) {
+        state.review.push({
+          kind: 'identity',
+          candidate: c,
+          reason: 'Identity name already held as ambiguous; no attribute or alias attachment',
+        });
+      }
+      continue;
+    }
+    const identityKey = [
+      'character',
+      name,
+      c.first_appearance_page,
+      c.evidence?.start_char ?? null,
+      c.evidence?.end_char ?? null,
+    ];
+    const candidates = new Set(
+      c.identity_status === 'distinct'
+        ? []
+        : matchingCharacters(state, name, c.first_appearance_page)
+    );
+    const deferredAliases = new Set<ChapterCharacterInput['aliases'][number]>();
+    // Reverse matching requires its own dated identity evidence, never just a mention.
+    for (const a of c.aliases) {
+      if (
+        c.identity_status !== 'distinct' &&
+        (a.type === 'name' || a.type === 'nickname') &&
+        a.evidence &&
+        a.identity_established_page
+      ) {
+        const matches = matchingCharacters(state, a.alias, a.identity_established_page);
+        // FR-SPL-002: a later reveal cannot move earlier facts onto another identity.
+        // Keep the independently introduced name; review its later link separately.
+        if (
+          a.identity_established_page > c.first_appearance_page &&
+          matches.some((match) => !candidates.has(match))
+        ) {
+          deferredAliases.add(a);
+          const candidate = { name, first_appearance_page: c.first_appearance_page, alias: a };
+          if (
+            !state.review.some(
+              (r) => r.kind === 'alias' && JSON.stringify(r.candidate) === JSON.stringify(candidate)
+            )
+          ) {
+            state.review.push({
+              kind: 'alias',
+              candidate,
+              reason:
+                'Identity link follows an independent introduction; preserve both identities for review',
+            });
+          }
+          continue;
+        }
+        for (const match of matches) candidates.add(match);
+      }
+    }
+    let existing =
+      candidates.size === 1
+        ? [...candidates][0]
+        : state.characters.find((x) => x.id === stableId(state, ...identityKey));
+    if (candidates.size > 1) {
+      const candidate = { character: c, ids: [...candidates].map((x) => x.id).sort() };
+      if (
+        !state.review.some(
+          (r) => r.kind === 'identity' && JSON.stringify(r.candidate) === JSON.stringify(candidate)
+        )
+      ) {
+        state.review.push({
+          kind: 'identity',
+          reason: 'Multiple identity candidates; no automatic merge',
+          candidate,
+        });
+      }
+      continue;
+    }
     if (!existing) {
       existing = {
-        id: uuidv4(),
+        ...c,
+        id: stableId(state, ...identityKey),
         name,
         first_appearance_page: c.first_appearance_page,
         aliases: [],
@@ -109,12 +252,65 @@ export function mergeCharacters(
       state.characters.push(existing);
     }
 
+    const previous = state.identity_evidence.find(
+      (entry) =>
+        entry.character_id === existing!.id &&
+        entry.candidate.name === name &&
+        entry.candidate.first_appearance_page === c.first_appearance_page &&
+        entry.candidate.evidence?.start_char === c.evidence?.start_char &&
+        entry.candidate.evidence?.end_char === c.evidence?.end_char
+    );
+    if (
+      c.identity_status === 'distinct' &&
+      previous &&
+      JSON.stringify(previous.candidate) !== JSON.stringify(c)
+    ) {
+      state.review.push({
+        kind: 'identity',
+        candidate: c,
+        reason: 'Conflicting distinct identities share one source anchor; disambiguation required',
+      });
+      continue;
+    }
+    if (
+      !state.identity_evidence.some(
+        (entry) =>
+          entry.character_id === existing!.id &&
+          JSON.stringify(entry.candidate) === JSON.stringify(c)
+      )
+    ) {
+      state.identity_evidence.push({ character_id: existing.id, candidate: c });
+    }
+
+    if (existing.name !== name) {
+      const identity = c.aliases.find(
+        (a) =>
+          !deferredAliases.has(a) &&
+          a.evidence &&
+          a.identity_established_page &&
+          matchingCharacters(state, a.alias, a.identity_established_page).includes(existing!)
+      );
+      if (identity && !existing.aliases.some((a) => a.alias === name)) {
+        existing.aliases.push({
+          ...identity,
+          alias: name,
+          type: 'name',
+          first_appearance_page: Math.max(
+            c.first_appearance_page,
+            identity.identity_established_page!
+          ),
+        });
+      }
+    }
+
     for (const a of c.aliases) {
+      if (deferredAliases.has(a)) continue;
       const aliasText = normalize(a.alias);
       const already =
         existing.aliases.some((ex) => ex.alias === aliasText) || existing.name === aliasText;
       if (!already) {
         existing.aliases.push({
+          ...a,
           alias: aliasText,
           type: a.type as AliasType,
           first_appearance_page: a.first_appearance_page,
@@ -123,7 +319,12 @@ export function mergeCharacters(
     }
 
     for (const n of c.notes) {
-      existing.notes.push({ id: uuidv4(), note: n.note, source_page: n.source_page });
+      if (!existing.notes.some((x) => x.note === n.note && x.source_page === n.source_page)) {
+        existing.notes.push({
+          ...n,
+          id: stableId(state, 'note', existing.id, n.source_page, n.note),
+        });
+      }
     }
   }
 }
@@ -131,9 +332,20 @@ export function mergeCharacters(
 /** 이름 또는 별칭으로 인물 id를 찾는다. 못 찾으면 undefined(관계 추출과 인물 추출 간 표기 불일치 — 검수 대상) */
 export function resolveCharacterId(
   state: GenerationState,
-  nameOrAlias: string
+  nameOrAlias: string,
+  atPage = Infinity
 ): string | undefined {
-  return findCharacter(state, nameOrAlias)?.id;
+  const blocked = state.review.some((review) => {
+    if (review.kind !== 'identity' || !review.candidate || typeof review.candidate !== 'object')
+      return false;
+    const record = review.candidate as Record<string, unknown>;
+    const c = (record.character ?? record) as Record<string, unknown>;
+    const since = typeof c.first_appearance_page === 'number' ? c.first_appearance_page : 0;
+    return c.name === normalize(nameOrAlias) && since <= atPage;
+  });
+  if (blocked) return undefined;
+  const matches = matchingCharacters(state, nameOrAlias, atPage);
+  return matches.length === 1 ? matches[0].id : undefined;
 }
 
 function pairKey(idA: string, idB: string): string {
@@ -145,6 +357,8 @@ interface ChapterRelationshipInput {
   character_b_id: string;
   label: string;
   established_page: number;
+  evidence?: SourceEvidence;
+  rationale?: string;
 }
 
 /**
@@ -161,12 +375,20 @@ export function mergeRelationships(
   state: GenerationState,
   chapterRelationships: ChapterRelationshipInput[]
 ): void {
-  for (const r of chapterRelationships) {
+  for (const r of [...chapterRelationships].sort(
+    (a, b) => a.established_page - b.established_page
+  )) {
     const [character_a_id, character_b_id] = [r.character_a_id, r.character_b_id].sort();
     const key = pairKey(character_a_id, character_b_id);
     const history = state.relationships.filter(
       (x) => pairKey(x.character_a_id, x.character_b_id) === key
     );
+    if (
+      history.some(
+        (x) => x.established_page === r.established_page && x.label === normalize(r.label)
+      )
+    )
+      continue;
     const latest = history.sort((a, b) => a.established_page - b.established_page).at(-1);
 
     if (latest && latest.label === normalize(r.label)) {
@@ -174,7 +396,8 @@ export function mergeRelationships(
     }
 
     state.relationships.push({
-      id: uuidv4(),
+      ...r,
+      id: stableId(state, 'relationship', key, r.established_page, normalize(r.label)),
       character_a_id,
       character_b_id,
       label: normalize(r.label),
@@ -196,7 +419,7 @@ export function mergeTerms(state: GenerationState, chapterTerms: ChapterTermInpu
     const already = state.terms.some((x) => x.term === term);
     if (!already) {
       state.terms.push({
-        id: uuidv4(),
+        id: stableId(state, 'term', term),
         term,
         definition: t.definition,
         first_appearance_page: t.first_appearance_page,

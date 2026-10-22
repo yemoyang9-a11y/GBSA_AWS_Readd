@@ -21,6 +21,7 @@ import {
   parseJsonResponse,
 } from './generate';
 import { checkPageBounds } from './validate';
+import { validateGroundedChapter } from './grounding';
 
 const BOOK_ID = 'takryu';
 
@@ -70,16 +71,19 @@ async function main(): Promise<void> {
   console.log('\n--- ② 인물 + 별칭 + 노트 ---');
   const characterRaw = await call('generate_character', buildCharacterPrompt(chapter, pages, []));
   const characterOut = parseJsonResponse<{ characters: CharacterOut[] }>(characterRaw);
+  const validatedCharacters = validateGroundedChapter(characterOut, pages);
   console.log(JSON.stringify(characterOut, null, 1));
-  const charPages = characterOut.characters.flatMap((c) => [
+  const charPages = validatedCharacters.characters.flatMap((c) => [
     c.first_appearance_page,
     ...c.aliases.map((a) => a.first_appearance_page),
     ...c.notes.map((n) => n.source_page),
   ]);
   reportPageBounds('인물/별칭/노트', charPages);
-  results.characters = characterOut;
+  results.characters = { characters: validatedCharacters.characters };
+  results.character_review = validatedCharacters.review;
+  results.raw_character_candidates = characterOut;
 
-  const knownNames = characterOut.characters.map((c) => c.name);
+  const knownNames = validatedCharacters.characters.map((c) => c.name);
 
   // 3) 관계
   console.log('\n--- ③ 관계 ---');
@@ -98,9 +102,12 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(relOut, null, 1));
   reportPageBounds(
     '관계',
-    relOut.relationships.map((r) => r.established_page)
+    validateGroundedChapter(relOut, pages).relationships.map((r) => r.established_page)
   );
-  results.relationships = relOut;
+  const validatedRelationships = validateGroundedChapter(relOut, pages);
+  results.relationships = { relationships: validatedRelationships.relationships };
+  results.relationship_review = validatedRelationships.review;
+  results.raw_relationship_candidates = relOut;
 
   // 4) 배경지식 · 소개 (장 무관, 책 전체 1회)
   console.log('\n--- ④ 배경지식 · 소개 ---');

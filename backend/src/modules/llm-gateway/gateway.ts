@@ -1,21 +1,19 @@
 /**
- * LLM 게이트웨이 (⑥)
- *
- * 모든 LLM 호출은 이 게이트웨이를 경유 (4.3절)
- * R1, R2, R3가 모두 사용
- *
- * @see architecture-r1.md 4.3절
- * @see dev-spec-R3-ai.md 1장, 2장
- * @see docs/migration.md — Phase 1 (Bedrock → Anthropic API 이관, 2026-08-29)
- *
- * ⚠️ 이 파일이 교체 지점이다 — 4.3절 의존 규칙상 모든 LLM 호출이 게이트웨이를 경유하므로,
- *    Bedrock에서 Anthropic API로 옮기면서 호출부(chatbot/service.ts, reading-state/
- *    recap.service.ts, batch/pipeline/*)는 한 줄도 건드리지 않았다. `call`/`stream`의
- *    시그니처와 반환 형태를 그대로 유지한 이유다.
+ * NFR-AI-001 / 4.3: all model requests pass through this gateway.
+ * The call/stream contract is shared by chatbot, recap and batch generation.
+ * LLM_PROVIDER selects one provider; an API failure never switches credentials/models.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { getModelForTask, validateModelVersions, DEFAULT_EFFORT, EFFORT_ENABLED } from './model-config';
+import OpenAI from 'openai';
+import { createOpenAIProvider, OpenAIUsage } from './openai-provider';
+import {
+  getModelForTask,
+  validateModelVersions,
+  DEFAULT_EFFORT,
+  EFFORT_ENABLED,
+  LLM_PROVIDER,
+} from './model-config';
 import dotenv from 'dotenv';
 
 // 환경 변수 로드 (gateway가 먼저 로드될 수 있으므로)
@@ -53,25 +51,32 @@ const TIMEOUT_MS = 120_000;
  */
 const WORKSPACE_ID = process.env.ANTHROPIC_WORKSPACE_ID?.trim();
 
-// Anthropic 클라이언트 초기화 — 인증은 ANTHROPIC_API_KEY 환경변수 (Bedrock의 IAM 서명 대체)
-const client = new Anthropic({
-  maxRetries: MAX_RETRIES,
-  timeout: TIMEOUT_MS, // TypeScript SDK의 timeout 단위는 밀리초다
-  ...(WORKSPACE_ID ? { defaultHeaders: { 'anthropic-workspace-id': WORKSPACE_ID } } : {}),
-});
-
-// 모델 버전 검증 (NFR-AI-002)
+// NFR-AI-001: initialize only the selected provider; credentials never fall back.
 validateModelVersions();
+const client =
+  LLM_PROVIDER === 'anthropic'
+    ? new Anthropic({
+        maxRetries: MAX_RETRIES,
+        timeout: TIMEOUT_MS,
+        ...(WORKSPACE_ID ? { defaultHeaders: { 'anthropic-workspace-id': WORKSPACE_ID } } : {}),
+      })
+    : undefined;
+const openaiProvider =
+  LLM_PROVIDER === 'openai'
+    ? createOpenAIProvider(new OpenAI({ maxRetries: MAX_RETRIES, timeout: TIMEOUT_MS }))
+    : undefined;
 
 /**
  * LLM 호출 옵션
  */
 export interface LLMCallOptions {
   maxTokens?: number;
+  /** Share the caller's generation deadline across SDK transport retries. */
+  signal?: AbortSignal;
+  /** Trusted application policy, separate from source text and user questions. */
+  system?: string;
   /**
-   * 추론 강도. 생략하면 DEFAULT_EFFORT(기본은 꺼짐).
-   *
-   * ⚠️ Sonnet 5 이상에서만 받는다 — Haiku 4.5·Sonnet 4.5는 이 필드를 거절한다.
+   * Provider-specific reasoning effort; omitted values use DEFAULT_EFFORT.
    */
   effort?: string;
 }
@@ -156,12 +161,24 @@ export async function call(
 
   try {
     // 재시도는 SDK가 처리한다 (NFR-AI-003) — 폴백 모델은 두지 않는다 (D-2)
-    const response = await client.messages.create({
-      model: modelId,
-      max_tokens: options.maxTokens || 4096,
-      ...effortConfig(options.effort),
-      messages: [{ role: 'user', content: prompt }],
-    });
+    if (openaiProvider) {
+      const result = await openaiProvider.call(modelId, prompt, {
+        ...options,
+        effort: options.effort ?? DEFAULT_EFFORT,
+        onUsage: (usage) => logMetrics({ task, ...usage, durationMs: Date.now() - startTime }),
+      });
+      return result.text;
+    }
+    const response = await client!.messages.create(
+      {
+        model: modelId,
+        max_tokens: options.maxTokens || 4096,
+        ...effortConfig(options.effort),
+        ...(options.system !== undefined ? { system: options.system } : {}),
+        messages: [{ role: 'user', content: prompt }],
+      },
+      options.signal ? { signal: options.signal } : undefined
+    );
 
     // 토큰 계측 (NFR-OBS-004)
     logMetrics({
@@ -174,6 +191,7 @@ export async function call(
 
     return extractText(response.content);
   } catch (error) {
+    if (openaiProvider) throw error;
     console.error('LLM Gateway Error:', { task, error });
     throw new Error(`LLM call failed for task "${task}": ${error}`);
   }
@@ -212,12 +230,24 @@ export async function* stream(
 
   try {
     // 재시도는 SDK가 처리한다 (NFR-AI-003) — 폴백 모델은 두지 않는다 (D-2)
-    const messageStream = client.messages.stream({
-      model: modelId,
-      max_tokens: options.maxTokens || 4096,
-      ...effortConfig(options.effort),
-      messages: [{ role: 'user', content: prompt }],
-    });
+    if (openaiProvider) {
+      return yield* openaiProvider.stream(modelId, prompt, {
+        ...options,
+        effort: options.effort ?? DEFAULT_EFFORT,
+        onUsage: (usage) =>
+          logMetrics({ task, ...usage, durationMs: Date.now() - startTime, streaming: true }),
+      });
+    }
+    const messageStream = client!.messages.stream(
+      {
+        model: modelId,
+        max_tokens: options.maxTokens || 4096,
+        ...effortConfig(options.effort),
+        ...(options.system !== undefined ? { system: options.system } : {}),
+        messages: [{ role: 'user', content: prompt }],
+      },
+      options.signal ? { signal: options.signal } : undefined
+    );
 
     for await (const event of messageStream) {
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -246,6 +276,7 @@ export async function* stream(
     // 토큰 사용량 반환 (호출부가 로그에 기록 가능)
     return usage;
   } catch (error) {
+    if (openaiProvider) throw error;
     console.error('LLM Gateway Stream Error:', { task, error });
     throw new Error(`LLM stream failed for task "${task}": ${error}`);
   }
@@ -256,7 +287,7 @@ export async function* stream(
  *
  * @param metrics - 기록할 메트릭
  */
-interface LLMMetrics {
+interface LLMMetrics extends Partial<OpenAIUsage> {
   task: string;
   modelId: string;
   inputTokens?: number;
@@ -268,6 +299,7 @@ interface LLMMetrics {
 function logMetrics(metrics: LLMMetrics): void {
   console.log('[LLM Metrics]', {
     timestamp: new Date().toISOString(),
+    provider: LLM_PROVIDER,
     ...metrics,
   });
 }
@@ -280,6 +312,7 @@ export function getGatewayStats(): {
 } {
   return {
     modelConfig: {
+      provider: LLM_PROVIDER,
       chatbot: getModelForTask('chatbot'),
       recap: getModelForTask('recap'),
       effort: DEFAULT_EFFORT,

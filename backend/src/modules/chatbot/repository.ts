@@ -37,7 +37,10 @@ export async function getBookMeta(bookId: string): Promise<{ title: string; auth
  *
  * FR-QNA-006 🚦: 종료 페이지 <= K
  */
-export async function findChapterSummaries(bookId: string, K: number): Promise<ChatbotChapterSummary[]> {
+export async function findChapterSummaries(
+  bookId: string,
+  K: number
+): Promise<ChatbotChapterSummary[]> {
   const query = `
     SELECT
       cs.chapter_no,
@@ -82,7 +85,7 @@ export async function getCurrentChapterText(bookId: string, K: number): Promise<
 
   // 2. 현재 장의 페이지들 조회 (시작 ~ K)
   const pagesQuery = `
-    SELECT content
+    SELECT page_no, content
     FROM pages
     WHERE book_id = $1
       AND page_no >= $2
@@ -93,7 +96,7 @@ export async function getCurrentChapterText(bookId: string, K: number): Promise<
   const pagesResult = await pool.query(pagesQuery, [bookId, chapter.start_page, K]);
 
   // 3. 페이지 내용 연결
-  return pagesResult.rows.map((row) => row.content).join('\n\n');
+  return pagesResult.rows.map((row) => `[p.${row.page_no}]\n${row.content}`).join('\n\n');
 }
 
 /**
@@ -127,16 +130,20 @@ export async function findCharacters(bookId: string, K: number): Promise<Charact
 export async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      character_a_id,
-      character_b_id,
-      label,
-      established_page
-    FROM relationships
-    WHERE book_id = $1
-      AND established_page <= $2
-    ORDER BY character_a_id, character_b_id, established_page
+      r.id,
+      r.book_id,
+      r.character_a_id,
+      r.character_b_id,
+      r.label,
+      r.established_page
+    FROM relationships r
+    JOIN characters a ON r.character_a_id = a.id
+    JOIN characters b ON r.character_b_id = b.id
+    WHERE r.book_id = $1
+      AND a.book_id = $1 AND b.book_id = $1
+      AND a.first_appearance_page <= $2 AND b.first_appearance_page <= $2
+      AND r.established_page <= $2
+    ORDER BY r.character_a_id, r.character_b_id, r.established_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -158,6 +165,7 @@ export async function findCharacterNotes(bookId: string, K: number): Promise<Cha
     FROM character_notes cn
     JOIN characters c ON cn.character_id = c.id
     WHERE c.book_id = $1
+      AND cn.book_id = $1
       AND c.first_appearance_page <= $2
       AND cn.source_page <= $2
     ORDER BY c.first_appearance_page, cn.source_page
@@ -175,15 +183,19 @@ export async function findCharacterNotes(bookId: string, K: number): Promise<Cha
 export async function findTerms(bookId: string, K: number): Promise<Term[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      term,
-      definition,
-      first_appearance_page
-    FROM terms
-    WHERE book_id = $1
-      AND first_appearance_page <= $2
-    ORDER BY first_appearance_page
+      t.id,
+      t.book_id,
+      t.term,
+      t.definition,
+      t.first_appearance_page
+    FROM terms t
+    JOIN chapters c ON c.book_id = t.book_id
+      AND c.start_page <= t.first_appearance_page
+      AND c.end_page >= t.first_appearance_page
+    WHERE t.book_id = $1
+      AND t.first_appearance_page <= $2
+      AND c.end_page <= $2
+    ORDER BY t.first_appearance_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -198,15 +210,19 @@ export async function findTerms(bookId: string, K: number): Promise<Term[]> {
 export async function findEvents(bookId: string, K: number): Promise<Event[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      event,
-      description,
-      occurrence_page
-    FROM events
-    WHERE book_id = $1
-      AND occurrence_page <= $2
-    ORDER BY occurrence_page
+      e.id,
+      e.book_id,
+      e.event,
+      e.description,
+      e.occurrence_page
+    FROM events e
+    JOIN chapters c ON c.book_id = e.book_id
+      AND c.start_page <= e.occurrence_page
+      AND c.end_page >= e.occurrence_page
+    WHERE e.book_id = $1
+      AND e.occurrence_page <= $2
+      AND c.end_page <= $2
+    ORDER BY e.occurrence_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -286,6 +302,8 @@ export async function findAliases(
     FROM aliases a
     JOIN characters c ON a.character_id = c.id
     WHERE c.book_id = $1
+      AND a.book_id = $1
+      AND c.first_appearance_page <= $2
       AND a.first_appearance_page <= $2
     ORDER BY a.first_appearance_page
   `;
@@ -295,4 +313,49 @@ export async function findAliases(
     alias: row.alias,
     characterName: row.character_name,
   }));
+}
+
+/** Literal source-text recovery, independent of embedding availability. */
+export async function lexicalSearch(
+  bookId: string,
+  query: string,
+  K: number,
+  topN: number = 6
+): Promise<SearchChunk[]> {
+  // Bound parameter size and returned evidence. strpos treats regex/LIKE syntax
+  // as plain text, and all values remain SQL parameters.
+  const words = query.slice(0, 1000).match(/[\p{L}\p{N}]+/gu) ?? [];
+  const terms = [
+    ...new Set(
+      words
+        .flatMap((word) => {
+          const literal = word.slice(0, 64);
+          const stem =
+            literal.length >= 3
+              ? literal.replace(/(?:에게|에서|으로|이란|은|는|을|를|의|에|와|과|도|란|가)$/u, '')
+              : literal;
+          return [literal, stem];
+        })
+        .filter((term) => term.length >= 2)
+    ),
+  ].slice(0, 16);
+  if (terms.length === 0 || K < 1) return [];
+  const result = await pool.query(
+    `
+    SELECT page_no, content, 1.0::float8 AS distance
+    FROM pages
+    WHERE book_id = $1 AND page_no <= $2
+      AND EXISTS (
+        SELECT 1 FROM unnest($3::text[]) AS term
+        WHERE strpos(content, term) > 0
+      )
+    ORDER BY (
+      SELECT COUNT(*) FROM unnest($3::text[]) AS term
+      WHERE strpos(content, term) > 0
+    ) DESC, page_no ASC
+    LIMIT $4
+  `,
+    [bookId, K, terms, Math.max(1, Math.min(topN, 6))]
+  );
+  return result.rows;
 }
