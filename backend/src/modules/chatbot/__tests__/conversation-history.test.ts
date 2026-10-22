@@ -237,6 +237,33 @@ describe('recordTurns / getConversationContext — 맥락 재사용 시 cutoff_p
     expect(repo.insertTurn).toHaveBeenNthCalledWith(2, 1, 2, 'assistant', '고무신 장사입니다.', 90);
   });
 
+  test('FR-QNA-006: selected text is retained in the user turn at the same cutoff while title stays the original question', async () => {
+    (repo.getMaxTurnNo as jest.Mock).mockResolvedValue(2);
+    const query = '본명은 뭐야?';
+    const quote = '전봇대가 걸어왔다.\n"이보게."';
+
+    await recordTurns(1, query, '확인된 본명은 없습니다.', 303, quote);
+
+    expect(repo.insertTurn).toHaveBeenNthCalledWith(
+      1,
+      1,
+      3,
+      'user',
+      `${query}\n\n선택한 문장: ${JSON.stringify(quote)}`,
+      303
+    );
+    expect(repo.insertTurn).toHaveBeenNthCalledWith(
+      2,
+      1,
+      4,
+      'assistant',
+      '확인된 본명은 없습니다.',
+      303
+    );
+    expect(repo.setTitleIfMissing).toHaveBeenCalledWith(1, query);
+    expect(repo.touchConversation).toHaveBeenCalledWith(1);
+  });
+
   test('negative: cutoff_page(90)가 현재 K(40)보다 큰 turn은 맥락에서 빠진다', async () => {
     (repo.listTurnsForContext as jest.Mock).mockResolvedValue([]); // repository가 이미 K로 필터링
 

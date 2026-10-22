@@ -26,6 +26,7 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
   const QUOTE = '내가 벌써 이십 년 전에 십만 원 하나는 모았을 거야';
 
   let capturedPrompt = '';
+  let capturedHistory: Array<{ role: string; content: string }> = [];
 
   beforeEach(() => {
     process.env.MOCK_MODE = 'false';
@@ -42,8 +43,13 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
     (vectorSearch as jest.Mock).mockResolvedValue([]);
 
     capturedPrompt = '';
-    (llmStream as jest.Mock).mockImplementation(async function* (_task: string, prompt: string) {
+    (llmStream as jest.Mock).mockImplementation(async function* (
+      _task: string,
+      prompt: string,
+      options
+    ) {
       capturedPrompt = prompt;
+      capturedHistory = options.history;
       yield '답변입니다.';
     });
 
@@ -72,12 +78,12 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
     expect(capturedPrompt).not.toContain('## 검증된 본문 인용');
   });
 
-  test('인용문은 K로 자르는 근거 조립·검색 경로를 거치지 않는다 — vectorSearch에 인용문이 아닌 사용자 질의만 전달된다', async () => {
+  test('선택한 문장은 질문의 검색 힌트로만 전달하고 모든 검색 근거는 K로 제한한다', async () => {
     for await (const _ of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID, undefined, QUOTE)) {
       // 소비만 한다
     }
 
-    expect(vectorSearch).toHaveBeenCalledWith(BOOK_ID, QUERY, K);
+    expect(vectorSearch).toHaveBeenCalledWith(BOOK_ID, QUERY, K, QUOTE);
   });
 
   // 2026-08-26 사용자 제보: "선택된 문장이 바뀌면 이전에 선택됐던 문장 기준으로
@@ -85,7 +91,7 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
   // 속 답변엔 옛 인용문 A 관련 내용이 남아 있다. 그게 "본문 인용"(새 인용문 B)보다
   // "사용자 질문"에 더 가까이 있으면 모델이 최신 인용 대신 그쪽으로 쏠린다. 새
   // 인용문이 이전 대화보다 질문에 더 가까운 자리(뒤)에 오는지로 이 순서를 고정한다.
-  test('새 인용문 섹션은 "이전 대화"보다 뒤, "사용자 질문" 바로 앞에 온다 (순서 회귀)', async () => {
+  test('이전 문답은 native history이고 새 인용문은 마지막 user 요청에 포함한다', async () => {
     (getConversationContext as jest.Mock).mockResolvedValue([
       { role: 'user', text: '이 문장 무슨 뜻이야?' },
       {
@@ -100,14 +106,19 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
       // 소비만 한다
     }
 
-    const priorTurnIdx = capturedPrompt.indexOf('## 이전 대화');
     const newQuoteIdx = capturedPrompt.indexOf(NEW_QUOTE);
     const questionIdx = capturedPrompt.indexOf('# 사용자 질문');
 
-    expect(priorTurnIdx).toBeGreaterThan(-1);
+    expect(capturedHistory).toEqual([
+      { role: 'user', content: '이 문장 무슨 뜻이야?' },
+      {
+        role: 'assistant',
+        content: '"내가 벌써 이십 년 전에..." 이 문장은 형보가 예전 얘기를 하는 장면이에요 (p.10).',
+      },
+    ]);
+    expect(capturedPrompt).not.toContain('## 이전 대화');
     expect(newQuoteIdx).toBeGreaterThan(-1);
     expect(questionIdx).toBeGreaterThan(-1);
-    expect(priorTurnIdx).toBeLessThan(newQuoteIdx);
     expect(newQuoteIdx).toBeLessThan(questionIdx);
   });
 });

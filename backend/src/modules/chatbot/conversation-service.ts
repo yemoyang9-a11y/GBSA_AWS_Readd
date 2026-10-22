@@ -10,6 +10,7 @@
 
 import * as repo from './conversation-repository';
 import type { ConversationRow, ConversationTurnRow } from './conversation-repository';
+import { formatConversationInput } from './conversation-input';
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -84,10 +85,11 @@ export async function recordTurns(
   conversationId: number,
   query: string,
   answer: string,
-  K: number
+  K: number,
+  quote?: string
 ): Promise<void> {
   const base = await repo.getMaxTurnNo(conversationId);
-  await repo.insertTurn(conversationId, base + 1, 'user', query, K);
+  await repo.insertTurn(conversationId, base + 1, 'user', formatConversationInput(query, quote), K);
   await repo.insertTurn(conversationId, base + 2, 'assistant', answer, K);
   await repo.setTitleIfMissing(conversationId, query.slice(0, 40));
   await repo.touchConversation(conversationId);

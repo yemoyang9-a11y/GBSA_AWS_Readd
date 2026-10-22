@@ -48,9 +48,9 @@ describe('grounded retrieval recovery', () => {
     await expect(vectorSearch('book', '정주사', 40)).resolves.toEqual(source);
   });
 
-  test('uses prior wording only as a lexical hint while embedding the original follow-up', async () => {
+  test('uses the same user-grounded subject in lexical and semantic follow-up retrieval', async () => {
     await vectorSearch('book', '그 사람 본명은?', 40, '전봇대는 누구야?');
-    expect(embedQuery).toHaveBeenCalledWith('그 사람 본명은?');
+    expect(embedQuery).toHaveBeenCalledWith('그 사람 본명은?\n전봇대는 누구야?');
     expect(repo.lexicalSearch).toHaveBeenCalledWith(
       'book',
       '그 사람 본명은?\n전봇대는 누구야?',

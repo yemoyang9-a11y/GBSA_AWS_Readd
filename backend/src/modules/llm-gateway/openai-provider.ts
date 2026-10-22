@@ -20,6 +20,8 @@ export interface OpenAIProviderOptions {
   /** Total generated-token ceiling, including reasoning; no hidden allowance. */
   maxTokens?: number;
   system?: string;
+  /** FR-QNA-006: cutoff and budget are enforced by the caller, not the serializer. */
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   signal?: AbortSignal;
   effort?: string;
   /** NFR-OBS-004: includes reported usage from failed/incomplete terminal responses. */
@@ -42,7 +44,7 @@ function request(
   }
   return {
     model: modelId,
-    input: [{ role: 'user', content: prompt }],
+    input: [...(options.history ?? []), { role: 'user', content: prompt }],
     // FR-QNA-006: application policy cannot be promoted from question/source text.
     ...(options.system !== undefined ? { instructions: options.system } : {}),
     ...(effort ? { reasoning: { effort: effort as Effort } } : {}),
