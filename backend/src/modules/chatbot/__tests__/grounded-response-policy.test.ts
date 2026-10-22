@@ -153,7 +153,7 @@ describe('mocked prompt policy contracts (not live generation quality)', () => {
     for await (const _ of handleQuery('book', '그 사람 본명은?', 40, 'device', 7)) {
       /* consume */
     }
-    expect(vectorSearch).toHaveBeenCalledWith('book', '그 사람 본명은?', 40, '전봇대는 누구야?');
+    expect(vectorSearch).toHaveBeenCalledWith('book', '그 사람 본명은?', 40, '전봇대');
     expect(getConversationContext).toHaveBeenCalledWith(7, 40);
   });
 

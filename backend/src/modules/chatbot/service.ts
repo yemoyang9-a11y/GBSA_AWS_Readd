@@ -7,6 +7,8 @@ import { stream as llmStream } from '../llm-gateway/gateway';
 import { getMockContext, getMockSearchResults, getMockLLMResponse } from './__mocks__/mock-data';
 import { recordTurns, getConversationContext } from './conversation-service';
 import { questionFocus } from './question-focus';
+import { resolveConversationContext } from './conversation-context';
+import { formatConversationInput } from './conversation-input';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -50,7 +52,8 @@ export async function* handleQuery(
 
   if (isAskingAboutAmo(query)) {
     if (conversationId != null) {
-      await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
+      if (quote) await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K, quote);
+      else await recordTurns(conversationId, query, AMO_INTRO_MESSAGE, K);
     }
     await logQuery({
       timestamp: new Date(),
@@ -85,19 +88,22 @@ export async function* handleQuery(
 
     const priorTurns =
       conversationId != null && !MOCK_MODE ? await getConversationContext(conversationId, K) : [];
-    // User wording is a retrieval hint only. Assistant turns never seed factual retrieval.
-    const lexicalHint = /(?:그\s*(?:사람|인물|분)|걔|그의|그녀|그는)/u.test(query)
-      ? priorTurns
-          .filter((turn) => turn.role === 'user')
-          .slice(-3)
-          .map((turn) => turn.text)
-          .join('\n')
-          .slice(-500)
-      : '';
+    // Resolve the user's subject before retrieval, using only cutoff-filtered history.
+    // Past assistant claims are conversational context, never an identity lookup.
+    const dialogue = resolveConversationContext(
+      formatConversationInput(query, quote),
+      priorTurns,
+      context.entities.characters,
+      K
+    );
+    const subjectHint =
+      dialogue.status === 'explicit' && !quote
+        ? ''
+        : dialogue.retrievalHint || quote?.slice(0, 500);
     const searchResults = MOCK_MODE
       ? getMockSearchResults(query, K)
-      : lexicalHint
-        ? await vectorSearch(bookId, query, K, lexicalHint)
+      : subjectHint
+        ? await vectorSearch(bookId, query, K, subjectHint)
         : await vectorSearch(bookId, query, K);
 
     const basePrompt = buildPrompt(context, '');
@@ -112,15 +118,6 @@ export async function* handleQuery(
       searchResults.forEach((result) => {
         fullPrompt += `### p.${result.page_no}\n${result.content}\n\n`;
       });
-    }
-
-    if (conversationId != null) {
-      if (priorTurns.length > 0) {
-        fullPrompt += '\n\n## 이전 대화 (맥락 파악용 — 근거 아님)\n\n';
-        priorTurns.forEach((turn) => {
-          fullPrompt += `${turn.role === 'user' ? '사용자' : '싸비'}: ${turn.text}\n`;
-        });
-      }
     }
 
     if (currentPageText) {
@@ -142,6 +139,19 @@ export async function* handleQuery(
     if (focus) {
       fullPrompt += `\n\n## 질문 초점 (사용자 문장의 구조이며 작품 근거 아님)\n\n${JSON.stringify(focus)}`;
     }
+    fullPrompt += `\n\n## 대화 대상 (사용자 표현의 연결이며 작품 사실 아님)\n\n${JSON.stringify({
+      status: dialogue.status,
+      subjects: dialogue.subjects,
+    })}`;
+    const subjectFacts = context.entities.characters
+      .filter(
+        (character) =>
+          character.first_appearance_page <= K && dialogue.subjects.includes(character.name)
+      )
+      .map(({ name, first_appearance_page }) => ({ name, first_appearance_page }));
+    if (subjectFacts.length) {
+      fullPrompt += `\n\n## 현재 질문 대상의 인물 근거 (현재 읽기 범위의 서버 자료)\n\n${JSON.stringify({ subject_facts: subjectFacts })}`;
+    }
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
 
     const modelSelection = selectModel(query);
@@ -155,7 +165,11 @@ export async function* handleQuery(
     generationDeadline = setTimeout(() => controller.abort(), 60_000);
     const streamSource = MOCK_MODE
       ? getMockLLMResponse(query)
-      : llmStream(task, fullPrompt, { system: SYSTEM_RULES, signal: controller.signal });
+      : llmStream(task, fullPrompt, {
+          system: SYSTEM_RULES,
+          history: dialogue.history,
+          signal: controller.signal,
+        });
     let responseText = '';
     let pending = '';
 
@@ -183,7 +197,8 @@ export async function* handleQuery(
     clearTimeout(generationDeadline);
 
     if (conversationId != null) {
-      await recordTurns(conversationId, query, responseText, K);
+      if (quote) await recordTurns(conversationId, query, responseText, K, quote);
+      else await recordTurns(conversationId, query, responseText, K);
     }
 
     await logQuery({

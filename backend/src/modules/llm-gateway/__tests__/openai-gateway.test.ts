@@ -139,6 +139,33 @@ describe('OpenAI gateway integration (SDK mocked, no network)', () => {
     expect(Anthropic).not.toHaveBeenCalled();
   });
 
+  test.each(['call', 'stream'] as const)(
+    'FR-QNA-006: %s forwards native conversation history through the gateway unchanged',
+    async (mode) => {
+      const history = [
+        { role: 'user' as const, content: 'Tell me about Yun.' },
+        { role: 'assistant' as const, content: 'Yun appears in the allowed source.' },
+      ];
+      const options = { system: 'trusted policy', history };
+      const prompt = 'BOUNDED SOURCE: allowed evidence. USER: On which page does he appear?';
+      if (mode === 'call') await call('chatbot', prompt, options);
+      else
+        for await (const _ of stream('chatbot', prompt, options)) {
+          /* consume */
+        }
+
+      const sdkMethod = mode === 'call' ? responses.create : responses.stream;
+      expect(sdkMethod).toHaveBeenCalledTimes(1);
+      expect(sdkMethod.mock.calls[0][0]).toMatchObject({
+        instructions: 'trusted policy',
+        input: [...history, { role: 'user', content: prompt }],
+        store: false,
+      });
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(history).toHaveLength(2);
+    }
+  );
+
   test('consumer cancellation propagates through yield delegation to provider abort', async () => {
     const iterator = stream('recap', 'bounded context');
     await iterator.next();

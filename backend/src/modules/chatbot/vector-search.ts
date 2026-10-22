@@ -4,20 +4,22 @@ import { embedQuery, EMBEDDING_DIM, EMBEDDING_MODEL } from '../llm-gateway/embed
 
 const SEARCH_CONFIG = { topN: 6, embeddingDim: EMBEDDING_DIM, embeddingModel: EMBEDDING_MODEL };
 
-/** Original-query retrieval; every source is bounded by the server cutoff K. */
+/** Reader wording plus resolved conversational subject; every source is bounded by K. */
 export async function vectorSearch(
   bookId: string,
   query: string,
   K: number,
-  lexicalHint?: string
+  subjectHint?: string
 ): Promise<SearchChunk[]> {
   // Alias occurrence does not prove when a same-person identity became known.
   // Preserve reader wording instead of injecting an unproven canonical identity.
-  const lexicalQuery = lexicalHint ? `${query.slice(0, 500)}\n${lexicalHint.slice(0, 500)}` : query;
-  const lexical = await repo.lexicalSearch(bookId, lexicalQuery, K, SEARCH_CONFIG.topN);
+  const retrievalQuery = subjectHint
+    ? `${query.slice(0, 500)}\n${subjectHint.slice(0, 500)}`
+    : query;
+  const lexical = await repo.lexicalSearch(bookId, retrievalQuery, K, SEARCH_CONFIG.topN);
   let queryEmbedding: number[];
   try {
-    queryEmbedding = await embedQuery(query);
+    queryEmbedding = await embedQuery(retrievalQuery);
   } catch {
     // Catch only provider failure. Database failures remain visible errors.
     console.warn('[VectorSearch] Embedding unavailable; using cutoff-bounded lexical evidence', {
