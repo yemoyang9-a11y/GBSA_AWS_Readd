@@ -46,14 +46,13 @@ test('source fixture is pinned to the actual stored Takryu text and split positi
 });
 
 test('actual Han/chin-beard labels merge only with their own exact identity evidence', () => {
-  const quote =
-    '탑삭부리 한참봉은 마침 쌀을 사러 온 아이한테 봉지쌀 한 납대기를 되어 주느라고 꾸부리고 있 다가 힐끔 돌아다보고 인사를 한다는 것이';
-  const proof = evidence(13, quote);
+  const quote = '탑삭부리 한참봉네 집 싸전가게 를 피하자면, 좀 돌더라도 신흥동으로 둘러 가야 한다.';
+  const proof = evidence(12, quote);
   const base = {
     entity_type: 'person',
     identity_status: 'same',
-    rationale: '쌀을 되어 주고 돌아다보며 인사하는 사람이다.',
-    first_appearance_page: 13,
+    rationale: '소유자의 호칭으로 이미 식별되는 사람이다.',
+    first_appearance_page: 12,
     evidence: proof,
     aliases: [],
     notes: [],
@@ -68,15 +67,16 @@ test('actual Han/chin-beard labels merge only with their own exact identity evid
           aliases: [
             {
               alias: '탑삭부리 한참봉',
-              type: 'name',
-              first_appearance_page: 13,
-              identity_established_page: 13,
+              type: 'nickname',
+              reference_type: 'person_label',
+              first_appearance_page: 12,
+              identity_established_page: 12,
               rationale: '한 사람을 탑삭부리 한참봉이라고 지칭한다.',
               evidence: proof,
             },
           ],
         },
-        { ...base, name: '한참봉', first_appearance_page: 12 },
+        { ...base, name: '한참봉', first_appearance_page: 11 },
         { ...base, name: '쌀', entity_type: 'non_person', rationale: '사람이 되어 주는 곡물이다.' },
       ],
     },
@@ -90,7 +90,7 @@ test('actual Han/chin-beard labels merge only with their own exact identity evid
   expect(state.characters[0].name).toBe('탑삭부리 한참봉');
   expect(state.characters[0].aliases).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ alias: '한참봉', first_appearance_page: 13 }),
+      expect.objectContaining({ alias: '한참봉', first_appearance_page: 12 }),
     ])
   );
 });
@@ -145,6 +145,8 @@ test('FR-DAT-005: 실제 p.304 관계 인용은 p.303 확립 태깅을 보류하
     character_b: '전봇대',
     label: '함께 우동을 먹기로 함',
     established_page: 304,
+    assertion_status: 'fact',
+    change_type: 'establishment',
     rationale: '전봇대의 제안에 정주사가 우동 한 그릇씩 먹자고 답한다.',
     evidence: proof,
   };
@@ -166,4 +168,86 @@ test('FR-DAT-005: 실제 p.304 관계 인용은 p.303 확립 태깅을 보류하
   expect(out.review.map(({ kind, candidate }) => ({ kind, candidate }))).toEqual(
     rejectedRelationships.map((candidate) => ({ kind: 'relationship', candidate }))
   );
+});
+
+test('actual p.36 non-person alias is held even though its spelling and character name are both quoted', () => {
+  const p = pages.find((p) => p.page_no === 36)!;
+  const out = validateGroundedChapter(
+    {
+      characters: [
+        {
+          name: '박제호',
+          first_appearance_page: 36,
+          entity_type: 'person',
+          identity_status: 'same',
+          rationale: '대화하는 인물이다.',
+          evidence: evidence(36, p.content),
+          notes: [],
+          aliases: [
+            {
+              alias: '선영',
+              type: 'nickname',
+              reference_type: 'non_person',
+              first_appearance_page: 36,
+              identity_established_page: 36,
+              rationale: '조상 묘를 뜻하는 명사이다.',
+              evidence: evidence(36, p.content),
+            },
+          ],
+        },
+      ],
+    },
+    [p]
+  );
+  expect(out.characters).toHaveLength(1);
+  expect(out.characters[0].aliases).toEqual([]);
+  expect(out.review[0]).toMatchObject({ kind: 'alias' });
+});
+
+test.each([
+  [139, '태수', '초봉이', '부부'],
+  [277, '형보', '고태수', '유언 이행자'],
+] as const)(
+  'actual p.%i planned marriage or false testament is not a fact',
+  (pageNo, a, b, label) => {
+    const p = pages.find((p) => p.page_no === pageNo)!;
+    const out = validateGroundedChapter(
+      {
+        relationships: [
+          {
+            character_a: a,
+            character_b: b,
+            label,
+            established_page: pageNo,
+            assertion_status: 'fact',
+            change_type: 'establishment',
+            rationale: '관계 후보',
+            evidence: evidence(pageNo, p.content),
+          },
+        ],
+      },
+      [p]
+    );
+    expect(out.relationships).toEqual([]);
+    expect(out.review[0].reason).toMatch(/Planned|false|misunderstood/);
+  }
+);
+
+test('actual Haenghwa first mention p.20 stays separate from the later occupation explanation p.21', () => {
+  const candidate = (pageNo: number) => ({
+    name: '행화',
+    first_appearance_page: pageNo,
+    entity_type: 'person',
+    identity_status: 'distinct',
+    rationale: '인물의 행동 또는 직업을 서술한다.',
+    evidence: evidence(pageNo, pages.find((p) => p.page_no === pageNo)!.content),
+    aliases: [],
+    notes: [],
+  });
+  const source = pages.filter((p) => p.page_no === 20 || p.page_no === 21);
+  expect(validateGroundedChapter({ characters: [candidate(21)] }, source).characters).toEqual([]);
+  expect(
+    validateGroundedChapter({ characters: [candidate(20)] }, source).characters[0]
+      .first_appearance_page
+  ).toBe(20);
 });

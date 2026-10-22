@@ -1,0 +1,3997 @@
+{
+  "schemaVersion": 1,
+  "bookId": "takryu",
+  "auditSnapshotSha256": "9fd719ce70228fd2ac7f1138124acf26a51b5357277cde55b025e965102b3f28",
+  "sourcePagesSha256": "4735962c66254c6af7227ecf257def5b2183c870e61702dd25bd030a1705a7ef",
+  "baselineHashes": {
+    "pages": "a46438e3ec3da014cc6969c6c92a240e364041d1e8853436fcd2a279a51bfd80",
+    "aliases": "55903df26c8fe73d3f3ea00a24675de3589236a9ea84315a6114ee6d7eedc4e3",
+    "relationships": "f222a8fd0365e8c7236491643bacccc309ef26e7833604fd83338bb6aacbb659",
+    "characters": "51a44e32fdf4d9e815821c418523c1aaef54442ad5f40d2d2abd49f2b7d72c47",
+    "characterNotes": "c1a56ae22c4d2de2b57a20589ea5b9f3593b8d3a6d33eb54c714a7034ccba1fc",
+    "chapters": "9418bd2419815fd80a4ee8577fcb069a5f0ca73a3d69b2dcdc3caa86f091d584"
+  },
+  "characterBaseline": [
+    {
+      "id": "875a039f-0abd-47c7-880d-4bac40774737",
+      "book_id": "takryu",
+      "name": "애송이",
+      "first_appearance_page": 2
+    },
+    {
+      "id": "9d5db924-2429-453a-bff4-e2b72644821a",
+      "book_id": "takryu",
+      "name": "정주사",
+      "first_appearance_page": 2
+    },
+    {
+      "id": "08046f69-0ee4-45be-aeda-0575add04131",
+      "book_id": "takryu",
+      "name": "장형보",
+      "first_appearance_page": 4
+    },
+    {
+      "id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+      "book_id": "takryu",
+      "name": "고태수",
+      "first_appearance_page": 4
+    },
+    {
+      "id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+      "book_id": "takryu",
+      "name": "초봉이",
+      "first_appearance_page": 6
+    },
+    {
+      "id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+      "book_id": "takryu",
+      "name": "유씨",
+      "first_appearance_page": 6
+    },
+    {
+      "id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+      "book_id": "takryu",
+      "name": "병주",
+      "first_appearance_page": 6
+    },
+    {
+      "id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+      "book_id": "takryu",
+      "name": "형주",
+      "first_appearance_page": 6
+    },
+    {
+      "id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+      "book_id": "takryu",
+      "name": "계봉이",
+      "first_appearance_page": 6
+    },
+    {
+      "id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+      "book_id": "takryu",
+      "name": "한참봉",
+      "first_appearance_page": 12
+    },
+    {
+      "id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+      "book_id": "takryu",
+      "name": "김씨",
+      "first_appearance_page": 16
+    },
+    {
+      "id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+      "book_id": "takryu",
+      "name": "박제호",
+      "first_appearance_page": 18
+    },
+    {
+      "id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+      "book_id": "takryu",
+      "name": "행화",
+      "first_appearance_page": 21
+    },
+    {
+      "id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+      "book_id": "takryu",
+      "name": "윤희",
+      "first_appearance_page": 22
+    },
+    {
+      "id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+      "book_id": "takryu",
+      "name": "남승재",
+      "first_appearance_page": 25
+    },
+    {
+      "id": "d1b64e8e-73db-45da-b83e-65226d64022e",
+      "book_id": "takryu",
+      "name": "윤달식",
+      "first_appearance_page": 50
+    },
+    {
+      "id": "6b4ead63-5cbd-4b32-9dbc-bb8e1bd41762",
+      "book_id": "takryu",
+      "name": "백석",
+      "first_appearance_page": 63
+    },
+    {
+      "id": "1ea2079b-d6bd-485b-84ae-f170a518b188",
+      "book_id": "takryu",
+      "name": "태수를 총애하던 과장",
+      "first_appearance_page": 68
+    },
+    {
+      "id": "de9a669b-2f7a-472c-b61d-4961d6deed4e",
+      "book_id": "takryu",
+      "name": "태수의 모친",
+      "first_appearance_page": 68
+    },
+    {
+      "id": "e2d9a1c7-ffa6-4e8b-bc54-7bf5187d3290",
+      "book_id": "takryu",
+      "name": "또 한 기생",
+      "first_appearance_page": 78
+    },
+    {
+      "id": "216508fc-0aab-4271-b949-71160828711c",
+      "book_id": "takryu",
+      "name": "제돌쟁이",
+      "first_appearance_page": 92
+    },
+    {
+      "id": "53a551c1-2524-4dd7-8290-86d434934255",
+      "book_id": "takryu",
+      "name": "명님이",
+      "first_appearance_page": 92
+    },
+    {
+      "id": "938eb173-f863-4971-a8c4-7bc2b556717f",
+      "book_id": "takryu",
+      "name": "경쟁이",
+      "first_appearance_page": 92
+    },
+    {
+      "id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+      "book_id": "takryu",
+      "name": "먹곰보",
+      "first_appearance_page": 92
+    },
+    {
+      "id": "07b194d0-a4b8-49a5-aba3-b0730f18d26f",
+      "book_id": "takryu",
+      "name": "먹곰보네 아낙",
+      "first_appearance_page": 93
+    },
+    {
+      "id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+      "book_id": "takryu",
+      "name": "양서방",
+      "first_appearance_page": 97
+    },
+    {
+      "id": "11d79ca3-5985-4560-a825-a51f916adbd9",
+      "book_id": "takryu",
+      "name": "아범",
+      "first_appearance_page": 136
+    },
+    {
+      "id": "31739900-de90-49a1-bc9d-7ebebda5def5",
+      "book_id": "takryu",
+      "name": "영감",
+      "first_appearance_page": 136
+    },
+    {
+      "id": "9c327a95-7731-4746-8184-ff94da634719",
+      "book_id": "takryu",
+      "name": "간호부",
+      "first_appearance_page": 137
+    },
+    {
+      "id": "456d1ff8-b930-40d6-a8ed-0037c6efcf57",
+      "book_id": "takryu",
+      "name": "제약사",
+      "first_appearance_page": 144
+    },
+    {
+      "id": "ec21464c-b4f2-4b7a-bd74-d92df82f48fc",
+      "book_id": "takryu",
+      "name": "웬 낯모를 아낙네",
+      "first_appearance_page": 145
+    },
+    {
+      "id": "e3c058fc-690f-40f5-bb5a-177dcbd6e94e",
+      "book_id": "takryu",
+      "name": "탑삭부리 한참봉네 계집아이",
+      "first_appearance_page": 186
+    },
+    {
+      "id": "24ac96ae-c8f4-40e2-b213-945aa22c32bc",
+      "book_id": "takryu",
+      "name": "의사",
+      "first_appearance_page": 206
+    },
+    {
+      "id": "b48053bf-de32-463c-ab71-bcb4bf9649e6",
+      "book_id": "takryu",
+      "name": "경부보",
+      "first_appearance_page": 206
+    },
+    {
+      "id": "a2073b7a-d935-4ee5-95f0-907873c63b95",
+      "book_id": "takryu",
+      "name": "식모",
+      "first_appearance_page": 239
+    },
+    {
+      "id": "256a9ea6-8412-4161-8c2f-cf02952052e9",
+      "book_id": "takryu",
+      "name": "S",
+      "first_appearance_page": 244
+    },
+    {
+      "id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+      "book_id": "takryu",
+      "name": "송희",
+      "first_appearance_page": 249
+    },
+    {
+      "id": "251dd5aa-93b1-41c4-906b-8bccb3dc80d0",
+      "book_id": "takryu",
+      "name": "어멈",
+      "first_appearance_page": 262
+    },
+    {
+      "id": "4ddbf9b5-2af3-4181-9ab7-ac7438749f97",
+      "book_id": "takryu",
+      "name": "전봇대",
+      "first_appearance_page": 303
+    },
+    {
+      "id": "538f69a7-2212-468b-b074-efd7545fad41",
+      "book_id": "takryu",
+      "name": "전서방",
+      "first_appearance_page": 324
+    },
+    {
+      "id": "95185937-c43b-4c84-b35f-e24f2f39dfbd",
+      "book_id": "takryu",
+      "name": "창윤이",
+      "first_appearance_page": 324
+    },
+    {
+      "id": "963deb59-ffc9-463c-94a2-b83c6d296c32",
+      "book_id": "takryu",
+      "name": "창윤이 외 학생",
+      "first_appearance_page": 324
+    },
+    {
+      "id": "b01bbdd2-c7c1-4257-9fde-c91304e7af30",
+      "book_id": "takryu",
+      "name": "종쇠",
+      "first_appearance_page": 324
+    },
+    {
+      "id": "a2103801-c68a-42fe-8e9f-6c3f6936e4e7",
+      "book_id": "takryu",
+      "name": "오달식",
+      "first_appearance_page": 329
+    },
+    {
+      "id": "ed315454-176b-4efb-9f04-1b0eb5b7fb9d",
+      "book_id": "takryu",
+      "name": "개명옥의 주인",
+      "first_appearance_page": 330
+    },
+    {
+      "id": "08ae4c7b-a059-411a-a3b9-4d86c88d899c",
+      "book_id": "takryu",
+      "name": "주임",
+      "first_appearance_page": 352
+    },
+    {
+      "id": "41bcffac-46b5-4371-b963-4b52da82203b",
+      "book_id": "takryu",
+      "name": "레지",
+      "first_appearance_page": 352
+    },
+    {
+      "id": "e47fd016-c3f6-4f3c-9a79-6835e90ff324",
+      "book_id": "takryu",
+      "name": "단발쟁이",
+      "first_appearance_page": 352
+    },
+    {
+      "id": "f0fd255d-788c-4c94-8c27-0a7d810b905d",
+      "book_id": "takryu",
+      "name": "오꼼이",
+      "first_appearance_page": 352
+    },
+    {
+      "id": "65380053-b943-434d-b396-0ed0d7c1560c",
+      "book_id": "takryu",
+      "name": "여드름바가지",
+      "first_appearance_page": 357
+    },
+    {
+      "id": "0b43e339-d79b-4252-9ff9-a4f62d216d7c",
+      "book_id": "takryu",
+      "name": "옆집 행랑 사람",
+      "first_appearance_page": 384
+    },
+    {
+      "id": "b5f70283-7231-4489-a31f-c715e8c93e5e",
+      "book_id": "takryu",
+      "name": "S의사",
+      "first_appearance_page": 391
+    }
+  ],
+  "targets": [
+    {
+      "auditRowId": "A002",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "정주산",
+        "character_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "alias_type": "name",
+        "first_appearance_page": 3
+      }
+    },
+    {
+      "auditRowId": "A012",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "처자",
+        "character_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "alias_type": "kinship",
+        "first_appearance_page": 11
+      }
+    },
+    {
+      "auditRowId": "A015",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "여편네",
+        "character_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "alias_type": "kinship",
+        "first_appearance_page": 15
+      }
+    },
+    {
+      "auditRowId": "A016",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "탑삭부리 한서방",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "nickname",
+        "first_appearance_page": 15
+      }
+    },
+    {
+      "auditRowId": "A018",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "여편네",
+        "character_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "alias_type": "kinship",
+        "first_appearance_page": 16
+      }
+    },
+    {
+      "auditRowId": "A027",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "아주머니",
+        "character_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "alias_type": "kinship",
+        "first_appearance_page": 22
+      }
+    },
+    {
+      "auditRowId": "A033",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "선영",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "nickname",
+        "first_appearance_page": 36
+      }
+    },
+    {
+      "auditRowId": "A034",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "남서방",
+        "character_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "alias_type": "nickname",
+        "first_appearance_page": 48
+      }
+    },
+    {
+      "auditRowId": "A036",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "곱사 형보",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "nickname",
+        "first_appearance_page": 62
+      }
+    },
+    {
+      "auditRowId": "A037",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "백석이",
+        "character_id": "6b4ead63-5cbd-4b32-9dbc-bb8e1bd41762",
+        "alias_type": "name",
+        "first_appearance_page": 63
+      }
+    },
+    {
+      "auditRowId": "A044",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "안주인 김씨",
+        "character_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "alias_type": "kinship",
+        "first_appearance_page": 79
+      }
+    },
+    {
+      "auditRowId": "A045",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "탑삭부리 한참봉",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "nickname",
+        "first_appearance_page": 79
+      }
+    },
+    {
+      "auditRowId": "A053",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "여편네",
+        "character_id": "07b194d0-a4b8-49a5-aba3-b0730f18d26f",
+        "alias_type": "kinship",
+        "first_appearance_page": 103
+      }
+    },
+    {
+      "auditRowId": "A055",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "아저씨",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "nickname",
+        "first_appearance_page": 119
+      }
+    },
+    {
+      "auditRowId": "A056",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "태수의 친구",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "kinship",
+        "first_appearance_page": 129
+      }
+    },
+    {
+      "auditRowId": "A057",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "영감네 내외",
+        "character_id": "31739900-de90-49a1-bc9d-7ebebda5def5",
+        "alias_type": "kinship",
+        "first_appearance_page": 136
+      }
+    },
+    {
+      "auditRowId": "A061",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "탑삭부리 한참봉네 아낙",
+        "character_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "alias_type": "kinship",
+        "first_appearance_page": 163
+      }
+    },
+    {
+      "auditRowId": "A063",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "순사",
+        "character_id": "b48053bf-de32-463c-ab71-bcb4bf9649e6",
+        "alias_type": "title",
+        "first_appearance_page": 202
+      }
+    },
+    {
+      "auditRowId": "A067",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "식모",
+        "character_id": "251dd5aa-93b1-41c4-906b-8bccb3dc80d0",
+        "alias_type": "nickname",
+        "first_appearance_page": 262
+      }
+    },
+    {
+      "auditRowId": "A068",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "곱사",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "nickname",
+        "first_appearance_page": 263
+      }
+    },
+    {
+      "auditRowId": "A069",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "복상",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "title",
+        "first_appearance_page": 273
+      }
+    },
+    {
+      "auditRowId": "A070",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "병신",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "nickname",
+        "first_appearance_page": 274
+      }
+    },
+    {
+      "auditRowId": "A071",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "조선총독이 될래요",
+        "character_id": "963deb59-ffc9-463c-94a2-b83c6d296c32",
+        "alias_type": "nickname",
+        "first_appearance_page": 324
+      }
+    },
+    {
+      "auditRowId": "A072",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "종쇠의 아버지",
+        "character_id": "538f69a7-2212-468b-b074-efd7545fad41",
+        "alias_type": "kinship",
+        "first_appearance_page": 324
+      }
+    },
+    {
+      "auditRowId": "A074",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "명님이의 아버지",
+        "character_id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+        "alias_type": "kinship",
+        "first_appearance_page": 328
+      }
+    },
+    {
+      "auditRowId": "A077",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "홍도",
+        "character_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "alias_type": "name",
+        "first_appearance_page": 330
+      }
+    },
+    {
+      "auditRowId": "A080",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "우리 송흰가",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "nickname",
+        "first_appearance_page": 343
+      }
+    },
+    {
+      "auditRowId": "A081",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "검인의 스탬프를 손에 쥐고 있는 사내",
+        "character_id": "08ae4c7b-a059-411a-a3b9-4d86c88d899c",
+        "alias_type": "nickname",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "A082",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "싱글로 깎아올린 단발쟁이",
+        "character_id": "e47fd016-c3f6-4f3c-9a79-6835e90ff324",
+        "alias_type": "name",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "A083",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "오꼼이가",
+        "character_id": "f0fd255d-788c-4c94-8c27-0a7d810b905d",
+        "alias_type": "name",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "A084",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "주근깨",
+        "character_id": "41bcffac-46b5-4371-b963-4b52da82203b",
+        "alias_type": "nickname",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "A085",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "학생",
+        "character_id": "65380053-b943-434d-b396-0ed0d7c1560c",
+        "alias_type": "title",
+        "first_appearance_page": 359
+      }
+    },
+    {
+      "auditRowId": "A086",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "형",
+        "character_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "alias_type": "kinship",
+        "first_appearance_page": 360
+      }
+    },
+    {
+      "auditRowId": "A087",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "언니",
+        "character_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "alias_type": "kinship",
+        "first_appearance_page": 361
+      }
+    },
+    {
+      "auditRowId": "A088",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "계집아이",
+        "character_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "alias_type": "nickname",
+        "first_appearance_page": 362
+      }
+    },
+    {
+      "auditRowId": "A089",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "선생님",
+        "character_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "alias_type": "title",
+        "first_appearance_page": 366
+      }
+    },
+    {
+      "auditRowId": "A090",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "거시키",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "nickname",
+        "first_appearance_page": 367
+      }
+    },
+    {
+      "auditRowId": "A091",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "됴련님",
+        "character_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "alias_type": "nickname",
+        "first_appearance_page": 380
+      }
+    },
+    {
+      "auditRowId": "A092",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "우리 송희",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "nickname",
+        "first_appearance_page": 380
+      }
+    },
+    {
+      "auditRowId": "A093",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "독초",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "nickname",
+        "first_appearance_page": 382
+      }
+    },
+    {
+      "auditRowId": "A097",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "새끼",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "nickname",
+        "first_appearance_page": 388
+      }
+    },
+    {
+      "auditRowId": "A100",
+      "table": "aliases",
+      "record": {
+        "book_id": "takryu",
+        "alias": "부주전상백",
+        "character_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "alias_type": "title",
+        "first_appearance_page": 404
+      }
+    },
+    {
+      "auditRowId": "R014",
+      "table": "relationships",
+      "record": {
+        "id": "d8d52d17-900f-430e-8b36-3e16a54eb15e",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "딸과 아버지",
+        "established_page": 19
+      }
+    },
+    {
+      "auditRowId": "R015",
+      "table": "relationships",
+      "record": {
+        "id": "00ba1d1c-2c69-4ccc-ab1e-b7f053e3fdec",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "점원과 기생 손님",
+        "established_page": 20
+      }
+    },
+    {
+      "auditRowId": "R016",
+      "table": "relationships",
+      "record": {
+        "id": "749bb557-3084-46ba-981f-d8518ecb5e91",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "언니와 남동생",
+        "established_page": 20
+      }
+    },
+    {
+      "auditRowId": "R017",
+      "table": "relationships",
+      "record": {
+        "id": "970372d1-812a-473a-a50d-cb18db260727",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "언니와 남동생",
+        "established_page": 20
+      }
+    },
+    {
+      "auditRowId": "R019",
+      "table": "relationships",
+      "record": {
+        "id": "c2b0f82e-fd23-42be-93b8-00c08c827983",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "같은 집에 사는 사람들",
+        "established_page": 24
+      }
+    },
+    {
+      "auditRowId": "R021",
+      "table": "relationships",
+      "record": {
+        "id": "7185d5d4-7637-4dbd-b0e4-b0b350ee61c2",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "점원과 단골 손님",
+        "established_page": 29
+      }
+    },
+    {
+      "auditRowId": "R022",
+      "table": "relationships",
+      "record": {
+        "id": "4465a062-2470-4980-871b-b0a991f42220",
+        "book_id": "takryu",
+        "character_a_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "중매인",
+        "established_page": 40
+      }
+    },
+    {
+      "auditRowId": "R023",
+      "table": "relationships",
+      "record": {
+        "id": "89653297-3884-4c08-b425-e681b9ac67ef",
+        "book_id": "takryu",
+        "character_a_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "혼담관계",
+        "established_page": 40
+      }
+    },
+    {
+      "auditRowId": "R024",
+      "table": "relationships",
+      "record": {
+        "id": "ba5cc2af-2aaa-4cd9-8e04-65901cdafd80",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부녀",
+        "established_page": 40
+      }
+    },
+    {
+      "auditRowId": "R025",
+      "table": "relationships",
+      "record": {
+        "id": "116f7072-63cd-44ed-a1b2-a0e4329cb5dd",
+        "book_id": "takryu",
+        "character_a_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "부녀",
+        "established_page": 42
+      }
+    },
+    {
+      "auditRowId": "R026",
+      "table": "relationships",
+      "record": {
+        "id": "3a8242d3-e39e-4f07-b687-e32914257583",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "label": "형제",
+        "established_page": 42
+      }
+    },
+    {
+      "auditRowId": "R027",
+      "table": "relationships",
+      "record": {
+        "id": "54ece527-b05c-42c0-9b18-7de3b394eb2f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "자매",
+        "established_page": 42
+      }
+    },
+    {
+      "auditRowId": "R028",
+      "table": "relationships",
+      "record": {
+        "id": "ec4a2f54-4758-43ca-9fbb-c9a420b8894a",
+        "book_id": "takryu",
+        "character_a_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부자",
+        "established_page": 42
+      }
+    },
+    {
+      "auditRowId": "R029",
+      "table": "relationships",
+      "record": {
+        "id": "f426abaf-c622-4b75-ae40-3e6683651b8c",
+        "book_id": "takryu",
+        "character_a_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "형제",
+        "established_page": 42
+      }
+    },
+    {
+      "auditRowId": "R030",
+      "table": "relationships",
+      "record": {
+        "id": "02929af5-10b6-49d7-b31e-55de0ec77e06",
+        "book_id": "takryu",
+        "character_a_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부자",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R031",
+      "table": "relationships",
+      "record": {
+        "id": "09b63919-cbd5-4edf-af2a-5184e9fab022",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "label": "모녀",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R032",
+      "table": "relationships",
+      "record": {
+        "id": "2e30cab6-8be6-4c91-b202-bc1f3d5c7b4d",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "label": "모자",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R033",
+      "table": "relationships",
+      "record": {
+        "id": "58561aa5-204e-4e9c-883f-1da3af4dfe74",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "형제",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R034",
+      "table": "relationships",
+      "record": {
+        "id": "59aa5c6e-a860-44c3-95ff-867d67089a53",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부부",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R035",
+      "table": "relationships",
+      "record": {
+        "id": "613a36ef-4cc5-437d-b0a5-12df0964fa12",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "모자",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R036",
+      "table": "relationships",
+      "record": {
+        "id": "761c0058-db48-4344-9d01-3ea8d279dbc2",
+        "book_id": "takryu",
+        "character_a_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "형제",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R037",
+      "table": "relationships",
+      "record": {
+        "id": "953d8844-5a98-4fad-8979-2b8cc824935b",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "고용인",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R038",
+      "table": "relationships",
+      "record": {
+        "id": "c879d435-c1f6-49e8-aab2-9318836bc4ed",
+        "book_id": "takryu",
+        "character_a_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "형제",
+        "established_page": 43
+      }
+    },
+    {
+      "auditRowId": "R039",
+      "table": "relationships",
+      "record": {
+        "id": "395a1a17-a615-4054-ac19-82968eebc42b",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "고용주",
+        "established_page": 44
+      }
+    },
+    {
+      "auditRowId": "R040",
+      "table": "relationships",
+      "record": {
+        "id": "634be257-c9c6-4bd6-8176-248722a7ddaf",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "모녀",
+        "established_page": 47
+      }
+    },
+    {
+      "auditRowId": "R042",
+      "table": "relationships",
+      "record": {
+        "id": "e8b6577d-5d74-4850-936c-8ed47cc4762c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "하숙인",
+        "established_page": 48
+      }
+    },
+    {
+      "auditRowId": "R044",
+      "table": "relationships",
+      "record": {
+        "id": "d5e89e6a-da7f-4b83-a339-a3c7c9302de0",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "6b4ead63-5cbd-4b32-9dbc-bb8e1bd41762",
+        "label": "고리대금업자(태수가 위조 소절수 발행)",
+        "established_page": 63
+      }
+    },
+    {
+      "auditRowId": "R049",
+      "table": "relationships",
+      "record": {
+        "id": "2c13cfa8-64fb-4ca4-a420-a81479e44e6b",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "연인",
+        "established_page": 70
+      }
+    },
+    {
+      "auditRowId": "R051",
+      "table": "relationships",
+      "record": {
+        "id": "2c9bbdb5-f8d4-4588-89b3-6de6a397b5e3",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "하숙인과 하숙집 주인의 아내",
+        "established_page": 80
+      }
+    },
+    {
+      "auditRowId": "R052",
+      "table": "relationships",
+      "record": {
+        "id": "9be32f1e-a4e5-47d4-91f4-d04e1e016dcf",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "연인",
+        "established_page": 87
+      }
+    },
+    {
+      "auditRowId": "R053",
+      "table": "relationships",
+      "record": {
+        "id": "d18a4815-8e29-47bd-8864-877b53ee83cb",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "일면식",
+        "established_page": 90
+      }
+    },
+    {
+      "auditRowId": "R054",
+      "table": "relationships",
+      "record": {
+        "id": "d83fa228-be26-4f9d-a189-22d66779972e",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "label": "친구의 딸과 부모의 지인",
+        "established_page": 90
+      }
+    },
+    {
+      "auditRowId": "R055",
+      "table": "relationships",
+      "record": {
+        "id": "5e7fcf54-b948-49f6-b5c6-3ebceea1463c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "딸과 아버지",
+        "established_page": 91
+      }
+    },
+    {
+      "auditRowId": "R056",
+      "table": "relationships",
+      "record": {
+        "id": "cfaed172-a5a5-49c1-a1e8-6c63cc466a9f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "혼인 예정자",
+        "established_page": 91
+      }
+    },
+    {
+      "auditRowId": "R058",
+      "table": "relationships",
+      "record": {
+        "id": "1ef66821-6d92-4d7f-afcf-776985bfc49b",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+        "label": "모자",
+        "established_page": 92
+      }
+    },
+    {
+      "auditRowId": "R062",
+      "table": "relationships",
+      "record": {
+        "id": "39707b29-f2a4-4758-82d5-fd496f8b5f7a",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "하숙인-집주인",
+        "established_page": 101
+      }
+    },
+    {
+      "auditRowId": "R064",
+      "table": "relationships",
+      "record": {
+        "id": "429ea9cf-e37f-4be3-ad8b-088544678826",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "집주인-하숙인",
+        "established_page": 102
+      }
+    },
+    {
+      "auditRowId": "R065",
+      "table": "relationships",
+      "record": {
+        "id": "c182ba59-8c45-4a6c-be9c-e1b89dc98a2e",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "누이동생-형",
+        "established_page": 102
+      }
+    },
+    {
+      "auditRowId": "R066",
+      "table": "relationships",
+      "record": {
+        "id": "83095c2c-6159-4a08-96e4-4424579ca2de",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+        "label": "명님이네 아버지-의사",
+        "established_page": 103
+      }
+    },
+    {
+      "auditRowId": "R067",
+      "table": "relationships",
+      "record": {
+        "id": "0677d74c-5332-41f2-9445-78903f5cdfd8",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+        "label": "이웃-이웃",
+        "established_page": 104
+      }
+    },
+    {
+      "auditRowId": "R068",
+      "table": "relationships",
+      "record": {
+        "id": "055ac5a9-16e8-48e7-aeac-6efc29a69adf",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부녀",
+        "established_page": 106
+      }
+    },
+    {
+      "auditRowId": "R069",
+      "table": "relationships",
+      "record": {
+        "id": "5df414a9-d1da-406d-bee4-ec17cbbcc549",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "label": "장모",
+        "established_page": 106
+      }
+    },
+    {
+      "auditRowId": "R070",
+      "table": "relationships",
+      "record": {
+        "id": "8b647892-26df-4914-b2f5-13308fdfd813",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "기숙 관계",
+        "established_page": 106
+      }
+    },
+    {
+      "auditRowId": "R071",
+      "table": "relationships",
+      "record": {
+        "id": "8df12640-d14d-4ce5-ab23-1c15c2a4fae9",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "장인",
+        "established_page": 106
+      }
+    },
+    {
+      "auditRowId": "R074",
+      "table": "relationships",
+      "record": {
+        "id": "dbc8b026-43ca-4c19-890e-656a48669f8f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "고용주와 피고용인",
+        "established_page": 120
+      }
+    },
+    {
+      "auditRowId": "R077",
+      "table": "relationships",
+      "record": {
+        "id": "5b428824-bc31-495b-9e10-c1c38c0d6b3e",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "친구",
+        "established_page": 129
+      }
+    },
+    {
+      "auditRowId": "R080",
+      "table": "relationships",
+      "record": {
+        "id": "2e2dad1c-e685-403d-8791-ba15553680f8",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "친구/하숙인과 집 딸",
+        "established_page": 133
+      }
+    },
+    {
+      "auditRowId": "R081",
+      "table": "relationships",
+      "record": {
+        "id": "7bc7ba6b-3827-4ddd-bae8-118da8df853d",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "약혼",
+        "established_page": 133
+      }
+    },
+    {
+      "auditRowId": "R084",
+      "table": "relationships",
+      "record": {
+        "id": "9f78aab8-fdbe-47ee-b73c-3badf0753b76",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "결혼",
+        "established_page": 137
+      }
+    },
+    {
+      "auditRowId": "R085",
+      "table": "relationships",
+      "record": {
+        "id": "474f9111-8adb-4812-8b9b-8736f2e01196",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "동기간의 누이동생과 오빠",
+        "established_page": 151
+      }
+    },
+    {
+      "auditRowId": "R086",
+      "table": "relationships",
+      "record": {
+        "id": "0589053c-3573-402e-870c-4d9a4fce247c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "약혼자",
+        "established_page": 159
+      }
+    },
+    {
+      "auditRowId": "R089",
+      "table": "relationships",
+      "record": {
+        "id": "f07bd9bd-6835-4c1b-a552-39544a37f122",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "양딸 관계",
+        "established_page": 162
+      }
+    },
+    {
+      "auditRowId": "R091",
+      "table": "relationships",
+      "record": {
+        "id": "1627500e-0464-4a12-a5c7-bd61cd3a5045",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "남매",
+        "established_page": 164
+      }
+    },
+    {
+      "auditRowId": "R092",
+      "table": "relationships",
+      "record": {
+        "id": "d1b414f6-7efd-40a9-9563-67f2c126ff6d",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "아는 사이",
+        "established_page": 166
+      }
+    },
+    {
+      "auditRowId": "R093",
+      "table": "relationships",
+      "record": {
+        "id": "aae89857-715c-4308-b86c-315e410db54b",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "질투 관계",
+        "established_page": 167
+      }
+    },
+    {
+      "auditRowId": "R097",
+      "table": "relationships",
+      "record": {
+        "id": "abd18043-a59a-4ba8-b618-c623d50d135a",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "정부",
+        "established_page": 184
+      }
+    },
+    {
+      "auditRowId": "R098",
+      "table": "relationships",
+      "record": {
+        "id": "67c80324-4147-4aa3-8de1-ffb36de39b47",
+        "book_id": "takryu",
+        "character_a_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "고자질꾼",
+        "established_page": 189
+      }
+    },
+    {
+      "auditRowId": "R101",
+      "table": "relationships",
+      "record": {
+        "id": "4a5a1e23-d720-4f12-9f87-e9e3412a6f96",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "부부",
+        "established_page": 209
+      }
+    },
+    {
+      "auditRowId": "R102",
+      "table": "relationships",
+      "record": {
+        "id": "77dae2bb-c07e-4d3d-ace0-cf51d9dd1bc3",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "아들-아버지",
+        "established_page": 209
+      }
+    },
+    {
+      "auditRowId": "R103",
+      "table": "relationships",
+      "record": {
+        "id": "25d4b944-f809-42f2-9aaf-8254b8648a8f",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "de9a669b-2f7a-472c-b61d-4961d6deed4e",
+        "label": "아들-모친",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R104",
+      "table": "relationships",
+      "record": {
+        "id": "40c787b2-0ffe-4952-a260-942006c3193a",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "며느리-시아버지",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R105",
+      "table": "relationships",
+      "record": {
+        "id": "51b200b2-6f9c-411d-871e-444b13fe0053",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "누나-남동생",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R106",
+      "table": "relationships",
+      "record": {
+        "id": "52156251-95d7-4ff1-9626-c5aadfc9b710",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "label": "형-시형수",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R107",
+      "table": "relationships",
+      "record": {
+        "id": "6e199529-e9eb-4c34-977a-6b0aeff701ca",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "아들-모친",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R108",
+      "table": "relationships",
+      "record": {
+        "id": "6e7e2dff-0bdf-4245-b4a0-5b22523ff2ee",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "label": "딸-모친",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R109",
+      "table": "relationships",
+      "record": {
+        "id": "d83433e2-00d1-4151-b175-8fda2ab45f49",
+        "book_id": "takryu",
+        "character_a_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "아들-아버지",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R110",
+      "table": "relationships",
+      "record": {
+        "id": "e18839a9-84ac-4a3c-b9b9-63e8a1e1b571",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "아들-아버지",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R111",
+      "table": "relationships",
+      "record": {
+        "id": "f6985db9-d05c-4d2b-83de-5e0048b5fbc1",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "기생-지인",
+        "established_page": 210
+      }
+    },
+    {
+      "auditRowId": "R112",
+      "table": "relationships",
+      "record": {
+        "id": "bdae155c-6a76-49c9-beb1-6771f9612aaf",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "피해자-가해자(강간)",
+        "established_page": 211
+      }
+    },
+    {
+      "auditRowId": "R113",
+      "table": "relationships",
+      "record": {
+        "id": "46aa1534-bc2f-4741-b49e-47b305f5c12f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "label": "지인",
+        "established_page": 212
+      }
+    },
+    {
+      "auditRowId": "R114",
+      "table": "relationships",
+      "record": {
+        "id": "798802df-1df9-4e16-b357-568d349e06f6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "신뢰-지인",
+        "established_page": 212
+      }
+    },
+    {
+      "auditRowId": "R115",
+      "table": "relationships",
+      "record": {
+        "id": "b4db0699-f2c7-4a07-b991-5260832f9118",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "지인",
+        "established_page": 213
+      }
+    },
+    {
+      "auditRowId": "R117",
+      "table": "relationships",
+      "record": {
+        "id": "2735487c-4a88-40e6-a4f7-29e6fcc4078b",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "전남편",
+        "established_page": 216
+      }
+    },
+    {
+      "auditRowId": "R118",
+      "table": "relationships",
+      "record": {
+        "id": "3a805a3f-2c99-4b1c-8b9c-68c1b956a412",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "피해를 입힌 사람",
+        "established_page": 216
+      }
+    },
+    {
+      "auditRowId": "R120",
+      "table": "relationships",
+      "record": {
+        "id": "a5df2dd0-ed3b-4afd-9b81-5c7637fdbd4b",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "아버지",
+        "established_page": 217
+      }
+    },
+    {
+      "auditRowId": "R121",
+      "table": "relationships",
+      "record": {
+        "id": "05fd5c57-0fee-49de-8be0-9040783ca849",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "동거 관계",
+        "established_page": 222
+      }
+    },
+    {
+      "auditRowId": "R123",
+      "table": "relationships",
+      "record": {
+        "id": "3f8ef815-dbf2-4516-b6bf-1021034526e6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "형제",
+        "established_page": 233
+      }
+    },
+    {
+      "auditRowId": "R124",
+      "table": "relationships",
+      "record": {
+        "id": "59f2118e-83f4-44ef-9e5f-0f7c1181136f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "형제",
+        "established_page": 233
+      }
+    },
+    {
+      "auditRowId": "R126",
+      "table": "relationships",
+      "record": {
+        "id": "8bbc3e8c-cfac-4f3b-a9eb-aea26ed27e09",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "부부",
+        "established_page": 238
+      }
+    },
+    {
+      "auditRowId": "R127",
+      "table": "relationships",
+      "record": {
+        "id": "9508570e-5d6f-42fd-81ec-a1cc23d68c09",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "강간범",
+        "established_page": 239
+      }
+    },
+    {
+      "auditRowId": "R129",
+      "table": "relationships",
+      "record": {
+        "id": "f6163966-3c71-4746-9f4d-77a81afb9a6c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a2073b7a-d935-4ee5-95f0-907873c63b95",
+        "label": "사용인 관계",
+        "established_page": 239
+      }
+    },
+    {
+      "auditRowId": "R133",
+      "table": "relationships",
+      "record": {
+        "id": "a9747cf9-a64b-4cc2-8de4-0c383f7f98df",
+        "book_id": "takryu",
+        "character_a_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "character_b_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "label": "부부",
+        "established_page": 259
+      }
+    },
+    {
+      "auditRowId": "R135",
+      "table": "relationships",
+      "record": {
+        "id": "50aa1e19-f0f8-435c-85c1-c29005dad5d6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "초봉이가 송희의 어머니 (절대적 사랑과 보호)",
+        "established_page": 263
+      }
+    },
+    {
+      "auditRowId": "R138",
+      "table": "relationships",
+      "record": {
+        "id": "95962c10-a9d2-4688-8d42-80f94dd11af4",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "박제호가 초봉이를 자신의 첩으로 두고 살던 관계 (이전)",
+        "established_page": 271
+      }
+    },
+    {
+      "auditRowId": "R139",
+      "table": "relationships",
+      "record": {
+        "id": "337c1db2-47d1-4b0a-b484-e65dacc6ed13",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "형보가 고태수의 유언 이행자 역할 (친구 관계)",
+        "established_page": 276
+      }
+    },
+    {
+      "auditRowId": "R140",
+      "table": "relationships",
+      "record": {
+        "id": "3302b1c1-e4d7-4be8-9ff6-9b79135922db",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "형보가 송희를 자신의 자식이라고 주장함",
+        "established_page": 281
+      }
+    },
+    {
+      "auditRowId": "R141",
+      "table": "relationships",
+      "record": {
+        "id": "ce569d03-e44d-423f-898d-02b028ae2e12",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "박제호가 형보에게 초봉이를 넘기고 떠남 (관계 단절)",
+        "established_page": 286
+      }
+    },
+    {
+      "auditRowId": "R143",
+      "table": "relationships",
+      "record": {
+        "id": "b8b39faf-bb89-4805-b87d-6c107a59854e",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "박제호가 초봉이를 배신하고 떠남 (관계 단절)",
+        "established_page": 289
+      }
+    },
+    {
+      "auditRowId": "R146",
+      "table": "relationships",
+      "record": {
+        "id": "1745c1de-b501-4ae1-bf98-77ff859ebff7",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부녀",
+        "established_page": 301
+      }
+    },
+    {
+      "auditRowId": "R147",
+      "table": "relationships",
+      "record": {
+        "id": "68fb4f1d-46a1-484f-9587-5ebbd97a932d",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "자매",
+        "established_page": 301
+      }
+    },
+    {
+      "auditRowId": "R148",
+      "table": "relationships",
+      "record": {
+        "id": "78d28547-6259-4acc-a316-eba1be1cfaff",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "label": "모녀",
+        "established_page": 301
+      }
+    },
+    {
+      "auditRowId": "R151",
+      "table": "relationships",
+      "record": {
+        "id": "d87186fd-0392-4fcd-8782-94a6a79fbaa1",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "친구 (고인)",
+        "established_page": 302
+      }
+    },
+    {
+      "auditRowId": "R153",
+      "table": "relationships",
+      "record": {
+        "id": "2b31fbb9-693e-47e7-bc82-45803a9e6e5f",
+        "book_id": "takryu",
+        "character_a_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부자",
+        "established_page": 305
+      }
+    },
+    {
+      "auditRowId": "R154",
+      "table": "relationships",
+      "record": {
+        "id": "41d46369-82eb-4f91-bdd9-2c2cce8b0dfc",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "label": "모자",
+        "established_page": 305
+      }
+    },
+    {
+      "auditRowId": "R156",
+      "table": "relationships",
+      "record": {
+        "id": "bd8b2e06-6b17-4cab-a6cd-98b4593baba6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "현 배우자",
+        "established_page": 311
+      }
+    },
+    {
+      "auditRowId": "R157",
+      "table": "relationships",
+      "record": {
+        "id": "ccadf014-9026-4883-8920-c08a8c1a6433",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "전 관계",
+        "established_page": 311
+      }
+    },
+    {
+      "auditRowId": "R159",
+      "table": "relationships",
+      "record": {
+        "id": "f5d9fb05-42c5-4ce0-9cbb-18be6e1714b8",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "의료 관계",
+        "established_page": 327
+      }
+    },
+    {
+      "auditRowId": "R161",
+      "table": "relationships",
+      "record": {
+        "id": "e1a05bf2-222c-4701-9f77-cf87cae575c3",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "누나와 여동생",
+        "established_page": 339
+      }
+    },
+    {
+      "auditRowId": "R162",
+      "table": "relationships",
+      "record": {
+        "id": "25849538-3e47-4ddd-a8cc-285f1a21bc92",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "엄마와 딸",
+        "established_page": 343
+      }
+    },
+    {
+      "auditRowId": "R163",
+      "table": "relationships",
+      "record": {
+        "id": "ec673474-52ab-41e8-a268-2e5f41b58efe",
+        "book_id": "takryu",
+        "character_a_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "모모와 딸",
+        "established_page": 343
+      }
+    },
+    {
+      "auditRowId": "R164",
+      "table": "relationships",
+      "record": {
+        "id": "97a05bc7-a915-44ed-b1df-7ca9757198cf",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "아내와 남편",
+        "established_page": 344
+      }
+    },
+    {
+      "auditRowId": "R172",
+      "table": "relationships",
+      "record": {
+        "id": "2cf57cb2-fec3-4716-a980-e8cd0f1a35f0",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "형제 관계",
+        "established_page": 360
+      }
+    },
+    {
+      "auditRowId": "R175",
+      "table": "relationships",
+      "record": {
+        "id": "f56c30ca-5a43-4511-bf91-dee1706a7464",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "모녀 관계",
+        "established_page": 367
+      }
+    },
+    {
+      "auditRowId": "R176",
+      "table": "relationships",
+      "record": {
+        "id": "feeeb6b3-f8bb-42c7-bea5-b05cb45f5c3c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "첫사랑 관계 (과거)",
+        "established_page": 371
+      }
+    },
+    {
+      "auditRowId": "R177",
+      "table": "relationships",
+      "record": {
+        "id": "711b0153-f507-4d73-873e-f589cc7f0273",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "위협 관계",
+        "established_page": 372
+      }
+    },
+    {
+      "auditRowId": "R178",
+      "table": "relationships",
+      "record": {
+        "id": "b390d006-fd8a-4661-9243-d64350dd2040",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "모녀 관계",
+        "established_page": 372
+      }
+    },
+    {
+      "auditRowId": "R179",
+      "table": "relationships",
+      "record": {
+        "id": "cd7d3f33-0e24-4adf-8325-0a991bebf701",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "남녀 관계 (강압적)",
+        "established_page": 372
+      }
+    },
+    {
+      "auditRowId": "R182",
+      "table": "relationships",
+      "record": {
+        "id": "5de6b074-7cd6-4372-911d-bc35f88d1353",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "부부",
+        "established_page": 388
+      }
+    },
+    {
+      "auditRowId": "R184",
+      "table": "relationships",
+      "record": {
+        "id": "bf1bf4af-73e9-445f-9f02-6fa2502c03d6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "자매",
+        "established_page": 388
+      }
+    },
+    {
+      "auditRowId": "R185",
+      "table": "relationships",
+      "record": {
+        "id": "de385e97-cbd1-4c87-9bbe-85d07be84ce4",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "모자",
+        "established_page": 388
+      }
+    },
+    {
+      "auditRowId": "R186",
+      "table": "relationships",
+      "record": {
+        "id": "6dbf1024-c6e9-4596-87a1-e64c9eb227d2",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "동료/알던 사이",
+        "established_page": 393
+      }
+    },
+    {
+      "auditRowId": "R188",
+      "table": "relationships",
+      "record": {
+        "id": "74fb0644-2f16-4b1f-8764-26b33143c378",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "변심한 배우자",
+        "established_page": 399
+      }
+    },
+    {
+      "auditRowId": "R189",
+      "table": "relationships",
+      "record": {
+        "id": "daedda72-2cae-4a9d-92c6-885676b30144",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "과거 관계",
+        "established_page": 403
+      }
+    },
+    {
+      "auditRowId": "R190",
+      "table": "relationships",
+      "record": {
+        "id": "f0eb655d-ef5e-42a5-a123-467000a9129c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "과거 관계",
+        "established_page": 403
+      }
+    },
+    {
+      "auditRowId": "R191",
+      "table": "relationships",
+      "record": {
+        "id": "87f77549-9459-49b5-a947-cd43f22c1e53",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "형제(오빠와 동생)",
+        "established_page": 406
+      }
+    },
+    {
+      "auditRowId": "R193",
+      "table": "relationships",
+      "record": {
+        "id": "755a6377-51c3-4927-a1d5-64a16e36aede",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "피해자(초봉이가 살해함)",
+        "established_page": 408
+      }
+    },
+    {
+      "auditRowId": "R194",
+      "table": "relationships",
+      "record": {
+        "id": "8e037217-df56-4b99-8bad-8a3c53c58525",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "연인(남승재가 초봉이를 사랑함)",
+        "established_page": 408
+      }
+    },
+    {
+      "auditRowId": "R195",
+      "table": "relationships",
+      "record": {
+        "id": "ea1b1af4-243a-42ae-94d9-b868c66a1983",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "초봉이를 구해주기로 한 사람",
+        "established_page": 408
+      }
+    },
+    {
+      "auditRowId": "E001",
+      "table": "characters",
+      "record": {
+        "id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "book_id": "takryu",
+        "name": "행화",
+        "first_appearance_page": 21
+      }
+    },
+    {
+      "auditRowId": "E002",
+      "table": "characters",
+      "record": {
+        "id": "6b4ead63-5cbd-4b32-9dbc-bb8e1bd41762",
+        "book_id": "takryu",
+        "name": "백석",
+        "first_appearance_page": 63
+      }
+    },
+    {
+      "auditRowId": "E003",
+      "table": "characters",
+      "record": {
+        "id": "538f69a7-2212-468b-b074-efd7545fad41",
+        "book_id": "takryu",
+        "name": "전서방",
+        "first_appearance_page": 324
+      }
+    },
+    {
+      "auditRowId": "E004",
+      "table": "characters",
+      "record": {
+        "id": "08ae4c7b-a059-411a-a3b9-4d86c88d899c",
+        "book_id": "takryu",
+        "name": "주임",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "E005",
+      "table": "characters",
+      "record": {
+        "id": "41bcffac-46b5-4371-b963-4b52da82203b",
+        "book_id": "takryu",
+        "name": "레지",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "E006",
+      "table": "characters",
+      "record": {
+        "id": "e47fd016-c3f6-4f3c-9a79-6835e90ff324",
+        "book_id": "takryu",
+        "name": "단발쟁이",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "E007",
+      "table": "characters",
+      "record": {
+        "id": "f0fd255d-788c-4c94-8c27-0a7d810b905d",
+        "book_id": "takryu",
+        "name": "오꼼이",
+        "first_appearance_page": 352
+      }
+    },
+    {
+      "auditRowId": "E008",
+      "table": "characters",
+      "record": {
+        "id": "65380053-b943-434d-b396-0ed0d7c1560c",
+        "book_id": "takryu",
+        "name": "여드름바가지",
+        "first_appearance_page": 357
+      }
+    },
+    {
+      "auditRowId": "E_DEP_R129",
+      "table": "characters",
+      "record": {
+        "id": "a2073b7a-d935-4ee5-95f0-907873c63b95",
+        "book_id": "takryu",
+        "name": "식모",
+        "first_appearance_page": 239
+      }
+    }
+  ],
+  "protectedRows": [
+    {
+      "auditRowId": "A001",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "영감님",
+        "character_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "alias_type": "nickname",
+        "first_appearance_page": 3
+      }
+    },
+    {
+      "auditRowId": "A003",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "바다지",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "title",
+        "first_appearance_page": 4
+      }
+    },
+    {
+      "auditRowId": "A004",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "젊은 친구",
+        "character_id": "875a039f-0abd-47c7-880d-4bac40774737",
+        "alias_type": "nickname",
+        "first_appearance_page": 4
+      }
+    },
+    {
+      "auditRowId": "A005",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "태수",
+        "character_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "alias_type": "name",
+        "first_appearance_page": 4
+      }
+    },
+    {
+      "auditRowId": "A006",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "형보",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "name",
+        "first_appearance_page": 4
+      }
+    },
+    {
+      "auditRowId": "A007",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "막내",
+        "character_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "alias_type": "kinship",
+        "first_appearance_page": 6
+      }
+    },
+    {
+      "auditRowId": "A008",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "맏딸",
+        "character_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "alias_type": "kinship",
+        "first_appearance_page": 6
+      }
+    },
+    {
+      "auditRowId": "A009",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "작은딸",
+        "character_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "alias_type": "kinship",
+        "first_appearance_page": 6
+      }
+    },
+    {
+      "auditRowId": "A010",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "정주사의 부인",
+        "character_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "alias_type": "kinship",
+        "first_appearance_page": 6
+      }
+    },
+    {
+      "auditRowId": "A011",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "큰아들",
+        "character_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "alias_type": "kinship",
+        "first_appearance_page": 6
+      }
+    },
+    {
+      "auditRowId": "A013",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "탑삭부리",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "nickname",
+        "first_appearance_page": 12
+      }
+    },
+    {
+      "auditRowId": "A014",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "털보 한서방",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "nickname",
+        "first_appearance_page": 14
+      }
+    },
+    {
+      "auditRowId": "A017",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "안주인",
+        "character_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "alias_type": "title",
+        "first_appearance_page": 16
+      }
+    },
+    {
+      "auditRowId": "A019",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "고서방",
+        "character_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "alias_type": "title",
+        "first_appearance_page": 17
+      }
+    },
+    {
+      "auditRowId": "A020",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "약제사",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "title",
+        "first_appearance_page": 18
+      }
+    },
+    {
+      "auditRowId": "A021",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "제호",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "name",
+        "first_appearance_page": 18
+      }
+    },
+    {
+      "auditRowId": "A022",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "주인",
+        "character_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "alias_type": "title",
+        "first_appearance_page": 18
+      }
+    },
+    {
+      "auditRowId": "A023",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "동생",
+        "character_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "alias_type": "kinship",
+        "first_appearance_page": 20
+      }
+    },
+    {
+      "auditRowId": "A024",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "동생",
+        "character_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "alias_type": "kinship",
+        "first_appearance_page": 20
+      }
+    },
+    {
+      "auditRowId": "A025",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "기생",
+        "character_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "alias_type": "title",
+        "first_appearance_page": 21
+      }
+    },
+    {
+      "auditRowId": "A026",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "아낙",
+        "character_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "alias_type": "kinship",
+        "first_appearance_page": 22
+      }
+    },
+    {
+      "auditRowId": "A028",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "제호의 아내",
+        "character_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "alias_type": "kinship",
+        "first_appearance_page": 22
+      }
+    },
+    {
+      "auditRowId": "A029",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "××은행 고태수",
+        "character_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "alias_type": "title",
+        "first_appearance_page": 23
+      }
+    },
+    {
+      "auditRowId": "A030",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "한참봉네",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "nickname",
+        "first_appearance_page": 24
+      }
+    },
+    {
+      "auditRowId": "A031",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "금호병원 조수",
+        "character_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "alias_type": "title",
+        "first_appearance_page": 25
+      }
+    },
+    {
+      "auditRowId": "A032",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "승재",
+        "character_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "alias_type": "name",
+        "first_appearance_page": 27
+      }
+    },
+    {
+      "auditRowId": "A035",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "달식",
+        "character_id": "d1b64e8e-73db-45da-b83e-65226d64022e",
+        "alias_type": "name",
+        "first_appearance_page": 50
+      }
+    },
+    {
+      "auditRowId": "A038",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "고리대금업자",
+        "character_id": "6b4ead63-5cbd-4b32-9dbc-bb8e1bd41762",
+        "alias_type": "title",
+        "first_appearance_page": 64
+      }
+    },
+    {
+      "auditRowId": "A039",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "과부",
+        "character_id": "de9a669b-2f7a-472c-b61d-4961d6deed4e",
+        "alias_type": "nickname",
+        "first_appearance_page": 68
+      }
+    },
+    {
+      "auditRowId": "A040",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "남×가",
+        "character_id": "1ea2079b-d6bd-485b-84ae-f170a518b188",
+        "alias_type": "name",
+        "first_appearance_page": 68
+      }
+    },
+    {
+      "auditRowId": "A041",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "편모",
+        "character_id": "de9a669b-2f7a-472c-b61d-4961d6deed4e",
+        "alias_type": "kinship",
+        "first_appearance_page": 68
+      }
+    },
+    {
+      "auditRowId": "A042",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "기생",
+        "character_id": "e2d9a1c7-ffa6-4e8b-bc54-7bf5187d3290",
+        "alias_type": "title",
+        "first_appearance_page": 78
+      }
+    },
+    {
+      "auditRowId": "A043",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "바깥주인",
+        "character_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "alias_type": "kinship",
+        "first_appearance_page": 79
+      }
+    },
+    {
+      "auditRowId": "A046",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "정주사네 맏딸",
+        "character_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "alias_type": "kinship",
+        "first_appearance_page": 91
+      }
+    },
+    {
+      "auditRowId": "A047",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "먹곰보네",
+        "character_id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+        "alias_type": "nickname",
+        "first_appearance_page": 92
+      }
+    },
+    {
+      "auditRowId": "A048",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "명님이네",
+        "character_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "alias_type": "nickname",
+        "first_appearance_page": 92
+      }
+    },
+    {
+      "auditRowId": "A049",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "어린것",
+        "character_id": "216508fc-0aab-4271-b949-71160828711c",
+        "alias_type": "nickname",
+        "first_appearance_page": 92
+      }
+    },
+    {
+      "auditRowId": "A050",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "업동",
+        "character_id": "216508fc-0aab-4271-b949-71160828711c",
+        "alias_type": "name",
+        "first_appearance_page": 93
+      }
+    },
+    {
+      "auditRowId": "A051",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "명님이네 부친",
+        "character_id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+        "alias_type": "kinship",
+        "first_appearance_page": 97
+      }
+    },
+    {
+      "auditRowId": "A052",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "성님",
+        "character_id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+        "alias_type": "nickname",
+        "first_appearance_page": 103
+      }
+    },
+    {
+      "auditRowId": "A054",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "고현 손",
+        "character_id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+        "alias_type": "nickname",
+        "first_appearance_page": 104
+      }
+    },
+    {
+      "auditRowId": "A058",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "인력거꾼",
+        "character_id": "11d79ca3-5985-4560-a825-a51f916adbd9",
+        "alias_type": "title",
+        "first_appearance_page": 136
+      }
+    },
+    {
+      "auditRowId": "A059",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "아낙네",
+        "character_id": "ec21464c-b4f2-4b7a-bd74-d92df82f48fc",
+        "alias_type": "nickname",
+        "first_appearance_page": 145
+      }
+    },
+    {
+      "auditRowId": "A060",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "양서방네 딸",
+        "character_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "alias_type": "kinship",
+        "first_appearance_page": 163
+      }
+    },
+    {
+      "auditRowId": "A062",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "아재",
+        "character_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "alias_type": "kinship",
+        "first_appearance_page": 185
+      }
+    },
+    {
+      "auditRowId": "A064",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "여편넬",
+        "character_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "alias_type": "kinship",
+        "first_appearance_page": 216
+      }
+    },
+    {
+      "auditRowId": "A065",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "산부인과의 전문의사",
+        "character_id": "256a9ea6-8412-4161-8c2f-cf02952052e9",
+        "alias_type": "title",
+        "first_appearance_page": 244
+      }
+    },
+    {
+      "auditRowId": "A066",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "딸",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "kinship",
+        "first_appearance_page": 250
+      }
+    },
+    {
+      "auditRowId": "A073",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "동행 제약사",
+        "character_id": "456d1ff8-b930-40d6-a8ed-0037c6efcf57",
+        "alias_type": "nickname",
+        "first_appearance_page": 326
+      }
+    },
+    {
+      "auditRowId": "A075",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "병원 주인",
+        "character_id": "a2103801-c68a-42fe-8e9f-6c3f6936e4e7",
+        "alias_type": "title",
+        "first_appearance_page": 329
+      }
+    },
+    {
+      "auditRowId": "A076",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "주인여자",
+        "character_id": "ed315454-176b-4efb-9f04-1b0eb5b7fb9d",
+        "alias_type": "nickname",
+        "first_appearance_page": 330
+      }
+    },
+    {
+      "auditRowId": "A078",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "구혈의 이 여자",
+        "character_id": "ed315454-176b-4efb-9f04-1b0eb5b7fb9d",
+        "alias_type": "nickname",
+        "first_appearance_page": 337
+      }
+    },
+    {
+      "auditRowId": "A079",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "송희야",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "name",
+        "first_appearance_page": 343
+      }
+    },
+    {
+      "auditRowId": "A094",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "이 집 식모",
+        "character_id": "a2073b7a-d935-4ee5-95f0-907873c63b95",
+        "alias_type": "title",
+        "first_appearance_page": 384
+      }
+    },
+    {
+      "auditRowId": "A095",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "사내",
+        "character_id": "0b43e339-d79b-4252-9ff9-a4f62d216d7c",
+        "alias_type": "nickname",
+        "first_appearance_page": 385
+      }
+    },
+    {
+      "auditRowId": "A096",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "작은아씨",
+        "character_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "alias_type": "kinship",
+        "first_appearance_page": 385
+      }
+    },
+    {
+      "auditRowId": "A098",
+      "table": "aliases",
+      "verdict": "supported",
+      "record": {
+        "book_id": "takryu",
+        "alias": "어린애",
+        "character_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "alias_type": "nickname",
+        "first_appearance_page": 388
+      }
+    },
+    {
+      "auditRowId": "A099",
+      "table": "aliases",
+      "verdict": "needs_review",
+      "record": {
+        "book_id": "takryu",
+        "alias": "S",
+        "character_id": "b5f70283-7231-4489-a31f-c715e8c93e5e",
+        "alias_type": "name",
+        "first_appearance_page": 391
+      }
+    },
+    {
+      "auditRowId": "R001",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "d203e92b-99c4-43c4-b0df-bde3af0faa1b",
+        "book_id": "takryu",
+        "character_a_id": "875a039f-0abd-47c7-880d-4bac40774737",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "싸움 중(하바꾼)",
+        "established_page": 2
+      }
+    },
+    {
+      "auditRowId": "R002",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "7e1c2850-026f-4f59-8645-360112135d04",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "만남(싸움을 말린 자)",
+        "established_page": 4
+      }
+    },
+    {
+      "auditRowId": "R003",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "a773f25c-c2fe-4f25-a5ad-d8cb1c358df6",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "알고 지내는 사이",
+        "established_page": 4
+      }
+    },
+    {
+      "auditRowId": "R004",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "11434343-be30-4b30-93d7-32b033728057",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부부 관계",
+        "established_page": 6
+      }
+    },
+    {
+      "auditRowId": "R005",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "8bf47309-46f1-4cad-8de6-316d3a1efb69",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부녀 관계(딸)",
+        "established_page": 6
+      }
+    },
+    {
+      "auditRowId": "R006",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "b7dae217-da46-49d2-b3e5-0f17c7d4e83a",
+        "book_id": "takryu",
+        "character_a_id": "3bb4cee4-b1c1-4ef3-b076-7b1b915ec12f",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부자 관계(아들)",
+        "established_page": 6
+      }
+    },
+    {
+      "auditRowId": "R007",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "d3ba5e4f-7603-4ff3-90ac-46a4df753572",
+        "book_id": "takryu",
+        "character_a_id": "2d708f99-7099-4fb4-b422-6c6f0d054fc7",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "부자 관계(아들)",
+        "established_page": 6
+      }
+    },
+    {
+      "auditRowId": "R008",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "ef3049e2-9165-4322-ad65-7649ecf900fd",
+        "book_id": "takryu",
+        "character_a_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "부녀 관계(딸)",
+        "established_page": 6
+      }
+    },
+    {
+      "auditRowId": "R009",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "606af030-33be-46a1-b4aa-a9fbaf326f18",
+        "book_id": "takryu",
+        "character_a_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "거래 관계(쌀값 외상)",
+        "established_page": 12
+      }
+    },
+    {
+      "auditRowId": "R010",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "3aced936-7496-46bb-acb2-53d01cf10fc0",
+        "book_id": "takryu",
+        "character_a_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "아는 사이",
+        "established_page": 16
+      }
+    },
+    {
+      "auditRowId": "R011",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "ebbb129a-4bde-491a-ad41-fbb61dfc0d82",
+        "book_id": "takryu",
+        "character_a_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "character_b_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "label": "부부 관계",
+        "established_page": 16
+      }
+    },
+    {
+      "auditRowId": "R012",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "2ded6d79-41c2-4f5d-8030-b7ccd8593b71",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "428b1fb4-e27d-4a6e-89ef-649c9fe2cb12",
+        "label": "하숙 관계(한참봉 집에서 하숙중)",
+        "established_page": 17
+      }
+    },
+    {
+      "auditRowId": "R013",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "0659069a-2d84-432e-946b-8fa2da7120e2",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "주인과 여점원",
+        "established_page": 18
+      }
+    },
+    {
+      "auditRowId": "R018",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "0e56cfc7-a180-4177-a672-f5bcb4588126",
+        "book_id": "takryu",
+        "character_a_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "character_b_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "label": "부부",
+        "established_page": 22
+      }
+    },
+    {
+      "auditRowId": "R020",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "d1efa334-92ba-4af8-a6bf-eecb22d50616",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "서로 마음을 두고 있는 사이",
+        "established_page": 28
+      }
+    },
+    {
+      "auditRowId": "R041",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "007091d5-d110-4a05-969e-737164984f73",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "이웃",
+        "established_page": 48
+      }
+    },
+    {
+      "auditRowId": "R043",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "863b74a0-0e58-4ced-9ff0-6011204ae3cf",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "d1b64e8e-73db-45da-b83e-65226d64022e",
+        "label": "상관",
+        "established_page": 50
+      }
+    },
+    {
+      "auditRowId": "R045",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "dc2e2ddd-d184-484f-8f11-5d2d4275118e",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "친구",
+        "established_page": 63
+      }
+    },
+    {
+      "auditRowId": "R046",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "0d2a5a53-6d4e-45cf-9013-ce5b964ed300",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "1ea2079b-d6bd-485b-84ae-f170a518b188",
+        "label": "후배/피후견인",
+        "established_page": 68
+      }
+    },
+    {
+      "auditRowId": "R047",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "8d421a30-0b70-4449-8684-5fe2e2b68478",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "de9a669b-2f7a-472c-b61d-4961d6deed4e",
+        "label": "아들",
+        "established_page": 68
+      }
+    },
+    {
+      "auditRowId": "R048",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "08902d77-83bb-45ca-ae85-f7daaee89ead",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "사랑하는 여인",
+        "established_page": 70
+      }
+    },
+    {
+      "auditRowId": "R050",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "ceccc325-ec07-4fe1-a2e0-c513166b744e",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "범죄 공모자",
+        "established_page": 72
+      }
+    },
+    {
+      "auditRowId": "R057",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "e2a09160-9020-42fc-8f06-159a49103eaa",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "경쟁 관계(질투의 대상)",
+        "established_page": 91
+      }
+    },
+    {
+      "auditRowId": "R059",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "318f24e8-db47-43f7-bec6-5b62b85d2f1a",
+        "book_id": "takryu",
+        "character_a_id": "07b194d0-a4b8-49a5-aba3-b0730f18d26f",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "의사-환자 가족",
+        "established_page": 93
+      }
+    },
+    {
+      "auditRowId": "R060",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "4c59e380-4c9c-4112-8f59-db52b130ad3c",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "의사-환자",
+        "established_page": 97
+      }
+    },
+    {
+      "auditRowId": "R061",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "84bedcb9-792f-4d9d-aadc-2007c37e2c8f",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "d653ae39-7da3-4470-a7f1-c5f33c5789de",
+        "label": "부녀",
+        "established_page": 97
+      }
+    },
+    {
+      "auditRowId": "R063",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "867693b0-9bf5-4367-aa55-2282fb2fc24f",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "d48ea117-3db2-4bb4-a5ec-74fa4c23c139",
+        "label": "폭력을 행사하는 사람-피해자",
+        "established_page": 101
+      }
+    },
+    {
+      "auditRowId": "R072",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "d7673105-2ab9-42e9-b288-64bed80a3791",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "중매",
+        "established_page": 106
+      }
+    },
+    {
+      "auditRowId": "R073",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "b81045ee-1107-41fd-b315-9221411a0f56",
+        "book_id": "takryu",
+        "character_a_id": "2ab84636-2bac-4bc0-beb3-2eb7f08f01b8",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "혼처감시",
+        "established_page": 115
+      }
+    },
+    {
+      "auditRowId": "R075",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "a0f98489-1a75-4c2e-9e1c-6abc7f75140a",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "경쟁",
+        "established_page": 124
+      }
+    },
+    {
+      "auditRowId": "R076",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "bde54bc6-7489-43b4-a7c0-5fe57a091a55",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "미련",
+        "established_page": 124
+      }
+    },
+    {
+      "auditRowId": "R078",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "6656d576-266d-40a1-acf8-7b62dd7a382c",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "욕망",
+        "established_page": 129
+      }
+    },
+    {
+      "auditRowId": "R079",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "f9e0e81e-5221-46ba-8b83-5296c00ff5af",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "약혼녀와 약혼남",
+        "established_page": 129
+      }
+    },
+    {
+      "auditRowId": "R082",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "e43a1a05-6b29-4359-8c44-d038f89ba106",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "연애 관계",
+        "established_page": 133
+      }
+    },
+    {
+      "auditRowId": "R083",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "312d8a9e-b8cb-4d99-8a2b-bfbf9a68fc68",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "의사-환자",
+        "established_page": 137
+      }
+    },
+    {
+      "auditRowId": "R087",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "e3d3f1e2-a5bb-48cb-a171-e18d1a9fcc66",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "연인 관계",
+        "established_page": 159
+      }
+    },
+    {
+      "auditRowId": "R088",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "c7b0ab16-7c23-419f-b8ae-2f60a4c2efa5",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "cf11d654-f9ca-4da6-b012-36a14f22dae1",
+        "label": "친구",
+        "established_page": 160
+      }
+    },
+    {
+      "auditRowId": "R090",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "78850dcc-84c7-429d-876b-6e2f6c0a236f",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "3ef63f88-251b-4f9b-ba35-98a4e08da157",
+        "label": "신랑 측 일을 돕는 관계",
+        "established_page": 163
+      }
+    },
+    {
+      "auditRowId": "R094",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "746d84d4-1dbc-4e04-ac3d-cb9b2587d2d2",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "부부",
+        "established_page": 169
+      }
+    },
+    {
+      "auditRowId": "R095",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "7e27713a-bfdf-4ffe-8bc8-3b7dc24b7048",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "일편단심",
+        "established_page": 169
+      }
+    },
+    {
+      "auditRowId": "R096",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "abfbda5f-791a-4da9-9027-bb20d389a6d3",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "형 동생",
+        "established_page": 169
+      }
+    },
+    {
+      "auditRowId": "R099",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "0b7d0b1b-41cc-4b8d-9e2e-5753c6e07b92",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "강간범",
+        "established_page": 200
+      }
+    },
+    {
+      "auditRowId": "R100",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "fcdbba49-ad6e-40a6-a0e9-59272566f154",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "label": "부부(사망)",
+        "established_page": 206
+      }
+    },
+    {
+      "auditRowId": "R116",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "e8fc319a-b164-4724-8e32-499e12ee3180",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "우연히 만난 지인",
+        "established_page": 214
+      }
+    },
+    {
+      "auditRowId": "R119",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "ad6229c0-1a20-45a4-ab63-55127b4a8cde",
+        "book_id": "takryu",
+        "character_a_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "character_b_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "label": "별거 중인 부부",
+        "established_page": 216
+      }
+    },
+    {
+      "auditRowId": "R122",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "935f275c-59bb-43f4-a857-b15f7c44e235",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "사실상의 부부",
+        "established_page": 231
+      }
+    },
+    {
+      "auditRowId": "R125",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "9dd5ceb8-440d-4e64-9508-fe2a3b1bb7a7",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "그리워하는 사람",
+        "established_page": 235
+      }
+    },
+    {
+      "auditRowId": "R128",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "d69e9d0e-6458-4767-8108-85f3bb921094",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "만난 사람",
+        "established_page": 239
+      }
+    },
+    {
+      "auditRowId": "R130",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "595ac7a8-460c-429e-b1e1-a1f1b96f1216",
+        "book_id": "takryu",
+        "character_a_id": "256a9ea6-8412-4161-8c2f-cf02952052e9",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "친구이자 의사",
+        "established_page": 244
+      }
+    },
+    {
+      "auditRowId": "R131",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "3c7d9349-0c7f-4db8-a6fc-b5f3114dd3b8",
+        "book_id": "takryu",
+        "character_a_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "양부와 딸",
+        "established_page": 250
+      }
+    },
+    {
+      "auditRowId": "R132",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "fb5a6016-7ecd-42fa-91a6-30c7ad8ac3a6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "모녀",
+        "established_page": 250
+      }
+    },
+    {
+      "auditRowId": "R134",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "d490eb96-2b9e-4c5b-be31-e28366e8ede6",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "e1514ef2-a2da-40f6-93e4-b0c386998ef3",
+        "label": "제호의 큰아내",
+        "established_page": 259
+      }
+    },
+    {
+      "auditRowId": "R136",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "ec544346-448b-4ede-a92c-d03d460207d2",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "초봉이가 형보를 경계하고 거부함 (호칭: 외간 남자)",
+        "established_page": 263
+      }
+    },
+    {
+      "auditRowId": "R137",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "1d3a24bb-1407-40de-8545-7a0fbd8b2d37",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "형보가 초봉이에게 위협과 협박을 가함 (칼을 들고 송희를 해치겠다고 협박)",
+        "established_page": 268
+      }
+    },
+    {
+      "auditRowId": "R142",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "173a941a-c292-429b-9469-a5dc869f149f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "7a538c2d-6c08-468a-a1a9-549cb5586c29",
+        "label": "초봉이가 박제호에게 강한 원한과 노염을 품음",
+        "established_page": 289
+      }
+    },
+    {
+      "auditRowId": "R144",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "bd06c606-07fb-4dcf-81ad-794909c12fdc",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "a2073b7a-d935-4ee5-95f0-907873c63b95",
+        "label": "형보가 집의 바깥주인 역할 (새로운 권위 설정)",
+        "established_page": 293
+      }
+    },
+    {
+      "auditRowId": "R145",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "e137824e-9213-4176-a8da-d275a20bcca2",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "초봉이가 형보의 아내 역할을 승낙함 (계집 노릇)",
+        "established_page": 298
+      }
+    },
+    {
+      "auditRowId": "R149",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "a893ccda-8e7b-44df-a26f-66fcf4bb567a",
+        "book_id": "takryu",
+        "character_a_id": "1bd505a9-a474-4f1b-b4e6-0320137236cd",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "고인",
+        "established_page": 302
+      }
+    },
+    {
+      "auditRowId": "R150",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "bbe21da9-651e-4176-8b3f-49a8b8095af4",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "딸의 남편",
+        "established_page": 302
+      }
+    },
+    {
+      "auditRowId": "R152",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "e3be6574-5eb1-487b-bccc-5a4ecf48b355",
+        "book_id": "takryu",
+        "character_a_id": "4ddbf9b5-2af3-4181-9ab7-ac7438749f97",
+        "character_b_id": "9d5db924-2429-453a-bff4-e2b72644821a",
+        "label": "동료 하바꾼",
+        "established_page": 304
+      }
+    },
+    {
+      "auditRowId": "R155",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "213eacf6-c8a9-4815-8861-3927d5258347",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "전 사이",
+        "established_page": 311
+      }
+    },
+    {
+      "auditRowId": "R158",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "96e7afc7-e882-4785-836c-c0987eb7d8a4",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "사이",
+        "established_page": 316
+      }
+    },
+    {
+      "auditRowId": "R160",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "9133201d-4684-4e9b-b7e2-597ae160c79d",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "ed315454-176b-4efb-9f04-1b0eb5b7fb9d",
+        "label": "기생",
+        "established_page": 330
+      }
+    },
+    {
+      "auditRowId": "R165",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "130d4f42-f85e-4087-b09e-d24363ed1dff",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "처제와 형부",
+        "established_page": 345
+      }
+    },
+    {
+      "auditRowId": "R166",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "13f9922d-c817-4f5e-9931-8cec533400f0",
+        "book_id": "takryu",
+        "character_a_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "character_b_id": "f0fd255d-788c-4c94-8c27-0a7d810b905d",
+        "label": "직장 동료",
+        "established_page": 353
+      }
+    },
+    {
+      "auditRowId": "R167",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "6c198189-25ba-4ed9-98d9-f2f09734deaf",
+        "book_id": "takryu",
+        "character_a_id": "08ae4c7b-a059-411a-a3b9-4d86c88d899c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "상점원과 주임",
+        "established_page": 353
+      }
+    },
+    {
+      "auditRowId": "R168",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "7091209b-8a8f-4e9e-b1cf-5f96cba34f85",
+        "book_id": "takryu",
+        "character_a_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "character_b_id": "e47fd016-c3f6-4f3c-9a79-6835e90ff324",
+        "label": "직장 동료",
+        "established_page": 353
+      }
+    },
+    {
+      "auditRowId": "R169",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "f4e9c4e0-764c-4df1-a3bd-35abf7d30466",
+        "book_id": "takryu",
+        "character_a_id": "41bcffac-46b5-4371-b963-4b52da82203b",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "직장 동료",
+        "established_page": 353
+      }
+    },
+    {
+      "auditRowId": "R170",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "b90f0c56-209a-4d8f-a5a0-508738e01d42",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "전화로 통화하는 사이",
+        "established_page": 355
+      }
+    },
+    {
+      "auditRowId": "R171",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "7888ca2e-2a43-4783-97ae-129d2f257932",
+        "book_id": "takryu",
+        "character_a_id": "65380053-b943-434d-b396-0ed0d7c1560c",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "점원과 고객",
+        "established_page": 357
+      }
+    },
+    {
+      "auditRowId": "R173",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "39a372d8-39a1-4e94-a2d5-e333bba9d2bc",
+        "book_id": "takryu",
+        "character_a_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "연애 관계",
+        "established_page": 360
+      }
+    },
+    {
+      "auditRowId": "R174",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "76e330a4-30ba-47dc-ad94-bcc3fa80a775",
+        "book_id": "takryu",
+        "character_a_id": "53a551c1-2524-4dd7-8290-86d434934255",
+        "character_b_id": "a80139e1-6bd7-4adc-b8c7-8d8a9d472683",
+        "label": "관심 대상",
+        "established_page": 367
+      }
+    },
+    {
+      "auditRowId": "R180",
+      "table": "relationships",
+      "verdict": "supported",
+      "record": {
+        "id": "c9afbc60-0eff-4868-8e67-aa38963be836",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "구출 의도",
+        "established_page": 373
+      }
+    },
+    {
+      "auditRowId": "R181",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "13dafc8b-5a95-4b94-8f6d-ff52132be5ca",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "label": "살인 관계",
+        "established_page": 387
+      }
+    },
+    {
+      "auditRowId": "R183",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "6696e32e-0393-48a8-81c6-d80ecffa5979",
+        "book_id": "takryu",
+        "character_a_id": "08046f69-0ee4-45be-aeda-0575add04131",
+        "character_b_id": "08fc67a6-5012-4977-b7f9-83df7d0fc733",
+        "label": "부자",
+        "established_page": 388
+      }
+    },
+    {
+      "auditRowId": "R187",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "b88e5352-d1b8-40ad-ac9e-23273de64c1b",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "과거 연인",
+        "established_page": 393
+      }
+    },
+    {
+      "auditRowId": "R192",
+      "table": "relationships",
+      "verdict": "needs_review",
+      "record": {
+        "id": "9c81978a-f4b6-4330-add8-dc285ee68b7f",
+        "book_id": "takryu",
+        "character_a_id": "05439e81-649a-4035-9b56-f9ddfa12767c",
+        "character_b_id": "5a530e97-a2fa-4838-9d18-fa7d945dcf85",
+        "label": "연인(초봉이가 남승재를 사랑함)",
+        "established_page": 407
+      }
+    }
+  ]
+}

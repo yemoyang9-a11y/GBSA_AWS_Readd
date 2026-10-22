@@ -6,10 +6,11 @@
  * 장 순서대로 생성 결과를 이 상태에 누적하고 다음 장 프롬프트에는 대표명 목록만
  * "이미 등장한 인물" 힌트로 넘긴다.
  *
- * 관계는 이력형(A6, FR-CHR-001 🚦) — 같은 쌍이라도 라벨이 바뀌면 새 행을 추가하고,
- * 라벨이 그대로면(같은 사실의 재서술) 중복 행을 만들지 않는다. 기존 행은 절대 덮어쓰지 않는다.
+ * 관계는 이력형(A6, FR-CHR-001 🚦) — 같은 사실의 재서술은 최초 행을 보존한다.
+ * 이미 알려진 쌍은 실제 상태 변화 또는 새로운 사실 공개 근거가 있을 때만 이력을 추가한다.
  */
 import { v5 as uuidv5 } from 'uuid';
+import { relationshipKey } from './semantic-guards';
 import { ReviewCandidate, SourceEvidence } from './grounding';
 
 export type AliasType = 'name' | 'title' | 'kinship' | 'nickname';
@@ -359,12 +360,14 @@ interface ChapterRelationshipInput {
   established_page: number;
   evidence?: SourceEvidence;
   rationale?: string;
+  change_type?: 'establishment' | 'restatement' | 'transition' | 'disclosure';
+  change_evidence?: SourceEvidence;
 }
 
 /**
  * 이 장의 관계 생성 결과를 상태에 병합한다 (A6 이력형, FR-CHR-001 🚦).
- * 같은 쌍의 가장 최근 행과 라벨이 같으면 재서술로 보고 건너뛴다.
- * 라벨이 다르면 새 행을 추가한다 — 기존 행은 절대 수정·삭제하지 않는다.
+ * 같은 쌍의 최근 행과 의미가 같은 정적 라벨이면 재서술로 보고 건너뛴다.
+ * 다른 라벨은 변화/새 공개의 검증된 근거를 요구한다. 기존 행은 수정·삭제하지 않는다.
  *
  * character_a_id/character_b_id는 항상 pairKey()와 같은 정렬 순서로 저장한다 —
  * 조회 쿼리(findLatestRelationships)의 DISTINCT ON (character_a_id, character_b_id)가
@@ -391,7 +394,19 @@ export function mergeRelationships(
       continue;
     const latest = history.sort((a, b) => a.established_page - b.established_page).at(-1);
 
-    if (latest && latest.label === normalize(r.label)) {
+    const semanticKey = relationshipKey(r.label);
+    if (latest && relationshipKey(latest.label) === semanticKey) {
+      continue;
+    }
+    const explicitChange =
+      ['transition', 'disclosure'].includes(r.change_type ?? '') && r.change_evidence;
+    if (latest && !explicitChange) {
+      state.review.push({
+        kind: 'relationship',
+        candidate: r,
+        reason:
+          'Restatement cannot replace the latest relationship without explicit change/disclosure evidence',
+      });
       continue;
     }
 

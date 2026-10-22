@@ -46,6 +46,7 @@ import {
   validateGroundedChapter,
   sealResolvedOutput,
   assertResolvedGrounding,
+  sealChapterCache,
 } from './grounding';
 
 const BOOK_ID = 'takryu';
@@ -88,7 +89,8 @@ function chapterFilePath(chapterNo: number): string {
 async function generateChapter(
   chapter: Chapter,
   pages: Page[],
-  known: string[]
+  known: string[],
+  previousRelationships: string[]
 ): Promise<ChapterOutput> {
   const warnings: string[] = [];
   const bounds = { min: chapter.start_page, max: chapter.end_page };
@@ -133,7 +135,7 @@ async function generateChapter(
   const knownForRelationships = [...known, ...accepted.characters.map((c) => c.name)];
   const relRaw = await call(
     'generate_relationship',
-    buildRelationshipPrompt(chapter, pages, knownForRelationships)
+    buildRelationshipPrompt(chapter, pages, knownForRelationships, previousRelationships)
   );
   const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
   record(
@@ -175,32 +177,37 @@ async function generateChapter(
 export async function loadOrGenerateChapter(
   chapter: Chapter,
   pages: Page[],
-  known: string[]
+  known: string[],
+  previousRelationships: string[] = []
 ): Promise<ChapterOutput> {
+  const cacheContext = [...known, JSON.stringify(previousRelationships)];
   const filePath = chapterFilePath(chapter.chapter_no);
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
     const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
-    assertGroundingCache(cached, chapter, pages, known, EXTRACTION_CONTRACT);
+    assertGroundingCache(cached, chapter, pages, cacheContext, EXTRACTION_CONTRACT);
     return { ...cached, ...validateGroundedChapter(cached, pages) };
   }
 
   console.log(
     `[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`
   );
-  const output = await generateChapter(chapter, pages, known);
+  const output = await generateChapter(chapter, pages, known, previousRelationships);
   const validated = { ...output, ...validateGroundedChapter(output, pages) };
   // Keep original candidates in the chapter cache for review and repeat validation.
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify({ ...output, review: validated.review }, null, 2),
-    'utf-8'
+  const cached = sealChapterCache(
+    { ...output, review: validated.review },
+    chapter,
+    pages,
+    cacheContext,
+    EXTRACTION_CONTRACT
   );
+  fs.writeFileSync(filePath, JSON.stringify(cached, null, 2), 'utf-8');
   if (output.warnings.length > 0) {
     console.warn(`  [경고] ${chapter.chapter_no}장:`, output.warnings);
   }
   console.log(`  [저장] ${filePath}`);
-  return validated;
+  return { ...validated, grounding: cached.grounding };
 }
 
 async function loadOrGenerateBackground(): Promise<{ background: string; intro: string }> {
@@ -306,7 +313,21 @@ async function main(): Promise<void> {
     );
     const known = knownCharacterNames(state);
 
-    const output = await loadOrGenerateChapter(chapter, pages, known);
+    const latestRelationships = new Map<string, (typeof state.relationships)[number]>();
+    for (const relation of [...state.relationships].sort(
+      (a, b) => a.established_page - b.established_page
+    )) {
+      latestRelationships.set(
+        [relation.character_a_id, relation.character_b_id].sort().join('|'),
+        relation
+      );
+    }
+    const names = new Map(state.characters.map((c) => [c.id, c.name]));
+    const previousRelationships = [...latestRelationships.values()].map(
+      (r) =>
+        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page})`
+    );
+    const output = await loadOrGenerateChapter(chapter, pages, known, previousRelationships);
     chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
 
     mergeCharacters(state, output.characters);
@@ -339,7 +360,8 @@ async function main(): Promise<void> {
     background_and_intro: background,
     review_candidates: { chapters: chapterReviews, identities_and_relationships: state.review },
     provenance: {
-      validation_scope: 'exact source provenance only; semantic review required',
+      validation_scope:
+        'exact source provenance and conservative semantic guards; human semantic review required',
       identities: state.identity_evidence,
     },
   };
