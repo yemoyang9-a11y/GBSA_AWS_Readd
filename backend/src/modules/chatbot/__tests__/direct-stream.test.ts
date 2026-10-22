@@ -66,10 +66,11 @@ describe('single generation with immediate chatbot streaming', () => {
       );
       expect(stream).toHaveBeenCalledTimes(1);
       expect(call).not.toHaveBeenCalled();
-      expect(console.log).toHaveBeenCalledWith(
-        '[Chatbot] Query log',
-        expect.objectContaining({ logical_model_calls: 1 })
+      const queryLog = (console.log as jest.Mock).mock.calls.find(
+        ([label]) => label === '[Chatbot] Query log'
       );
+      expect(queryLog).toBeDefined();
+      expect(JSON.parse(queryLog![1])).toEqual(expect.objectContaining({ logical_model_calls: 1 }));
     } finally {
       if (timeout) clearTimeout(timeout);
       finish();

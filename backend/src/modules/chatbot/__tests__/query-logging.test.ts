@@ -133,6 +133,17 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     jest.clearAllMocks();
   });
 
+  function recordedQuery() {
+    const calls = (console.log as jest.Mock).mock.calls.filter(
+      (call) => call[0] === '[Chatbot] Query log'
+    );
+    expect(calls).toHaveLength(1);
+    const serialized = calls[0][1];
+    expect(typeof serialized).toBe('string');
+    expect(serialized).not.toMatch(/[\r\n]/);
+    return JSON.parse(serialized);
+  }
+
   test('명세 5.5절 #19: 질의 1회 → 로그 1건', async () => {
     // handleQuery 호출
     const chunks: string[] = [];
@@ -141,8 +152,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     }
 
     // 로그 출력 확인 (실제 구현에서는 DB INSERT)
-    expect(console.log).toHaveBeenCalledWith(
-      '[Chatbot] Query log',
+    expect(recordedQuery()).toEqual(
       expect.objectContaining({
         device_id: DEVICE_ID,
         book_id: BOOK_ID,
@@ -161,12 +171,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     }
 
     // 로그에 투입 레코드 ID가 모두 포함되어야 함
-    const logCall = (console.log as jest.Mock).mock.calls.find(
-      (call) => call[0] === '[Chatbot] Query log'
-    );
-    expect(logCall).toBeDefined();
-
-    const logData = logCall![1];
+    const logData = recordedQuery();
 
     // input_records 필드가 존재하고 올바른 구조를 가져야 함
     expect(logData).toHaveProperty('input_records');
@@ -194,12 +199,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     }
 
     // 검색 결과 로그 확인
-    const logCall = (console.log as jest.Mock).mock.calls.find(
-      (call) => call[0] === '[Chatbot] Query log'
-    );
-    expect(logCall).toBeDefined();
-
-    const logData = logCall![1];
+    const logData = recordedQuery();
 
     // search_selected_pages 필드 존재 확인
     expect(logData).toHaveProperty('search_selected_pages');
@@ -223,10 +223,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
       chunks.push(chunk);
     }
 
-    const logCall = (console.log as jest.Mock).mock.calls.find(
-      (call) => call[0] === '[Chatbot] Query log'
-    );
-    const logData = logCall![1];
+    const logData = recordedQuery();
 
     // CP5 인젝션 판정에 필요한 필드들
     expect(logData).toHaveProperty('cutoff_page'); // 기준점 K
@@ -245,10 +242,7 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
       chunks.push(chunk);
     }
 
-    const logCall = (console.log as jest.Mock).mock.calls.find(
-      (call) => call[0] === '[Chatbot] Query log'
-    );
-    const logData = logCall![1];
+    const logData = recordedQuery();
 
     // 명세서 요구 필드
     expect(logData).toHaveProperty('timestamp');
@@ -263,5 +257,22 @@ describe('질의 로그 검증 (명세 5.5절 #19~21)', () => {
     expect(logData).toHaveProperty('output_ref');
     expect(logData).toHaveProperty('tokens');
     expect(logData).not.toHaveProperty('answer_review');
+  });
+
+  test('NFR-OBS-005: one line preserves all IDs beyond console inspection limits', async () => {
+    const characters = Array.from({ length: 151 }, (_, index) => ({
+      ...mockContext.entities.characters[0],
+      id: `character-${index}`,
+    }));
+    (repo.findCharacters as jest.Mock).mockResolvedValue(characters);
+    const query = '정주사에 대해\n알려 주세요.';
+    for await (const _chunk of handleQuery(BOOK_ID, query, K, DEVICE_ID)) {
+      // Consume the stream to emit its completion record.
+    }
+
+    const record = recordedQuery();
+    expect(record.query).toBe(query);
+    expect(record.input_records.characters).toEqual(characters.map((character) => character.id));
+    expect(record.logical_model_calls).toBe(1);
   });
 });
