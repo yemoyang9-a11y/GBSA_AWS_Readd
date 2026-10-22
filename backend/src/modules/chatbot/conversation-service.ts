@@ -155,15 +155,14 @@ export async function getConversationDetail(
   conversationId: number,
   K: number
 ): Promise<ConversationDetail | null> {
-  const row = await repo.getConversationById(deviceId, bookId, conversationId);
-  if (!row || row.cutoff_page > K) {
+  const snapshot = await repo.getConversationSnapshot(deviceId, bookId, conversationId, K);
+  if (!snapshot) {
     return null;
   }
 
-  const turns = await repo.listTurns(conversationId);
   return {
-    ...toSummary(row),
-    turns: turns.map((t: ConversationTurnRow) => ({ role: t.role, text: t.text })),
+    ...toSummary(snapshot.conversation),
+    turns: snapshot.turns.map((t: ConversationTurnRow) => ({ role: t.role, text: t.text })),
   };
 }
 

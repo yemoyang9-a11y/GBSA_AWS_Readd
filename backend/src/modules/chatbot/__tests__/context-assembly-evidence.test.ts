@@ -152,30 +152,34 @@ describe('근거 조립 - 질의 비관여 (명세 5.5절 #7)', () => {
     const context = await assembleContext(BOOK_ID, K);
 
     // 인물 확립 페이지 검증
-    context.entities.characters.forEach(char => {
+    context.entities.characters.forEach((char) => {
       expect(char.first_appearance_page).toBeLessThanOrEqual(K);
     });
 
     // 관계 확립 페이지 검증
-    context.entities.relationships.forEach(rel => {
+    context.entities.relationships.forEach((rel) => {
       expect(rel.established_page).toBeLessThanOrEqual(K);
     });
 
     // 장 요약 종료 페이지 검증
-    context.chapter_summaries.forEach(ch => {
+    context.chapter_summaries.forEach((ch) => {
       expect(ch.end_page).toBeLessThanOrEqual(K);
     });
   });
 
-  test('FR-BGK-002 🚦: 배경지식은 K와 무관 (상한 없음)', async () => {
-    const context1 = await assembleContext(BOOK_ID, 10);   // K=10
-    const context2 = await assembleContext(BOOK_ID, 200);  // K=200
+  test('출처 페이지가 없는 생성 배경지식은 모든 K에서 사실 근거에서 제외한다', async () => {
+    const context1 = await assembleContext(BOOK_ID, 10); // K=10
+    const context2 = await assembleContext(BOOK_ID, 200); // K=200
 
-    // 배경지식은 K가 달라도 동일해야 함
-    expect(context1.background).toEqual(context2.background);
+    // Legacy whole-book background has no safe per-claim cutoff.
+    expect(context1.background).toBe('');
+    expect(context2.background).toBe('');
 
-    // getBackgroundKnowledge는 K 인자를 받지 않음
-    expect(repo.getBackgroundKnowledge).toHaveBeenCalledWith(BOOK_ID);
+    // Do not load unpositioned generated background into factual RAG.
+    expect(repo.getBackgroundKnowledge).not.toHaveBeenCalled();
+    const prompt = buildPrompt({ ...context1, background: '출처 없는 미래 사건' }, 'policy');
+    expect(prompt).not.toContain('출처 없는 미래 사건');
+    expect(prompt).toContain('탁류');
   });
 });
 

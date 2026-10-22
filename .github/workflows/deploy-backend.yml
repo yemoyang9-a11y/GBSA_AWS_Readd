@@ -21,6 +21,12 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/deploy-backend.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
 # 같은 브랜치의 배포가 겹치면 뒤엣것만 남긴다 — 앞선 배포를 취소해
@@ -61,6 +67,8 @@ jobs:
   deploy:
     name: Fly.io 배포
     needs: test
+    # PR에서는 검증만 수행한다. 운영 배포는 검증된 main에 한정한다.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

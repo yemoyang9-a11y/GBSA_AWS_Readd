@@ -80,18 +80,28 @@ function checkTermUniqueness(data: ResolvedBookData, issues: IntegrityIssue[]): 
   }
 }
 
-/** H3 — 인물 대표명 중복 없음(파이프라인 불변식 — accumulate가 보장해야 하는 값을 재확인) */
+/** H3 — IDs must be unique; grounded homonyms stay distinct and require review. */
 function checkCharacterNameUniqueness(data: ResolvedBookData, issues: IntegrityIssue[]): void {
-  const seen = new Set<string>();
+  const seen = new Map<string, AccumulatedCharacter>();
+  const ids = new Set<string>();
   for (const c of data.characters) {
-    if (seen.has(c.name)) {
+    if (ids.has(c.id))
       issues.push({
         severity: 'hard',
-        rule: 'H3-character-name-unique',
+        rule: 'H3-character-id-unique',
+        message: `Duplicate character id: ${c.id}`,
+      });
+    ids.add(c.id);
+    if (seen.has(c.name)) {
+      const groundedDistinct =
+        c.identity_status === 'distinct' && c.evidence && seen.get(c.name)?.evidence;
+      issues.push({
+        severity: groundedDistinct ? 'review' : 'hard',
+        rule: groundedDistinct ? 'R3-character-name-ambiguous' : 'H3-character-name-unique',
         message: `인물 대표명 "${c.name}" 중복 생성됨`,
       });
     }
-    seen.add(c.name);
+    seen.set(c.name, c);
   }
 }
 

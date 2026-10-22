@@ -1,8 +1,11 @@
 // Jest 환경 설정
 process.env.NODE_ENV = 'test';
-// 단일 기본 모델 (2026-08-25) — 난이도 분기 폐지.
-// 2026-08-29: Bedrock → Anthropic API 이관. 모델 ID에 리전 접두사·날짜·버전 접미사가
-// 붙지 않는다 — Anthropic API의 정식 ID는 `claude-haiku-4-5` 하나로 완결돼 있다.
+// Provider adapters are mocked in unit tests; these values never authorize real calls.
+process.env.LLM_PROVIDER = 'openai';
+process.env.OPENAI_MODEL = 'gpt-6-luna';
+process.env.OPENAI_REASONING_EFFORT = 'low';
+process.env.OPENAI_API_KEY = 'test-key-not-used';
+// Explicit legacy-provider tests retain Anthropic configuration.
 process.env.ANTHROPIC_MODEL = 'claude-haiku-4-5';
 process.env.ANTHROPIC_EFFORT = ''; // 기본 모델(Haiku 4.5)은 effort를 못 받는다
 // 테스트는 네트워크를 타지 않지만, model-config의 validateModelVersions가 키 부재로

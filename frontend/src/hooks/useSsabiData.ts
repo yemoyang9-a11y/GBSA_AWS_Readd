@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchGraph as defaultFetchGraph } from '../services/ssabiService';
 import { nextSeq } from '../utils/seq';
 import type { GraphResponse, SsabiTab } from '../types';
@@ -18,24 +18,33 @@ export function useSsabiData({
 }: {
   bookId: string;
   tab: SsabiTab;
-  currentPage: number;
+  currentPage: number | null;
   fetchGraph?: (bookId: string, page: number, seq: number) => Promise<GraphResponse>;
 }): { graph: GraphResponse | null; failed: boolean } {
   const [graph, setGraph] = useState<GraphResponse | null>(null);
   const [failed, setFailed] = useState(false);
+  const generation = useRef(0);
+  const [position, setPosition] = useState({ bookId, currentPage });
+  if (position.bookId !== bookId || position.currentPage !== currentPage) {
+    generation.current++;
+    setPosition({ bookId, currentPage });
+    setGraph(null);
+    setFailed(false);
+  }
 
   useEffect(() => {
-    if (tab !== 'relationship') return;
+    if (tab !== 'relationship' || currentPage === null) return;
 
     let cancelled = false;
+    const token = generation.current;
     setFailed(false);
 
     void fetchGraph(bookId, currentPage, nextSeq())
       .then((response) => {
-        if (!cancelled) setGraph(response);
+        if (!cancelled && token === generation.current) setGraph(response);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || token !== generation.current) return;
         setGraph(null);
         setFailed(true);
       });

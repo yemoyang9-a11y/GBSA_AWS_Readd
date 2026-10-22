@@ -37,22 +37,23 @@ import {
   GenerationState,
 } from './accumulate';
 import { Chapter, Page } from '../../shared/types';
+import {
+  GroundedCharacter,
+  GroundedRelationship,
+  ReviewCandidate,
+  assertGroundingCache,
+  groundingManifest,
+  validateGroundedChapter,
+  sealResolvedOutput,
+  assertResolvedGrounding,
+} from './grounding';
 
 const BOOK_ID = 'takryu';
 const OUT_DIR = path.join(__dirname, '../../../data/generated/full');
+const EXTRACTION_CONTRACT = `${buildCharacterPrompt.toString()}\n${buildRelationshipPrompt.toString()}`;
 
-interface RawCharacter {
-  name: string;
-  first_appearance_page: number;
-  aliases: { alias: string; type: string; first_appearance_page: number }[];
-  notes: { note: string; source_page: number }[];
-}
-interface RawRelationship {
-  character_a: string;
-  character_b: string;
-  label: string;
-  established_page: number;
-}
+type RawCharacter = GroundedCharacter;
+type RawRelationship = GroundedRelationship;
 interface RawTerm {
   term: string;
   definition: string;
@@ -65,6 +66,8 @@ interface RawEvent {
 }
 
 interface ChapterOutput {
+  grounding: ReturnType<typeof groundingManifest>;
+  review: ReviewCandidate[];
   chapter_no: number;
   title: string;
   start_page: number;
@@ -117,16 +120,17 @@ async function generateChapter(
     buildCharacterPrompt(chapter, pages, known)
   );
   const { characters } = parseJsonResponse<{ characters: RawCharacter[] }>(characterRaw);
+  const accepted = validateGroundedChapter({ characters }, pages);
   record(
     '인물/별칭/노트',
-    characters.flatMap((c) => [
+    accepted.characters.flatMap((c) => [
       c.first_appearance_page,
       ...c.aliases.map((a) => a.first_appearance_page),
       ...c.notes.map((n) => n.source_page),
     ])
   );
 
-  const knownForRelationships = [...known, ...characters.map((c) => c.name)];
+  const knownForRelationships = [...known, ...accepted.characters.map((c) => c.name)];
   const relRaw = await call(
     'generate_relationship',
     buildRelationshipPrompt(chapter, pages, knownForRelationships)
@@ -134,7 +138,7 @@ async function generateChapter(
   const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
   record(
     '관계',
-    relationships.map((r) => r.established_page)
+    validateGroundedChapter({ relationships }, pages).relationships.map((r) => r.established_page)
   );
 
   const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
@@ -152,6 +156,8 @@ async function generateChapter(
   );
 
   return {
+    grounding: groundingManifest(chapter, pages, known, EXTRACTION_CONTRACT),
+    review: [],
     chapter_no: chapter.chapter_no,
     title: chapter.title,
     start_page: chapter.start_page,
@@ -166,7 +172,7 @@ async function generateChapter(
 }
 
 /** 캐시된 장 결과가 있으면 재생하고, 없으면 새로 생성해 즉시 저장한다 */
-async function loadOrGenerateChapter(
+export async function loadOrGenerateChapter(
   chapter: Chapter,
   pages: Page[],
   known: string[]
@@ -174,19 +180,27 @@ async function loadOrGenerateChapter(
   const filePath = chapterFilePath(chapter.chapter_no);
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
+    const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
+    assertGroundingCache(cached, chapter, pages, known, EXTRACTION_CONTRACT);
+    return { ...cached, ...validateGroundedChapter(cached, pages) };
   }
 
   console.log(
     `[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`
   );
   const output = await generateChapter(chapter, pages, known);
-  fs.writeFileSync(filePath, JSON.stringify(output, null, 2), 'utf-8');
+  const validated = { ...output, ...validateGroundedChapter(output, pages) };
+  // Keep original candidates in the chapter cache for review and repeat validation.
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify({ ...output, review: validated.review }, null, 2),
+    'utf-8'
+  );
   if (output.warnings.length > 0) {
     console.warn(`  [경고] ${chapter.chapter_no}장:`, output.warnings);
   }
   console.log(`  [저장] ${filePath}`);
-  return output;
+  return validated;
 }
 
 async function loadOrGenerateBackground(): Promise<{ background: string; intro: string }> {
@@ -203,6 +217,30 @@ async function loadOrGenerateBackground(): Promise<{ background: string; intro: 
   return out;
 }
 
+/** Existing manual removals/merges must never disappear under an automatic replay. */
+export function persistResolvedOutput(
+  filePath: string,
+  data: Record<string, unknown>,
+  pages: Page[]
+): void {
+  const sealed = sealResolvedOutput(data, pages);
+  if (fs.existsSync(filePath)) {
+    const previous = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>;
+    try {
+      assertResolvedGrounding(previous, pages);
+      const oldManifest = previous.grounding as { content_hash: string };
+      if (oldManifest.content_hash === sealed.grounding.content_hash) return;
+    } catch {
+      // Preserve legacy/manual artifacts too; the candidate is reviewable separately.
+    }
+    fs.writeFileSync(`${filePath}.candidate.json`, JSON.stringify(sealed, null, 2), 'utf-8');
+    throw new Error(
+      `Existing resolved artifact preserved at ${filePath}; review ${filePath}.candidate.json and migrate corrections explicitly`
+    );
+  }
+  fs.writeFileSync(filePath, JSON.stringify(sealed, null, 2), 'utf-8');
+}
+
 /** 해당 장의 관계 결과를 이름→id로 해소해 상태에 병합한다. 매칭 실패는 건너뛰고 경고만 남긴다(지어내지 않는다) */
 function mergeChapterRelationships(
   state: GenerationState,
@@ -216,15 +254,21 @@ function mergeChapterRelationships(
     established_page: number;
   }[] = [];
   for (const r of relationships) {
-    const aId = resolveCharacterId(state, r.character_a);
-    const bId = resolveCharacterId(state, r.character_b);
-    if (!aId || !bId) {
+    const aId = resolveCharacterId(state, r.character_a, r.established_page);
+    const bId = resolveCharacterId(state, r.character_b, r.established_page);
+    if (!aId || !bId || aId === bId) {
+      state.review.push({
+        kind: 'relationship',
+        reason: 'Unresolved, ambiguous, future or identical endpoints',
+        candidate: r,
+      });
       console.warn(
         `  [경고] ${chapterNo}장: 관계의 인물명을 인물 목록에서 찾지 못함 — "${r.character_a}" / "${r.character_b}" (검수 대상)`
       );
       continue;
     }
     resolved.push({
+      ...r,
       character_a_id: aId,
       character_b_id: bId,
       label: r.label,
@@ -250,7 +294,8 @@ async function main(): Promise<void> {
     `=== 「탁류」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
   );
 
-  const state = createEmptyState();
+  const state = createEmptyState(BOOK_ID);
+  const chapterReviews: { chapter_no: number; candidates: ReviewCandidate[] }[] = [];
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
   const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] =
     [];
@@ -262,6 +307,7 @@ async function main(): Promise<void> {
     const known = knownCharacterNames(state);
 
     const output = await loadOrGenerateChapter(chapter, pages, known);
+    chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
 
     mergeCharacters(state, output.characters);
     mergeChapterRelationships(state, chapter.chapter_no, output.relationships);
@@ -291,9 +337,14 @@ async function main(): Promise<void> {
     terms: state.terms,
     events: allEvents,
     background_and_intro: background,
+    review_candidates: { chapters: chapterReviews, identities_and_relationships: state.review },
+    provenance: {
+      validation_scope: 'exact source provenance only; semantic review required',
+      identities: state.identity_evidence,
+    },
   };
   const combinedPath = path.join(OUT_DIR, 'all-resolved.json');
-  fs.writeFileSync(combinedPath, JSON.stringify(combined, null, 2), 'utf-8');
+  persistResolvedOutput(combinedPath, combined, allPages);
 
   console.log(`=== 완료 — ${combinedPath} ===`);
   console.log(
@@ -304,7 +355,8 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((err) => {
-  console.error('[FAIL]', err);
-  process.exit(1);
-});
+if (require.main === module)
+  main().catch((err) => {
+    console.error('[FAIL]', err);
+    process.exit(1);
+  });

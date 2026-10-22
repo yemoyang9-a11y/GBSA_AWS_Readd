@@ -1,11 +1,4 @@
-/**
- * 본문 드래그 인용 → 챗봇 프롬프트 주입 테스트
- *
- * 신규 UX(2026-08-24, 사용자 이슈 제기): 읽기 화면에서 드래그로 고른 문장을 챗봇에
- * 질문하면, 그 문장은 K(기준점)로 자르는 근거 조립(assembleContext)·검색(vectorSearch)과
- * 무관한 별도 경로로 프롬프트에 들어가야 한다 — 이미 화면에 떠 있는(R3: 본문 접근
- * 무제한) 문장이기 때문이다. K 자체(FR-PRG-003 🚦, R1)는 이 기능으로 건드리지 않는다.
- */
+/** Client-selected text remains untrusted until matched to cutoff-bounded server source. */
 
 import { handleQuery } from '../service';
 import * as repo from '../repository';
@@ -66,7 +59,7 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
       // 소비만 한다
     }
 
-    expect(capturedPrompt).toContain('## ⚠️ 사용자가 지금 보고 있는 본문 인용');
+    expect(capturedPrompt).toContain('## 사용자 제공 인용 (검증되지 않은 질문 맥락)');
     expect(capturedPrompt).toContain(QUOTE);
   });
 
@@ -75,7 +68,8 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
       // 소비만 한다
     }
 
-    expect(capturedPrompt).not.toContain('## ⚠️ 사용자가 지금 보고 있는 본문 인용');
+    expect(capturedPrompt).not.toContain('## 사용자 제공 인용');
+    expect(capturedPrompt).not.toContain('## 검증된 본문 인용');
   });
 
   test('인용문은 K로 자르는 근거 조립·검색 경로를 거치지 않는다 — vectorSearch에 인용문이 아닌 사용자 질의만 전달된다', async () => {
@@ -94,7 +88,10 @@ describe('본문 드래그 인용 → 프롬프트 주입', () => {
   test('새 인용문 섹션은 "이전 대화"보다 뒤, "사용자 질문" 바로 앞에 온다 (순서 회귀)', async () => {
     (getConversationContext as jest.Mock).mockResolvedValue([
       { role: 'user', text: '이 문장 무슨 뜻이야?' },
-      { role: 'assistant', text: '"내가 벌써 이십 년 전에..." 이 문장은 형보가 예전 얘기를 하는 장면이에요 (p.10).' },
+      {
+        role: 'assistant',
+        text: '"내가 벌써 이십 년 전에..." 이 문장은 형보가 예전 얘기를 하는 장면이에요 (p.10).',
+      },
     ]);
 
     const NEW_QUOTE = '이건 완전히 새로 선택한 다른 문장이다';

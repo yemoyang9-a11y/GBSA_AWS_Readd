@@ -35,6 +35,12 @@ import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../t
  */
 export default function Reader() {
   const { bookId = '' } = useParams();
+  // A different book must never inherit the previous book's entry, page, or panel state.
+  return <ReadingSession key={bookId} />;
+}
+
+function ReadingSession() {
+  const { bookId = '' } = useParams();
   const navigate = useNavigate();
   /**
    * ⚠️ `location.state.entry`를 시작 페이지로 쓰지 않는다 (2026-08-26, 사용자 제보 —
@@ -194,20 +200,18 @@ export default function Reader() {
    */
   const [session, setSession] = useState<EntryResponse | null>(null);
   const [currentPage, setCurrentPage] = useState<number | null>(null);
-  const previousPageRef = useRef<number | null>(currentPage);
+  const [previousPage, setPreviousPage] = useState(currentPage);
 
   /**
    * 선택 문장은 그 문장이 있던 본문 페이지에서만 유효하다. 이전/다음·목차·직접 입력처럼
    * currentPage를 바꾸는 모든 이동 경로가 이 한 상태를 거치므로, 페이지를 떠나는 즉시
    * 챗봇 카드와 본문 강조를 함께 비운다.
    */
-  useEffect(() => {
-    if (previousPageRef.current !== null && previousPageRef.current !== currentPage) {
-      setPendingQuote(null);
-      setHighlightedQuote(null);
-    }
-    previousPageRef.current = currentPage;
-  }, [currentPage]);
+  if (previousPage !== currentPage) {
+    setPreviousPage(currentPage);
+    setPendingQuote(null);
+    setHighlightedQuote(null);
+  }
 
   /**
    * 마지막으로 활성이던 싸비 탭 기억 — 어느 session_epoch에서 기록됐는지와 함께 보관한다.
@@ -272,7 +276,43 @@ export default function Reader() {
     streaming: recapStreaming,
     error: recapError,
     consume: consumeRecap,
-  } = useSSE();
+  } = useSSE(`${bookId}:${currentPage}`);
+  /**
+   * 패널 배지는 로컬 currentPage가 아니라 POST /progress가 확인한 applied_cutoff만 보여준다.
+   * 그래야 배지는 최신인데 실제 챗봇·관계도는 전 페이지를 보는 거짓 상태가 되지 않는다.
+   */
+  const [panelAppliedCutoff, setPanelAppliedCutoff] = useState<number | null>(null);
+  const progressRequestIdRef = useRef(0);
+  const progressSyncRef = useRef<{
+    page: number;
+    promise: Promise<void>;
+  } | null>(null);
+  const syncPageProgress = useCallback(
+    (targetPage: number): Promise<void> => {
+      const requestId = ++progressRequestIdRef.current;
+      const request = { page: targetPage, promise: Promise.resolve() };
+      request.promise = sendProgress(bookId, targetPage).then((appliedCutoff) => {
+        if (appliedCutoff === null) throw new Error('PROGRESS_SYNC_FAILED');
+        if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
+      });
+      progressSyncRef.current = request;
+      // 느린 이전 요청이 나중에 돌아와 최신 배지를 되감지 못하게 한다.
+      return request.promise;
+    },
+    [bookId]
+  );
+  const ensureHistoryPosition = useCallback(async () => {
+    if (currentPage === null) throw new Error('POSITION_NOT_READY');
+    const pending = progressSyncRef.current;
+    if (pending?.page === currentPage) {
+      await pending.promise;
+      return;
+    }
+    await syncPageProgress(currentPage);
+  }, [currentPage, syncPageProgress]);
+  const invalidateHistoryPosition = useCallback(() => {
+    progressSyncRef.current = null;
+  }, []);
   const {
     turns: chatTurns,
     streaming: chatStreaming,
@@ -284,27 +324,11 @@ export default function Reader() {
     toggleHistory: toggleChatHistory,
     selectConversation: selectChatConversation,
     deleteConversation: deleteChatConversation,
-  } = useChatConversation(bookId);
-  /**
-   * 패널 배지는 로컬 currentPage가 아니라 POST /progress가 확인한 applied_cutoff만 보여준다.
-   * 그래야 배지는 최신인데 실제 챗봇·관계도는 전 페이지를 보는 거짓 상태가 되지 않는다.
-   */
-  const [panelAppliedCutoff, setPanelAppliedCutoff] = useState<number | null>(null);
-  const progressRequestIdRef = useRef(0);
-  const syncPageProgress = useCallback(
-    async (targetPage: number): Promise<void> => {
-      const requestId = ++progressRequestIdRef.current;
-      const appliedCutoff = await sendProgress(bookId, targetPage);
-      if (appliedCutoff === null) throw new Error('PROGRESS_SYNC_FAILED');
-      // 느린 이전 요청이 나중에 돌아와 최신 배지를 되감지 못하게 한다.
-      if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
-    },
-    [bookId]
-  );
+  } = useChatConversation(bookId, currentPage, ensureHistoryPosition, invalidateHistoryPosition);
   const { graph, failed: graphFailed } = useSsabiData({
     bookId,
     tab,
-    currentPage: currentPage ?? 0,
+    currentPage,
   });
 
   /**
@@ -485,17 +509,30 @@ export default function Reader() {
         ) : null}
 
         <div className="flex-1">
-          <ReaderView
-            content={page.content}
-            currentPage={page.page_no}
-            totalPages={totalPages}
-            prevPage={page.prev_page}
-            nextPage={page.next_page}
-            onMove={setCurrentPage}
-            onQuote={handleQuote}
-            highlightedQuote={highlightedQuote}
-            chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
-          />
+          {page.page_no === currentPage ? (
+            <ReaderView
+              content={page.content}
+              currentPage={page.page_no}
+              totalPages={totalPages}
+              prevPage={page.prev_page}
+              nextPage={page.next_page}
+              onMove={setCurrentPage}
+              onQuote={handleQuote}
+              highlightedQuote={highlightedQuote}
+              chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
+            />
+          ) : pageError ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4">
+              <p role="alert" className="text-[13px] text-brief-muted">
+                페이지를 불러오지 못했습니다
+              </p>
+              <Button onClick={() => currentPage !== null && loadPage(currentPage)}>
+                다시 시도
+              </Button>
+            </div>
+          ) : (
+            <Loading message="페이지를 불러오는 중" />
+          )}
         </div>
 
         {panelRendered ? (
@@ -527,6 +564,7 @@ export default function Reader() {
               style={{ width: panelWidth }}
             >
               <SsabiPanel
+                key={currentPage}
                 sessionEpoch={session?.session_epoch ?? 0}
                 appliedCutoff={panelAppliedCutoff}
                 initialTab={tabMemory?.tab ?? null}

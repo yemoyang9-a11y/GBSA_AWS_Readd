@@ -10,6 +10,15 @@ const graph: GraphResponse = {
   edges: [{ source: 'c1', target: 'c2', label: '부녀', established_page: 5 }],
 };
 
+it('renders graph after loading and after a position invalidates the previous graph', () => {
+  const { rerender } = render(<RelationshipTab graph={null} failed={false} />);
+  rerender(<RelationshipTab graph={graph} failed={false} />);
+  expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
+  rerender(<RelationshipTab graph={null} failed={false} />);
+  rerender(<RelationshipTab graph={graph} failed={false} />);
+  expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
+});
+
 /**
  * 인물 관계도 탭 — FR-SVB-002, FR-SPL-005 🚦, NFR-USE-006
  *
@@ -169,7 +178,9 @@ describe('RelationshipTab', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
       const input = screen.getByLabelText('인물 검색');
       fireEvent.change(input, { target: { value: '정주사' } });
-      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('정주사'));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('정주사')
+      );
 
       expect(input).toHaveValue('');
       expect(screen.queryByRole('listbox', { name: '인물 검색 결과' })).not.toBeInTheDocument();
@@ -262,8 +273,18 @@ describe('RelationshipTab', () => {
       const rawEdges: GraphResponse['edges'] = [];
       for (let i = 0; i < RIM; i++) {
         rawEdges.push({ source: 'center', target: `rim${i}`, label: '지인', established_page: 1 });
-        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 1) % RIM}`, label: '지인', established_page: 1 });
-        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 2) % RIM}`, label: '지인', established_page: 1 });
+        rawEdges.push({
+          source: `rim${i}`,
+          target: `rim${(i + 1) % RIM}`,
+          label: '지인',
+          established_page: 1,
+        });
+        rawEdges.push({
+          source: `rim${i}`,
+          target: `rim${(i + 2) % RIM}`,
+          label: '지인',
+          established_page: 1,
+        });
       }
       const seen = new Set<string>();
       const edges = rawEdges.filter((e) => {
@@ -311,7 +332,9 @@ describe('RelationshipTab', () => {
       expect(within(people).queryByText('최차부')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
 
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '최차부' } });
-      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('최차부'));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('최차부')
+      );
 
       expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
         'aria-pressed',

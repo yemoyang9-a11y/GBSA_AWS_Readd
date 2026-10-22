@@ -6,6 +6,90 @@ import {
   resolveCharacterId,
   knownCharacterNames,
 } from './accumulate';
+import { validateGroundedChapter } from './grounding';
+
+describe('FR-SPL-002: identity facts respect their established page', () => {
+  const pages = [
+    { id: 'p1', book_id: 'fixture', page_no: 1, content: '가면남은 문을 열었다.' },
+    { id: 'p2', book_id: 'fixture', page_no: 2, content: '민수는 의사다.' },
+    { id: 'p3', book_id: 'fixture', page_no: 3, content: '가면남의 정체는 의사 민수였다.' },
+  ];
+  const evidence = (page: (typeof pages)[number]) => ({
+    source_page: page.page_no,
+    quote: page.content,
+  });
+  const candidates = (firstAppearance: 2 | 3) => [
+    {
+      name: '가면남',
+      first_appearance_page: 1,
+      entity_type: 'person',
+      identity_status: 'distinct',
+      rationale: '행동하는 인물이다.',
+      evidence: evidence(pages[0]),
+      aliases: [],
+      notes: [],
+    },
+    {
+      name: '민수',
+      first_appearance_page: firstAppearance,
+      entity_type: 'person',
+      identity_status: 'same',
+      rationale: '3페이지에서 가면남과 동일인이라고 밝힌다.',
+      evidence: evidence(pages[firstAppearance - 1]),
+      aliases: [
+        {
+          alias: '가면남',
+          type: 'nickname',
+          first_appearance_page: 1,
+          identity_established_page: 3,
+          rationale: '3페이지에서 정체를 명시한다.',
+          evidence: evidence(pages[2]),
+        },
+      ],
+      notes: [
+        {
+          note: '의사다.',
+          source_page: firstAppearance,
+          rationale: '직업을 명시한다.',
+          evidence: evidence(pages[firstAppearance - 1]),
+        },
+      ],
+    },
+  ];
+
+  test('keeps separately introduced names and their notes before a later identity link', () => {
+    const output = validateGroundedChapter({ characters: candidates(2) }, pages);
+    expect(output.review).toEqual([]);
+    const state = createEmptyState('fixture');
+    mergeCharacters(state, output.characters);
+
+    expect(state.characters).toHaveLength(2);
+    const masked = state.characters.find((c) => c.name === '가면남')!;
+    const minsu = state.characters.find((c) => c.name === '민수')!;
+    expect(masked.notes).toEqual([]);
+    expect(minsu.notes).toEqual([expect.objectContaining({ note: '의사다.', source_page: 2 })]);
+    expect(resolveCharacterId(state, '가면남', 2)).toBe(masked.id);
+    expect(resolveCharacterId(state, '민수', 2)).toBe(minsu.id);
+    expect(minsu.aliases).toEqual([]);
+    expect(state.review).toEqual([expect.objectContaining({ kind: 'alias' })]);
+
+    const snapshot = JSON.stringify(state);
+    mergeCharacters(state, output.characters);
+    expect(JSON.stringify(state)).toBe(snapshot);
+  });
+
+  test('merges a name first introduced on the identity establishment page', () => {
+    const output = validateGroundedChapter({ characters: candidates(3) }, pages);
+    const state = createEmptyState('fixture');
+    mergeCharacters(state, output.characters);
+
+    expect(state.characters).toHaveLength(1);
+    expect(state.characters[0].notes[0].source_page).toBe(3);
+    expect(resolveCharacterId(state, '민수', 2)).toBeUndefined();
+    expect(resolveCharacterId(state, '민수', 3)).toBe(state.characters[0].id);
+    expect(state.review).toEqual([]);
+  });
+});
 
 describe('mergeCharacters — 챕터 간 인물 상태 누적', () => {
   test('새 인물은 새 id로 추가된다', () => {
@@ -111,6 +195,19 @@ describe('resolveCharacterId / knownCharacterNames', () => {
 });
 
 describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => {
+  test('unordered model output retains the earliest same-label relationship', () => {
+    const state = createEmptyState();
+    mergeRelationships(
+      state,
+      [30, 10].map((established_page) => ({
+        character_a_id: 'a',
+        character_b_id: 'b',
+        label: '친구',
+        established_page,
+      }))
+    );
+    expect(state.relationships.map((r) => r.established_page)).toEqual([10]);
+  });
   test('처음 등장하는 쌍은 새 행으로 추가된다', () => {
     const state = createEmptyState();
     mergeRelationships(state, [

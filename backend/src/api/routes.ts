@@ -44,6 +44,28 @@ function requireDeviceId(req: Request, res: Response): string | null {
   return deviceId;
 }
 
+/** UI position is a precondition, never an alternative source for the server cutoff. */
+function matchesExpectedReadingPage(req: Request, res: Response, serverPage: number): boolean {
+  const expected = req.query.expected_page;
+  if (expected === undefined) return true; // Existing clients retain server-only scope.
+  if (
+    typeof expected !== 'string' ||
+    !/^\d+$/.test(expected) ||
+    !Number.isSafeInteger(Number(expected)) ||
+    Number(expected) < 1
+  ) {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid expected_page' });
+    return false;
+  }
+  if (Number(expected) !== serverPage) {
+    res
+      .status(409)
+      .json({ error: 'READING_POSITION_CHANGED', message: 'Reading position is not synchronized' });
+    return false;
+  }
+  return true;
+}
+
 /**
  * Health Check
  */
@@ -87,9 +109,7 @@ router.get('/diag/sse', (_req: Request, res: Response) => {
     sent += 1;
     // 서버가 보낸 시각을 실어 보낸다 — 클라이언트 수신 시각과 대조하면
     // "서버가 늦게 보낸 것"과 "중간에서 붙들고 있던 것"을 가를 수 있다
-    res.write(
-      `data: ${JSON.stringify({ seq: sent, sentAtMs: Date.now() - startedAt })}\n\n`
-    );
+    res.write(`data: ${JSON.stringify({ seq: sent, sentAtMs: Date.now() - startedAt })}\n\n`);
 
     if (sent >= CHUNK_COUNT) {
       clearInterval(timer);
@@ -153,8 +173,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 기준점 스냅샷 가져오기
     let K: number;
     // 완독 여부 — 기준점 결정기가 파생한 값을 그대로 받는다(재계산 금지, 절대 규칙 2번).
-    // 완독이면 챗봇이 근거에 없는 대상을 "이 책에 안 나온다"고 단정할 수 있다
-    // (D14, 절대 규칙 7번·R10의 완독 예외 — FR-QNA-004 🚦).
+    // 완독은 허용 범위만 뜻하며, 검색 결과에 없다는 이유로 작품 전체 부재를
+    // 단정할 근거가 되지 않는다(2026-10-21 정책, FR-QNA-004 🚦).
     let isComplete = false;
     // 대화 이력 기록 대상 — MOCK_MODE는 DB 없이 도는 화면 개발 경로라 이력 기록을 생략한다
     let conversationId: number | undefined;
@@ -228,7 +248,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         isComplete
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
-        // 근거 부재 거절도 일반 delta로 흘려보냄
+        // 부분 근거에 맞춘 답변도 생성되는 대로 일반 delta로 전달한다.
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
@@ -272,6 +292,7 @@ router.get('/books/:bookId/chat/conversations', async (req: Request, res: Respon
 
   try {
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
     const conversations = await listChatConversations(deviceId, bookId, snapshot.cutoff);
     return res.json(conversations);
   } catch (error) {
@@ -300,6 +321,7 @@ router.get(
 
     try {
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+      if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
       const detail = await getChatConversationDetail(deviceId, bookId, numericId, snapshot.cutoff);
       if (!detail) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'conversation not found' });
@@ -694,7 +716,6 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
       await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
-
 
     // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);

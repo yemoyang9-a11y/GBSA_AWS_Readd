@@ -86,7 +86,8 @@ describe('모델 선택 - 근거 집합 불변 (명세 5.5절 #15)', () => {
 
   test('명세 5.5절 #15: 질의 성격이 달라도 같은 K의 근거 집합은 동일', async () => {
     // 1. 예전에 Sonnet으로 갈리던 복잡한 질의
-    const complexQuery = '왜 정주사와 초봉의 관계가 그렇게 변화했나요? 그리고 앞으로 어떻게 될까요?';
+    const complexQuery =
+      '왜 정주사와 초봉의 관계가 그렇게 변화했나요? 그리고 앞으로 어떻게 될까요?';
     const complexSelection = selectModel(complexQuery);
 
     // 2. 예전에 Haiku로 갈리던 단순한 질의
@@ -119,8 +120,7 @@ describe('모델 선택 - 근거 집합 불변 (명세 5.5절 #15)', () => {
     expect(result1.model).toBeDefined();
     expect(result2.model).toBeDefined();
 
-    // 질의당 실제 LLM 호출은 handleQuery에서 1회만
-    // (selectModel은 단순 규칙 기반 분기)
+    // 답변 생성·검토·재생성 호출과 별개로 selectModel 자체는 API를 호출하지 않는다.
   });
 
   test('D13 ②: 모델 선택은 근거 범위(K)를 변경하지 않음', async () => {

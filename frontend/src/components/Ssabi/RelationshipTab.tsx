@@ -134,10 +134,23 @@ export default function RelationshipTab({
 
   // 되감아서 선택했던 인물이 아직 안 나왔으면 선택을 무시한다(지우지는 않는다 —
   // 다시 앞으로 감으면 그대로 복원된다)
-  const activeSelected =
-    selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
+  const activeSelected = selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
 
-  if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
+  // Hooks must run during loading/error renders as well as loaded graph renders.
+  const cardRefs = useRef(new Map<string, HTMLLIElement>());
+  const scrollTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
+    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scrollTargetRef.current = null;
+  }, [activeSelected]);
+
+  if (failed)
+    return (
+      <p role="alert" className="text-brief-muted">
+        관계도를 불러오지 못했습니다
+      </p>
+    );
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
@@ -161,14 +174,6 @@ export default function RelationshipTab({
   // "설명이 그대로다"로 보였다. 그래프에서 직접 인물을 눌렀을 때는 이미 그 화면을 보고
   // 누른 것이라 스크롤이 필요 없다(오히려 화면이 갑자기 움직여 방해된다, 사용자 재제보) —
   // 그래서 focusOn(검색 전용 경로)에서만 스크롤 대상을 표시해 둔다.
-  const cardRefs = useRef(new Map<string, HTMLLIElement>());
-  const scrollTargetRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
-    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    scrollTargetRef.current = null;
-  }, [activeSelected]);
-
   function focusOn(id: string) {
     // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
     // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
@@ -187,7 +192,11 @@ export default function RelationshipTab({
       .map((edge) => {
         const otherId = edge.source === id ? edge.target : edge.source;
         const other = shown.nodes.find((n) => n.id === otherId);
-        return { key: `${edge.source}-${edge.target}`, name: other?.name ?? otherId, label: edge.label };
+        return {
+          key: `${edge.source}-${edge.target}`,
+          name: other?.name ?? otherId,
+          label: edge.label,
+        };
       });
 
   return (
@@ -199,7 +208,11 @@ export default function RelationshipTab({
           그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
       <div className="flex items-center justify-between text-[11px] text-brief-muted">
         <span>두 손가락으로 확대 · 끌어서 이동</span>
-        <button type="button" onClick={() => setSelected(null)} className="font-bold text-brief-accent underline">
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="font-bold text-brief-accent underline"
+        >
           선택 해제
         </button>
       </div>
@@ -358,7 +371,9 @@ export default function RelationshipTab({
                       >
                         {node.name}
                         {node.aliases.length > 0 ? (
-                          <span className="ml-1.5 text-[10px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                          <span className="ml-1.5 text-[10px] text-brief-muted">
+                            {node.aliases.join(' · ')}
+                          </span>
                         ) : null}
                       </button>
                     </li>
@@ -391,7 +406,9 @@ export default function RelationshipTab({
                   aria-expanded={isOpen}
                   onClick={() => setSelected(isOpen ? null : node.id)}
                   className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
-                    isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
+                    isOpen
+                      ? 'border-brief-accent bg-brief-accent-soft'
+                      : 'border-brief-rule bg-white'
                   }`}
                 >
                   {/* 이름과 별칭을 **두 개의 열**로 둔다 — 별칭이 아무리 길어도 이름의 가로
@@ -419,7 +436,10 @@ export default function RelationshipTab({
                     ) : null}
                   </div>
                   {isOpen && relations.length > 0 ? (
-                    <ul aria-label="관계" className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-brief-rule pt-2.5">
+                    <ul
+                      aria-label="관계"
+                      className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-brief-rule pt-2.5"
+                    >
                       {relations.map((rel) => (
                         <li
                           key={rel.key}
