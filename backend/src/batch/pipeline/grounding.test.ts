@@ -1,7 +1,7 @@
 import * as generation from './generate';
 import { Page } from '../../shared/types';
 import { createEmptyState, mergeCharacters, resolveCharacterId } from './accumulate';
-import { assertGroundingCache, groundingManifest } from './grounding';
+import { assertGroundingCache, sealChapterCache } from './grounding';
 import { checkIntegrity } from './check-integrity';
 
 // Deliberately exercise the public boundary used by both new output and cache replay.
@@ -20,7 +20,7 @@ const pages: Page[] = [
     id: 'p1',
     book_id: 'fixture',
     page_no: 1,
-    content: '창가에 전봇대가 서 있다. 민수는 길을 걷는다.',
+    content: '창가에 전봇대가 서 있다. 영수는 길을 걷는다.',
   },
   {
     id: 'p2',
@@ -42,6 +42,17 @@ const person = (name = '민수') => ({
   identity_status: 'same',
   rationale: '사람이라고 명시하며 키와 별명으로 설명한다.',
   evidence: evidence(pages[1]),
+  earlier_mentions:
+    name === '전봇대'
+      ? [
+          {
+            source_page: 1,
+            kind: 'non_person',
+            rationale: '첫 페이지의 전봇대는 사물이다.',
+            evidence: evidence(pages[0], '창가에 전봇대가 서 있다.'),
+          },
+        ]
+      : [],
   aliases: [],
   notes: [],
 });
@@ -128,6 +139,7 @@ describe('grounded extraction boundary', () => {
     const alias = {
       alias: '전봇대',
       type: 'nickname',
+      reference_type: 'person_label',
       first_appearance_page: 1,
       identity_established_page: 2,
       rationale: '민수를 전봇대라 부른다고 명시한다.',
@@ -159,6 +171,8 @@ describe('grounded extraction boundary', () => {
       character_b: '영희',
       label: '친구',
       established_page: 2,
+      assertion_status: 'fact',
+      change_type: 'establishment',
       evidence: evidence(pages[1]),
       rationale: '친구라고 명시한다.',
     };
@@ -200,6 +214,7 @@ describe('identity safety and reproducible replay', () => {
               {
                 alias: '전봇대',
                 type: 'nickname',
+                reference_type: 'person_label',
                 first_appearance_page: 1,
                 identity_established_page: 2,
                 evidence: evidence(pages[1]),
@@ -294,6 +309,7 @@ describe('identity safety and reproducible replay', () => {
       aliases: ['민수', '영희'].map((alias) => ({
         alias,
         type: 'nickname',
+        reference_type: 'person_label',
         first_appearance_page: 2,
         identity_established_page: 2,
         evidence: evidence(pages[1]),
@@ -319,6 +335,7 @@ describe('identity safety and reproducible replay', () => {
         {
           alias: '전봇대',
           type: 'nickname',
+          reference_type: 'person_label',
           first_appearance_page: 1,
           identity_established_page: 2,
           evidence: evidence(pages[1]),
@@ -375,7 +392,7 @@ describe('cache provenance', () => {
   };
   test('rejects legacy and changed-source caches before replay', () => {
     expect(() => assertGroundingCache({}, chapter, pages)).toThrow(/Stale/);
-    const cache = { grounding: groundingManifest(chapter, pages) };
+    const cache = sealChapterCache({}, chapter, pages);
     expect(() => assertGroundingCache(cache, chapter, pages)).not.toThrow();
     expect(() =>
       assertGroundingCache(cache, chapter, [{ ...pages[0], content: 'changed' }, pages[1]])
@@ -386,7 +403,7 @@ describe('cache provenance', () => {
   });
 
   test('changed known-character context or extraction contract invalidates a cache', () => {
-    const cache = { grounding: groundingManifest(chapter, pages) };
+    const cache = sealChapterCache({}, chapter, pages);
     expect(() => (assertGroundingCache as any)(cache, chapter, pages, ['new known name'])).toThrow(
       /Stale/
     );

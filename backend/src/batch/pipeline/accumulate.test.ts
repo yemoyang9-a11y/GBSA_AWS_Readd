@@ -40,6 +40,7 @@ describe('FR-SPL-002: identity facts respect their established page', () => {
         {
           alias: '가면남',
           type: 'nickname',
+          reference_type: 'person_label',
           first_appearance_page: 1,
           identity_established_page: 3,
           rationale: '3페이지에서 정체를 명시한다.',
@@ -79,7 +80,12 @@ describe('FR-SPL-002: identity facts respect their established page', () => {
   });
 
   test('merges a name first introduced on the identity establishment page', () => {
-    const output = validateGroundedChapter({ characters: candidates(3) }, pages);
+    // This scenario has no independent earlier introduction of 민수 (the preceding test does).
+    const output = validateGroundedChapter({ characters: candidates(3) }, [
+      pages[0],
+      { ...pages[1], content: '문은 닫혀 있었다.' },
+      pages[2],
+    ]);
     const state = createEmptyState('fixture');
     mergeCharacters(state, output.characters);
 
@@ -195,6 +201,14 @@ describe('resolveCharacterId / knownCharacterNames', () => {
 });
 
 describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => {
+  const marriage = {
+    character_a_id: 'a',
+    character_b_id: 'b',
+    label: '부부',
+    established_page: 90,
+    change_type: 'transition' as const,
+    change_evidence: { source_page: 90, quote: '두 사람이 결혼했다.', start_char: 0, end_char: 11 },
+  };
   test('unordered model output retains the earliest same-label relationship', () => {
     const state = createEmptyState();
     mergeRelationships(
@@ -234,9 +248,7 @@ describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => 
     mergeRelationships(state, [
       { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
     ]);
-    mergeRelationships(state, [
-      { character_a_id: 'a', character_b_id: 'b', label: '부부', established_page: 90 },
-    ]);
+    mergeRelationships(state, [marriage]);
 
     expect(state.relationships).toHaveLength(2);
     expect(state.relationships[0].label).toBe('약혼');
@@ -249,9 +261,7 @@ describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => 
     mergeRelationships(state, [
       { character_a_id: 'a', character_b_id: 'b', label: '약혼', established_page: 30 },
     ]);
-    mergeRelationships(state, [
-      { character_a_id: 'b', character_b_id: 'a', label: '부부', established_page: 90 },
-    ]);
+    mergeRelationships(state, [{ ...marriage, character_a_id: 'b', character_b_id: 'a' }]);
 
     expect(state.relationships).toHaveLength(2); // 라벨이 바뀌었으니 새 행 — 순서 뒤바뀜과 무관하게 같은 쌍으로 식별
   });
@@ -264,9 +274,7 @@ describe('mergeRelationships — 이력형 관계 (A6, FR-CHR-001 🚦)', () => 
     mergeRelationships(state, [
       { character_a_id: 'b', character_b_id: 'a', label: '약혼', established_page: 30 },
     ]);
-    mergeRelationships(state, [
-      { character_a_id: 'a', character_b_id: 'b', label: '부부', established_page: 90 },
-    ]);
+    mergeRelationships(state, [marriage]);
 
     expect(state.relationships).toHaveLength(2);
     const orders = new Set(

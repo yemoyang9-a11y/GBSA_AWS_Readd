@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { Chapter, Page } from '../../shared/types';
-const GROUNDING_SCHEMA_VERSION = 2;
+import { aliasReviewReason, labelMentions, relationshipReviewReason } from './semantic-guards';
+const GROUNDING_SCHEMA_VERSION = 3;
 
 /** Offsets are zero-based UTF-16 code units in the stored split page; end is exclusive. */
 export interface SourceEvidence {
@@ -12,6 +13,7 @@ export interface SourceEvidence {
 
 export interface GroundedAlias {
   alias: string;
+  reference_type: 'person_label';
   type: 'name' | 'nickname' | 'title' | 'kinship';
   first_appearance_page: number;
   mention_page?: number;
@@ -45,6 +47,9 @@ export interface GroundedRelationship {
   established_page: number;
   rationale: string;
   evidence: SourceEvidence;
+  assertion_status: 'fact';
+  change_type: 'establishment' | 'restatement' | 'transition' | 'disclosure';
+  change_evidence?: SourceEvidence;
 }
 
 export interface ReviewCandidate {
@@ -129,6 +134,38 @@ export function validateGroundedChapter(
       );
       continue;
     }
+    const earlier = pages
+      .filter((p) => p.page_no < (c.first_appearance_page as number))
+      .flatMap((p) =>
+        labelMentions(p.content, c.name as string).map((mention) => ({
+          page: p.page_no,
+          ...mention,
+        }))
+      );
+    const exclusions = Array.isArray(c.earlier_mentions) ? c.earlier_mentions : [];
+    const unresolvedEarlier = earlier.filter(
+      (mention) =>
+        !exclusions.some((item) => {
+          const prior = object(item);
+          const proof = validEvidence(prior.evidence, pages, prior.source_page, [c.name]);
+          return (
+            proof &&
+            ['non_person', 'different_person'].includes(String(prior.kind)) &&
+            nonempty(prior.rationale) &&
+            prior.source_page === mention.page &&
+            proof.start_char <= mention.start &&
+            proof.end_char >= mention.end
+          );
+        })
+    );
+    if (unresolvedEarlier.length > 0) {
+      hold(
+        'character',
+        item,
+        `Earlier name mentions need identity review on pages ${[...new Set(unresolvedEarlier.map((p) => p.page))].join(', ')}; do not guess/backdate`
+      );
+      continue;
+    }
     const aliases: GroundedAlias[] = [];
     for (const item of Array.isArray(c.aliases) ? c.aliases : []) {
       const a = object(item);
@@ -139,13 +176,28 @@ export function validateGroundedChapter(
       ]);
       if (
         !['name', 'nickname', 'title', 'kinship'].includes(String(a.type)) ||
+        a.reference_type !== 'person_label' ||
         !pageNumber(mention) ||
         !pageNumber(a.identity_established_page) ||
         mention > a.identity_established_page ||
         !nonempty(a.rationale) ||
         !aliasEvidence
       ) {
-        hold('alias', item, 'Explicit dated identity evidence naming both labels required');
+        hold(
+          'alias',
+          item,
+          'Individual person-label classification and exact dated identity evidence naming both labels required'
+        );
+        continue;
+      }
+      const aliasIssue = aliasReviewReason(
+        c.name as string,
+        a.alias as string,
+        a.type as string,
+        aliasEvidence.quote
+      );
+      if (aliasIssue) {
+        hold('alias', item, aliasIssue);
         continue;
       }
       // Runtime's alias date denotes when the identity link is safe to expose.
@@ -203,7 +255,48 @@ export function validateGroundedChapter(
       );
       continue;
     }
-    relationships.push({ ...r, evidence: relationshipEvidence } as unknown as GroundedRelationship);
+    const needsChangeEvidence = r.change_type === 'transition' || r.change_type === 'disclosure';
+    const changeEvidence = needsChangeEvidence
+      ? validEvidence(r.change_evidence, pages, r.established_page, [r.character_a, r.character_b])
+      : undefined;
+    if (
+      r.assertion_status !== 'fact' ||
+      !['establishment', 'restatement', 'transition', 'disclosure'].includes(
+        String(r.change_type)
+      ) ||
+      (needsChangeEvidence && !changeEvidence)
+    ) {
+      hold(
+        'relationship',
+        item,
+        'Established fact/status required; a transition or disclosure needs exact dated change evidence'
+      );
+      continue;
+    }
+    const source = pages.find((p) => p.page_no === relationshipEvidence.source_page)!;
+    const following = source.content.slice(
+      relationshipEvidence.end_char,
+      relationshipEvidence.end_char + 1000
+    );
+    const next = pages.find((p) => p.page_no === source.page_no + 1);
+    const nearby =
+      following.length < 1000
+        ? following + ' ' + (next?.content.slice(0, 1000 - following.length) ?? '')
+        : following;
+    const relationshipIssue = relationshipReviewReason(
+      r.label as string,
+      relationshipEvidence.quote,
+      nearby
+    );
+    if (relationshipIssue) {
+      hold('relationship', item, relationshipIssue);
+      continue;
+    }
+    relationships.push({
+      ...r,
+      evidence: relationshipEvidence,
+      ...(changeEvidence ? { change_evidence: changeEvidence } : {}),
+    } as unknown as GroundedRelationship);
   }
   return { characters, relationships, review };
 }
@@ -213,7 +306,7 @@ export function groundingManifest(
   chapter: Chapter,
   pages: Page[],
   known: string[] = [],
-  extractionContract = 'grounded-agent-v2'
+  extractionContract = 'grounded-agent-v3'
 ): { schema_version: number; source_hash: string } {
   return {
     schema_version: GROUNDING_SCHEMA_VERSION,
@@ -235,18 +328,38 @@ export function assertGroundingCache(
   chapter: Chapter,
   pages: Page[],
   known: string[] = [],
-  extractionContract = 'grounded-agent-v2'
+  extractionContract = 'grounded-agent-v3'
 ): void {
   const cached = object(object(input).grounding);
   const expected = groundingManifest(chapter, pages, known, extractionContract);
+  const { grounding: _grounding, ...content } = object(input);
   if (
     cached.schema_version !== expected.schema_version ||
-    cached.source_hash !== expected.source_hash
+    cached.source_hash !== expected.source_hash ||
+    cached.content_hash !== digest(content)
   ) {
     throw new Error(
       `Stale/unverified chapter ${chapter.chapter_no} cache: preserve it for review, then regenerate explicitly`
     );
   }
+}
+
+/** Seal raw candidates plus review metadata, before replay can consume the cache. */
+export function sealChapterCache<T extends Record<string, unknown>>(
+  data: T,
+  chapter: Chapter,
+  pages: Page[],
+  known: string[] = [],
+  extractionContract = 'grounded-agent-v3'
+): T & { grounding: ReturnType<typeof groundingManifest> & { content_hash: string } } {
+  const { grounding: _previous, ...content } = data;
+  return {
+    ...data,
+    grounding: {
+      ...groundingManifest(chapter, pages, known, extractionContract),
+      content_hash: digest(content),
+    },
+  };
 }
 
 function digest(value: unknown): string {
