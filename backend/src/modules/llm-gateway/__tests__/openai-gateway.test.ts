@@ -56,6 +56,13 @@ describe('OpenAI gateway integration (SDK mocked, no network)', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
+  function recordedMetrics() {
+    expect(log).toHaveBeenCalledWith('[LLM Metrics]', expect.any(String));
+    const serialized = log.mock.calls.find(([label]) => label === '[LLM Metrics]')![1];
+    expect(serialized).not.toMatch(/[\r\n]/);
+    return JSON.parse(serialized);
+  }
+
   test('NFR-AI-001: initializes only the selected provider and has no vendor fallback', () => {
     expect(OpenAI).toHaveBeenCalledTimes(1);
     expect(Anthropic).not.toHaveBeenCalled();
@@ -82,8 +89,7 @@ describe('OpenAI gateway integration (SDK mocked, no network)', () => {
       { signal: controller.signal }
     );
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith(
-      '[LLM Metrics]',
+    expect(recordedMetrics()).toEqual(
       expect.objectContaining({
         provider: 'openai',
         task: 'chatbot',
@@ -114,8 +120,7 @@ describe('OpenAI gateway integration (SDK mocked, no network)', () => {
       { signal: controller.signal }
     );
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith(
-      '[LLM Metrics]',
+    expect(recordedMetrics()).toEqual(
       expect.objectContaining({ streaming: true, task: 'recap', modelId: 'test-actual-model' })
     );
   });
@@ -128,8 +133,7 @@ describe('OpenAI gateway integration (SDK mocked, no network)', () => {
     });
     await expect(call('chatbot', 'question')).rejects.toThrow('OPENAI_RESPONSE_INCOMPLETE');
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log).toHaveBeenCalledWith(
-      '[LLM Metrics]',
+    expect(recordedMetrics()).toEqual(
       expect.objectContaining({ status: 'incomplete', outputTokens: 40 })
     );
     expect(Anthropic).not.toHaveBeenCalled();

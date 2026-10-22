@@ -222,23 +222,27 @@ export async function* handleQuery(
 }
 
 async function logQuery(log: ChatbotQueryLog): Promise<void> {
-  console.log('[Chatbot] Query log', {
-    timestamp: log.timestamp.toISOString(),
-    device_id: log.device_id,
-    book_id: log.book_id,
-    cutoff_page: log.cutoff_page,
-    query: log.query.substring(0, 50),
-    quote: log.quote?.substring(0, 50),
-    input_records: log.input_records,
-    search_selected_pages: log.search_selected_pages,
-    search_result_count: log.search_selected_pages.length,
-    no_evidence: log.no_evidence,
-    is_complete: log.is_complete ?? false,
-    model: log.model,
-    logical_model_calls: log.logical_model_calls ?? 0,
-    output_ref: log.output_ref,
-    tokens: log.tokens,
-  });
+  // NFR-OBS-005: preserve every record ID in one physical stdout line.
+  console.log(
+    '[Chatbot] Query log',
+    JSON.stringify({
+      timestamp: log.timestamp.toISOString(),
+      device_id: log.device_id,
+      book_id: log.book_id,
+      cutoff_page: log.cutoff_page,
+      query: log.query.substring(0, 50),
+      quote: log.quote?.substring(0, 50),
+      input_records: log.input_records,
+      search_selected_pages: log.search_selected_pages,
+      search_result_count: log.search_selected_pages.length,
+      no_evidence: log.no_evidence,
+      is_complete: log.is_complete ?? false,
+      model: log.model,
+      logical_model_calls: log.logical_model_calls ?? 0,
+      output_ref: log.output_ref,
+      tokens: log.tokens,
+    })
+  );
 }
 
 export function getChatbotStats(): {

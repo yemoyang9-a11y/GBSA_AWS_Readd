@@ -297,11 +297,15 @@ interface LLMMetrics extends Partial<OpenAIUsage> {
 }
 
 function logMetrics(metrics: LLMMetrics): void {
-  console.log('[LLM Metrics]', {
-    timestamp: new Date().toISOString(),
-    provider: LLM_PROVIDER,
-    ...metrics,
-  });
+  // NFR-OBS-004: keep terminal usage together in line-oriented production logs.
+  console.log(
+    '[LLM Metrics]',
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      provider: LLM_PROVIDER,
+      ...metrics,
+    })
+  );
 }
 
 /**
