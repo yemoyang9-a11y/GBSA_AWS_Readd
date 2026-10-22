@@ -6,6 +6,7 @@ import { selectModel, logModelSelection, recordSelection, CHATBOT_TASK } from '.
 import { stream as llmStream } from '../llm-gateway/gateway';
 import { getMockContext, getMockSearchResults, getMockLLMResponse } from './__mocks__/mock-data';
 import { recordTurns, getConversationContext } from './conversation-service';
+import { questionFocus } from './question-focus';
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
 
@@ -137,6 +138,10 @@ export async function* handleQuery(
       fullPrompt += buildQuoteSection(quote, quoteSources, K);
     }
 
+    const focus = questionFocus(query);
+    if (focus) {
+      fullPrompt += `\n\n## 질문 초점 (사용자 문장의 구조이며 작품 근거 아님)\n\n${JSON.stringify(focus)}`;
+    }
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
 
     const modelSelection = selectModel(query);
