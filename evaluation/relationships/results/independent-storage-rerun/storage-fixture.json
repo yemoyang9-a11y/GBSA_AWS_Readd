@@ -1,0 +1,188 @@
+{
+  "source": {
+    "2": "지우는 민서를 신뢰했다. 민서는 지우를 의심했다. 두 사람은 남매였다.",
+    "3": "지우는 민서의 짐을 들어 주었다.",
+    "5": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+    "6": "지우는 민서의 짐을 다시 들어 주었다.",
+    "9": "나중에 만나는 새로운 인물."
+  },
+  "data": {
+    "book_id": "storage-fixture",
+    "chapter_summaries": [],
+    "terms": [],
+    "events": [],
+    "background_and_intro": {
+      "background": "",
+      "intro": ""
+    },
+    "characters": [
+      {
+        "id": "z-jiu",
+        "name": "지우",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "notes": []
+      },
+      {
+        "id": "a-minseo",
+        "name": "민서",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "notes": []
+      },
+      {
+        "id": "future",
+        "name": "나중 인물",
+        "first_appearance_page": 9,
+        "aliases": [],
+        "notes": []
+      }
+    ],
+    "relationships": [
+      {
+        "id": "trust",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "version": 2,
+          "direction": "a_to_b",
+          "kind": "emotion",
+          "relation_key": "trust",
+          "summary": "지우는 민서를 신뢰한다.",
+          "assertion_status": "fact",
+          "temporal_scope": "ongoing",
+          "state": "active",
+          "evidence": {
+            "source_page": 2,
+            "quote": "지우는 민서를 신뢰했다.",
+            "start_char": 0,
+            "end_char": 13
+          }
+        }
+      },
+      {
+        "id": "distrust-reverse",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "version": 2,
+          "direction": "b_to_a",
+          "kind": "emotion",
+          "relation_key": "distrust",
+          "summary": "민서는 지우를 의심한다.",
+          "assertion_status": "fact",
+          "temporal_scope": "ongoing",
+          "state": "active",
+          "evidence": {
+            "source_page": 2,
+            "quote": "민서는 지우를 의심했다.",
+            "start_char": 14,
+            "end_char": 27
+          }
+        }
+      },
+      {
+        "id": "siblings",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "version": 2,
+          "direction": "mutual",
+          "kind": "family",
+          "relation_key": "siblings",
+          "summary": "두 사람은 남매다.",
+          "assertion_status": "fact",
+          "temporal_scope": "ongoing",
+          "state": "active",
+          "evidence": {
+            "source_page": 2,
+            "quote": "두 사람은 남매였다.",
+            "start_char": 28,
+            "end_char": 39
+          }
+        }
+      },
+      {
+        "id": "trust-ended",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "trust-ended",
+        "established_page": 5,
+        "semantics": {
+          "version": 2,
+          "direction": "a_to_b",
+          "kind": "emotion",
+          "relation_key": "trust",
+          "summary": "지우는 더는 민서를 신뢰하지 않는다.",
+          "assertion_status": "fact",
+          "temporal_scope": "ongoing",
+          "state": "ended",
+          "evidence": {
+            "source_page": 5,
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "start_char": 0,
+            "end_char": 23
+          },
+          "change_evidence": {
+            "source_page": 5,
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "start_char": 0,
+            "end_char": 23
+          }
+        }
+      },
+      {
+        "id": "help-once",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "version": 2,
+          "direction": "a_to_b",
+          "kind": "action",
+          "relation_key": "help",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "assertion_status": "fact",
+          "temporal_scope": "event",
+          "state": "active",
+          "evidence": {
+            "source_page": 3,
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "start_char": 0,
+            "end_char": 18
+          }
+        }
+      },
+      {
+        "id": "help-twice",
+        "character_a_id": "z-jiu",
+        "character_b_id": "a-minseo",
+        "label": "help-twice",
+        "established_page": 6,
+        "semantics": {
+          "version": 2,
+          "direction": "a_to_b",
+          "kind": "action",
+          "relation_key": "help",
+          "summary": "지우가 민서의 짐을 다시 들어 주었다.",
+          "assertion_status": "fact",
+          "temporal_scope": "event",
+          "state": "active",
+          "evidence": {
+            "source_page": 6,
+            "quote": "지우는 민서의 짐을 다시 들어 주었다.",
+            "start_char": 0,
+            "end_char": 21
+          }
+        }
+      }
+    ]
+  }
+}

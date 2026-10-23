@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "viewport": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "passed": true,
+      "checks": [
+        "correct textual subject/object from reverse stored slots",
+        "b_to_a SVG arrow at start",
+        "parallel relations have distinct curve paths",
+        "coexisting jealousy/matchmaking",
+        "readable source disclosure",
+        "rewind removes future relation and quote",
+        "rewind restores positive relation at its page",
+        "dated alias hidden before disclosure and restored after",
+        "no horizontal document overflow",
+        "no browser runtime errors"
+      ],
+      "limitation": "Actual product UI component, independently injected graph fixture; no deployed DB/API, no physical mobile/Safari."
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "height": 844,
+      "passed": true,
+      "checks": [
+        "correct textual subject/object from reverse stored slots",
+        "b_to_a SVG arrow at start",
+        "parallel relations have distinct curve paths",
+        "coexisting jealousy/matchmaking",
+        "readable source disclosure",
+        "rewind removes future relation and quote",
+        "rewind restores positive relation at its page",
+        "dated alias hidden before disclosure and restored after",
+        "no horizontal document overflow",
+        "no browser runtime errors"
+      ],
+      "limitation": "Actual product UI component, independently injected graph fixture; no deployed DB/API, no physical mobile/Safari."
+    }
+  ]
+}

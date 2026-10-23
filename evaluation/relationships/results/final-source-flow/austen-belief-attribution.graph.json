@@ -1,0 +1,71 @@
+{
+  "nodes": [
+    {
+      "id": "234cec43-973d-58f1-8d35-345f9fce1c73",
+      "name": "Miss Bingley",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "f4e28db8-fe35-5cf3-ba11-4fc1104830f8",
+      "name": "Elizabeth",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "f1ec31db-d7f6-5cda-aa80-24773939fd40",
+      "source": "234cec43-973d-58f1-8d35-345f9fce1c73",
+      "target": "f4e28db8-fe35-5cf3-ba11-4fc1104830f8",
+      "label": "질투한다는 생각",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Elizabeth는 Miss Bingley의 자신에 대한 반감이 질투에서 비롯되었다고 여긴다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.",
+          "end_char": 284,
+          "start_char": 0,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "attribution": "Elizabeth",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "belief"
+      }
+    }
+  ],
+  "history": [
+    {
+      "id": "f1ec31db-d7f6-5cda-aa80-24773939fd40",
+      "source": "234cec43-973d-58f1-8d35-345f9fce1c73",
+      "target": "f4e28db8-fe35-5cf3-ba11-4fc1104830f8",
+      "label": "질투한다는 생각",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Elizabeth는 Miss Bingley의 자신에 대한 반감이 질투에서 비롯되었다고 여긴다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.",
+          "end_char": 284,
+          "start_char": 0,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "attribution": "Elizabeth",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "belief"
+      }
+    }
+  ],
+  "applied_cutoff": 1
+}

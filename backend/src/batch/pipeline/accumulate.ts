@@ -10,6 +10,7 @@
  * 이미 알려진 쌍은 실제 상태 변화 또는 새로운 사실 공개 근거가 있을 때만 이력을 추가한다.
  */
 import { v5 as uuidv5 } from 'uuid';
+import { RelationshipSemantics } from '../../shared/types';
 import { relationshipKey } from './semantic-guards';
 import { ReviewCandidate, SourceEvidence } from './grounding';
 
@@ -45,6 +46,7 @@ export interface AccumulatedCharacter {
 
 export interface AccumulatedRelationship {
   id: string;
+  semantics?: RelationshipSemantics;
   evidence?: SourceEvidence;
   rationale?: string;
   character_a_id: string;
@@ -353,7 +355,8 @@ function pairKey(idA: string, idB: string): string {
   return [idA, idB].sort().join('|');
 }
 
-interface ChapterRelationshipInput {
+export interface ChapterRelationshipInput {
+  semantics?: RelationshipSemantics;
   character_a_id: string;
   character_b_id: string;
   label: string;
@@ -364,38 +367,85 @@ interface ChapterRelationshipInput {
   change_evidence?: SourceEvidence;
 }
 
-/**
- * 이 장의 관계 생성 결과를 상태에 병합한다 (A6 이력형, FR-CHR-001 🚦).
- * 같은 쌍의 최근 행과 의미가 같은 정적 라벨이면 재서술로 보고 건너뛴다.
- * 다른 라벨은 변화/새 공개의 검증된 근거를 요구한다. 기존 행은 수정·삭제하지 않는다.
- *
- * character_a_id/character_b_id는 항상 pairKey()와 같은 정렬 순서로 저장한다 —
- * 조회 쿼리(findLatestRelationships)의 DISTINCT ON (character_a_id, character_b_id)가
- * 같은 쌍의 모든 행이 동일한 컬럼 순서라고 가정하기 때문. 라벨은 방향성 없이 화면에
- * "A — B : 라벨"로만 표시되므로(RelationshipGraph.tsx) 저장 순서를 바꿔도 의미는 그대로다.
- */
+/** FR-CHR-001: history is scoped to a semantic track; canonical IDs must preserve direction. */
+export function canonicalRelationship<
+  T extends {
+    character_a_id: string;
+    character_b_id: string;
+    semantics?: RelationshipSemantics | null;
+  },
+>(r: T): T {
+  if (r.character_a_id <= r.character_b_id) return r;
+  const direction = r.semantics?.direction;
+  return {
+    ...r,
+    character_a_id: r.character_b_id,
+    character_b_id: r.character_a_id,
+    ...(r.semantics
+      ? {
+          semantics: {
+            ...r.semantics,
+            direction:
+              direction === 'a_to_b' ? 'b_to_a' : direction === 'b_to_a' ? 'a_to_b' : direction,
+          },
+        }
+      : {}),
+  };
+}
+
+/** Must match runtime track selection. Legacy rows retain their unverified pair-only track. */
+export function relationshipTrack(r: {
+  character_a_id: string;
+  character_b_id: string;
+  semantics?: RelationshipSemantics | null;
+  established_page: number;
+  id?: string;
+}): string {
+  const c = canonicalRelationship(r);
+  const base = pairKey(c.character_a_id, c.character_b_id);
+  return c.semantics
+    ? JSON.stringify([
+        base,
+        c.semantics.direction,
+        c.semantics.kind,
+        c.semantics.relation_key,
+        c.semantics.temporal_scope,
+        c.semantics.temporal_scope === 'event'
+          ? [c.established_page, c.semantics.evidence.start_char, c.semantics.evidence.end_char]
+          : null,
+      ])
+    : base;
+}
+
 export function mergeRelationships(
   state: GenerationState,
   chapterRelationships: ChapterRelationshipInput[]
 ): void {
-  for (const r of [...chapterRelationships].sort(
+  for (const candidate of [...chapterRelationships].sort(
     (a, b) => a.established_page - b.established_page
   )) {
-    const [character_a_id, character_b_id] = [r.character_a_id, r.character_b_id].sort();
-    const key = pairKey(character_a_id, character_b_id);
-    const history = state.relationships.filter(
-      (x) => pairKey(x.character_a_id, x.character_b_id) === key
-    );
+    const r = canonicalRelationship(candidate);
+    const { character_a_id, character_b_id } = r;
+    const key = relationshipTrack(r);
+    const history = state.relationships.filter((x) => relationshipTrack(x) === key);
     if (
       history.some(
-        (x) => x.established_page === r.established_page && x.label === normalize(r.label)
+        (x) =>
+          x.established_page === r.established_page &&
+          x.label === normalize(r.label) &&
+          JSON.stringify(x.semantics) === JSON.stringify(r.semantics)
       )
     )
       continue;
     const latest = history.sort((a, b) => a.established_page - b.established_page).at(-1);
 
     const semanticKey = relationshipKey(r.label);
-    if (latest && relationshipKey(latest.label) === semanticKey) {
+    if (
+      latest &&
+      relationshipKey(latest.label) === semanticKey &&
+      latest.semantics?.assertion_status === r.semantics?.assertion_status &&
+      latest.semantics?.state === r.semantics?.state
+    ) {
       continue;
     }
     const explicitChange =

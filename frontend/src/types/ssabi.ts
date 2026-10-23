@@ -11,22 +11,52 @@ export interface GraphNode {
   first_appearance_page: number;
   /** 별칭도 최초 등장 <= K 로 걸러진 것만 (D6) */
   aliases: string[];
+  /** 별칭의 공개 시점. 서버 cutoff 안에서 선택된 별칭만 내려온다. */
+  alias_details?: { alias: string; first_appearance_page: number }[];
 }
 
-/** 관계도 간선 = 관계. 확립 페이지 <= K 중 최신 라벨 1개만 (A6, FR-CHR-001 🚦) */
+/** FR-SPL-002 🚦: 서버가 현재 읽은 범위에서 선택한 원문 근거만 포함한다. */
+export interface RelationshipEvidence {
+  source_page: number;
+  quote: string;
+  start_char: number;
+  end_char: number;
+}
+
+export interface RelationshipSemantics {
+  version: 2;
+  /** source/target은 정렬된 a/b 슬롯이다. 화살표는 이 필드만 따른다. */
+  direction: 'a_to_b' | 'b_to_a' | 'mutual' | 'undirected' | 'unknown';
+  kind: 'family' | 'social' | 'emotion' | 'action';
+  relation_key: string;
+  summary: string;
+  assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
+  attribution?: string;
+  temporal_scope: 'ongoing' | 'event';
+  state: 'active' | 'ended';
+  evidence: RelationshipEvidence;
+  change_evidence?: RelationshipEvidence;
+}
+
+/** 독립 관계별 최신 버전. 저장 슬롯 순서는 의미 방향을 나타내지 않는다. */
 export interface GraphEdge {
+  id?: string;
   source: string;
   target: string;
   label: string;
   established_page: number;
+  /** 이전 데이터는 방향·근거가 검증되지 않았으므로 화살표를 추정하지 않는다. */
+  semantics?: RelationshipSemantics | null;
 }
 
 /** GET /books/:bookId/ssabi/graph */
 export interface GraphResponse {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  // TODO(계약 미확정) applied_cutoff(적용된 K)가 응답에 없다. NFR-OBS-003 이 이를 요구하고,
-  //   없으면 FR-SPL-002 🚦 판정 자체가 불가능하다 — team-sync-r4.md §4.2 (🔴).
+  /** 서버가 동일 cutoff로 선택한 이력. 클라이언트는 이 범위 안에서만 되감는다. */
+  history?: GraphEdge[];
+  /** 기준점 결정기의 값. 프론트가 재계산하지 않는다 (FR-BRF-005). */
+  applied_cutoff?: number;
 }
 
 export interface CharacterAlias {

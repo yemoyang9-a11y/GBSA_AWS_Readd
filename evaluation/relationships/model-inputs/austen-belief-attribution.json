@@ -1,0 +1,36 @@
+{
+  "book_id": "evaluation-austen-belief-attribution",
+  "source": {
+    "kind": "actual_novel",
+    "description": "Jane Austen, Pride and Prejudice, source lines 8810-8814. Page 1 is excerpt-fixture numbering, not book pagination.",
+    "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+    "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+  },
+  "known_character_names": [
+    "Elizabeth",
+    "Miss Bingley",
+    "Darcy",
+    "Kitty",
+    "Lydia",
+    "Miss Lucas",
+    "Jane",
+    "Mr. Collins"
+  ],
+  "chapters": [
+    {
+      "id": "austen-belief-attribution",
+      "book_id": "evaluation-austen-belief-attribution",
+      "chapter_no": 1,
+      "title": "Independent holdout excerpt: belief-attribution",
+      "start_page": 1,
+      "end_page": 1
+    }
+  ],
+  "pages": [
+    {
+      "page_no": 1,
+      "content": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.\n",
+      "book_id": "evaluation-austen-belief-attribution"
+    }
+  ]
+}

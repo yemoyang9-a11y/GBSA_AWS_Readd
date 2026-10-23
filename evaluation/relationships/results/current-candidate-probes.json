@@ -1,0 +1,226 @@
+{
+  "mode": "candidate-injection-only",
+  "completed_at": "2026-10-22T13:51:50.479Z",
+  "counts": {
+    "total": 21,
+    "passed": 10,
+    "false_accepts": 11,
+    "false_holds": 0
+  },
+  "results": [
+    {
+      "id": "takryu-desire-direction",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "형보가 초봉이를 탐내는 정서. 초봉이의 상호 호감·욕망은 확인되지 않는다.",
+      "reasons": []
+    },
+    {
+      "id": "takryu-jealousy-direction",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "김씨가 태수를 두고 초봉이를 질투한다. 질투 대상은 초봉이이고 관련 인물은 태수이다.",
+      "reasons": []
+    },
+    {
+      "id": "takryu-negated-jealousy",
+      "provenance": "actual-source-excerpt",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "서술은 행화가 초봉이를 질투하지 않는다고 명시한다. 같은 문단의 김씨 질투를 행화에게 옮기면 안 된다.",
+      "reasons": []
+    },
+    {
+      "id": "harbor-direct-jealousy",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "질투 주체 서윤, 대상 도현. 대상은 감정을 모른다.",
+      "reasons": []
+    },
+    {
+      "id": "harbor-reversed-jealousy",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "같은 증거를 방향 반전한 후보는 승인 금지.",
+      "reasons": []
+    },
+    {
+      "id": "harbor-unrelated-desire",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "욕망의 대상은 사물/소유권이다. 동시 등장한 도현으로 전이하지 않는다.",
+      "reasons": []
+    },
+    {
+      "id": "harbor-nonmutual-love",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "서윤의 단방향 연정과 도현의 동료 관계가 공존한다. 연인으로 승격 금지.",
+      "reasons": []
+    },
+    {
+      "id": "harbor-rumor-as-fact",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "oracle": "소문 자체와 실제 관계를 구분한다.",
+      "reasons": [
+        "Nearby source marks a statement as false or misunderstood; factual relation requires review"
+      ]
+    },
+    {
+      "id": "lab-alias-established",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "원문 호칭으로 된 관계의 대상은 새벽이다. 윤아와의 동일인 지식은 p8부터만 허용.",
+      "reasons": []
+    },
+    {
+      "id": "lab-ambiguous-pronoun",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "공유 문맥에 이름이 있어도 대명사 지시 대상과 발화 진실성이 불명확하다.",
+      "reasons": []
+    },
+    {
+      "id": "lab-negation",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "명시적 부정 관계를 사실로 공개하지 않는다.",
+      "reasons": []
+    },
+    {
+      "id": "lab-plan",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "민의 희망은 실제 혼인 성립이 아니다.",
+      "reasons": []
+    },
+    {
+      "id": "lab-reported-mistake",
+      "provenance": "synthetic",
+      "holdout": false,
+      "expected": "hold-unqualified-fact",
+      "observed": "hold",
+      "pass": true,
+      "oracle": "수의 믿음을 민의 실제 정서로 승격하지 않는다.",
+      "reasons": [
+        "Nearby source marks a statement as false or misunderstood; factual relation requires review"
+      ]
+    },
+    {
+      "id": "station-clear-asymmetry",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "경멸하는 사람은 혜온이고 가람은 대상이다.",
+      "reasons": []
+    },
+    {
+      "id": "station-oblique-negation",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "부정을 담은 반문을 단정적 적대로 읽으면 안 된다.",
+      "reasons": []
+    },
+    {
+      "id": "station-english-direction",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "Nara → Eren envy와 Eren → Nara admiration은 서로 다른 방향의 공존 정서.",
+      "reasons": []
+    },
+    {
+      "id": "station-cooccurrence",
+      "provenance": "synthetic",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "같은 문장 내 두 이름만으로 친분을 만들지 않는다.",
+      "reasons": []
+    },
+    {
+      "id": "austen-jealousy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "accept",
+      "observed": "accept",
+      "pass": true,
+      "oracle": "Narration identifies Miss Bingley as jealous of Elizabeth in response to Darcy’s attraction. This does not establish mutual jealousy or romance between Bingley and Elizabeth.",
+      "reasons": []
+    },
+    {
+      "id": "austen-reversed-jealousy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "The same excerpt does not establish Elizabeth’s jealousy of Miss Bingley. Reversing the stored endpoints must not reverse the meaning.",
+      "reasons": []
+    },
+    {
+      "id": "austen-negated-envy-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "Kitty and Lydia are explicitly far from envying Miss Lucas; negated emotion must not become factual envy.",
+      "reasons": []
+    },
+    {
+      "id": "austen-belief-attribution-holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "holdout": true,
+      "expected": "hold-unqualified-fact",
+      "observed": "accept",
+      "pass": false,
+      "oracle": "This excerpt alone reports Elizabeth’s conviction about Miss Bingley’s jealousy. Preserve attribution to Elizabeth; do not substitute later or earlier novel knowledge as evidence.",
+      "reasons": []
+    }
+  ]
+}

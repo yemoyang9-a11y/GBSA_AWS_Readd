@@ -30,13 +30,13 @@ export interface SsabiRepository {
   findCharacters(bookId: string, cutoff: number): Promise<Character[]>;
 
   /**
-   * 관계 목록 조회 (최신 라벨만)
+   * 관계 목록 조회 (의미별 최신 상태)
    *
-   * A6: 표시는 최신 라벨 1개 (챗봇은 이력 전체)
+   * A6/FR-CHR-001: 같은 의미·방향의 이력별 최신 상태; 다른 관계는 공존
    * FR-SPL-002 🚦: 확립 페이지 <= cutoff
    *
-   * 같은 (character_a_id, character_b_id) 쌍에서
-   * established_page가 가장 큰(최신) 행 1개만 반환
+   * 같은 인물 쌍 + 의미 키 + 방향의 지속 관계에서
+   * established_page가 가장 큰 행을 반환; 단발 사건은 각각 보존
    */
   findLatestRelationships(bookId: string, cutoff: number): Promise<Relationship[]>;
 
@@ -79,7 +79,7 @@ export interface SsabiRepository {
    * FR-SPL-002 🚦: 모든 구성 요소가 cutoff 적용
    *
    * nodes: 인물 + 별칭 (first_appearance_page <= cutoff)
-   * edges: 관계 최신 라벨 (established_page <= cutoff)
+   * edges: 의미별 최신 상태, history: 읽은 범위 내 이력 (established_page <= cutoff)
    */
   getGraph(bookId: string, cutoff: number): Promise<RelationshipGraph>;
 

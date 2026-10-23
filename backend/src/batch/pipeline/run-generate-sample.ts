@@ -102,9 +102,13 @@ async function main(): Promise<void> {
   console.log(JSON.stringify(relOut, null, 1));
   reportPageBounds(
     '관계',
-    validateGroundedChapter(relOut, pages).relationships.map((r) => r.established_page)
+    validateGroundedChapter(relOut, pages, {
+      requireRelationshipSemantics: true,
+    }).relationships.map((r) => r.established_page)
   );
-  const validatedRelationships = validateGroundedChapter(relOut, pages);
+  const validatedRelationships = validateGroundedChapter(relOut, pages, {
+    requireRelationshipSemantics: true,
+  });
   results.relationships = { relationships: validatedRelationships.relationships };
   results.relationship_review = validatedRelationships.review;
   results.raw_relationship_candidates = relOut;

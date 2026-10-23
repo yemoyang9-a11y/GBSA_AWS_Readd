@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "checks": [
+    "Positive: original source-matched reviewed fixture can publish",
+    "Registration of changed semantics invalidates previously published readiness",
+    "Old approval snapshot does not cover changed label/summary",
+    "Applying stale semantic review sheet is rejected",
+    "Negative: stale review cannot republish",
+    "Positive: new exact semantic review can republish",
+    "Rollback preserves both last reviewed content and ready status atomically"
+  ],
+  "source": "Independent synthetic fixture",
+  "engine": "PGlite local PostgreSQL WASM",
+  "real_sql": true,
+  "remote": false,
+  "model": false
+}

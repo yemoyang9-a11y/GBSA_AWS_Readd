@@ -71,17 +71,20 @@ export function buildRelationshipPrompt(
 이 장에서 드러나는 인물 간 관계를 추출하라.
 
 규칙:
-- 확립 페이지 = 관계가 원문에서 명시적으로 확인되는 근거 페이지. 호칭 첫 등장만으로 소급하지 않는다.
-- 각 관계는 두 이름을 모두 포함한 정확한 원문 evidence(source_page, quote)와 관계 판정 rationale을 쓴다. 유일한 인용은 서버가 위치를 계산한다. 반복 인용에만 start_char, end_char를 추가하며 0 기반 UTF-16 위치이고 end_char는 제외한다. 단순 동시 등장·추측은 관계로 만들지 않는다.
-- 같은 두 인물의 관계가 이 장에서 바뀌면(예: 약혼 → 부부) 기존 라벨을 덮어쓰지 말고 새 행으로 추가하라(이력형)
-- assertion_status는 fact/plan/claim/belief/comparison/negated/uncertain 중 하나다. fact는 실제 성립이 원문으로 확인되는 경우만이다. 일방의 결혼/입양 계획, 거짓 유언, 마음속 추측, 친족에 빗댄 표현을 성립한 관계로 승격하지 않는다. 바로 뒤의 서술이나 다음 페이지에서 부정·거짓·오해라고 밝히는지도 확인한다. 불확실한 후보를 fact로 억지 분류하지 않는다. 서버는 fact만 자동 승인한다.
-- change_type은 establishment/restatement/transition/disclosure 중 하나다. 새 쌍의 처음 관계는 establishment다. 이전 관계를 다른 표현으로 반복한 경우 restatement이며 새로운 날짜를 만들지 않는다. 이미 알려진 쌍의 상태가 실제 바뀌면 transition, 친구였던 두 사람이 사촌임이 처음 밝혀지는 것처럼 관계의 새 사실이 드러나면 disclosure다. transition/disclosure에는 별도의 change_evidence(source_page, quote, 필요 시 start_char/end_char)로 실제 변화 또는 새 공개를 증명한다. 서버는 라벨만 바꾼 행이 최신 관계를 덮는 것을 보류한다.
+- 이름 문자열은 이 원문과 아래 인물 목록에 나온 표기를 사용한다. 각 관계는 누가 누구에게 무엇을 하는지 설명한다. 장르/작품 기억으로 보충하지 않는다.
+- label은 짧고 구체적인 술어/관계다(예: "성적으로 탐낸다", "고용한다", "아버지다", "협박한다"). "욕망", "감정", "관계"처럼 대상/의미를 알 수 없는 추상 명사는 금지한다. summary는 두 이름을 모두 넣은 한 문장으로 해당 술어의 구체적인 의미를 설명한다. rationale는 그 해석을 뒷받침하는 원문 문맥이다.
+- direction은 입력 character_a/b 기준 a_to_b(주체 A→대상 B), b_to_a(주체 B→대상 A), mutual(양쪽에 동일한 관계가 명시됨), undirected(방향이 없는 관계), unknown(방향 불명)이다. 사랑/미움/욕망은 일방일 수 있으며 서로 사랑함으로 승격하지 않는다. 아버지→자녀 등 역할이 다른 가족도 방향이 있다. 알 수 없으면 unknown으로 보류할 문맥을 남긴다.
+- kind는 family/social/emotion/action. 같은 두 인물의 가족·고용·감정·행동은 별도 행으로 공존한다. relation_key는 두 인물 사이의 같은 의미 이력을 추적하는 영어 소문자 키다(예: parenthood, employment, affection, marriage). 라벨 문구가 달라도 같은 이력에는 앞서 사용한 키를 재사용한다. 다른 의미를 덮어쓰지 않는다.
+- temporal_scope=ongoing은 지속 관계/감정, event는 해당 페이지의 일회 행동이다. 동일 행위가 다른 페이지에 실제 반복되면 별개 event다. state=active는 그 시점 성립/진행, ended는 원문에서 종료가 명시된 이력이다. 종료 페이지를 앞선 관계 행에 소급해 넣지 않는다.
+- 확립 페이지 = 해당 의미와 방향 및 지위가 확인되는 evidence.source_page. evidence는 두 이름을 모두 포함한 한 페이지의 정확한 부분 문자열이다. 유일한 인용은 서버가 위치를 계산한다. 반복 인용에만 start_char/end_char를 0 기반 UTF-16 위치로 쓰며 end_char는 제외한다. 명확한 한 페이지 근거를 잡을 수 없으면 추측하지 말고 검수 후보로 남긴다.
+- assertion_status는 fact/belief/claim/rumor/uncertain/negated다. fact는 서술로 확인되는 사실만이다. 인물의 추측·거짓말·소문을 사실로 바꾸지 않는다. belief/claim/rumor/uncertain은 attribution에 근거에 명시된 주장/믿음 주체의 이름을 넣고 summary에도 그 이름과 "믿는다/주장한다/소문/불확실하다" 같은 한정을 명시한다. negated는 부정된 내용임을 summary에 명시한다. 인용 다음 문맥의 부정·오해도 확인한다. 계획은 성립한 혼인/친족이 아니라 구체적인 제안/계획 행위로 적거나 보류한다.
+- change_type은 establishment/restatement/transition/disclosure. 동일 관계 이력의 재서술은 restatement이며 새 확립 날짜를 만들지 않는다. 실제 상태 변화는 transition, 새 사실 공개는 disclosure다. transition/disclosure 또는 ended에는 같은 확립 페이지의 별도 정확한 change_evidence가 필수다. 새로운 독립 relation_key는 establishment로 추가할 수 있다.
+- semantics는 version=2의 완전한 계약이며 evidence/assertion_status/change_evidence는 상위 값과 동일하다. 구체적인 의미가 불명확하면 확신을 꾸미지 않는다. 서버 검증은 정확한 인용/구조의 검사이며 작품 해석의 진실을 보증하지 않으므로 사람 검수 전 후보다.
 - 이미 등장한 인물: ${known}
-- 앞 장까지의 최신 관계: ${previousRelationships.length ? previousRelationships.join('; ') : '(없음)'}
+- 앞 장까지의 관계 이력(서로 다른 의미 병존): ${previousRelationships.length ? previousRelationships.join('; ') : '(없음)'}
 
-출력은 아래 JSON 형식만 반환하라. 다른 설명·마크다운 코드블록 없이 JSON 텍스트만 출력하라.
-{"relationships": [{"character_a": "...", "character_b": "...", "label": "...", "established_page": 0, "assertion_status": "fact|plan|claim|belief|comparison|negated|uncertain", "change_type": "establishment|restatement|transition|disclosure", "rationale": "...", "evidence": {"source_page": 0, "quote": "...", "start_char": 0, "end_char": 0}, "change_evidence": {"source_page": 0, "quote": "실제 변화 또는 새 공개를 명시한 원문", "start_char": 0, "end_char": 0}}]}
-change_evidence는 transition/disclosure일 때 필수이고 establishment/restatement일 때만 생략할 수 있다.
+출력은 JSON만 반환한다. 완전한 예시 형태:
+{"relationships":[{"character_a":"주체 이름","character_b":"대상 이름","label":"구체적인 술어","established_page":1,"assertion_status":"fact","change_type":"establishment","rationale":"원문이 의미와 방향을 뒷받침하는 이유","evidence":{"source_page":1,"quote":"두 이름과 관계가 포함된 정확한 원문"},"semantics":{"version":2,"direction":"a_to_b","kind":"emotion","relation_key":"affection","summary":"주체 이름은 대상 이름에게 어떤 감정을 느낀다.","assertion_status":"fact","temporal_scope":"ongoing","state":"active","evidence":{"source_page":1,"quote":"동일한 정확한 원문"}}}]}
 
 --- 원문 ---
 ${buildPageTaggedText(pages)}`;

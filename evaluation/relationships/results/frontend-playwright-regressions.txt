@@ -1,0 +1,35 @@
+Frontend relationship controls regression record — 2026-10-22 UTC
+Recorded from completed command output in this session. These are existing mock-app
+browser regressions, separate from the evaluator's source-flow UI tests.
+
+Working directory: frontend
+Environment: SSABI_CHROMIUM_EXECUTABLE=/usr/bin/chromium SSABI_OFFLINE_ASSETS=1
+
+Command 1:
+npx playwright test --project=iphone-390-portrait-chromium --project=android-tab-s9-portrait-chromium --project=desktop-1440-chromium --grep 'reader drawers|tablet|fullscreen|split'
+
+Observed result: 6 passed (18.0s), exit code 0.
+- android-tab-s9-portrait-chromium: tablet split view preserves reading and the fullscreen layer across the drawer breakpoint
+- android-tab-s9-portrait-chromium: touch catalog controls and long book information remain accessible while resizing
+- android-tab-s9-portrait-chromium: an expanded sidebar leaves readable content and page controls after tablet resize
+- android-tab-s9-portrait-chromium: reader drawers, graph, chat and page controls preserve position
+- iphone-390-portrait-chromium: reader drawers, graph, chat and page controls preserve position
+- desktop-1440-chromium: reader drawers, graph, chat and page controls preserve position
+
+Command 2 (after the final SVG-only select-none class):
+npx playwright test --project=iphone-small-portrait-chromium --project=iphone-small-landscape-chromium --grep 'reader drawers'
+
+Observed result: 2 passed (8.9s), exit code 0.
+- iphone-small-portrait-chromium: reader drawers, graph, chat and page controls preserve position
+- iphone-small-landscape-chromium: reader drawers, graph, chat and page controls preserve position
+
+Total: 8 existing Playwright cases passed after the footer controls fix.
+The second invocation replaces Playwright's default test-results directory; this
+record preserves the first invocation's observed result without claiming that its
+raw report is still present. These Chromium checks do not verify physical Safari.
+
+Independent focused regression:
+evaluation/relationships/check-control-overlap.cjs
+evaluation/relationships/results/control-overlap.json
+Two 390px cases report zero node/name/control intersections and successful zoom,
+fit, and drag interactions. Source-flow screenshots were regenerated separately.

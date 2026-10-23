@@ -682,7 +682,9 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
     // 관계도 조회 (FR-SPL-002 🚦: cutoff 적용)
     const graph = await ssabiServices.graph.getGraph(bookId, K);
 
-    res.json(graph);
+    // FR-SPL-002: reading-position responses must not survive in shared/browser caches.
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ ...graph, applied_cutoff: K });
   } catch (error) {
     console.error('[API] ssabi/graph error', { bookId, error });
     res.status(500).json({

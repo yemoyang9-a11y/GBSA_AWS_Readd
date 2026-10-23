@@ -1,5 +1,6 @@
 import type { GraphResponse } from '../../types';
 import { computeDegrees } from './graphLayout';
+import { graphEdgeKey, graphTrackKey } from './graphEdges';
 
 /**
  * 관계도 되감기 — 읽은 범위 안에서 과거 시점의 관계도를 보는 기능.
@@ -27,23 +28,55 @@ import { computeDegrees } from './graphLayout';
  */
 export function graphMilestones(graph: GraphResponse): number[] {
   const pages = new Set<number>();
-  for (const node of graph.nodes) pages.add(node.first_appearance_page);
-  for (const edge of graph.edges) pages.add(edge.established_page);
+  for (const node of graph.nodes) {
+    pages.add(node.first_appearance_page);
+    for (const alias of node.alias_details ?? []) pages.add(alias.first_appearance_page);
+  }
+  for (const edge of graph.history ?? graph.edges) pages.add(edge.established_page);
+  if (graph.applied_cutoff !== undefined) pages.add(graph.applied_cutoff);
   return [...pages].sort((a, b) => a - b);
 }
 
 /** `page` 시점까지 드러난 것만 남긴다. 그 뒤 등장하는 인물·관계는 뺀다. */
 export function graphUpTo(graph: GraphResponse, page: number): GraphResponse {
-  const nodes = graph.nodes.filter((node) => node.first_appearance_page <= page);
+  const milestones = graphMilestones(graph);
+  const historical = page < (milestones[milestones.length - 1] ?? 0);
+  // 별칭은 현재 응답에 허용됐어도 과거 공개 시점은 알 수 없다. 되감기에서 그때의
+  // 별칭으로 오인되지 않도록 날짜 없는 별칭은 생략한다 (FR-CHR-001).
+  const nodes = graph.nodes
+    .filter((node) => node.first_appearance_page <= page)
+    .map((node) => {
+      if (node.alias_details) {
+        const details = node.alias_details.filter((alias) => alias.first_appearance_page <= page);
+        return { ...node, alias_details: details, aliases: details.map((alias) => alias.alias) };
+      }
+      return historical ? { ...node, aliases: [] } : node;
+    });
   const visible = new Set(nodes.map((node) => node.id));
+  // FR-CHR-001: 클라이언트는 이미 허용된 이력의 표시 시점만 고른다. 서로 다른
+  // 감정·사건은 보존하고 동일 관계의 변경만 최신 버전으로 바꾼다.
+  const candidates = (graph.history ?? graph.edges).filter(
+    (edge) => edge.established_page <= page && visible.has(edge.source) && visible.has(edge.target)
+  );
+  const latest = new Map<string, (typeof candidates)[number]>();
+  for (const edge of candidates) {
+    const key = graphTrackKey(edge);
+    const previous = latest.get(key);
+    if (
+      !previous ||
+      edge.established_page > previous.established_page ||
+      (edge.established_page === previous.established_page &&
+        graphEdgeKey(edge) > graphEdgeKey(previous))
+    ) {
+      latest.set(key, edge);
+    }
+  }
 
   return {
+    ...graph,
     nodes,
     // 양쪽 인물이 모두 드러난 관계만 남긴다 — 한쪽이 없으면 그릴 수 없다
-    edges: graph.edges.filter(
-      (edge) =>
-        edge.established_page <= page && visible.has(edge.source) && visible.has(edge.target)
-    ),
+    edges: graph.history ? [...latest.values()] : candidates,
   };
 }
 
@@ -51,17 +84,14 @@ export function graphUpTo(graph: GraphResponse, page: number): GraphResponse {
  * 인물별 **확립 시점 수** — 그 인물의 관계가 서로 다른 몇 개의 페이지에서 확립됐는지.
  *
  * 관계 5개가 전부 40페이지에서 한꺼번에 드러났으면 1, 관계 2개가 10·80페이지에 흩어져
- * 있으면 2다. 정의상 항상 연결 수(degree) 이하이며, 관계가 전부 다른 페이지에 있으면
- * 연결 수와 같아진다 — 즉 **연결 수에서 "같은 장면에 뭉친 만큼"을 깎아낸 값**이다.
+ * 있으면 2다. 동일 상대와 여러 시점의 사건이 있을 수 있어 연결 인원 수와는 별개다.
  *
  * 이 값은 `filterMajorCharacters`의 순위에만 쓴다. 노드 원 크기·배치는 여전히 실제
- * 연결 수를 쓴다(`RelationshipGraph.tsx`, `graphLayout.ts`) — 관계가 5개인 인물은
- * 화면에서도 5개짜리 크기로 보여야 "관계 5개인데 왜 작지"라는 혼란이 안 생긴다.
+ * 연결 인원 수를 쓴다(`RelationshipGraph.tsx`, `graphLayout.ts`). 같은 상대와 관계가
+ * 여러 개여도 노드 크기와 배치의 인력을 중복해서 키우지 않는다.
  *
- * ⚠️ 여기서 보는 `established_page`는 A6(이력형 관계) 때문에 **그 쌍의 최신 확립 시점**
- *    이다(약혼 22p → 부부 28p면 28p만 내려온다). 그래서 엄밀히는 "관계가 마지막으로
- *    확립·갱신된 시점"을 센다. 대부분의 쌍은 이력이 하나라 차이가 없지만, 여러 관계가
- *    한 장면에서 동시에 *갱신*된 인물은 실제보다 뭉쳐 보일 수 있다.
+ * 표시 중인 독립 관계의 최신 확립·변경 시점과 개별 사건 시점을 센다. 전체 관계
+ * 이력이나 인물의 등장 횟수를 세는 값은 아니다.
  */
 export function countRelationPages(
   nodes: readonly { id: string }[],
@@ -173,7 +203,9 @@ export function filterMajorCharacters(
 ): GraphResponse {
   // 자리 개수는 연결 수로 (예전 그대로), 순위는 확립 시점 수로 — 위 클래스 주석 참고
   const degree = computeDegrees(graph.nodes, graph.edges);
-  const qualifyingCount = graph.nodes.filter((node) => (degree.get(node.id) ?? 0) >= minDegree).length;
+  const qualifyingCount = graph.nodes.filter(
+    (node) => (degree.get(node.id) ?? 0) >= minDegree
+  ).length;
   const topN = Math.max(floor, qualifyingCount);
 
   const relationPages = countRelationPages(graph.nodes, graph.edges);
@@ -189,6 +221,7 @@ export function filterMajorCharacters(
   const visible = new Set(ranked.slice(0, topN).map((node) => node.id));
 
   return {
+    ...graph,
     nodes: graph.nodes.filter((node) => visible.has(node.id)),
     edges: graph.edges.filter((edge) => visible.has(edge.source) && visible.has(edge.target)),
   };

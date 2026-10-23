@@ -1,0 +1,157 @@
+{
+  "mode": "human-source-candidate -> production validation/accumulation/SQL/repository -> product UI; model not exercised",
+  "results": [
+    {
+      "id": "takryu-p91",
+      "viewport": "desktop",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "김씨",
+          "object": "초봉이",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-takryu-p91-desktop.png"
+    },
+    {
+      "id": "takryu-p129",
+      "viewport": "desktop",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "형보",
+          "object": "초봉이",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-takryu-p129-desktop.png"
+    },
+    {
+      "id": "austen-jealousy",
+      "viewport": "desktop",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Miss Bingley",
+          "object": "Elizabeth",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-jealousy-desktop.png"
+    },
+    {
+      "id": "austen-negated-envy",
+      "viewport": "desktop",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Kitty",
+          "object": "Miss Lucas",
+          "assertion_status": "negated",
+          "exact_source_quote": true
+        },
+        {
+          "subject": "Lydia",
+          "object": "Miss Lucas",
+          "assertion_status": "negated",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-negated-envy-desktop.png"
+    },
+    {
+      "id": "austen-belief-attribution",
+      "viewport": "desktop",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Miss Bingley",
+          "object": "Elizabeth",
+          "assertion_status": "belief",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-belief-attribution-desktop.png"
+    },
+    {
+      "id": "takryu-p91",
+      "viewport": "mobile",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "김씨",
+          "object": "초봉이",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-takryu-p91-mobile.png"
+    },
+    {
+      "id": "takryu-p129",
+      "viewport": "mobile",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "형보",
+          "object": "초봉이",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-takryu-p129-mobile.png"
+    },
+    {
+      "id": "austen-jealousy",
+      "viewport": "mobile",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Miss Bingley",
+          "object": "Elizabeth",
+          "assertion_status": "fact",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-jealousy-mobile.png"
+    },
+    {
+      "id": "austen-negated-envy",
+      "viewport": "mobile",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Kitty",
+          "object": "Miss Lucas",
+          "assertion_status": "negated",
+          "exact_source_quote": true
+        },
+        {
+          "subject": "Lydia",
+          "object": "Miss Lucas",
+          "assertion_status": "negated",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-negated-envy-mobile.png"
+    },
+    {
+      "id": "austen-belief-attribution",
+      "viewport": "mobile",
+      "passed": true,
+      "assertions": [
+        {
+          "subject": "Miss Bingley",
+          "object": "Elizabeth",
+          "assertion_status": "belief",
+          "exact_source_quote": true
+        }
+      ],
+      "screenshot": "source-flow-austen-belief-attribution-mobile.png"
+    }
+  ]
+}

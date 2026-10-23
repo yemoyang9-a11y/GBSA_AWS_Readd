@@ -1,0 +1,20 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "results": [
+    {
+      "dataset": "takryu-p129",
+      "passed": true,
+      "overlaps": [],
+      "zoom_fit_drag": true
+    },
+    {
+      "dataset": "austen-belief-attribution",
+      "passed": true,
+      "overlaps": [],
+      "zoom_fit_drag": true
+    }
+  ]
+}

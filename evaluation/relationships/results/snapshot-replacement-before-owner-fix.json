@@ -1,0 +1,45 @@
+{
+  "status": "failed",
+  "engine": "PGlite local PostgreSQL WASM",
+  "source": "Independent synthetic two-chapter fixture",
+  "remote": false,
+  "checks": [
+    {
+      "label": "Partial coverage refused",
+      "passed": true,
+      "error": "A complete nonempty semantic-v2 relationship snapshot is required"
+    },
+    {
+      "label": "Missing chapter refused",
+      "passed": true,
+      "error": "Complete source and every chapter must be processed before replacement"
+    },
+    {
+      "label": "Changed source refused",
+      "passed": true,
+      "error": "Grounding manifest missing or changed: preserve the artifact and regenerate/review explicitly"
+    },
+    {
+      "label": "Unmapped endpoints refused",
+      "passed": true,
+      "error": "Unmapped relationship endpoint identity; supply a reviewed existing-ID mapping first"
+    },
+    {
+      "label": "Complete source snapshot replaces obsolete legacy row",
+      "passed": true
+    },
+    {
+      "label": "Replacement invalidates relation approvals and published readiness only",
+      "passed": true
+    },
+    {
+      "label": "Existing character IDs, aliases and corrected notes preserved",
+      "passed": true
+    },
+    {
+      "label": "Relationship ID owned by another book refused",
+      "passed": false,
+      "error": ""
+    }
+  ]
+}

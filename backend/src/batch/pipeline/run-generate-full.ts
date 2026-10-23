@@ -16,6 +16,7 @@ dotenv.config();
 import * as fs from 'fs';
 import * as path from 'path';
 import { call } from '../../modules/llm-gateway/gateway';
+import { LLM_PROVIDER, MODEL_CONFIG, DEFAULT_EFFORT } from '../../modules/llm-gateway/model-config';
 import { splitBook } from './split';
 import {
   buildSummaryPrompt,
@@ -35,6 +36,7 @@ import {
   mergeTerms,
   resolveCharacterId,
   GenerationState,
+  relationshipTrack,
 } from './accumulate';
 import { Chapter, Page } from '../../shared/types';
 import {
@@ -51,7 +53,13 @@ import {
 
 const BOOK_ID = 'takryu';
 const OUT_DIR = path.join(__dirname, '../../../data/generated/full');
-const EXTRACTION_CONTRACT = `${buildCharacterPrompt.toString()}\n${buildRelationshipPrompt.toString()}`;
+const EXTRACTION_CONTRACT = JSON.stringify({
+  characterPrompt: buildCharacterPrompt.toString(),
+  relationshipPrompt: buildRelationshipPrompt.toString(),
+  provider: LLM_PROVIDER,
+  models: MODEL_CONFIG,
+  effort: DEFAULT_EFFORT,
+});
 
 type RawCharacter = GroundedCharacter;
 type RawRelationship = GroundedRelationship;
@@ -140,7 +148,9 @@ async function generateChapter(
   const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
   record(
     '관계',
-    validateGroundedChapter({ relationships }, pages).relationships.map((r) => r.established_page)
+    validateGroundedChapter({ relationships }, pages, {
+      requireRelationshipSemantics: true,
+    }).relationships.map((r) => r.established_page)
   );
 
   const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
@@ -186,14 +196,20 @@ export async function loadOrGenerateChapter(
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
     const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
     assertGroundingCache(cached, chapter, pages, cacheContext, EXTRACTION_CONTRACT);
-    return { ...cached, ...validateGroundedChapter(cached, pages) };
+    return {
+      ...cached,
+      ...validateGroundedChapter(cached, pages, { requireRelationshipSemantics: true }),
+    };
   }
 
   console.log(
     `[생성] ${chapter.chapter_no}장 "${chapter.title}" (p.${chapter.start_page}~${chapter.end_page}) 게이트웨이 호출 중...`
   );
   const output = await generateChapter(chapter, pages, known, previousRelationships);
-  const validated = { ...output, ...validateGroundedChapter(output, pages) };
+  const validated = {
+    ...output,
+    ...validateGroundedChapter(output, pages, { requireRelationshipSemantics: true }),
+  };
   // Keep original candidates in the chapter cache for review and repeat validation.
   const cached = sealChapterCache(
     { ...output, review: validated.review },
@@ -317,15 +333,12 @@ async function main(): Promise<void> {
     for (const relation of [...state.relationships].sort(
       (a, b) => a.established_page - b.established_page
     )) {
-      latestRelationships.set(
-        [relation.character_a_id, relation.character_b_id].sort().join('|'),
-        relation
-      );
+      latestRelationships.set(relationshipTrack(relation), relation);
     }
     const names = new Map(state.characters.map((c) => [c.id, c.name]));
     const previousRelationships = [...latestRelationships.values()].map(
       (r) =>
-        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page})`
+        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
     );
     const output = await loadOrGenerateChapter(chapter, pages, known, previousRelationships);
     chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
@@ -360,6 +373,11 @@ async function main(): Promise<void> {
     background_and_intro: background,
     review_candidates: { chapters: chapterReviews, identities_and_relationships: state.review },
     provenance: {
+      relationship_coverage: {
+        complete: chapters.length === allChapters.length,
+        source_page_count: allPages.length,
+        chapter_nos: chapters.map((c) => c.chapter_no),
+      },
       validation_scope:
         'exact source provenance and conservative semantic guards; human semantic review required',
       identities: state.identity_evidence,

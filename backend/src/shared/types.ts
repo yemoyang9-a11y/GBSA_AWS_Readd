@@ -246,6 +246,9 @@ export interface RelationshipGraph {
 
   /** 간선 = 관계 (확립 페이지 <= K, 최신 라벨 1개) */
   edges: GraphEdge[];
+  /** FR-SPL-002: only versions already selected within the server cutoff. */
+  history?: GraphEdge[];
+  applied_cutoff?: number;
 }
 
 export interface GraphNode {
@@ -255,13 +258,39 @@ export interface GraphNode {
 
   /** 별칭 목록 (최초 등장 페이지 <= K) */
   aliases: string[];
+  /** Allows past display selection without showing a later revealed identity. */
+  alias_details?: { alias: string; first_appearance_page: number }[];
 }
 
 export interface GraphEdge {
+  id?: string;
   source: string;
   target: string;
   label: string;
   established_page: number;
+  semantics?: RelationshipSemantics | null;
+}
+
+export interface RelationshipEvidence {
+  source_page: number;
+  quote: string;
+  start_char: number;
+  end_char: number;
+}
+
+/** Endpoints remain canonical storage slots; direction must never be inferred from UUID order. */
+export interface RelationshipSemantics {
+  version: 2;
+  direction: 'a_to_b' | 'b_to_a' | 'mutual' | 'undirected' | 'unknown';
+  kind: 'family' | 'social' | 'emotion' | 'action';
+  relation_key: string;
+  summary: string;
+  assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
+  attribution?: string;
+  temporal_scope: 'ongoing' | 'event';
+  state: 'active' | 'ended';
+  evidence: RelationshipEvidence;
+  change_evidence?: RelationshipEvidence;
 }
 
 /**
@@ -319,6 +348,8 @@ export interface Relationship {
   character_b_id: string;
   label: string;
   established_page: number;
+  /** null/absent means legacy, not independently verified direction. */
+  semantics?: RelationshipSemantics | null;
 }
 
 export interface CharacterNote {

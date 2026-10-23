@@ -1,0 +1,636 @@
+{
+  "schema_version": 1,
+  "authorship": "Independent evaluator; expected facts written from source text before consuming implementation contract.",
+  "scope": "Two actual public-domain novels with short excerpts, plus explicitly authored synthetic corpora; no empirical claim about all novels.",
+  "cases": [
+    {
+      "id": "takryu-desire-direction",
+      "corpus": "채만식 탁류",
+      "provenance": "actual-source-excerpt",
+      "source_path": "backend/data/raw/takryu.txt",
+      "source_lines": [
+        3604,
+        3612
+      ],
+      "pages": [
+        {
+          "page_no": 129,
+          "content": "형보는 오늘 이 자리에서 처음으로 보는 초봉이를 보고는 깜짝 놀란다. 그는 절절히 탄복하면서 ‘아, 요놈이!’ 하고 샘을 더럭 내어 태수를 쳐다보았다. 형보의 눈에 보인 대로 말하면, 초봉이는 청초하기 초생의 반달 같고 연연하기 동풍에 세류 같았 다. 시방 형보가 초봉이를 탐내는 품은 태수가 초봉이한테 반한 것보다 훨씬 더했다. ‘고걸, 고걸 거저, 손아구에다가 꼭 훑으려 쥐고서 아드득 비어 물었으면, 사뭇 비린내두 안 나겠 다!’ 형보는 정말로 침이 꿀꺽 삼켜졌다."
+        }
+      ],
+      "endpoints": [
+        "형보",
+        "초봉이"
+      ],
+      "candidate_semantics": {
+        "subject": "형보",
+        "object": "초봉이",
+        "kind": "possessive_desire"
+      },
+      "expected_decision": "accept",
+      "oracle": "형보가 초봉이를 탐내는 정서. 초봉이의 상호 호감·욕망은 확인되지 않는다.",
+      "forbidden": [
+        "초봉이 → 형보의 욕망",
+        "연인",
+        "상호 애정"
+      ],
+      "page_note": "평가 발췌 자체는 원문 행으로 추출했다. source-audit.cjs 재분할에서 해당 의미의 핵심 문장이 있는 페이지를 확인했다. 전체 발췌가 단일 제품 페이지와 동일하다고 주장하지 않는다."
+    },
+    {
+      "id": "takryu-jealousy-direction",
+      "corpus": "채만식 탁류",
+      "provenance": "actual-source-excerpt",
+      "source_path": "backend/data/raw/takryu.txt",
+      "source_lines": [
+        2555,
+        2568
+      ],
+      "pages": [
+        {
+          "page_no": 91,
+          "content": "“아녜요, 아저씬 괜히.” 그날 밤부터 태수는 그새까지 시뻐하던 장가를 급작스레 들겠노라고, 그러니 초봉이한테 중매를 서달라고 김씨를 졸랐다. 초봉이란 말에 김씨는 도무지 전에 없던 일로 별안간 강짜가 나고, 나되 사뭇 앞이 캄캄하고 몸 이 떨려 어쩔 줄을 몰랐다. 김씨는 자청해서 태수더러 결혼을 하라고 했고, 종차 나서서 규수를 골라 내 손으로다가 뒤받이 를 들어 혼사를 치러 줄 염량까지 했고, 그러면서도 조금도 질투 같은 것은 몰랐고 한 것은 무릇 그 여자 즉 태수의 배필인 동시에 질투의 대상 인물이 실지의 인물로서 아직 드러나지 않았기 때 문이었었다. 그러다가 마침내 초봉이라고 하는 잘 아는 계집애, 그때의 최근으로는 작년에 본 것이 마지막이 지만 썩 아담스럽게 생긴 그 계집애 초봉이가, 이건 시방 당장 내 애물인 태수를 차지를 해가다 니! 아 그 계집애가! 이러해서 계제와 대상을 만나 질투는 피어올랐던 것이다. 그러한 딴 속을 두 어 두고, 그는 태수더러는 초봉이가 너한테는 과분하다는 핑계를 해가면서, 그의 소청을 들어주 지 않으려고 드는 것이었었다."
+        }
+      ],
+      "endpoints": [
+        "김씨",
+        "초봉이"
+      ],
+      "candidate_semantics": {
+        "subject": "김씨",
+        "object": "초봉이",
+        "kind": "jealousy"
+      },
+      "expected_decision": "accept",
+      "oracle": "김씨가 태수를 두고 초봉이를 질투한다. 질투 대상은 초봉이이고 관련 인물은 태수이다.",
+      "forbidden": [
+        "초봉이 → 김씨의 질투",
+        "서로 질투"
+      ],
+      "page_note": "평가 발췌 자체는 원문 행으로 추출했다. source-audit.cjs 재분할에서 해당 의미의 핵심 문장이 있는 페이지를 확인했다. 전체 발췌가 단일 제품 페이지와 동일하다고 주장하지 않는다."
+    },
+    {
+      "id": "takryu-negated-jealousy",
+      "corpus": "채만식 탁류",
+      "provenance": "actual-source-excerpt",
+      "source_path": "backend/data/raw/takryu.txt",
+      "source_lines": [
+        4642,
+        4652
+      ],
+      "pages": [
+        {
+          "page_no": 167,
+          "content": "그러자 어저껜지 그저껜지는 마침 제중당에를 들르니까, 웬 낯선 사람이 있고 그는 보이지 않아 서 물어 보았더니 며칠 전에 주인이 갈리면서 같이 그만두었다고 해, 그래 심심찮은 동무 하나를 불시에 잃어버린 것 같아서 적잖이 섭섭했어, 하다가 또, 오늘은 생각도 않은 곳에서 뜻밖에 그 를 만나, 만났는데 알고 본즉, 그가 바로 초봉이―---태수의 아낙이 될 그 색시가 아니냔 말이다 . 행화는 그것이 마치, 모르고 구경했던 구경거리를 속내를 알고 나니까 깜빡 신기하듯이 인제야 비로소 일이 자꾸만 희한스럽고 재미가 나고 했다. 그러나 그는 단지 그렇게 희한스럽고 재미가 나고 하기나 할 뿐이지, 가령 탑삭부리 한참봉네 안 가 김씨처럼 태수를 놓고 초봉이를 질투하는 그런 마음은 역시 조금치도 우러나지 않았다. 질투가 없을 뿐만 아니라 (그역, 김씨가 강짜에 가슴을 쥐어뜯기는 하면서도, 일변 그들의 결혼 에 대해서는 도맡아 가지고 일을 성취시켜 주듯이 그러한) 호의나 관심도 또한 생기지를 않았다."
+        }
+      ],
+      "endpoints": [
+        "행화",
+        "초봉이"
+      ],
+      "candidate_semantics": {
+        "subject": "행화",
+        "object": "초봉이",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "서술은 행화가 초봉이를 질투하지 않는다고 명시한다. 같은 문단의 김씨 질투를 행화에게 옮기면 안 된다.",
+      "page_note": "평가 발췌 자체는 원문 행으로 추출했다. source-audit.cjs 재분할에서 해당 의미의 핵심 문장이 있는 페이지를 확인했다. 전체 발췌가 단일 제품 페이지와 동일하다고 주장하지 않는다."
+    },
+    {
+      "id": "harbor-direct-jealousy",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 3,
+          "content": "서윤은 도현이 받은 찬사를 못마땅해했다. 서윤은 도현을 질투했다. 도현은 서윤의 마음을 전혀 몰랐다."
+        }
+      ],
+      "endpoints": [
+        "서윤",
+        "도현"
+      ],
+      "candidate_semantics": {
+        "subject": "서윤",
+        "object": "도현",
+        "kind": "jealousy"
+      },
+      "expected_decision": "accept",
+      "oracle": "질투 주체 서윤, 대상 도현. 대상은 감정을 모른다."
+    },
+    {
+      "id": "harbor-reversed-jealousy",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 3,
+          "content": "서윤은 도현이 받은 찬사를 못마땅해했다. 서윤은 도현을 질투했다. 도현은 서윤의 마음을 전혀 몰랐다."
+        }
+      ],
+      "endpoints": [
+        "도현",
+        "서윤"
+      ],
+      "candidate_semantics": {
+        "subject": "도현",
+        "object": "서윤",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "같은 증거를 방향 반전한 후보는 승인 금지."
+    },
+    {
+      "id": "harbor-unrelated-desire",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 4,
+          "content": "서윤은 항구의 소유권을 원했다. 도현은 서윤과 같은 배를 탔다."
+        }
+      ],
+      "endpoints": [
+        "서윤",
+        "도현"
+      ],
+      "candidate_semantics": {
+        "subject": "서윤",
+        "object": "도현",
+        "kind": "possessive_desire"
+      },
+      "expected_decision": "hold",
+      "oracle": "욕망의 대상은 사물/소유권이다. 동시 등장한 도현으로 전이하지 않는다."
+    },
+    {
+      "id": "harbor-nonmutual-love",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 5,
+          "content": "서윤은 도현에게 연정을 품었다. 도현은 서윤을 동료로만 여겼다."
+        }
+      ],
+      "endpoints": [
+        "서윤",
+        "도현"
+      ],
+      "candidate_semantics": {
+        "subject": "서윤",
+        "object": "도현",
+        "kind": "romantic_affection"
+      },
+      "expected_decision": "accept",
+      "oracle": "서윤의 단방향 연정과 도현의 동료 관계가 공존한다. 연인으로 승격 금지."
+    },
+    {
+      "id": "harbor-rumor-as-fact",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 6,
+          "content": "서윤이 도현과 연인이라는 소문이 돌았다. 그러나 그 소문은 꾸며 낸 거짓말이었다."
+        }
+      ],
+      "endpoints": [
+        "서윤",
+        "도현"
+      ],
+      "candidate_semantics": {
+        "subject": "서윤",
+        "object": "도현",
+        "kind": "romantic_partners"
+      },
+      "expected_decision": "hold",
+      "oracle": "소문 자체와 실제 관계를 구분한다."
+    },
+    {
+      "id": "lab-alias-established",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 8,
+          "content": "새벽이라고 불리던 사람의 본명은 윤아였다. 민은 새벽을 신뢰했다."
+        }
+      ],
+      "endpoints": [
+        "민",
+        "새벽"
+      ],
+      "candidate_semantics": {
+        "subject": "민",
+        "object": "새벽",
+        "kind": "trust"
+      },
+      "expected_decision": "accept",
+      "oracle": "원문 호칭으로 된 관계의 대상은 새벽이다. 윤아와의 동일인 지식은 p8부터만 허용.",
+      "alias": {
+        "alias": "새벽",
+        "canonical": "윤아",
+        "identity_established_page": 8,
+        "first_appearance_page": 2
+      }
+    },
+    {
+      "id": "lab-ambiguous-pronoun",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 9,
+          "content": "윤아와 민, 수가 방에 남았다. 그가 그녀를 질투한다는 말도 있었지만 누구를 가리키는지 수는 알 수 없었다."
+        }
+      ],
+      "endpoints": [
+        "민",
+        "윤아"
+      ],
+      "candidate_semantics": {
+        "subject": "민",
+        "object": "윤아",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "공유 문맥에 이름이 있어도 대명사 지시 대상과 발화 진실성이 불명확하다."
+    },
+    {
+      "id": "lab-negation",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 10,
+          "content": "민은 윤아를 질투하지 않았다. 윤아도 민에게 경쟁심을 느끼지 않았다."
+        }
+      ],
+      "endpoints": [
+        "민",
+        "윤아"
+      ],
+      "candidate_semantics": {
+        "subject": "민",
+        "object": "윤아",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "명시적 부정 관계를 사실로 공개하지 않는다."
+    },
+    {
+      "id": "lab-plan",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 11,
+          "content": "민은 언젠가 윤아와 결혼하고 싶다고 말했다. 윤아는 대답하지 않았다."
+        }
+      ],
+      "endpoints": [
+        "민",
+        "윤아"
+      ],
+      "candidate_semantics": {
+        "subject": "민",
+        "object": "윤아",
+        "kind": "marriage"
+      },
+      "expected_decision": "hold",
+      "oracle": "민의 희망은 실제 혼인 성립이 아니다."
+    },
+    {
+      "id": "lab-reported-mistake",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 12,
+          "content": "수는 민이 윤아를 미워한다고 믿었다. 그것은 수의 오해였다. 민은 윤아를 믿고 있었다."
+        }
+      ],
+      "endpoints": [
+        "민",
+        "윤아"
+      ],
+      "candidate_semantics": {
+        "subject": "민",
+        "object": "윤아",
+        "kind": "hostility"
+      },
+      "expected_decision": "hold",
+      "oracle": "수의 믿음을 민의 실제 정서로 승격하지 않는다."
+    },
+    {
+      "id": "station-clear-asymmetry",
+      "corpus": "역 앞의 우산 — 창작 holdout",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 2,
+          "content": "혜온은 가람을 경멸했다. 가람은 그 시선을 느끼지 못했다."
+        }
+      ],
+      "endpoints": [
+        "혜온",
+        "가람"
+      ],
+      "candidate_semantics": {
+        "subject": "혜온",
+        "object": "가람",
+        "kind": "contempt"
+      },
+      "expected_decision": "accept",
+      "oracle": "경멸하는 사람은 혜온이고 가람은 대상이다.",
+      "holdout": true
+    },
+    {
+      "id": "station-oblique-negation",
+      "corpus": "역 앞의 우산 — 창작 holdout",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 3,
+          "content": "가람이 혜온을 미워한다니, 그럴 리 없었다. 가람은 혜온을 위해 먼 길을 돌아왔다."
+        }
+      ],
+      "endpoints": [
+        "가람",
+        "혜온"
+      ],
+      "candidate_semantics": {
+        "subject": "가람",
+        "object": "혜온",
+        "kind": "hostility"
+      },
+      "expected_decision": "hold",
+      "oracle": "부정을 담은 반문을 단정적 적대로 읽으면 안 된다.",
+      "holdout": true
+    },
+    {
+      "id": "station-english-direction",
+      "corpus": "역 앞의 우산 — 창작 holdout",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 4,
+          "content": "Nara envied Eren. Eren admired Nara, unaware of the envy."
+        }
+      ],
+      "endpoints": [
+        "Nara",
+        "Eren"
+      ],
+      "candidate_semantics": {
+        "subject": "Nara",
+        "object": "Eren",
+        "kind": "jealousy"
+      },
+      "expected_decision": "accept",
+      "oracle": "Nara → Eren envy와 Eren → Nara admiration은 서로 다른 방향의 공존 정서.",
+      "holdout": true
+    },
+    {
+      "id": "station-cooccurrence",
+      "corpus": "역 앞의 우산 — 창작 holdout",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 5,
+          "content": "은결은 정류장에서 지후의 이름을 들었다. 은결과 지후는 그날 만나지 않았다."
+        }
+      ],
+      "endpoints": [
+        "은결",
+        "지후"
+      ],
+      "candidate_semantics": {
+        "subject": "은결",
+        "object": "지후",
+        "kind": "friendship"
+      },
+      "expected_decision": "hold",
+      "oracle": "같은 문장 내 두 이름만으로 친분을 만들지 않는다.",
+      "holdout": true
+    },
+    {
+      "id": "harbor-coexisting-relations",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 3,
+          "content": "서윤은 도현의 누나였다. 서윤은 도현의 재능을 질투했다."
+        }
+      ],
+      "expected_facts": [
+        {
+          "subject": "서윤",
+          "object": "도현",
+          "kind": "family",
+          "directed": false
+        },
+        {
+          "subject": "서윤",
+          "object": "도현",
+          "kind": "jealousy",
+          "directed": true
+        }
+      ],
+      "oracle": "남매 관계와 일방적 질투는 동시 유효하다. 최신 한 라벨로 덮지 않는다."
+    },
+    {
+      "id": "harbor-temporal-transition",
+      "corpus": "유리 항구 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 3,
+          "content": "서윤은 도현을 질투했다."
+        },
+        {
+          "page_no": 9,
+          "content": "서윤은 도현에게 더는 질투를 느끼지 않았다. 서윤은 도현을 진심으로 존경하게 되었다."
+        }
+      ],
+      "expected_by_cutoff": {
+        "2": [],
+        "3": [
+          "서윤 → 도현: 질투"
+        ],
+        "8": [
+          "서윤 → 도현: 질투"
+        ],
+        "9": [
+          "서윤 → 도현: 존경"
+        ]
+      },
+      "oracle": "p9 변화를 읽기 전 질투를 미리 제거하지 않는다. p9 이후 지난 감정을 현재 감정처럼 함께 표시하지 않는다."
+    },
+    {
+      "id": "lab-alias-spoiler-pair",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 2,
+          "content": "새벽은 민을 신뢰했다."
+        },
+        {
+          "page_no": 8,
+          "content": "새벽의 본명은 윤아였다."
+        }
+      ],
+      "expected_by_cutoff": {
+        "1": [],
+        "2": [
+          "새벽 → 민: 신뢰"
+        ],
+        "7": [
+          "새벽 → 민: 신뢰"
+        ],
+        "8": [
+          "새벽 = 윤아",
+          "새벽 → 민: 신뢰"
+        ]
+      },
+      "oracle": "먼저 알게 된 호칭이 관계에서 유지되어야 하며 미래 본명은 p8 이전에 노출 금지. p8 후에는 동일인 근거 공개 positive 필요."
+    },
+    {
+      "id": "lab-omission-review",
+      "corpus": "안개 실험실 — 창작 평가문",
+      "provenance": "synthetic",
+      "pages": [
+        {
+          "page_no": 2,
+          "content": "민은 윤아를 신뢰했다."
+        }
+      ],
+      "empty_extractor_output": {
+        "relationships": []
+      },
+      "oracle": "빈 추출을 의미 정확성 100%로 평가하지 않는다. 기대 사실 누락을 별도 집계하고 검수/보류 범위를 기록한다."
+    },
+    {
+      "id": "austen-jealousy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        1819,
+        1829
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "\nElizabeth, having rather expected to affront him, was amazed at his\ngallantry; but there was a mixture of sweetness and archness in her\nmanner which made it difficult for her to affront anybody; and Darcy\nhad never been so bewitched by any woman as he was by her. He really\nbelieved, that were it not for the inferiority of her connections, he\nshould be in some danger.\n\nMiss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth."
+        }
+      ],
+      "endpoints": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "candidate_semantics": {
+        "subject": "Miss Bingley",
+        "object": "Elizabeth",
+        "kind": "jealousy"
+      },
+      "expected_decision": "accept",
+      "oracle": "Narration identifies Miss Bingley as jealous of Elizabeth in response to Darcy’s attraction. This does not establish mutual jealousy or romance between Bingley and Elizabeth.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-reversed-jealousy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        1819,
+        1829
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "\nElizabeth, having rather expected to affront him, was amazed at his\ngallantry; but there was a mixture of sweetness and archness in her\nmanner which made it difficult for her to affront anybody; and Darcy\nhad never been so bewitched by any woman as he was by her. He really\nbelieved, that were it not for the inferiority of her connections, he\nshould be in some danger.\n\nMiss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth."
+        }
+      ],
+      "endpoints": [
+        "Elizabeth",
+        "Miss Bingley"
+      ],
+      "candidate_semantics": {
+        "subject": "Elizabeth",
+        "object": "Miss Bingley",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "The same excerpt does not establish Elizabeth’s jealousy of Miss Bingley. Reversing the stored endpoints must not reverse the meaning.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-negated-envy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        4419,
+        4424
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "Jane confessed herself a little surprised at the match; but she said\nless of her astonishment than of her earnest desire for their happiness;\nnor could Elizabeth persuade her to consider it as improbable. Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton."
+        }
+      ],
+      "endpoints": [
+        "Kitty",
+        "Miss Lucas"
+      ],
+      "candidate_semantics": {
+        "subject": "Kitty",
+        "object": "Miss Lucas",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "Kitty and Lydia are explicitly far from envying Miss Lucas; negated emotion must not become factual envy.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-belief-attribution-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        8810,
+        8814
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.\n"
+        }
+      ],
+      "endpoints": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "candidate_semantics": {
+        "subject": "Miss Bingley",
+        "object": "Elizabeth",
+        "kind": "jealousy"
+      },
+      "expected_decision": "qualified",
+      "oracle": "This excerpt alone reports Elizabeth’s conviction about Miss Bingley’s jealousy. Preserve attribution to Elizabeth; do not substitute later or earlier novel knowledge as evidence.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    }
+  ]
+}

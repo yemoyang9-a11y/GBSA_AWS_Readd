@@ -8,7 +8,7 @@ function mockClient(): { client: QueryClient; calls: { sql: string; params?: unk
     client: {
       query: async (sql: string, params?: unknown[]) => {
         calls.push({ sql, params });
-        return { rows: [] };
+        return { rows: sql.includes('RETURNING id') ? [{ id: params?.[0] }] : [] };
       },
     },
     calls,
@@ -201,4 +201,38 @@ describe('registerGeneratedContent — S4/S5 산출물 적재 (FR-DAT-003~008)',
       ])
     );
   });
+});
+
+test('FR-ADM-005: 기존 다른 도서의 인물 ID와 충돌하면 모든 쓰기와 준비상태 변경 전에 거절한다', async () => {
+  const writes: string[] = [];
+  const client: QueryClient = {
+    query: async (sql: string) => {
+      if (/^(UPDATE|INSERT|DELETE)/.test(sql)) writes.push(sql);
+      return {
+        rows:
+          sql.includes('FROM characters') && sql.includes('book_id <>')
+            ? [{ id: 'foreign-character' }]
+            : [],
+      };
+    },
+  };
+  const data: ResolvedBookData = {
+    book_id: 'target',
+    chapter_summaries: [],
+    characters: [
+      {
+        id: 'foreign-character',
+        name: 'Other book person',
+        first_appearance_page: 1,
+        aliases: [],
+        notes: [],
+      },
+    ],
+    relationships: [],
+    terms: [],
+    events: [],
+    background_and_intro: { background: '', intro: '' },
+  };
+  await expect(registerGeneratedContent(client, data)).rejects.toThrow(/another book|ownership/i);
+  expect(writes).toEqual([]);
 });

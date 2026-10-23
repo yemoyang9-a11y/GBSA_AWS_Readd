@@ -63,7 +63,8 @@ const LAYOUT_RADIUS = CANVAS_SIZE * 1.6;
 const GRAVITY_STRENGTH = 0.5;
 
 /**
- * 인물별 연결 수(간선 수). 노드에 없는 id 를 가리키는 간선은 세지 않는다 — 유령 id 가
+ * 인물별 연결 인원 수. 평행 관계가 여러 개여도 같은 상대는 한 번만 센다.
+ * 노드에 없는 id 를 가리키는 간선은 세지 않는다 — 유령 id 가
  * 연결 수를 부풀리면 안 된다.
  */
 export function computeDegrees(
@@ -72,10 +73,18 @@ export function computeDegrees(
 ): Map<string, number> {
   const degree = new Map<string, number>();
   for (const node of nodes) degree.set(node.id, 0);
+  const seen = new Set<string>();
   for (const edge of edges) {
+    const pair = JSON.stringify([edge.source, edge.target].sort());
     // 두 id 모두 노드 목록에 있을 때만 센다 — 한쪽이 유령 id면 그 간선 자체를 없는 것으로
     // 취급한다. 반대쪽만이라도 세면 유령 id 가 실재 노드의 연결 수를 부풀린다.
-    if (degree.has(edge.source) && degree.has(edge.target)) {
+    if (
+      edge.source !== edge.target &&
+      !seen.has(pair) &&
+      degree.has(edge.source) &&
+      degree.has(edge.target)
+    ) {
+      seen.add(pair);
       degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
       degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
     }
@@ -177,10 +186,15 @@ export function forceLayout(
   const iterations = options.iterations ?? DEFAULT_ITERATIONS;
   const indexOf = new Map(nodes.map((node, i) => [node.id, i]));
   const pairs: { a: number; b: number }[] = [];
+  const seenPairs = new Set<string>();
   for (const edge of edges) {
     const a = indexOf.get(edge.source);
     const b = indexOf.get(edge.target);
-    if (a !== undefined && b !== undefined && a !== b) pairs.push({ a, b });
+    const key = JSON.stringify([edge.source, edge.target].sort());
+    if (a !== undefined && b !== undefined && a !== b && !seenPairs.has(key)) {
+      seenPairs.add(key);
+      pairs.push({ a, b });
+    }
   }
 
   // 이상적인 간선 길이. n이 아주 작으면(1/sqrt(n)) k가 지나치게 커져 반발력이 과해진다 —
@@ -367,7 +381,12 @@ export function estimateTextWidth(text: string, charWidth: number): number {
 }
 
 function boxesOverlap(a: LabelBox, b: LabelBox): boolean {
-  return !(a.x + a.width < b.x || b.x + b.width < a.x || a.y + a.height < b.y || b.y + b.height < a.y);
+  return !(
+    a.x + a.width < b.x ||
+    b.x + b.width < a.x ||
+    a.y + a.height < b.y ||
+    b.y + b.height < a.y
+  );
 }
 
 /**
