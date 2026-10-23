@@ -164,4 +164,15 @@ describe('mocked prompt policy contracts (not live generation quality)', () => {
     expect(vectorSearch).toHaveBeenCalledWith('book', '아모야, 전봇대는 누구야?', 40);
     expect(prompt).toContain('아모야, 전봇대는 누구야?');
   });
+
+  test('mixed introduction and story question sends the Amo identity as trusted system policy', async () => {
+    const query = '너 이름은 뭐야? 그리고 정주사는 누구야?';
+    for await (const _ of handleQuery('book', query, 40, 'device')) {
+      /* consume */
+    }
+    expect(prompt).toContain(query);
+    expect(systemPrompt).toContain('이름은 아모');
+    expect(systemPrompt).toContain('모델·제공자 명칭');
+    expect(llmStream).toHaveBeenCalledTimes(1);
+  });
 });
