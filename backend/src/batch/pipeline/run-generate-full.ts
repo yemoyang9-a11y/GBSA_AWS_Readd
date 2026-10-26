@@ -9,6 +9,8 @@
  * 최종적으로 data/generated/full/all-resolved.json에 인물 id가 해소된 전체 결과를 합친다.
  *
  * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-generate-full.ts
+ *        [--book <bookId> --file <원문 경로> --title <제목> --author <저자>]
+ *        다른 책의 산출물은 data/generated/<bookId>/full/ 에 따로 둔다 — run-args.ts 참조
  */
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -50,9 +52,10 @@ import {
   assertResolvedGrounding,
   sealChapterCache,
 } from './grounding';
+import { bookArgsFromCli, parseBookArgs, requireBookMeta } from './run-args';
 
-const BOOK_ID = 'takryu';
-const OUT_DIR = path.join(__dirname, '../../../data/generated/full');
+/** 인자 없는 기본값(takryu) — 장 캐시를 읽는 export 함수의 기본 디렉터리 */
+const DEFAULT_OUT_DIR = parseBookArgs([]).fullDir;
 const EXTRACTION_CONTRACT = JSON.stringify({
   characterPrompt: buildCharacterPrompt.toString(),
   relationshipPrompt: buildRelationshipPrompt.toString(),
@@ -89,8 +92,8 @@ interface ChapterOutput {
   warnings: string[];
 }
 
-function chapterFilePath(chapterNo: number): string {
-  return path.join(OUT_DIR, `chapter-${chapterNo}.json`);
+function chapterFilePath(chapterNo: number, outDir: string): string {
+  return path.join(outDir, `chapter-${chapterNo}.json`);
 }
 
 /** 이 장을 실제 게이트웨이로 생성한다 — 캐시가 있으면 절대 여기까지 오지 않는다 */
@@ -188,10 +191,11 @@ export async function loadOrGenerateChapter(
   chapter: Chapter,
   pages: Page[],
   known: string[],
-  previousRelationships: string[] = []
+  previousRelationships: string[] = [],
+  outDir: string = DEFAULT_OUT_DIR
 ): Promise<ChapterOutput> {
   const cacheContext = [...known, JSON.stringify(previousRelationships)];
-  const filePath = chapterFilePath(chapter.chapter_no);
+  const filePath = chapterFilePath(chapter.chapter_no, outDir);
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
     const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
@@ -226,15 +230,19 @@ export async function loadOrGenerateChapter(
   return { ...validated, grounding: cached.grounding };
 }
 
-async function loadOrGenerateBackground(): Promise<{ background: string; intro: string }> {
-  const filePath = path.join(OUT_DIR, 'background.json');
+async function loadOrGenerateBackground(
+  outDir: string,
+  title: string,
+  author: string
+): Promise<{ background: string; intro: string }> {
+  const filePath = path.join(outDir, 'background.json');
   if (fs.existsSync(filePath)) {
     console.log('[재생] 배경지식·소개 — 기존 결과 재사용');
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   }
 
   console.log('[생성] 배경지식·소개 게이트웨이 호출 중...');
-  const raw = await call('generate_background', buildBackgroundPrompt('탁류', '채만식'));
+  const raw = await call('generate_background', buildBackgroundPrompt(title, author));
   const out = parseJsonResponse<{ background: string; intro: string }>(raw);
   fs.writeFileSync(filePath, JSON.stringify(out, null, 2), 'utf-8');
   return out;
@@ -302,10 +310,13 @@ function mergeChapterRelationships(
 }
 
 async function main(): Promise<void> {
+  const args = bookArgsFromCli('run-generate-full');
+  const BOOK_ID = args.bookId;
+  const OUT_DIR = args.fullDir;
+  const { title, author } = requireBookMeta(args);
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const filePath = path.join(__dirname, '../../../data/raw/takryu.txt');
-  const rawText = fs.readFileSync(filePath, 'utf-8');
+  const rawText = fs.readFileSync(args.filePath, 'utf-8');
   const { pages: allPages, chapters: allChapters } = splitBook(rawText, BOOK_ID);
 
   // MAX_CHAPTERS — 전체 배치 전 소규모 스모크 테스트용. 지정 안 하면 전체 장 처리
@@ -314,7 +325,7 @@ async function main(): Promise<void> {
     : allChapters.length;
   const chapters = allChapters.slice(0, maxChapters);
   console.log(
-    `=== 「탁류」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
+    `=== 「${title}」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
   );
 
   const state = createEmptyState(BOOK_ID);
@@ -340,7 +351,13 @@ async function main(): Promise<void> {
       (r) =>
         `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
     );
-    const output = await loadOrGenerateChapter(chapter, pages, known, previousRelationships);
+    const output = await loadOrGenerateChapter(
+      chapter,
+      pages,
+      known,
+      previousRelationships,
+      OUT_DIR
+    );
     chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
 
     mergeCharacters(state, output.characters);
@@ -361,7 +378,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const background = await loadOrGenerateBackground();
+  const background = await loadOrGenerateBackground(OUT_DIR, title, author);
 
   const combined = {
     book_id: BOOK_ID,

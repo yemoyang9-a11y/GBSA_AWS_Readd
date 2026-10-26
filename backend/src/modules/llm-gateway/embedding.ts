@@ -66,11 +66,15 @@ function tokensUsedInWindow(now: number): number {
   return tokenWindow.reduce((sum, e) => sum + e.tokens, 0);
 }
 
-async function waitForTokenBudget(estimatedTokens: number): Promise<void> {
+/** @returns 실제로 기다린 ms — [Embed Metrics]의 waitMs (처리 시간과 대기 시간을 나눠 보기 위해) */
+async function waitForTokenBudget(estimatedTokens: number): Promise<number> {
+  const startedAt = Date.now();
   for (;;) {
     const now = Date.now();
     const used = tokensUsedInWindow(now);
-    if (used + estimatedTokens <= TOKENS_PER_MINUTE || tokenWindow.length === 0) return;
+    if (used + estimatedTokens <= TOKENS_PER_MINUTE || tokenWindow.length === 0) {
+      return now - startedAt;
+    }
 
     // 가장 오래된 기록이 창 밖으로 나갈 때까지 기다린다
     const waitMs = 60_000 - (now - tokenWindow[0].at) + 250;
@@ -117,8 +121,9 @@ async function callCohereEmbed(texts: string[], inputType: string): Promise<numb
   const estimatedTokens = Math.ceil(
     texts.reduce((sum, t) => sum + t.length, 0) * TOKENS_PER_CHAR_ESTIMATE
   );
-  await waitForTokenBudget(estimatedTokens);
+  const waitMs = await waitForTokenBudget(estimatedTokens);
 
+  const startedAt = Date.now();
   const body = await withRetry(
     async () => {
       const response = await fetch(COHERE_EMBED_URL, {
@@ -153,11 +158,29 @@ async function callCohereEmbed(texts: string[], inputType: string): Promise<numb
     { task: 'embed', model: EMBEDDING_MODEL, inputType, count: texts.length }
   );
 
+  const billedInputTokens = body.meta?.billed_units?.input_tokens;
+
   // 실제 사용량으로 창을 갱신한다 — 어림값이 틀려도 오차가 누적되지 않는다
   tokenWindow.push({
     at: Date.now(),
-    tokens: body.meta?.billed_units?.input_tokens ?? estimatedTokens,
+    tokens: billedInputTokens ?? estimatedTokens,
   });
+
+  // NFR-OBS-004: 게이트웨이 [LLM Metrics]와 같은 한 줄 JSON — 적재(search_document)와
+  // 질의(search_query)를 inputType으로 구분한다. durationMs는 재시도 대기를 포함하고
+  // 토큰 한도 대기(waitMs)는 뺀 값이다. 응답에 사용량이 없으면 billedInputTokens는 null.
+  console.log(
+    '[Embed Metrics]',
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      model: EMBEDDING_MODEL,
+      inputType,
+      count: texts.length,
+      billedInputTokens: billedInputTokens ?? null,
+      durationMs: Date.now() - startedAt,
+      waitMs,
+    })
+  );
 
   const embeddings = body.embeddings?.float;
   if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
