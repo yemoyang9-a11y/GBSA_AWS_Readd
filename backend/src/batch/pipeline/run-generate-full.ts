@@ -54,6 +54,9 @@ import {
 } from './grounding';
 import { bookArgsFromCli, parseBookArgs, requireBookMeta } from './run-args';
 
+// 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
+const GENERATE_MAX_TOKENS = 16000;
+
 /** 인자 없는 기본값(takryu) — 장 캐시를 읽는 export 함수의 기본 디렉터리 */
 const DEFAULT_OUT_DIR = parseBookArgs([]).fullDir;
 const EXTRACTION_CONTRACT = JSON.stringify({
@@ -125,12 +128,15 @@ async function generateChapter(
     }
   }
 
-  const summaryRaw = await call('generate_summary', buildSummaryPrompt(chapter, pages));
+  const summaryRaw = await call('generate_summary', buildSummaryPrompt(chapter, pages), {
+    maxTokens: GENERATE_MAX_TOKENS,
+  });
   const { summary } = parseJsonResponse<{ summary: string }>(summaryRaw);
 
   const characterRaw = await call(
     'generate_character',
-    buildCharacterPrompt(chapter, pages, known)
+    buildCharacterPrompt(chapter, pages, known),
+    { maxTokens: GENERATE_MAX_TOKENS }
   );
   const { characters } = parseJsonResponse<{ characters: RawCharacter[] }>(characterRaw);
   const accepted = validateGroundedChapter({ characters }, pages);
@@ -146,7 +152,8 @@ async function generateChapter(
   const knownForRelationships = [...known, ...accepted.characters.map((c) => c.name)];
   const relRaw = await call(
     'generate_relationship',
-    buildRelationshipPrompt(chapter, pages, knownForRelationships, previousRelationships)
+    buildRelationshipPrompt(chapter, pages, knownForRelationships, previousRelationships),
+    { maxTokens: GENERATE_MAX_TOKENS }
   );
   const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
   record(
@@ -156,14 +163,18 @@ async function generateChapter(
     }).relationships.map((r) => r.established_page)
   );
 
-  const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
+  const termRaw = await call('generate_term', buildTermPrompt(chapter, pages), {
+    maxTokens: GENERATE_MAX_TOKENS,
+  });
   const { terms } = parseJsonResponse<{ terms: RawTerm[] }>(termRaw);
   record(
     '용어',
     terms.map((t) => t.first_appearance_page)
   );
 
-  const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages));
+  const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages), {
+    maxTokens: GENERATE_MAX_TOKENS,
+  });
   const { events } = parseJsonResponse<{ events: RawEvent[] }>(eventRaw);
   record(
     '사건',
@@ -242,7 +253,9 @@ async function loadOrGenerateBackground(
   }
 
   console.log('[생성] 배경지식·소개 게이트웨이 호출 중...');
-  const raw = await call('generate_background', buildBackgroundPrompt(title, author));
+  const raw = await call('generate_background', buildBackgroundPrompt(title, author), {
+    maxTokens: GENERATE_MAX_TOKENS,
+  });
   const out = parseJsonResponse<{ background: string; intro: string }>(raw);
   fs.writeFileSync(filePath, JSON.stringify(out, null, 2), 'utf-8');
   return out;
