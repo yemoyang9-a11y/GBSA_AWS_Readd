@@ -39,6 +39,70 @@ export function graphTrackKey(edge: GraphEdge): string {
   ]);
 }
 
+type Slot = 'a' | 'b';
+
+/** 정렬된 두 인물과, 그 정렬에 맞춘 방향 */
+function normalized(edge: GraphEdge) {
+  const pair = [edge.source, edge.target].sort();
+  let direction = edge.semantics?.direction;
+  if (pair[0] !== edge.source) {
+    if (direction === 'a_to_b') direction = 'b_to_a';
+    else if (direction === 'b_to_a') direction = 'a_to_b';
+  }
+  return { pair, direction };
+}
+
+/**
+ * FR-CHR-001: 서로 대체할 수 있는 관계 묶음. 방향은 묶음 키가 아니라 그 안의 관점 칸이다.
+ * 서버 relationshipGroup(backend/src/modules/ssabi/relationship-versions.ts)과 같은 규칙.
+ */
+function graphGroupKey(edge: GraphEdge): string {
+  const { pair } = normalized(edge);
+  const s = edge.semantics;
+  if (!s) return JSON.stringify(['legacy', ...pair]);
+  return JSON.stringify([
+    'semantic',
+    ...pair,
+    s.kind,
+    s.relation_key,
+    s.temporal_scope === 'event'
+      ? [edge.established_page, s.evidence.start_char, s.evidence.end_char]
+      : 'ongoing',
+  ]);
+}
+
+/** 한쪽 방향은 그 관계를 가진 쪽 칸만, 쌍방·무방향·미확인·기존 관계는 양쪽 칸 */
+function graphSlots(edge: GraphEdge): Slot[] {
+  const { direction } = normalized(edge);
+  return direction === 'a_to_b' ? ['a'] : direction === 'b_to_a' ? ['b'] : ['a', 'b'];
+}
+
+/**
+ * FR-CHR-001: 묶음마다 페이지 순서로 칸을 채우고, 칸을 하나라도 빼앗긴 관계는 통째로 대체한다.
+ * 한쪽→쌍방, 쌍방→한쪽, 미확인→확정은 새 관계만 남고 A→B와 B→A는 함께 남는다.
+ * 서버 currentRelationshipVersions와 같은 규칙이다 — 이미 허용된 이력만 받는다.
+ */
+export function currentGraphEdges(edges: readonly GraphEdge[]): GraphEdge[] {
+  const ordered = [...edges].sort(
+    (x, y) =>
+      x.established_page - y.established_page ||
+      (graphEdgeKey(x) < graphEdgeKey(y) ? -1 : graphEdgeKey(x) > graphEdgeKey(y) ? 1 : 0)
+  );
+  const groups = new Map<string, Map<Slot, GraphEdge>>();
+  for (const edge of ordered) {
+    const key = graphGroupKey(edge);
+    const slots = groups.get(key) ?? new Map<Slot, GraphEdge>();
+    groups.set(key, slots);
+    for (const slot of graphSlots(edge)) {
+      const replaced = slots.get(slot);
+      if (replaced) for (const [s, e] of [...slots]) if (e === replaced) slots.delete(s);
+    }
+    for (const slot of graphSlots(edge)) slots.set(slot, edge);
+  }
+  const current = new Set([...groups.values()].flatMap((slots) => [...slots.values()]));
+  return ordered.filter((edge) => current.has(edge));
+}
+
 /** NFR-USE-006: uncertainty, denial and time are stated in text, not color alone. */
 export function graphEdgeLabel(edge: GraphEdge): string {
   const semantics = edge.semantics;

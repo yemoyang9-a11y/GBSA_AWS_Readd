@@ -1,6 +1,6 @@
 import type { GraphResponse } from '../../types';
 import { computeDegrees } from './graphLayout';
-import { graphEdgeKey, graphTrackKey } from './graphEdges';
+import { currentGraphEdges } from './graphEdges';
 
 /**
  * 관계도 되감기 — 읽은 범위 안에서 과거 시점의 관계도를 보는 기능.
@@ -54,29 +54,16 @@ export function graphUpTo(graph: GraphResponse, page: number): GraphResponse {
     });
   const visible = new Set(nodes.map((node) => node.id));
   // FR-CHR-001: 클라이언트는 이미 허용된 이력의 표시 시점만 고른다. 서로 다른
-  // 감정·사건은 보존하고 동일 관계의 변경만 최신 버전으로 바꾼다.
+  // 감정·사건은 보존하고, 같은 관계의 변경(방향 변화 포함)만 최신 버전으로 바꾼다.
   const candidates = (graph.history ?? graph.edges).filter(
     (edge) => edge.established_page <= page && visible.has(edge.source) && visible.has(edge.target)
   );
-  const latest = new Map<string, (typeof candidates)[number]>();
-  for (const edge of candidates) {
-    const key = graphTrackKey(edge);
-    const previous = latest.get(key);
-    if (
-      !previous ||
-      edge.established_page > previous.established_page ||
-      (edge.established_page === previous.established_page &&
-        graphEdgeKey(edge) > graphEdgeKey(previous))
-    ) {
-      latest.set(key, edge);
-    }
-  }
 
   return {
     ...graph,
     nodes,
     // 양쪽 인물이 모두 드러난 관계만 남긴다 — 한쪽이 없으면 그릴 수 없다
-    edges: graph.history ? [...latest.values()] : candidates,
+    edges: graph.history ? currentGraphEdges(candidates) : candidates,
   };
 }
 
