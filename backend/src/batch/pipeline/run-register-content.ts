@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { pool } from '../../config/database';
 import { checkIntegrity, ResolvedBookData } from './check-integrity';
-import { registerGeneratedContent } from './register';
+import { registerGeneratedContent, replaceRelationshipSnapshot } from './register';
 import { splitBook } from './split';
 import {
   assertInitialRegistration,
@@ -29,10 +29,11 @@ async function main(): Promise<void> {
   assertResolvedGrounding(data, pages);
   if (data.book_id !== BOOK_ID) throw new Error('Artifact book_id mismatch');
 
+  const replace = process.argv.includes('--replace-relationships');
   const client = await pool.connect();
   try {
     await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
-    await assertInitialRegistration(client, BOOK_ID);
+    if (!replace) await assertInitialRegistration(client, BOOK_ID);
     await assertStoredGrounding(client, data, BOOK_ID);
 
     const bookResult = (await client.query('SELECT total_pages FROM books WHERE book_id = $1', [
@@ -63,8 +64,30 @@ async function main(): Promise<void> {
       );
     }
 
-    await registerGeneratedContent(client, data);
-    await client.query('COMMIT');
+    if (replace) {
+      const audit = await replaceRelationshipSnapshot(client, data);
+      const auditPath = path.join(
+        __dirname,
+        `../../../data/generated/full/relationship-replacement-${Date.now()}.json`
+      );
+      // Durable local before/after audit is created before the database transaction commits.
+      fs.writeFileSync(
+        auditPath,
+        JSON.stringify({ ...audit, transaction_status: 'pending' }, null, 2),
+        { flag: 'wx' }
+      );
+      await client.query('COMMIT');
+      fs.writeFileSync(
+        auditPath,
+        JSON.stringify({ ...audit, transaction_status: 'committed' }, null, 2)
+      );
+      console.log(
+        `[OK] Relationship snapshot staged; source and all chapters checked, semantic review and publication still required. Audit: ${auditPath}`
+      );
+    } else {
+      await registerGeneratedContent(client, data);
+      await client.query('COMMIT');
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

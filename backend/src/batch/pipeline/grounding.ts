@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
-import { Chapter, Page } from '../../shared/types';
+import { Chapter, Page, RelationshipSemantics } from '../../shared/types';
 import { aliasReviewReason, labelMentions, relationshipReviewReason } from './semantic-guards';
-const GROUNDING_SCHEMA_VERSION = 3;
+const GROUNDING_SCHEMA_VERSION = 4;
 
 /** Offsets are zero-based UTF-16 code units in the stored split page; end is exclusive. */
 export interface SourceEvidence {
@@ -47,7 +47,8 @@ export interface GroundedRelationship {
   established_page: number;
   rationale: string;
   evidence: SourceEvidence;
-  assertion_status: 'fact';
+  assertion_status: RelationshipSemantics['assertion_status'];
+  semantics?: RelationshipSemantics;
   change_type: 'establishment' | 'restatement' | 'transition' | 'disclosure';
   change_evidence?: SourceEvidence;
 }
@@ -106,7 +107,8 @@ function validEvidence(
 /** A single fail-closed boundary for live output and cached chapter replay. */
 export function validateGroundedChapter(
   input: unknown,
-  pages: Page[]
+  pages: Page[],
+  options: { requireRelationshipSemantics?: boolean } = {}
 ): {
   characters: GroundedCharacter[];
   relationships: GroundedRelationship[];
@@ -255,12 +257,93 @@ export function validateGroundedChapter(
       );
       continue;
     }
-    const needsChangeEvidence = r.change_type === 'transition' || r.change_type === 'disclosure';
-    const changeEvidence = needsChangeEvidence
-      ? validEvidence(r.change_evidence, pages, r.established_page, [r.character_a, r.character_b])
-      : undefined;
+    let semantics: RelationshipSemantics | undefined;
+    if (r.semantics !== undefined || options.requireRelationshipSemantics) {
+      const s = object(r.semantics);
+      const semanticEvidence = validEvidence(s.evidence, pages, r.established_page, [
+        r.character_a,
+        r.character_b,
+      ]);
+      const attributed = ['belief', 'claim', 'rumor', 'uncertain'].includes(
+        String(s.assertion_status)
+      );
+      const qualified =
+        /(?:주장|믿|생각|소문|전언|추측|불확실|확실하지|여(?:기|겼|긴)|아니|않|없|부정)/u;
+      if (
+        s.version !== 2 ||
+        !['a_to_b', 'b_to_a', 'mutual', 'undirected', 'unknown'].includes(String(s.direction)) ||
+        !['family', 'social', 'emotion', 'action'].includes(String(s.kind)) ||
+        !['ongoing', 'event'].includes(String(s.temporal_scope)) ||
+        !['active', 'ended'].includes(String(s.state)) ||
+        !['fact', 'belief', 'claim', 'rumor', 'uncertain', 'negated'].includes(
+          String(s.assertion_status)
+        ) ||
+        s.assertion_status !== r.assertion_status ||
+        !nonempty(s.relation_key) ||
+        !/^[a-z][a-z0-9_:-]{1,79}$/.test(s.relation_key) ||
+        !nonempty(s.summary) ||
+        s.summary.length > 500 ||
+        ![r.character_a, r.character_b].every(
+          (name) => nonempty(name) && (s.summary as string).includes(name)
+        ) ||
+        !semanticEvidence ||
+        JSON.stringify(semanticEvidence) !== JSON.stringify(relationshipEvidence) ||
+        /^(?:욕망|관계|감정|관심|연결|인연|애정|갈등|적대|사랑|desire|relationship|emotion)$/iu.test(
+          (r.label as string).trim()
+        ) ||
+        (attributed &&
+          (!nonempty(s.attribution) || !(s.summary as string).includes(s.attribution))) ||
+        (s.attribution !== undefined &&
+          (!nonempty(s.attribution) || !semanticEvidence.quote.includes(s.attribution))) ||
+        (s.assertion_status !== 'fact' && !qualified.test(s.summary as string))
+      ) {
+        hold(
+          'relationship',
+          item,
+          'Complete semantic v2 contract, specific predicate, qualified subject/object summary and exact dated evidence required'
+        );
+        continue;
+      }
+      // Only the versioned contract is persisted; extra model keys never become public JSON.
+      semantics = {
+        version: 2,
+        direction: s.direction,
+        kind: s.kind,
+        relation_key: s.relation_key,
+        summary: s.summary,
+        assertion_status: s.assertion_status,
+        temporal_scope: s.temporal_scope,
+        state: s.state,
+        evidence: semanticEvidence,
+        ...(s.attribution !== undefined ? { attribution: s.attribution } : {}),
+        ...(s.change_evidence !== undefined ? { change_evidence: s.change_evidence } : {}),
+      } as RelationshipSemantics;
+    }
+    const needsChangeEvidence =
+      r.change_type === 'transition' ||
+      r.change_type === 'disclosure' ||
+      semantics?.state === 'ended';
+    const changeEvidence =
+      needsChangeEvidence || r.change_evidence !== undefined
+        ? validEvidence(r.change_evidence, pages, r.established_page, [
+            r.character_a,
+            r.character_b,
+          ])
+        : undefined;
+    const innerChange =
+      semantics?.change_evidence === undefined
+        ? undefined
+        : validEvidence(semantics.change_evidence, pages, r.established_page, [
+            r.character_a,
+            r.character_b,
+          ]);
     if (
-      r.assertion_status !== 'fact' ||
+      (semantics?.change_evidence !== undefined &&
+        (!innerChange ||
+          !changeEvidence ||
+          JSON.stringify(innerChange) !== JSON.stringify(changeEvidence))) ||
+      (r.change_evidence !== undefined && !changeEvidence) ||
+      (!semantics && r.assertion_status !== 'fact') ||
       !['establishment', 'restatement', 'transition', 'disclosure'].includes(
         String(r.change_type)
       ) ||
@@ -283,11 +366,10 @@ export function validateGroundedChapter(
       following.length < 1000
         ? following + ' ' + (next?.content.slice(0, 1000 - following.length) ?? '')
         : following;
-    const relationshipIssue = relationshipReviewReason(
-      r.label as string,
-      relationshipEvidence.quote,
-      nearby
-    );
+    const relationshipIssue =
+      !semantics || semantics.assertion_status === 'fact'
+        ? relationshipReviewReason(r.label as string, relationshipEvidence.quote, nearby)
+        : undefined;
     if (relationshipIssue) {
       hold('relationship', item, relationshipIssue);
       continue;
@@ -295,6 +377,14 @@ export function validateGroundedChapter(
     relationships.push({
       ...r,
       evidence: relationshipEvidence,
+      ...(semantics
+        ? {
+            semantics: {
+              ...semantics,
+              ...(changeEvidence ? { change_evidence: changeEvidence } : {}),
+            },
+          }
+        : {}),
       ...(changeEvidence ? { change_evidence: changeEvidence } : {}),
     } as unknown as GroundedRelationship);
   }
@@ -306,7 +396,7 @@ export function groundingManifest(
   chapter: Chapter,
   pages: Page[],
   known: string[] = [],
-  extractionContract = 'grounded-agent-v3'
+  extractionContract = 'grounded-agent-v4-relationship-semantics'
 ): { schema_version: number; source_hash: string } {
   return {
     schema_version: GROUNDING_SCHEMA_VERSION,
@@ -328,7 +418,7 @@ export function assertGroundingCache(
   chapter: Chapter,
   pages: Page[],
   known: string[] = [],
-  extractionContract = 'grounded-agent-v3'
+  extractionContract = 'grounded-agent-v4-relationship-semantics'
 ): void {
   const cached = object(object(input).grounding);
   const expected = groundingManifest(chapter, pages, known, extractionContract);
@@ -350,7 +440,7 @@ export function sealChapterCache<T extends Record<string, unknown>>(
   chapter: Chapter,
   pages: Page[],
   known: string[] = [],
-  extractionContract = 'grounded-agent-v3'
+  extractionContract = 'grounded-agent-v4-relationship-semantics'
 ): T & { grounding: ReturnType<typeof groundingManifest> & { content_hash: string } } {
   const { grounding: _previous, ...content } = data;
   return {

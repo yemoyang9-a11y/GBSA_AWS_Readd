@@ -1,0 +1,38 @@
+{
+  "source_sha256": "3248eb87f94f993db4d3262f1fc5894628137ccdbde9022b234e9d6ed7c4d186",
+  "total_pages": 411,
+  "checks": [
+    {
+      "id": "takryu-jealousy-direction",
+      "needle": "질투는 피어올랐던",
+      "expectedPage": 91,
+      "subject": "김씨",
+      "object": "초봉이",
+      "found": [
+        91
+      ]
+    },
+    {
+      "id": "takryu-desire-direction",
+      "needle": "시방 형보가 초봉이를 탐내는 품",
+      "expectedPage": 129,
+      "subject": "형보",
+      "object": "초봉이",
+      "found": [
+        129
+      ]
+    },
+    {
+      "id": "takryu-negated-jealousy",
+      "needle": "김씨처럼 태수를 놓고 초봉이를 질투",
+      "expectedPage": 167,
+      "subject": "행화",
+      "object": "초봉이",
+      "negated": true,
+      "found": [
+        167
+      ]
+    }
+  ],
+  "pass": true
+}

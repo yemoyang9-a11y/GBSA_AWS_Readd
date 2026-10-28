@@ -13,6 +13,8 @@
  * "확인 내용" 문구를 대상별로 나눈 것이다.
  */
 import { v4 as uuidv4 } from 'uuid';
+import { isDeepStrictEqual } from 'util';
+import { canonicalRelationship, AccumulatedRelationship } from './accumulate';
 import { QueryClient } from './register';
 import { ResolvedBookData } from './check-integrity';
 
@@ -69,6 +71,7 @@ export interface ReviewSheetRow {
   target_id: string;
   page_ref: number | null;
   content_preview: string;
+  relationship_snapshot?: Record<string, unknown>;
 }
 
 /** review_records 조회 없이도 테스트 가능하도록, 이미 검수된 키 집합을 인자로 받는다(순수 함수) */
@@ -79,6 +82,7 @@ export function reviewKey(target_type: ReviewTargetType, target_id: string): str
 export type ReviewRecordRow = {
   target_type: ReviewTargetType;
   target_id: string;
+  relationship_snapshot?: Record<string, unknown> | null;
 } & Partial<Record<ReviewCriterion, boolean | null>>;
 
 /**
@@ -87,12 +91,33 @@ export type ReviewRecordRow = {
  * 그래야 검수자가 다음 시트에서 그 대상을 다시 받아 수정 후 재제출할 수 있다.
  * (이전엔 행 존재 여부만 봐서, 한번 FALSE를 받은 대상은 재수출 경로가 영구히 막혔었다)
  */
-export function passedReviewKeys(records: ReviewRecordRow[]): Set<string> {
+export function relationshipSnapshot(relation: AccumulatedRelationship): Record<string, unknown> {
+  const r = canonicalRelationship(relation);
+  return {
+    character_a_id: r.character_a_id,
+    character_b_id: r.character_b_id,
+    label: r.label,
+    established_page: r.established_page,
+    semantics: r.semantics ?? null,
+  };
+}
+
+const SNAPSHOT_SQL = `jsonb_build_object('character_a_id', character_a_id, 'character_b_id', character_b_id,
+  'label', label, 'established_page', established_page, 'semantics', semantics)`;
+
+export function passedReviewKeys(records: ReviewRecordRow[], data?: ResolvedBookData): Set<string> {
   const keys = new Set<string>();
   for (const r of records) {
     const applicable = APPLICABLE_CRITERIA[r.target_type];
     const passed = applicable.every((c) => r[c] === true);
-    if (passed) keys.add(reviewKey(r.target_type, r.target_id));
+    const relationship =
+      r.target_type === 'relationship'
+        ? data?.relationships.find((item) => item.id === r.target_id)
+        : undefined;
+    const snapshotMatches =
+      !relationship?.semantics ||
+      isDeepStrictEqual(r.relationship_snapshot, relationshipSnapshot(relationship));
+    if (passed && snapshotMatches) keys.add(reviewKey(r.target_type, r.target_id));
   }
   return keys;
 }
@@ -107,10 +132,17 @@ export function buildReviewSheetRows(
     target_type: ReviewTargetType,
     target_id: string,
     page_ref: number | null,
-    content_preview: string
+    content_preview: string,
+    relationship_snapshot?: Record<string, unknown>
   ): void => {
     if (alreadyReviewed.has(reviewKey(target_type, target_id))) return;
-    rows.push({ target_type, target_id, page_ref, content_preview });
+    rows.push({
+      target_type,
+      target_id,
+      page_ref,
+      content_preview,
+      ...(relationship_snapshot ? { relationship_snapshot } : {}),
+    });
   };
 
   for (const cs of data.chapter_summaries) {
@@ -136,7 +168,17 @@ export function buildReviewSheetRows(
   for (const r of data.relationships) {
     const a = nameById.get(r.character_a_id) ?? r.character_a_id;
     const b = nameById.get(r.character_b_id) ?? r.character_b_id;
-    push('relationship', r.id, r.established_page, `${a} - ${b}: ${r.label}`);
+    const semantics = r.semantics;
+    const detail = semantics
+      ? ` | ${semantics.direction} | ${semantics.kind}/${semantics.relation_key} | ${semantics.assertion_status}${semantics.attribution ? ` (${semantics.attribution})` : ''} | ${semantics.temporal_scope}/${semantics.state} | ${semantics.summary} | p.${semantics.evidence.source_page}: ${semantics.evidence.quote}${semantics.change_evidence ? ` | change p.${semantics.change_evidence.source_page}: ${semantics.change_evidence.quote}` : ''}`
+      : ' | legacy-unverified';
+    push(
+      'relationship',
+      r.id,
+      r.established_page,
+      `${a} - ${b}: ${r.label}${detail}`,
+      r.semantics ? relationshipSnapshot(r) : undefined
+    );
   }
 
   for (const t of data.terms) {
@@ -154,7 +196,12 @@ export function buildReviewSheetRows(
 }
 
 const FIXED_COLUMNS = ['target_type', 'target_id', 'page_ref', 'content_preview'] as const;
-const TAIL_COLUMNS = ['corrected_content', 'correction_note', 'reviewer'] as const;
+const TAIL_COLUMNS = [
+  'corrected_content',
+  'correction_note',
+  'reviewer',
+  'relationship_snapshot',
+] as const;
 export const REVIEW_SHEET_COLUMNS = [...FIXED_COLUMNS, ...ALL_CRITERIA, ...TAIL_COLUMNS];
 
 function csvEscape(value: string): string {
@@ -178,6 +225,7 @@ export function toReviewSheetCsv(rows: ReviewSheetRow[]): string {
       '',
       '',
       '',
+      row.relationship_snapshot ? JSON.stringify(row.relationship_snapshot) : '',
     ];
     lines.push(fields.map(csvEscape).join(','));
   }
@@ -242,6 +290,7 @@ export interface FilledReviewRow {
   corrected_content: string | null;
   correction_note: string | null;
   reviewer: string;
+  relationship_snapshot?: Record<string, unknown>;
 }
 
 function parseBooleanCell(value: string, context: string): boolean {
@@ -260,7 +309,11 @@ function parseBooleanCell(value: string, context: string): boolean {
 export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
   const table = parseCsv(csvText);
   const [header, ...dataRows] = table;
-  if (!header || REVIEW_SHEET_COLUMNS.some((col, i) => header[i] !== col)) {
+  const expectedColumns =
+    header?.length === REVIEW_SHEET_COLUMNS.length - 1
+      ? REVIEW_SHEET_COLUMNS.slice(0, -1)
+      : REVIEW_SHEET_COLUMNS;
+  if (!header || expectedColumns.some((col, i) => header[i] !== col)) {
     throw new Error(
       '검수 시트 헤더가 예상 컬럼과 다름 — toReviewSheetCsv로 생성된 파일인지 확인할 것'
     );
@@ -293,6 +346,14 @@ export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
       corrected_content: record.corrected_content.trim() || null,
       correction_note: record.correction_note.trim() || null,
       reviewer,
+      ...(record.relationship_snapshot.trim()
+        ? {
+            relationship_snapshot: JSON.parse(record.relationship_snapshot) as Record<
+              string,
+              unknown
+            >,
+          }
+        : {}),
     };
   });
 }
@@ -313,6 +374,11 @@ export async function applyCorrection(
   target_id: string,
   correctedContent: string
 ): Promise<void> {
+  // R12: any corrected public content must pass publication review again.
+  await client.query(
+    "UPDATE books SET ssabi_ready = false, publish_status = 'review' WHERE book_id = $1 AND (ssabi_ready OR publish_status = 'published')",
+    [bookId]
+  );
   switch (target_type) {
     case 'chapter_summary':
       await client.query(
@@ -343,11 +409,10 @@ export async function applyCorrection(
       ]);
       return;
     case 'relationship':
-      await client.query('UPDATE relationships SET label = $1 WHERE book_id = $2 AND id = $3', [
-        correctedContent,
-        bookId,
-        target_id,
-      ]);
+      await client.query(
+        'UPDATE relationships SET label = $1 WHERE book_id = $2 AND id = $3 AND semantics IS NULL',
+        [correctedContent, bookId, target_id]
+      );
       return;
     case 'term':
       await client.query('UPDATE terms SET definition = $1 WHERE book_id = $2 AND id = $3', [
@@ -385,6 +450,27 @@ export async function applyReviewJudgments(
   rows: FilledReviewRow[]
 ): Promise<void> {
   for (const row of rows) {
+    // FR-ADM-005: a label-only approval cannot approve changed semantic content.
+    // Caller uses a transaction; lock keeps this snapshot valid through the approval write.
+    if (row.target_type === 'relationship') {
+      const current = (await client.query(
+        `SELECT semantics, ${SNAPSHOT_SQL} AS relationship_snapshot FROM relationships WHERE book_id = $1 AND id = $2 FOR UPDATE`,
+        [bookId, row.target_id]
+      )) as { rows: { semantics: unknown; relationship_snapshot: Record<string, unknown> }[] };
+      if (current.rows[0]?.semantics) {
+        if (
+          !row.relationship_snapshot ||
+          !isDeepStrictEqual(current.rows[0].relationship_snapshot, row.relationship_snapshot)
+        )
+          throw new Error(
+            'Relationship content changed or stale semantic review snapshot missing; export and review again'
+          );
+        if (row.corrected_content)
+          throw new Error(
+            'Semantic relationship corrections require a reviewed candidate with updated evidence; a label-only correction is insufficient'
+          );
+      }
+    }
     if (row.corrected_content) {
       await applyCorrection(client, bookId, row.target_type, row.target_id, row.corrected_content);
     }
@@ -392,12 +478,12 @@ export async function applyReviewJudgments(
     await client.query(
       `INSERT INTO review_records
          (id, book_id, target_type, target_id, hallucination_ok, alias_merge_ok, page_boundary_ok,
-          recap_continuity_ok, info_separation_ok, intro_tone_ok, spoiler_free_ok, correction_note, reviewer)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          recap_continuity_ok, info_separation_ok, intro_tone_ok, spoiler_free_ok, correction_note, reviewer, relationship_snapshot)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb)
        ON CONFLICT (book_id, target_type, target_id) DO UPDATE SET
          hallucination_ok = $5, alias_merge_ok = $6, page_boundary_ok = $7, recap_continuity_ok = $8,
          info_separation_ok = $9, intro_tone_ok = $10, spoiler_free_ok = $11, correction_note = $12,
-         reviewer = $13, reviewed_at = now()`,
+         reviewer = $13, relationship_snapshot = $14::jsonb, reviewed_at = now()`,
       [
         uuidv4(),
         bookId,
@@ -412,6 +498,7 @@ export async function applyReviewJudgments(
         row.criteria.spoiler_free_ok ?? null,
         row.correction_note,
         row.reviewer,
+        row.relationship_snapshot ? JSON.stringify(row.relationship_snapshot) : null,
       ]
     );
   }
@@ -432,7 +519,9 @@ interface TargetListRow {
   target_id: string;
 }
 
-type ReviewJoinRow = TargetListRow & Partial<Record<ReviewCriterion, boolean | null>>;
+type ReviewJoinRow = TargetListRow & { snapshot_current?: boolean } & Partial<
+    Record<ReviewCriterion, boolean | null>
+  >;
 
 /** 대상 종류 하나에 대해 review_records를 LEFT JOIN해 미판정·판정 불완전 행을 찾는다 */
 async function findIncomplete(
@@ -443,8 +532,12 @@ async function findIncomplete(
 ): Promise<MissingReviewItem[]> {
   const applicable = APPLICABLE_CRITERIA[targetType];
   const criteriaSelect = applicable.map((c) => `rr.${c}`).join(', ');
+  const snapshotSelect =
+    targetType === 'relationship'
+      ? ', (sub.semantics IS NULL OR rr.relationship_snapshot = sub.relationship_snapshot) AS snapshot_current'
+      : '';
   const sql = `
-    SELECT sub.target_id AS target_id${applicable.length ? ', ' + criteriaSelect : ''}
+    SELECT sub.target_id AS target_id${applicable.length ? ', ' + criteriaSelect : ''}${snapshotSelect}
     FROM (${listSql}) sub
     LEFT JOIN review_records rr
       ON rr.book_id = $1 AND rr.target_type = '${targetType}' AND rr.target_id = sub.target_id
@@ -454,6 +547,12 @@ async function findIncomplete(
   const missing: MissingReviewItem[] = [];
   for (const row of result.rows) {
     const missingCriteria = applicable.filter((c) => row[c] !== true);
+    if (
+      targetType === 'relationship' &&
+      (row.snapshot_current === false || row.snapshot_current === null) &&
+      !missingCriteria.includes('hallucination_ok')
+    )
+      missingCriteria.push('hallucination_ok');
     if (missingCriteria.length > 0) {
       missing.push({
         target_type: targetType,
@@ -509,7 +608,7 @@ export async function checkReviewComplete(
       client,
       bookId,
       'relationship',
-      'SELECT id AS target_id FROM relationships WHERE book_id = $1'
+      `SELECT id AS target_id, semantics, ${SNAPSHOT_SQL} AS relationship_snapshot FROM relationships WHERE book_id = $1`
     ))
   );
   missing.push(

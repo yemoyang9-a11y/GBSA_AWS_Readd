@@ -27,7 +27,17 @@ async function main(): Promise<void> {
   const rows = parseFilledReviewSheet(csv);
   const corrections = rows.filter((r) => r.corrected_content !== null).length;
 
-  await applyReviewJudgments(pool, BOOK_ID, rows);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await applyReviewJudgments(client, BOOK_ID, rows);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 
   console.log(
     `[OK] 검수 판정 ${rows.length}건 기록, 수정 반영 ${corrections}건 (NFR-AI-012) — ${sheetPath}`

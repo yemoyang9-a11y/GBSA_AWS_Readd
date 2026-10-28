@@ -15,6 +15,7 @@ import type {
   CharacterDetail,
 } from '../../../shared/types';
 import type { SsabiRepository } from '../repository';
+import { latestRelationshipVersions, relationshipToEdge } from '../relationship-versions';
 
 /**
  * Fixture 데이터
@@ -42,25 +43,27 @@ export class FakeSsabiRepository implements SsabiRepository {
     );
   }
 
-  async findLatestRelationships(bookId: string, cutoff: number): Promise<Relationship[]> {
-    // FR-SPL-002 🚦: 확립 페이지 <= cutoff
-    const filtered = this.fixture.relationships.filter(
-      (r) => r.book_id === bookId && r.established_page <= cutoff
+  private boundedRelationships(bookId: string, cutoff: number): Relationship[] {
+    const ids = new Set(
+      this.fixture.characters
+        .filter((c) => c.book_id === bookId && c.first_appearance_page <= cutoff)
+        .map((c) => c.id)
     );
+    return this.fixture.relationships.filter(
+      (r) =>
+        r.book_id === bookId &&
+        r.established_page <= cutoff &&
+        ids.has(r.character_a_id) &&
+        ids.has(r.character_b_id) &&
+        (!r.semantics ||
+          (r.semantics.evidence.source_page <= r.established_page &&
+            (!r.semantics.change_evidence ||
+              r.semantics.change_evidence.source_page <= r.established_page)))
+    );
+  }
 
-    // A6: 같은 쌍의 최신 라벨만 (established_page가 가장 큰 것)
-    const latestMap = new Map<string, Relationship>();
-
-    for (const rel of filtered) {
-      const key = `${rel.character_a_id}:${rel.character_b_id}`;
-      const existing = latestMap.get(key);
-
-      if (!existing || rel.established_page > existing.established_page) {
-        latestMap.set(key, rel);
-      }
-    }
-
-    return Array.from(latestMap.values());
+  async findLatestRelationships(bookId: string, cutoff: number): Promise<Relationship[]> {
+    return latestRelationshipVersions(this.boundedRelationships(bookId, cutoff));
   }
 
   async findAliases(bookId: string, cutoff: number): Promise<Alias[]> {
@@ -117,7 +120,8 @@ export class FakeSsabiRepository implements SsabiRepository {
   async getGraph(bookId: string, cutoff: number): Promise<RelationshipGraph> {
     // FR-SPL-002 🚦: 모든 구성 요소가 cutoff 적용
     const characters = await this.findCharacters(bookId, cutoff);
-    const relationships = await this.findLatestRelationships(bookId, cutoff);
+    const history = this.boundedRelationships(bookId, cutoff);
+    const relationships = latestRelationshipVersions(history);
     const aliases = await this.findAliases(bookId, cutoff);
 
     // 별칭을 인물별로 그룹화
@@ -134,17 +138,14 @@ export class FakeSsabiRepository implements SsabiRepository {
       name: c.name,
       first_appearance_page: c.first_appearance_page,
       aliases: aliasMap.get(c.id) || [],
+      alias_details: aliases
+        .filter((a) => a.character_id === c.id)
+        .map((a) => ({ alias: a.alias, first_appearance_page: a.first_appearance_page })),
     }));
 
     // GraphEdge 생성
-    const edges = relationships.map((r) => ({
-      source: r.character_a_id,
-      target: r.character_b_id,
-      label: r.label,
-      established_page: r.established_page,
-    }));
-
-    return { nodes, edges };
+    const edges = relationships.map(relationshipToEdge);
+    return { nodes, edges, history: history.map(relationshipToEdge), applied_cutoff: cutoff };
   }
 
   async getCharacterDetail(

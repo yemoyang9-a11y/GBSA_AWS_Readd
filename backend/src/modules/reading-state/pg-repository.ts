@@ -291,6 +291,15 @@ export function createPgSessionRecapCacheRepository(db: QueryClient): SessionRec
            recap_text = $4, created_at = now(), expires_at = $5`,
         [deviceId, bookId, cutoff, recapText, expiresAt]
       );
+      // FR-DAT-010 · R8 — 만료 행은 findCached가 걸러낼 뿐 지워지지 않아 쌓였다. 적재 시
+      // 같은 (device_id, book_id)의 만료 행을 함께 정리한다. 방금 쓴 행은 expires_at이
+      // 미래라 남는다. cutoff_page로 좁히지 않는다 — 다른 K의 만료 행도 대상이고, 이
+      // DELETE는 아무 행도 반환하지 않아 기준점 초과 노출 경로가 아니다(FR-SPL-002 🚦).
+      await db.query(
+        `DELETE FROM session_recap_cache
+         WHERE device_id = $1 AND book_id = $2 AND expires_at <= now()`,
+        [deviceId, bookId]
+      );
     },
   };
 }

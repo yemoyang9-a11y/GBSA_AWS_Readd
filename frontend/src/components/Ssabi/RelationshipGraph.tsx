@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalLayer } from '../../hooks/useModalLayer';
 import type { GraphResponse } from '../../types';
+import { graphEdgeLabel, makeEdgePaths } from './graphEdges';
 import {
   boundingBox,
   computeDegrees,
@@ -96,16 +98,30 @@ export default function RelationshipGraph({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const markerId = `relationship-arrow-${useId().replace(/:/g, '')}`;
   const wrapRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ pointers: Map<number, Point>; last: Point | null; pinchDist: number | null; moved: number }>({
+  const canvasRef = useRef<SVGSVGElement>(null);
+  const fullscreenButtonRef = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef<{
+    pointers: Map<number, Point>;
+    last: Point | null;
+    pinchDist: number | null;
+    moved: number;
+  }>({
     pointers: new Map(),
     last: null,
     pinchDist: null,
     moved: 0,
   });
 
-  const degree = useMemo(() => computeDegrees(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
-  const positions = useMemo(() => forceLayout(graph.nodes, graph.edges), [graph.nodes, graph.edges]);
+  const degree = useMemo(
+    () => computeDegrees(graph.nodes, graph.edges),
+    [graph.nodes, graph.edges]
+  );
+  const positions = useMemo(
+    () => forceLayout(graph.nodes, graph.edges),
+    [graph.nodes, graph.edges]
+  );
   const base = useMemo(() => boundingBox(positions), [positions]);
 
   const [viewBox, setViewBox] = useState<ViewBox>(() => ({
@@ -146,9 +162,12 @@ export default function RelationshipGraph({
     viewBoxAnimRef.current = requestAnimationFrame(tick);
   }
 
-  useEffect(() => () => {
-    if (viewBoxAnimRef.current != null) cancelAnimationFrame(viewBoxAnimRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (viewBoxAnimRef.current != null) cancelAnimationFrame(viewBoxAnimRef.current);
+    },
+    []
+  );
 
   // 그래프가 바뀌면(되감기·페이지 진행) 그 그래프의 배치로 다시 fit — 이전 줌 위치를
   // 새 좌표계에 그대로 들고 있으면 화면 밖을 보게 된다.
@@ -167,14 +186,22 @@ export default function RelationshipGraph({
   // 동시에 만족하는 최대 크기"(contain)를 안정적으로 계산해주지 않아(요소가 아니라
   // 이미지/비디오에만 있는 동작) 직접 계산한다.
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fullscreenSize, setFullscreenSize] = useState<{ width: number; height: number } | null>(null);
+  useModalLayer({
+    active: isFullscreen,
+    dialogRef: wrapRef,
+    returnFocusRef: fullscreenButtonRef,
+    onClose: () => setIsFullscreen(false),
+  });
+  const [fullscreenSize, setFullscreenSize] = useState<{ width: number; height: number } | null>(
+    null
+  );
 
   useEffect(() => {
     if (!isFullscreen) return;
     function computeSize() {
       const marginPx = 32;
-      const maxW = window.innerWidth - marginPx * 2;
-      const maxH = window.innerHeight - marginPx * 2;
+      const maxW = (window.visualViewport?.width ?? window.innerWidth) - marginPx * 2;
+      const maxH = (window.visualViewport?.height ?? window.innerHeight) - marginPx * 2;
       const ratio = base.width / base.height;
       let width = maxW;
       let height = width / ratio;
@@ -186,18 +213,12 @@ export default function RelationshipGraph({
     }
     computeSize();
     window.addEventListener('resize', computeSize);
-    return () => window.removeEventListener('resize', computeSize);
+    window.visualViewport?.addEventListener('resize', computeSize);
+    return () => {
+      window.removeEventListener('resize', computeSize);
+      window.visualViewport?.removeEventListener('resize', computeSize);
+    };
   }, [isFullscreen, base]);
-
-  // BookInfoModal.tsx 와 같은 관례 — Esc 로도 닫을 수 있게 한다
-  useEffect(() => {
-    if (!isFullscreen) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsFullscreen(false);
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isFullscreen]);
 
   const validSelectedId = selectedId && degree.has(selectedId) ? selectedId : null;
 
@@ -243,7 +264,10 @@ export default function RelationshipGraph({
     // 큰 쪽으로 잡으면, 작은 쪽 축은 그 비율로 다시 계산된 height가 실제로 필요한 반경보다
     // 작아질 수 있다 — width를 두 축 모두를 여유 있게 덮는 값으로 따로 계산한다.
     const rawWidth = Math.max(maxX - minX, (maxY - minY) / aspect);
-    const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
+    const width = Math.max(
+      base.width * MIN_ZOOM_RATIO,
+      Math.min(base.width * MAX_ZOOM_RATIO, rawWidth)
+    );
     const height = width * aspect;
     animateViewBoxTo(clampViewBox({ x: cx - width / 2, y: cy - height / 2, width, height }, base));
   }, [validSelectedId, graph.nodes, positions, neighborIds, base]);
@@ -255,7 +279,7 @@ export default function RelationshipGraph({
   // 실제보다 작게 계산됐다(2026-08-25, "가로로 늘리면 글씨가 작아진다" 피드백) — 두 축 모두
   // 계산해 더 큰 쪽(더 좁게 맞아야 하는 쪽)을 쓴다.
   const unit = () => {
-    const el = wrapRef.current;
+    const el = canvasRef.current;
     const widthPx = el?.clientWidth || 1;
     const heightPx = el?.clientHeight || 1;
     return Math.max(viewBox.width / widthPx, viewBox.height / heightPx);
@@ -264,7 +288,7 @@ export default function RelationshipGraph({
   // 100%(fit) 상태 기준 k — 노드 원을 이 값 대비로 스케일해 "글자처럼" 화면상 크기를
   // 고정한다(아래 nodeScale 참고).
   const unit0 = () => {
-    const el = wrapRef.current;
+    const el = canvasRef.current;
     const widthPx = el?.clientWidth || 1;
     const heightPx = el?.clientHeight || 1;
     return Math.max(base.width / widthPx, base.height / heightPx);
@@ -276,13 +300,16 @@ export default function RelationshipGraph({
    * 이미 부드럽다) 즉시 setViewBox로 반영한다.
    */
   function zoomAt(clientX: number, clientY: number, factor: number, animated = false) {
-    const rect = wrapRef.current?.getBoundingClientRect();
+    const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const computeNext = (vb: ViewBox): ViewBox => {
       const ux = vb.x + ((clientX - rect.left) / rect.width) * vb.width;
       const uy = vb.y + ((clientY - rect.top) / rect.height) * vb.height;
       const rawWidth = vb.width / factor;
-      const width = Math.max(base.width * MIN_ZOOM_RATIO, Math.min(base.width * MAX_ZOOM_RATIO, rawWidth));
+      const width = Math.max(
+        base.width * MIN_ZOOM_RATIO,
+        Math.min(base.width * MAX_ZOOM_RATIO, rawWidth)
+      );
       const k = width / vb.width;
       return clampViewBox(
         { x: ux - (ux - vb.x) * k, y: uy - (uy - vb.y) * k, width, height: vb.height * k },
@@ -300,7 +327,7 @@ export default function RelationshipGraph({
   // 등록해서 그 안에서 preventDefault()를 불러도 실제로는 막히지 않는다(콘솔 경고만
   // 뜨고 페이지가 같이 스크롤된다). 줌 도중 배경 스크롤을 막으려면 이 방법뿐이다.
   useEffect(() => {
-    const el = wrapRef.current;
+    const el = canvasRef.current;
     if (!el) return;
     function handleWheel(event: WheelEvent) {
       event.preventDefault();
@@ -309,7 +336,7 @@ export default function RelationshipGraph({
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base]);
+  }, [base, isFullscreen]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if ((event.target as HTMLElement).closest('[data-graph-zoom-control]')) return;
@@ -344,7 +371,7 @@ export default function RelationshipGraph({
       }
 
       if (drag.pointers.size === 1 && drag.last) {
-        const rect = wrapRef.current?.getBoundingClientRect();
+        const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) return;
         const dx = ((event.clientX - drag.last.x) / rect.width) * viewBox.width;
         const dy = ((event.clientY - drag.last.y) / rect.height) * viewBox.height;
@@ -393,7 +420,7 @@ export default function RelationshipGraph({
   // 예전엔 window의 resize 이벤트만 들었다. 그런데 싸비 패널 폭 조절(usePanelResize,
   // Reader.tsx)은 브라우저 창 크기가 아니라 이 컴포넌트를 감싼 <aside>의 CSS 폭만 바꾸는
   // 것이라 window resize가 아예 안 일어난다 — 드래그 중엔 k가 갱신될 계기가 없어서, 다음
-  // 렌더에서 wrapRef.current.clientWidth를 읽어도 그 렌더 자신이 만든 DOM 변화가 아직
+  // 렌더에서 canvasRef.current.clientWidth를 읽어도 그 렌더 자신이 만든 DOM 변화가 아직
   // 반영되기 전 값(한 스텝 뒤처진 값)을 읽게 된다. 그 결과 그래프 바깥 상자는 순수 CSS
   // (aspect-ratio)로 즉시 폭을 따라가는데, k로 계산하는 글자·선 굵기는 뒤늦게 따라오는
   // 것처럼 보였다(2026-08-25, 사용자 제보 — "관계도 창이 혼자 조절된 다음 전체 창 조절은
@@ -401,14 +428,14 @@ export default function RelationshipGraph({
   // 이 컨테이너 자체의 실제 렌더 크기가 바뀐 뒤에 콜백이 온다 — 그 시점엔 clientWidth가
   // 이미 새 값이라 뒤처지지 않는다.
   useEffect(() => {
-    const el = wrapRef.current;
+    const el = canvasRef.current;
     if (!el) return;
     const observer = new ResizeObserver(() => {
       setViewBox((vb) => ({ ...vb }));
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [isFullscreen]);
 
   const k = unit();
   // 노드 원·글자는 출발선이 서로 반대다 — 원은 원래 아무 보정도 없어(유닛값 그대로)
@@ -428,6 +455,17 @@ export default function RelationshipGraph({
   const NODE_ZOOM_DAMPING = 0.5;
   const nodeScale = Math.pow(k / unit0(), NODE_ZOOM_DAMPING);
   const labelScale = 1 / nodeScale;
+  const edgePaths = useMemo(
+    () =>
+      makeEdgePaths(
+        graph.nodes,
+        graph.edges,
+        positions,
+        (id) => nodeRadius(degree.get(id) ?? 0) * nodeScale + 7 * k,
+        38 * k * labelScale
+      ),
+    [graph.nodes, graph.edges, positions, degree, nodeScale, k, labelScale]
+  );
 
   // 인물명 라벨 박스 — 겹치면 연결 수 적은 쪽을 숨긴다. 선택·인접 인물은 최우선.
   // 관계 라벨(아래)이 이 중 실제로 보이는 라벨과 안 겹치게 하려면 살아남은 박스
@@ -453,10 +491,7 @@ export default function RelationshipGraph({
     // k(줌 배율)가 바뀌면 라벨 크기가 바뀌어 충돌 여부도 바뀐다
   }, [graph.nodes, positions, degree, validSelectedId, neighborIds, k, nodeScale, labelScale]);
 
-  const nameLabels = useMemo(
-    () => new Set(nameLabelBoxes.map((b) => b.id)),
-    [nameLabelBoxes]
-  );
+  const nameLabels = useMemo(() => new Set(nameLabelBoxes.map((b) => b.id)), [nameLabelBoxes]);
 
   /**
    * 관계 라벨 — 선택된 인물과 닿은 간선에서만. 참고 시안(reader-map-graph.html
@@ -468,25 +503,21 @@ export default function RelationshipGraph({
    */
   const edgeLabels = useMemo(() => {
     if (!validSelectedId) return [];
-    const indexOf = new Map(graph.nodes.map((n, i) => [n.id, i]));
-    const candidates = graph.edges
-      .filter((edge) => edge.source === validSelectedId || edge.target === validSelectedId)
-      .map((edge) => {
-        const fromSelected = edge.source === validSelectedId;
-        const nearIdx = indexOf.get(fromSelected ? edge.source : edge.target);
-        const farIdx = indexOf.get(fromSelected ? edge.target : edge.source);
-        if (nearIdx === undefined || farIdx === undefined) return null;
-        const near = positions[nearIdx];
-        const far = positions[farIdx];
-        const dx = far.x - near.x;
-        const dy = far.y - near.y;
-        const len = Math.hypot(dx, dy) || 1;
-        const width = estimateTextWidth(edge.label, EDGE_LABEL_CHAR_PX * k * labelScale) + 10 * k;
+    const candidates = edgePaths
+      .filter(({ edge }) => edge.source === validSelectedId || edge.target === validSelectedId)
+      .map(({ edge, key, label: anchor, length }) => {
+        const label = graphEdgeLabel(edge);
+        const width = estimateTextWidth(label, EDGE_LABEL_CHAR_PX * k * labelScale) + 10 * k;
         const height = (EDGE_LABEL_FONT_PX * labelScale + 7) * k;
-        const dist = Math.max(26 * k, Math.min(len * 0.62, len - 22 * k));
-        const cx = near.x + (dx / len) * dist;
-        const cy = near.y + (dy / len) * dist;
-        return { key: `${edge.source}-${edge.target}`, label: edge.label, cx, cy, width, height, len };
+        return {
+          key,
+          label,
+          cx: anchor.x,
+          cy: anchor.y,
+          width,
+          height,
+          len: length,
+        };
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
 
@@ -509,7 +540,7 @@ export default function RelationshipGraph({
     }));
     const kept = new Set(pickNonOverlapping([...blockerBoxes, ...edgeBoxes]).map((b) => b.key));
     return candidates.filter((c) => kept.has(c.key));
-  }, [validSelectedId, graph.nodes, graph.edges, positions, k, labelScale, nameLabelBoxes]);
+  }, [validSelectedId, edgePaths, k, labelScale, nameLabelBoxes, neighborIds]);
 
   const graphBox = (
     <div
@@ -524,8 +555,8 @@ export default function RelationshipGraph({
       // base의 가로세로비는 그대로 유지된 채 크기만 화면에 맞춰 커진다.
       className={
         isFullscreen
-          ? 'relative touch-none overflow-hidden rounded-xl border border-brief-rule bg-white'
-          : 'relative w-full min-h-[220px] max-h-[420px] touch-none overflow-hidden rounded-xl border border-brief-rule bg-white'
+          ? 'relative flex flex-col touch-none rounded-xl border border-brief-rule bg-white'
+          : 'relative flex w-full min-h-[220px] max-h-[420px] flex-col touch-none rounded-xl border border-brief-rule bg-white'
       }
       style={
         isFullscreen && fullscreenSize
@@ -538,31 +569,55 @@ export default function RelationshipGraph({
       // 컨테이너를 넘어 배경까지 버블링하지 않게 여기서 막는다.
       onClick={isFullscreen ? (event) => event.stopPropagation() : undefined}
       role={isFullscreen ? 'dialog' : undefined}
+      tabIndex={isFullscreen ? -1 : undefined}
       aria-modal={isFullscreen ? true : undefined}
       aria-label={isFullscreen ? '인물 관계도 전체화면' : undefined}
     >
       <svg
+        ref={canvasRef}
+        data-graph-canvas
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-        className="h-full w-full cursor-grab active:cursor-grabbing"
+        className="min-h-0 w-full flex-1 cursor-grab select-none active:cursor-grabbing"
         onClick={(event) => {
           if (wasDragged()) return;
           if (!(event.target as SVGElement).closest('[data-node-id]')) onSelect(null);
         }}
       >
+        <defs>
+          <marker
+            id={markerId}
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="5"
+            markerHeight="5"
+            orient="auto-start-reverse"
+            markerUnits="strokeWidth"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" className="fill-brief-accent" />
+          </marker>
+        </defs>
         <g>
-          {graph.edges.map((edge) => {
-            const sIdx = graph.nodes.findIndex((n) => n.id === edge.source);
-            const tIdx = graph.nodes.findIndex((n) => n.id === edge.target);
-            if (sIdx < 0 || tIdx < 0) return null;
+          {edgePaths.map(({ edge, key, path }) => {
             const touches = validSelectedId === edge.source || validSelectedId === edge.target;
             const dimmed = validSelectedId !== null && !touches;
+            const direction = edge.semantics?.direction;
+            const qualified =
+              edge.semantics &&
+              (edge.semantics.assertion_status !== 'fact' || edge.semantics.state === 'ended');
             return (
-              <line
-                key={`${edge.source}-${edge.target}`}
-                x1={positions[sIdx].x}
-                y1={positions[sIdx].y}
-                x2={positions[tIdx].x}
-                y2={positions[tIdx].y}
+              <path
+                key={key}
+                data-edge-id={edge.id ?? key}
+                d={path}
+                fill="none"
+                markerStart={
+                  direction === 'b_to_a' || direction === 'mutual' ? `url(#${markerId})` : undefined
+                }
+                markerEnd={
+                  direction === 'a_to_b' || direction === 'mutual' ? `url(#${markerId})` : undefined
+                }
+                strokeDasharray={qualified ? `${5 * k} ${4 * k}` : undefined}
                 className={touches ? 'stroke-brief-accent' : 'stroke-brief-rule'}
                 strokeWidth={(touches ? 2.4 : 1.2) * k}
                 // 실데이터(간선 54개, 핵심 인물군에 몰림)로 확인: 선택 전 기본 상태에서
@@ -571,7 +626,12 @@ export default function RelationshipGraph({
                 // 낮춰 겹치는 선끼리 서로 잡아먹는 인상을 줄인다 — 선택하면 그대로 1로
                 // 돌아온다(반대편 dimmed 분기는 원래도 0.15).
                 opacity={dimmed ? 0.15 : validSelectedId ? 1 : 0.55}
-              />
+              >
+                <title>
+                  {graphEdgeLabel(edge)}
+                  {edge.semantics ? '' : ' · 방향 미검증'}
+                </title>
+              </path>
             );
           })}
         </g>
@@ -664,68 +724,94 @@ export default function RelationshipGraph({
         </g>
       </svg>
 
-      <div className="absolute right-2 top-2 flex flex-col gap-1.5" data-graph-zoom-control>
-        <button
-          type="button"
-          aria-label="확대"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-          onClick={() => {
-            const rect = wrapRef.current?.getBoundingClientRect();
-            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35, true);
-          }}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          aria-label="축소"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-          onClick={() => {
-            const rect = wrapRef.current?.getBoundingClientRect();
-            if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35, true);
-          }}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          aria-label="전체 보기"
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-[11px] text-brief-muted"
-          onClick={fitView}
-        >
-          ⤢
-        </button>
-      </div>
-
-      {/* 시안(reader-map-graph.html)의 .scalebar 그대로 — 확대율 표시. base/viewBox 비율만 쓰므로 새 데이터 없이 되는 순수 표시값 */}
-      <span className="absolute bottom-2 left-2 rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
-        {Math.round((base.width / viewBox.width) * 100)}%
-      </span>
-
-      <div className="absolute bottom-2 right-2" data-graph-zoom-control>
-        <button
-          type="button"
-          aria-label={isFullscreen ? '전체화면 종료' : '전체화면'}
-          aria-pressed={isFullscreen}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
-          onClick={() => setIsFullscreen((v) => !v)}
-        >
-          {isFullscreen ? (
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 3v3a2 2 0 0 1-2 2H3" />
-              <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-              <path d="M3 16h3a2 2 0 0 1 2 2v3" />
-              <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
-            </svg>
-          ) : (
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-            </svg>
-          )}
-        </button>
+      {/* NFR-USE-006: 조작 버튼은 SVG 밖의 전용 행에 둔다. 두 인물만 펼쳐져도
+          인물·이름과 겹치지 않으며, 확대·이동 좌표는 canvasRef의 실제 영역을 쓴다. */}
+      <div
+        className="flex shrink-0 items-center justify-between gap-2 border-t border-brief-rule px-2 py-2"
+        role="toolbar"
+        aria-label="관계도 조작"
+        data-graph-zoom-control
+      >
+        <span className="rounded-pill border border-brief-rule bg-white/90 px-2 py-0.5 text-[10px] text-brief-muted">
+          {Math.round((base.width / viewBox.width) * 100)}%
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            aria-label="확대"
+            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+            onClick={() => {
+              const rect = canvasRef.current?.getBoundingClientRect();
+              if (rect) zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.35, true);
+            }}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            aria-label="축소"
+            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+            onClick={() => {
+              const rect = canvasRef.current?.getBoundingClientRect();
+              if (rect)
+                zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.35, true);
+            }}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            aria-label="전체 보기"
+            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-[11px] text-brief-muted"
+            onClick={fitView}
+          >
+            ⤢
+          </button>
+          <button
+            type="button"
+            ref={fullscreenButtonRef}
+            aria-label={isFullscreen ? '전체화면 종료' : '전체화면'}
+            aria-pressed={isFullscreen}
+            className="flex h-11 w-11 lg:h-7 lg:w-7 items-center justify-center rounded-full border border-brief-rule bg-white/95 text-brief-muted"
+            onClick={() => setIsFullscreen((v) => !v)}
+          >
+            {isFullscreen ? (
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+              </svg>
+            ) : (
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -744,7 +830,7 @@ export default function RelationshipGraph({
     <div
       data-testid="relationship-graph-fullscreen-overlay"
       onClick={() => setIsFullscreen(false)}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+      className="viewport-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
     >
       {graphBox}
     </div>,

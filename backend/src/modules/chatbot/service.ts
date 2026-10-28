@@ -24,8 +24,24 @@ export const AMO_INTRO_MESSAGE =
 
 function isAskingAboutAmo(query: string): boolean {
   // Only a pure introduction intent may skip retrieval; mixed story questions continue normally.
-  return /^(?:아모(?:가\s*뭐야|에\s*대해\s*알려줘|야)|너\s*이름이\s*아모야)[?!.]*$/u.test(
-    query.trim()
+  const text = query
+    .trim()
+    .replace(/[?？!！.。]+$/u, '')
+    .trim();
+  if (/^(?:아모(?:가\s*뭐야|에\s*대해\s*알려줘|야)|너\s*이름이\s*아모야)$/u.test(text)) return true;
+  if (/^(?:너(?:는)?|넌|당신(?:은)?)\s*누구(?:야|니|세요)$/u.test(text)) return true;
+  if (
+    /^(?:너(?:는|의)?|넌|네|니|당신(?:은|의)?)\s*이름(?:이|은)?\s*(?:뭐야|뭐니|뭐예요|무엇인가요)$/u.test(
+      text
+    )
+  )
+    return true;
+
+  // A bare name question may refer to a story character; only bypass retrieval when addressed to Amo.
+  const addressed = text.replace(/^아모야[,\s]+|[,\s]+아모야$/gu, '').trim();
+  return (
+    addressed !== text &&
+    /^(?:이름(?:이|은)?\s*(?:뭐야|뭐니|뭐예요|무엇인가요)|누구(?:야|니|세요))$/u.test(addressed)
   );
 }
 

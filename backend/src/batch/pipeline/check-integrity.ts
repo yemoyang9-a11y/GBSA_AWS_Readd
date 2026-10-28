@@ -8,10 +8,18 @@
  * 이 모듈은 값을 고치지 않는다 — 애매한 경우를 자동으로 병합·삭제하면 잘못된 결정이
  * 조용히 굳는다(CLAUDE.md 6장). 발견만 하고 사람에게 넘긴다.
  */
-import { AccumulatedCharacter, AccumulatedRelationship, AccumulatedTerm } from './accumulate';
+import {
+  AccumulatedCharacter,
+  AccumulatedRelationship,
+  AccumulatedTerm,
+  relationshipTrack,
+} from './accumulate';
 
 export interface ResolvedBookData {
   book_id: string;
+  provenance?: {
+    relationship_coverage?: { complete: boolean; source_page_count: number; chapter_nos: number[] };
+  };
   chapter_summaries: { chapter_no: number; title: string; summary: string }[];
   characters: AccumulatedCharacter[];
   relationships: AccumulatedRelationship[];
@@ -123,7 +131,7 @@ function checkRelationshipCharacterRefs(data: ResolvedBookData, issues: Integrit
 function checkRelationshipLabelConflicts(data: ResolvedBookData, issues: IntegrityIssue[]): void {
   const byPairPage = new Map<string, AccumulatedRelationship[]>();
   for (const r of data.relationships) {
-    const key = `${[r.character_a_id, r.character_b_id].sort().join('|')}@${r.established_page}`;
+    const key = `${relationshipTrack(r)}@${r.established_page}`;
     const list = byPairPage.get(key) ?? [];
     list.push(r);
     byPairPage.set(key, list);
