@@ -157,11 +157,25 @@ describe('OpenAI Responses adapter (mocked SDK, no network)', () => {
       role: 'user',
       content: [
         { type: 'input_text', text: 'part 1', prompt_cache_breakpoint: { mode: 'explicit' } },
-        { type: 'input_text', text: '\n[p.41]\npage', prompt_cache_breakpoint: { mode: 'explicit' } },
+        {
+          type: 'input_text',
+          text: '\n[p.41]\npage',
+          prompt_cache_breakpoint: { mode: 'explicit' },
+        },
       ],
     });
     expect(params.prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
   });
+
+  test.each([[[]], [['', '']], ['']])(
+    'A8-2: an empty context (%j) sends no context message and no cache options',
+    async (context) => {
+      await provider.call('test-model', 'tail', { context });
+      const params = create.mock.calls[0][0];
+      expect(params.input).toEqual([{ role: 'user', content: 'tail' }]);
+      expect(params.prompt_cache_options).toBeUndefined();
+    }
+  );
 
   test('NFR-OBS-004: cache writes are measured separately and reasoning is not double-counted', async () => {
     create.mockResolvedValue(

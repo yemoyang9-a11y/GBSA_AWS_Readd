@@ -143,6 +143,19 @@ function extractText(content: Anthropic.ContentBlock[]): string {
 }
 
 /**
+ * A8-2: 근거 조각을 그대로 이어 첫 user 메시지로, 그 뒤에 이력과 질문을 둔다.
+ * 조각은 구분 문자를 이미 담고 있다. 비어 있으면 빈 user 메시지를 보내지 않는다(API가 거절한다).
+ */
+function anthropicMessages(prompt: string, options: LLMCallOptions): Anthropic.MessageParam[] {
+  const context = [options.context ?? []].flat().join('');
+  return [
+    ...(context ? [{ role: 'user' as const, content: context }] : []),
+    ...(options.history ?? []),
+    { role: 'user', content: prompt },
+  ];
+}
+
+/**
  * LLM 호출 (동기)
  *
  * @param task - 작업 유형 (예: "recap", "chatbot", "generate_summary")
@@ -179,13 +192,7 @@ export async function call(
         max_tokens: options.maxTokens || 4096,
         ...effortConfig(options.effort),
         ...(options.system !== undefined ? { system: options.system } : {}),
-        messages: [
-          ...(options.context !== undefined
-            ? [{ role: 'user' as const, content: [options.context].flat().join('\n') }]
-            : []),
-          ...(options.history ?? []),
-          { role: 'user', content: prompt },
-        ],
+        messages: anthropicMessages(prompt, options),
       },
       options.signal ? { signal: options.signal } : undefined
     );
@@ -254,13 +261,7 @@ export async function* stream(
         max_tokens: options.maxTokens || 4096,
         ...effortConfig(options.effort),
         ...(options.system !== undefined ? { system: options.system } : {}),
-        messages: [
-          ...(options.context !== undefined
-            ? [{ role: 'user' as const, content: [options.context].flat().join('\n') }]
-            : []),
-          ...(options.history ?? []),
-          { role: 'user', content: prompt },
-        ],
+        messages: anthropicMessages(prompt, options),
       },
       options.signal ? { signal: options.signal } : undefined
     );

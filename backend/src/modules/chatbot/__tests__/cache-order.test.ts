@@ -2,7 +2,7 @@
  * A8-2 — 같은 근거를 공급자 접두 캐시가 맞도록 순서만 바꾼다.
  * 데이터 선택(FR-SPL-002 🚦, R4)은 그대로다. 여기서는 이미 K로 걸러진 레코드의 배치만 본다.
  */
-import { buildPrompt, buildStableContext, buildStableContextParts } from '../context-assembly';
+import { buildStableContext, buildStableContextParts } from '../context-assembly';
 import type { ChatbotContext } from '../../../shared/types';
 
 // 2장 진행 중(장 시작 p.18). K는 컨텍스트를 만든 쪽이 정한다 — 여기선 레코드만 다룬다.
@@ -76,15 +76,24 @@ function makeContext(currentPages: number[]): ChatbotContext {
 const lines = (text: string) => text.split('\n').filter((l) => l.trim() !== '');
 
 describe('A8-2 캐시 순서 — buildStableContext', () => {
-  test('FR-SPL-002: 순서만 바꾼다 — 기존 프롬프트와 레코드 줄이 정확히 같다(추가·누락 0건)', () => {
-    const ctx = makeContext([18, 19, 20, 21, 22, 23, 24, 25]);
-    const stable = lines(buildStableContext(ctx))
-      .filter((l) => !l.startsWith('## '))
-      .sort();
-    const legacy = lines(buildPrompt(ctx, ''))
-      .filter((l) => !l.startsWith('## '))
-      .sort();
-    expect(stable).toEqual(legacy);
+  test('FR-SPL-002: 배치만 바꾼다 — 입력 레코드가 정확히 한 번씩 렌더링된다(추가·누락 0건)', () => {
+    const all = lines(buildStableContext(makeContext([18, 19, 20, 21, 22, 23, 24, 25])));
+    for (const record of [
+      '- 정주사 (첫 등장: p.3)',
+      '- 초봉 (첫 등장: p.3)',
+      '- 승재 (첫 등장: p.20)',
+      '- 태수 (첫 등장: p.25)',
+      '- 정주사: 미두꾼 (p.5)',
+      '- 승재: 의사 지망생 (p.20)',
+      '- 정주사 - 초봉: 부녀 (확립: p.3)',
+      '- 승재 - 초봉: 호감 (확립: p.21)',
+      '- **미두**: 쌀 선물 투기 (p.4)',
+      '- 봉욕 (p.6): 미두장에서 망신',
+      '정주사가 봉욕을 당한다.',
+    ]) {
+      expect(all.filter((l) => l === record)).toHaveLength(1);
+    }
+    expect(all.filter((l) => l.startsWith('- '))).toHaveLength(12); // 위 10줄 + 책 정보 2줄
   });
 
   test('현재 장 시작 전 엔티티는 현재 장 원문 앞, 현재 장 엔티티는 뒤에 놓인다', () => {
@@ -138,9 +147,9 @@ describe('A8-2 쪽 단위 캐시 지점 — buildStableContextParts', () => {
     expect(parts[5]).toContain('- 승재 (첫 등장: p.20)');
   });
 
-  test('FR-SPL-002: 조각을 이으면 현재 장 원문이 한 글자도 바뀌지 않고 그대로 들어 있다', () => {
+  test('FR-SPL-002: 조각을 구분자 없이 이으면 현재 장 원문이 한 글자도 바뀌지 않고 그대로 들어 있다', () => {
     const ctx = makeContext([18, 19, 20, 21, 22, 23, 24, 25]);
-    const joined = buildStableContextParts(ctx).join('\n');
+    const joined = buildStableContextParts(ctx).join('');
     expect(joined).toContain(`## 현재 장 원문 (절단)\n${ctx.current_chapter_text}\n\n## 인물`);
     expect(joined.match(/\[p\.\d+\]/g)).toEqual([
       '[p.18]',
@@ -165,7 +174,7 @@ describe('A8-2 쪽 단위 캐시 지점 — buildStableContextParts', () => {
     const ctx = { ...makeContext([18]), current_chapter_text: null };
     const parts = buildStableContextParts(ctx);
     expect(parts).toHaveLength(2);
-    expect(parts.join('\n')).not.toContain('## 현재 장 원문');
+    expect(parts.join('')).not.toContain('## 현재 장 원문');
     expect(parts[1]).toContain('이 목록은 읽은 범위의 모든 사실을');
   });
 
@@ -174,7 +183,72 @@ describe('A8-2 쪽 단위 캐시 지점 — buildStableContextParts', () => {
       ...makeContext([18, 19]),
       entities: { characters: [], character_notes: [], relationships: [], terms: [], events: [] },
     };
-    const joined = buildStableContextParts(bare).join('\n');
+    const joined = buildStableContextParts(bare).join('');
     expect(joined.endsWith(`## 현재 장 원문 (절단)\n${bare.current_chapter_text}\n`)).toBe(true);
+  });
+
+  test('조각을 구분자 없이 이어도 buildStableContext와 같다 — 공급자는 조각을 그대로 붙여 읽는다', () => {
+    const ctx = makeContext([18, 19, 20, 21]);
+    expect(buildStableContextParts(ctx).join('')).toBe(buildStableContext(ctx));
+    expect(buildStableContext(ctx)).toContain('본문 18\n\n[p.19]\n본문 19');
+  });
+
+  test('장 마지막 쪽(K = 장 끝)에서도 앞 블록과 쪽 조각이 직전 쪽과 같다 — 현재 장 요약은 뒤 블록에 둔다', () => {
+    // K=21이 2장(18~21)의 끝이면 저장소는 2장 요약(end_page <= K)과 2장 원문(시작..K)을 함께 준다
+    const before = buildStableContextParts(makeContext([18, 19, 20]));
+    const lastPage = makeContext([18, 19, 20, 21]);
+    lastPage.chapter_summaries.push({
+      chapter_no: 2,
+      title: '생활 제일과',
+      content: '초봉이가 제중당에서 일한다.',
+      start_page: 18,
+      end_page: 21,
+    });
+    const after = buildStableContextParts(lastPage);
+    expect(after.slice(0, before.length - 1)).toEqual(before.slice(0, -1));
+    expect(after[after.length - 1]).toContain('초봉이가 제중당에서 일한다.');
+    expect(after[after.length - 1]).toContain('- 승재 (첫 등장: p.20)');
+  });
+
+  test('A6: 같은 인물 쌍의 관계 이력은 블록 안에서 쌍끼리 모여 확립 쪽 순서로 놓인다', () => {
+    const ctx = makeContext([18, 19]);
+    ctx.entities.characters.push({
+      id: 'c5',
+      book_id: 'b',
+      name: '형보',
+      first_appearance_page: 5,
+    });
+    ctx.entities.relationships = [
+      {
+        id: 'r1',
+        book_id: 'b',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '부녀',
+        established_page: 3,
+      },
+      {
+        id: 'r3',
+        book_id: 'b',
+        character_a_id: 'c1',
+        character_b_id: 'c5',
+        label: '이웃',
+        established_page: 5,
+      },
+      {
+        id: 'r2',
+        book_id: 'b',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '갈등',
+        established_page: 10,
+      },
+    ];
+    const rel = lines(buildStableContextParts(ctx)[0]).filter((l) => l.includes('(확립:'));
+    expect(rel).toEqual([
+      '- 정주사 - 초봉: 부녀 (확립: p.3)',
+      '- 정주사 - 초봉: 갈등 (확립: p.10)',
+      '- 정주사 - 형보: 이웃 (확립: p.5)',
+    ]);
   });
 });

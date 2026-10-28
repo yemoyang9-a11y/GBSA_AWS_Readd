@@ -8,7 +8,7 @@
  * → 질의와 무관하게 항상 같은 근거를 반환
  */
 
-import { assembleContext, buildPrompt } from '../context-assembly';
+import { assembleContext, buildStableContext } from '../context-assembly';
 import * as repo from '../repository';
 
 // Repository 모킹
@@ -177,7 +177,7 @@ describe('근거 조립 - 질의 비관여 (명세 5.5절 #7)', () => {
 
     // Do not load unpositioned generated background into factual RAG.
     expect(repo.getBackgroundKnowledge).not.toHaveBeenCalled();
-    const prompt = buildPrompt({ ...context1, background: '출처 없는 미래 사건' }, 'policy');
+    const prompt = buildStableContext({ ...context1, background: '출처 없는 미래 사건' });
     expect(prompt).not.toContain('출처 없는 미래 사건');
     expect(prompt).toContain('탁류');
   });
@@ -223,17 +223,17 @@ describe('책 제목·저자 — 상한 없음 (배경지식과 동일한 방식
     );
   });
 
-  test('buildPrompt는 책 제목·저자를 프롬프트에 포함한다', async () => {
+  test('근거 렌더링은 책 제목·저자를 프롬프트에 포함한다', async () => {
     const context = await assembleContext(BOOK_ID, 80);
-    const prompt = buildPrompt(context, '시스템 규칙');
+    const prompt = buildStableContext(context);
 
     expect(prompt).toContain('탁류');
     expect(prompt).toContain('채만식');
   });
 
-  test('buildPrompt는 책 정보에 페이지 번호를 지어내거나 "없음"을 언급하지 말라는 지시를 근거 옆에 둔다 (실사용 재현 — 2026-08-25)', async () => {
+  test('근거 렌더링은 책 정보에 페이지 번호를 지어내거나 "없음"을 언급하지 말라는 지시를 근거 옆에 둔다 (실사용 재현 — 2026-08-25)', async () => {
     const context = await assembleContext(BOOK_ID, 80);
-    const prompt = buildPrompt(context, '시스템 규칙');
+    const prompt = buildStableContext(context);
 
     // 1차 수정("지어내지 마세요")만으로는 부족했다 — 실 Bedrock 호출에서
     // "채만식이에요. (p.없음)"처럼 "없다"는 사실을 그대로 노출하는 새 부작용이 나왔다.

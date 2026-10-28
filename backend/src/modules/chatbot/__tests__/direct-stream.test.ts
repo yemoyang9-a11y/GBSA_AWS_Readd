@@ -6,7 +6,6 @@ import { getConversationContext, recordTurns } from '../conversation-service';
 
 jest.mock('../context-assembly', () => ({
   assembleContext: jest.fn(),
-  buildPrompt: () => 'bounded p.40 evidence',
   buildStableContext: () => 'bounded p.40 evidence',
   buildStableContextParts: () => ['bounded p.40 evidence', ''],
 }));

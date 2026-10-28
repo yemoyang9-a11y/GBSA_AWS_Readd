@@ -51,12 +51,13 @@ function request(
   // boundaries never get a cache entry. Explicit breakpoints mark each stable part instead.
   const contextParts = Array.isArray(options.context)
     ? options.context.filter((part) => part.length > 0)
-    : undefined;
+    : [];
   return {
     model: modelId,
     // A8-2: stable context first so the provider prefix cache can cover it across turns.
+    // An all-empty context sends no message: the API rejects an empty user message.
     input: [
-      ...(contextParts
+      ...(contextParts.length > 0
         ? [
             {
               role: 'user' as const,
@@ -67,13 +68,15 @@ function request(
               })),
             },
           ]
-        : typeof options.context === 'string'
+        : typeof options.context === 'string' && options.context
           ? [{ role: 'user' as const, content: options.context }]
           : []),
       ...(options.history ?? []),
       { role: 'user', content: prompt },
     ],
-    ...(contextParts ? { prompt_cache_options: { mode: 'explicit' as const, ttl: '30m' as const } } : {}),
+    ...(contextParts.length > 0
+      ? { prompt_cache_options: { mode: 'explicit' as const, ttl: '30m' as const } }
+      : {}),
     // FR-QNA-006: application policy cannot be promoted from question/source text.
     ...(options.system !== undefined ? { instructions: options.system } : {}),
     ...(effort ? { reasoning: { effort: effort as Effort } } : {}),
