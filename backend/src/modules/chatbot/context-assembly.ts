@@ -3,6 +3,7 @@ import type {
   ChatbotChapterSummary,
   Character,
   Relationship,
+  RelationshipSemantics,
   CharacterNote,
   Term,
   Event,
@@ -75,6 +76,42 @@ async function findEvents(bookId: string, K: number): Promise<Event[]> {
   return repo.findEvents(bookId, K);
 }
 
+const ASSERTION_LABEL: Record<RelationshipSemantics['assertion_status'], string> = {
+  fact: '사실',
+  belief: '인물의 믿음',
+  claim: '인물의 주장',
+  rumor: '소문',
+  uncertain: '불확실',
+  negated: '부정 — 성립하지 않음',
+};
+
+/**
+ * R10 · FR-CHR-001: semantics가 있으면 방향대로 주어·목적어를 쓰고 확정 여부·종료를 함께 싣는다.
+ * 저장 순서(character_a/b)는 방향이 아니다. semantics가 없는 기존 행은 형식을 바꾸지 않는다.
+ */
+function formatRelationship(rel: Relationship, nameA: string, nameB: string): string {
+  const page = `(확립: p.${rel.established_page})`;
+  const s = rel.semantics;
+  if (!s) return `- ${nameA} - ${nameB}: ${rel.label} ${page}`;
+
+  const pair =
+    s.direction === 'a_to_b'
+      ? `${nameA} → ${nameB}`
+      : s.direction === 'b_to_a'
+        ? `${nameB} → ${nameA}`
+        : s.direction === 'mutual'
+          ? `${nameA} ↔ ${nameB}`
+          : s.direction === 'unknown'
+            ? `${nameA} - ${nameB} (방향 미확인)`
+            : `${nameA} - ${nameB}`;
+  const status = [
+    ASSERTION_LABEL[s.assertion_status] + (s.attribution ? `(${s.attribution})` : ''),
+    ...(s.temporal_scope === 'event' ? ['일회성 사건'] : []),
+    ...(s.state === 'ended' ? ['종료됨'] : []),
+  ].join(', ');
+  return `- ${pair}: [${status}] ${rel.label} — ${s.summary} ${page}`;
+}
+
 export function buildPrompt(context: ChatbotContext, systemRules: string): string {
   const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
   const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
@@ -127,7 +164,7 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     context.entities.relationships.forEach((rel) => {
       const nameA = nameById.get(rel.character_a_id) ?? rel.character_a_id;
       const nameB = nameById.get(rel.character_b_id) ?? rel.character_b_id;
-      sections.push(`- ${nameA} - ${nameB}: ${rel.label} (확립: p.${rel.established_page})`);
+      sections.push(formatRelationship(rel, nameA, nameB));
     });
     sections.push('');
   }
