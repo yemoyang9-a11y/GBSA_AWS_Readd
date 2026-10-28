@@ -125,6 +125,44 @@ describe('OpenAI Responses adapter (mocked SDK, no network)', () => {
     }
   );
 
+  test.each(['call', 'stream'] as const)(
+    'A8-2: %s places caller context as the first user message, before history',
+    async (mode) => {
+      const history = [
+        { role: 'user' as const, content: 'q1' },
+        { role: 'assistant' as const, content: 'a1' },
+      ];
+      const options = { system: policy, context: 'STABLE BOUNDED CONTEXT', history };
+      if (mode === 'call') await provider.call('test-model', 'tail', options);
+      else {
+        mockStream([{ type: 'response.output_text.delta', delta: 'answer' }]);
+        for await (const _ of provider.stream('test-model', 'tail', options)) {
+          /* consume */
+        }
+      }
+      const sdkMethod = mode === 'call' ? create : stream;
+      expect(sdkMethod.mock.calls[0][0].input).toEqual([
+        { role: 'user', content: 'STABLE BOUNDED CONTEXT' },
+        ...history,
+        { role: 'user', content: 'tail' },
+      ]);
+      expect(sdkMethod.mock.calls[0][0].instructions).toBe(policy);
+    }
+  );
+
+  test('A8-2: context parts each end with an explicit cache breakpoint; empty parts are dropped', async () => {
+    await provider.call('test-model', 'tail', { context: ['part 1', '\n[p.41]\npage', ''] });
+    const params = create.mock.calls[0][0];
+    expect(params.input[0]).toEqual({
+      role: 'user',
+      content: [
+        { type: 'input_text', text: 'part 1', prompt_cache_breakpoint: { mode: 'explicit' } },
+        { type: 'input_text', text: '\n[p.41]\npage', prompt_cache_breakpoint: { mode: 'explicit' } },
+      ],
+    });
+    expect(params.prompt_cache_options).toEqual({ mode: 'explicit', ttl: '30m' });
+  });
+
   test('NFR-OBS-004: cache writes are measured separately and reasoning is not double-counted', async () => {
     create.mockResolvedValue(
       response({

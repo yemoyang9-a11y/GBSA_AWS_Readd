@@ -77,6 +77,8 @@ export interface LLMCallOptions {
   system?: string;
   /** FR-QNA-006: caller-bounded context only; prior messages never become system policy. */
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /** A8-2: caller-bounded stable context, sent as the first user message before history. */
+  context?: string | string[];
   /**
    * Provider-specific reasoning effort; omitted values use DEFAULT_EFFORT.
    */
@@ -177,7 +179,13 @@ export async function call(
         max_tokens: options.maxTokens || 4096,
         ...effortConfig(options.effort),
         ...(options.system !== undefined ? { system: options.system } : {}),
-        messages: [...(options.history ?? []), { role: 'user', content: prompt }],
+        messages: [
+          ...(options.context !== undefined
+            ? [{ role: 'user' as const, content: [options.context].flat().join('\n') }]
+            : []),
+          ...(options.history ?? []),
+          { role: 'user', content: prompt },
+        ],
       },
       options.signal ? { signal: options.signal } : undefined
     );
@@ -246,7 +254,13 @@ export async function* stream(
         max_tokens: options.maxTokens || 4096,
         ...effortConfig(options.effort),
         ...(options.system !== undefined ? { system: options.system } : {}),
-        messages: [...(options.history ?? []), { role: 'user', content: prompt }],
+        messages: [
+          ...(options.context !== undefined
+            ? [{ role: 'user' as const, content: [options.context].flat().join('\n') }]
+            : []),
+          ...(options.history ?? []),
+          { role: 'user', content: prompt },
+        ],
       },
       options.signal ? { signal: options.signal } : undefined
     );

@@ -37,9 +37,10 @@ describe('mocked prompt policy contracts (not live generation quality)', () => {
     (llmStream as jest.Mock).mockImplementation(async function* (
       _task: string,
       input: string,
-      options?: { system?: string }
+      options?: { system?: string; context?: string }
     ) {
-      prompt = input;
+      // A8-2: user-role input is the stable context message plus the final message.
+      prompt = [options?.context, input].filter(Boolean).join('\n\n');
       systemPrompt = options?.system ?? '';
       yield '정주사는 고무신 장사를 해요. 그 밖의 이력은 확인되지 않아요.';
     });

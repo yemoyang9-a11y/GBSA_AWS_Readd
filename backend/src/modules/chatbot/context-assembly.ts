@@ -112,10 +112,9 @@ function formatRelationship(rel: Relationship, nameA: string, nameB: string): st
   return `- ${pair}: [${status}] ${rel.label} — ${s.summary} ${page}`;
 }
 
-export function buildPrompt(context: ChatbotContext, systemRules: string): string {
-  const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
-  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
+type ChatbotEntities = ChatbotContext['entities'];
 
+function pushBookAndSummaries(sections: string[], context: ChatbotContext): void {
   if (context.book.title || context.book.author) {
     sections.push('## 책 정보');
     if (context.book.title) sections.push(`- 제목: ${context.book.title}`);
@@ -135,33 +134,43 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
       sections.push('');
     });
   }
+}
 
+const CURRENT_CHAPTER_HEADING = '## 현재 장 원문 (절단)';
+
+function pushCurrentChapterText(sections: string[], context: ChatbotContext): void {
   if (context.current_chapter_text) {
-    sections.push('## 현재 장 원문 (절단)');
+    sections.push(CURRENT_CHAPTER_HEADING);
     sections.push(context.current_chapter_text);
     sections.push('');
   }
+}
 
-  if (context.entities.characters.length > 0) {
+function pushEntities(
+  sections: string[],
+  entities: ChatbotEntities,
+  nameById: Map<string, string>
+): void {
+  if (entities.characters.length > 0) {
     sections.push('## 인물');
-    context.entities.characters.forEach((char) => {
+    entities.characters.forEach((char) => {
       sections.push(`- ${char.name} (첫 등장: p.${char.first_appearance_page})`);
     });
     sections.push('');
   }
 
-  if (context.entities.character_notes.length > 0) {
+  if (entities.character_notes.length > 0) {
     sections.push('## 인물 노트');
-    context.entities.character_notes.forEach((note) => {
+    entities.character_notes.forEach((note) => {
       const name = nameById.get(note.character_id) ?? note.character_id;
       sections.push(`- ${name}: ${note.note} (p.${note.source_page})`);
     });
     sections.push('');
   }
 
-  if (context.entities.relationships.length > 0) {
+  if (entities.relationships.length > 0) {
     sections.push('## 인물 관계 (이력)');
-    context.entities.relationships.forEach((rel) => {
+    entities.relationships.forEach((rel) => {
       const nameA = nameById.get(rel.character_a_id) ?? rel.character_a_id;
       const nameB = nameById.get(rel.character_b_id) ?? rel.character_b_id;
       sections.push(formatRelationship(rel, nameA, nameB));
@@ -169,28 +178,30 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     sections.push('');
   }
 
-  if (context.entities.terms.length > 0) {
+  if (entities.terms.length > 0) {
     sections.push('## 용어');
-    context.entities.terms.forEach((term) => {
+    entities.terms.forEach((term) => {
       sections.push(`- **${term.term}**: ${term.definition} (p.${term.first_appearance_page})`);
     });
     sections.push('');
   }
 
-  if (context.entities.events.length > 0) {
+  if (entities.events.length > 0) {
     sections.push('## 사건');
-    context.entities.events.forEach((event) => {
+    entities.events.forEach((event) => {
       sections.push(`- ${event.event} (p.${event.occurrence_page}): ${event.description}`);
     });
     sections.push('');
   }
+}
 
+function pushEntityNote(sections: string[], entities: ChatbotEntities): void {
   if (
-    context.entities.characters.length > 0 ||
-    context.entities.character_notes.length > 0 ||
-    context.entities.relationships.length > 0 ||
-    context.entities.terms.length > 0 ||
-    context.entities.events.length > 0
+    entities.characters.length > 0 ||
+    entities.character_notes.length > 0 ||
+    entities.relationships.length > 0 ||
+    entities.terms.length > 0 ||
+    entities.events.length > 0
   ) {
     sections.push(
       '(위 인물·인물 노트·인물 관계·용어·사건에 명시된 사실은 답변의 근거입니다. ' +
@@ -201,6 +212,103 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     );
     sections.push('');
   }
+}
+
+export function buildPrompt(context: ChatbotContext, systemRules: string): string {
+  const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
+  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
+
+  pushBookAndSummaries(sections, context);
+  pushCurrentChapterText(sections, context);
+  pushEntities(sections, context.entities, nameById);
+  pushEntityNote(sections, context.entities);
 
   return sections.join('\n');
+}
+
+/**
+ * A8-2 — 공급자 접두 캐시가 맞도록 **같은 근거를 순서만 바꿔** 렌더링한다.
+ *
+ * FR-SPL-002 🚦, R4: 데이터 선택은 assembleContext(bookId, K)가 이미 끝냈다. 여기서는 그 결과를
+ * 걸러 내거나 넓히지 않고, 페이지로 나눠 배치만 한다. 기준점·cutoff 계산은 없다.
+ *
+ * 배치(같은 장 안에서 K가 늘면 뒤에만 덧붙는다):
+ *   a. 책 정보 + 완결 장 요약 + 현재 장 시작 전 페이지의 엔티티
+ *   b. 현재 장 원문(장 시작..K)
+ *   c. 현재 장 안 페이지의 엔티티
+ *   d. 엔티티 설명문(고정)
+ * 현재 장 시작은 이미 선택된 완결 장 요약의 마지막 종료 페이지 다음 쪽이다(추가 조회 없음).
+ * 각 목록은 (페이지, id) 순으로 정렬해 저장소 반환 순서와 무관하게 결정적이다.
+ */
+export function buildStableContext(context: ChatbotContext): string {
+  return buildStableContextParts(context).join('\n');
+}
+
+/**
+ * A8-2: 위 배치를 [a, b의 쪽 하나씩…, c~d] 조각으로 나눈다. 각 조각 끝이 공급자 캐시 지점이 된다.
+ * 공급자는 새 요청에 표시된 지점에서만 이전 캐시를 찾는다. 쪽마다 지점을 두면 K가 늘어도
+ * 이전 K 쪽 끝 지점이 새 요청에 그대로 남아 거기까지 캐시를 읽는다.
+ * 원문을 쪽 경계에서 자르기만 하므로 join('\n')하면 두 조각으로 나눌 때와 같은 문자열이다.
+ */
+export function buildStableContextParts(context: ChatbotContext): string[] {
+  const sections: string[] = ['# 근거 데이터', ''];
+  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
+  const chapterStart = context.chapter_summaries.reduce(
+    (start, ch) => Math.max(start, ch.end_page + 1),
+    1
+  );
+
+  function split<T extends { id: string }>(items: T[], page: (item: T) => number): [T[], T[]] {
+    const sorted = [...items].sort(
+      (x, y) => page(x) - page(y) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)
+    );
+    return [
+      sorted.filter((item) => page(item) < chapterStart),
+      sorted.filter((item) => page(item) >= chapterStart),
+    ];
+  }
+
+  const { characters, character_notes, relationships, terms, events } = context.entities;
+  const [charsBefore, charsCurrent] = split(characters, (c) => c.first_appearance_page);
+  const [notesBefore, notesCurrent] = split(character_notes, (n) => n.source_page);
+  const [relsBefore, relsCurrent] = split(relationships, (r) => r.established_page);
+  const [termsBefore, termsCurrent] = split(terms, (t) => t.first_appearance_page);
+  const [eventsBefore, eventsCurrent] = split(events, (e) => e.occurrence_page);
+
+  pushBookAndSummaries(sections, context);
+  pushEntities(
+    sections,
+    {
+      characters: charsBefore,
+      character_notes: notesBefore,
+      relationships: relsBefore,
+      terms: termsBefore,
+      events: eventsBefore,
+    },
+    nameById
+  );
+  const entitySections: string[] = [];
+  pushEntities(
+    entitySections,
+    {
+      characters: charsCurrent,
+      character_notes: notesCurrent,
+      relationships: relsCurrent,
+      terms: termsCurrent,
+      events: eventsCurrent,
+    },
+    nameById
+  );
+  pushEntityNote(entitySections, context.entities);
+
+  if (!context.current_chapter_text) return [sections.join('\n'), entitySections.join('\n')];
+
+  // 저장소가 쪽을 `[p.N]\n본문`으로 만들어 '\n\n'로 잇는다. 그 경계에서만 자른다 — 형식이 달라
+  // 경계를 못 찾으면 원문 전체가 한 조각이 될 뿐 근거는 그대로다.
+  const pages = context.current_chapter_text.split(/\n\n(?=\[p\.\d+\]\n)/);
+  return [
+    sections.join('\n'),
+    ...pages.map((page, i) => (i === 0 ? `${CURRENT_CHAPTER_HEADING}\n${page}` : `\n${page}`)),
+    ['', ...entitySections].join('\n'),
+  ];
 }

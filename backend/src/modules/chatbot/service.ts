@@ -1,6 +1,6 @@
 import { SYSTEM_RULES, COMPLETION_STANCE, buildQuoteSection } from './response-policy';
 import type { ChatbotQueryLog } from '../../shared/types';
-import { assembleContext, buildPrompt } from './context-assembly';
+import { assembleContext, buildStableContextParts } from './context-assembly';
 import { vectorSearch } from './vector-search';
 import { selectModel, logModelSelection, recordSelection, CHATBOT_TASK } from './difficulty-router';
 import { stream as llmStream } from '../llm-gateway/gateway';
@@ -122,9 +122,11 @@ export async function* handleQuery(
         ? await vectorSearch(bookId, query, K, subjectHint)
         : await vectorSearch(bookId, query, K);
 
-    const basePrompt = buildPrompt(context, '');
+    // A8-2: the same K-bounded context, ordered append-only and sent before history so the
+    // provider prefix cache can hit across turns. Selection is unchanged (FR-SPL-002 🚦, R4).
+    const stableContext = buildStableContextParts(context);
 
-    let fullPrompt = basePrompt;
+    let fullPrompt = '';
 
     if (isComplete) {
       fullPrompt += `\n\n${COMPLETION_STANCE}`;
@@ -169,6 +171,7 @@ export async function* handleQuery(
       fullPrompt += `\n\n## 현재 질문 대상의 인물 근거 (현재 읽기 범위의 서버 자료)\n\n${JSON.stringify({ subject_facts: subjectFacts })}`;
     }
     fullPrompt += `\n\n# 사용자 질문\n\n${query}`;
+    fullPrompt = fullPrompt.replace(/^\n+/, '');
 
     const modelSelection = selectModel(query);
     logModelSelection(modelSelection, query);
@@ -183,6 +186,7 @@ export async function* handleQuery(
       ? getMockLLMResponse(query)
       : llmStream(task, fullPrompt, {
           system: SYSTEM_RULES,
+          context: stableContext,
           history: dialogue.history,
           signal: controller.signal,
         });
