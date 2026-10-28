@@ -22,6 +22,11 @@ export interface OpenAIProviderOptions {
   system?: string;
   /** FR-QNA-006: cutoff and budget are enforced by the caller, not the serializer. */
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /**
+   * A8-2: caller-bounded stable context, sent as the first user message before history.
+   * An array marks each part's end as an explicit cache breakpoint.
+   */
+  context?: string | string[];
   signal?: AbortSignal;
   effort?: string;
   /** NFR-OBS-004: includes reported usage from failed/incomplete terminal responses. */
@@ -42,9 +47,36 @@ function request(
   if (effort && !(VALID_EFFORTS as readonly string[]).includes(effort)) {
     throw new ProviderError('OPENAI_INVALID_EFFORT');
   }
+  // A8-2: implicit caching writes only at the latest message end, so earlier context
+  // boundaries never get a cache entry. Explicit breakpoints mark each stable part instead.
+  const contextParts = Array.isArray(options.context)
+    ? options.context.filter((part) => part.length > 0)
+    : [];
   return {
     model: modelId,
-    input: [...(options.history ?? []), { role: 'user', content: prompt }],
+    // A8-2: stable context first so the provider prefix cache can cover it across turns.
+    // An all-empty context sends no message: the API rejects an empty user message.
+    input: [
+      ...(contextParts.length > 0
+        ? [
+            {
+              role: 'user' as const,
+              content: contextParts.map((text) => ({
+                type: 'input_text' as const,
+                text,
+                prompt_cache_breakpoint: { mode: 'explicit' as const },
+              })),
+            },
+          ]
+        : typeof options.context === 'string' && options.context
+          ? [{ role: 'user' as const, content: options.context }]
+          : []),
+      ...(options.history ?? []),
+      { role: 'user', content: prompt },
+    ],
+    ...(contextParts.length > 0
+      ? { prompt_cache_options: { mode: 'explicit' as const, ttl: '30m' as const } }
+      : {}),
     // FR-QNA-006: application policy cannot be promoted from question/source text.
     ...(options.system !== undefined ? { instructions: options.system } : {}),
     ...(effort ? { reasoning: { effort: effort as Effort } } : {}),

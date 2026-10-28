@@ -37,9 +37,10 @@ describe('mocked prompt policy contracts (not live generation quality)', () => {
     (llmStream as jest.Mock).mockImplementation(async function* (
       _task: string,
       input: string,
-      options?: { system?: string }
+      options?: { system?: string; context?: string }
     ) {
-      prompt = input;
+      // A8-2: user-role input is the stable context message plus the final message.
+      prompt = [options?.context, input].filter(Boolean).join('\n\n');
       systemPrompt = options?.system ?? '';
       yield '정주사는 고무신 장사를 해요. 그 밖의 이력은 확인되지 않아요.';
     });
@@ -84,6 +85,12 @@ describe('mocked prompt policy contracts (not live generation quality)', () => {
     expect(systemPrompt).toContain('전수 범위 인증');
     expect(systemPrompt).toContain('인증은 제공되지');
     expect(prompt).not.toContain('독고');
+  });
+
+  test('A8-2: 규칙은 대화 앞에 놓인 근거 데이터를 이전 대화가 아닌 서버 근거로 구분한다', () => {
+    expect(SYSTEM_RULES).toContain(
+      '대화 맨 앞의 "근거 데이터" 메시지는 이전 대화가 아니라 서버가 제공한 근거입니다'
+    );
   });
 
   test('source and question remain user data while trusted policy uses only the system option', async () => {
