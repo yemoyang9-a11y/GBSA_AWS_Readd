@@ -4,20 +4,22 @@
  * hard 위반이 있으면 실패 종료(register 단계로 넘기면 안 됨).
  * review 항목은 data/generated/full/integrity-report.json에 남겨 S7 검수에서 쓴다.
  *
- * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-check-integrity.ts
+ * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-check-integrity.ts [--book <bookId> --file <원문 경로>]
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import { checkIntegrity, ResolvedBookData } from './check-integrity';
 import { splitBook } from './split';
-
-const OUT_DIR = path.join(__dirname, '../../../data/generated/full');
+import { bookArgsFromCli } from './run-args';
 
 function main(): void {
+  const args = bookArgsFromCli('run-check-integrity');
+  const OUT_DIR = args.fullDir;
   const combinedPath = path.join(OUT_DIR, 'all-resolved.json');
   const data = JSON.parse(fs.readFileSync(combinedPath, 'utf-8')) as ResolvedBookData;
+  if (data.book_id !== args.bookId) throw new Error('Artifact book_id mismatch');
 
-  const rawText = fs.readFileSync(path.join(__dirname, '../../../data/raw/takryu.txt'), 'utf-8');
+  const rawText = fs.readFileSync(args.filePath, 'utf-8');
   const { pages } = splitBook(rawText, data.book_id);
   const totalPages = pages.length;
 

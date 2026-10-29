@@ -9,6 +9,8 @@
  * 최종적으로 data/generated/full/all-resolved.json에 인물 id가 해소된 전체 결과를 합친다.
  *
  * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-generate-full.ts
+ *        [--book <bookId> --file <원문 경로> --title <제목> --author <저자>]
+ *        다른 책의 산출물은 data/generated/<bookId>/full/ 에 따로 둔다 — run-args.ts 참조
  */
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -50,9 +52,32 @@ import {
   assertResolvedGrounding,
   sealChapterCache,
 } from './grounding';
+import { DEFAULT_BOOK_ID, bookArgsFromCli, parseBookArgs, requireBookMeta } from './run-args';
 
-const BOOK_ID = 'takryu';
-const OUT_DIR = path.join(__dirname, '../../../data/generated/full');
+// 출력 상한은 reasoning 토큰을 포함한다 — 기본 4096이면 장 하나의 인물·별칭·노트 JSON이 잘린다(화분 1장 incomplete)
+const GENERATE_MAX_TOKENS = 16000;
+
+// 출력 형식 불이행(JSON 파싱 실패)이면 그 호출만 최대 2회 다시 부른다 — 재시도도 게이트웨이 경유라 [LLM Metrics]로 집계된다
+const JSON_PARSE_RETRIES = 2;
+
+async function callJson<T>(
+  task: string,
+  prompt: string,
+  chapterLabel: number | string
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    const raw = await call(task, prompt, { maxTokens: GENERATE_MAX_TOKENS });
+    try {
+      return parseJsonResponse<T>(raw);
+    } catch (err) {
+      if (attempt > JSON_PARSE_RETRIES) throw err;
+      console.warn(`[JSON 재시도] task=${task} 장=${chapterLabel} 시도=${attempt + 1}`);
+    }
+  }
+}
+
+/** 인자 없는 기본값(takryu) — 장 캐시를 읽는 export 함수의 기본 디렉터리 */
+const DEFAULT_OUT_DIR = parseBookArgs([]).fullDir;
 const EXTRACTION_CONTRACT = JSON.stringify({
   characterPrompt: buildCharacterPrompt.toString(),
   relationshipPrompt: buildRelationshipPrompt.toString(),
@@ -89,8 +114,8 @@ interface ChapterOutput {
   warnings: string[];
 }
 
-function chapterFilePath(chapterNo: number): string {
-  return path.join(OUT_DIR, `chapter-${chapterNo}.json`);
+function chapterFilePath(chapterNo: number, outDir: string): string {
+  return path.join(outDir, `chapter-${chapterNo}.json`);
 }
 
 /** 이 장을 실제 게이트웨이로 생성한다 — 캐시가 있으면 절대 여기까지 오지 않는다 */
@@ -122,14 +147,17 @@ async function generateChapter(
     }
   }
 
-  const summaryRaw = await call('generate_summary', buildSummaryPrompt(chapter, pages));
-  const { summary } = parseJsonResponse<{ summary: string }>(summaryRaw);
-
-  const characterRaw = await call(
-    'generate_character',
-    buildCharacterPrompt(chapter, pages, known)
+  const { summary } = await callJson<{ summary: string }>(
+    'generate_summary',
+    buildSummaryPrompt(chapter, pages),
+    chapter.chapter_no
   );
-  const { characters } = parseJsonResponse<{ characters: RawCharacter[] }>(characterRaw);
+
+  const { characters } = await callJson<{ characters: RawCharacter[] }>(
+    'generate_character',
+    buildCharacterPrompt(chapter, pages, known),
+    chapter.chapter_no
+  );
   const accepted = validateGroundedChapter({ characters }, pages);
   record(
     '인물/별칭/노트',
@@ -141,11 +169,11 @@ async function generateChapter(
   );
 
   const knownForRelationships = [...known, ...accepted.characters.map((c) => c.name)];
-  const relRaw = await call(
+  const { relationships } = await callJson<{ relationships: RawRelationship[] }>(
     'generate_relationship',
-    buildRelationshipPrompt(chapter, pages, knownForRelationships, previousRelationships)
+    buildRelationshipPrompt(chapter, pages, knownForRelationships, previousRelationships),
+    chapter.chapter_no
   );
-  const { relationships } = parseJsonResponse<{ relationships: RawRelationship[] }>(relRaw);
   record(
     '관계',
     validateGroundedChapter({ relationships }, pages, {
@@ -153,15 +181,21 @@ async function generateChapter(
     }).relationships.map((r) => r.established_page)
   );
 
-  const termRaw = await call('generate_term', buildTermPrompt(chapter, pages));
-  const { terms } = parseJsonResponse<{ terms: RawTerm[] }>(termRaw);
+  const { terms } = await callJson<{ terms: RawTerm[] }>(
+    'generate_term',
+    buildTermPrompt(chapter, pages),
+    chapter.chapter_no
+  );
   record(
     '용어',
     terms.map((t) => t.first_appearance_page)
   );
 
-  const eventRaw = await call('generate_event', buildEventPrompt(chapter, pages));
-  const { events } = parseJsonResponse<{ events: RawEvent[] }>(eventRaw);
+  const { events } = await callJson<{ events: RawEvent[] }>(
+    'generate_event',
+    buildEventPrompt(chapter, pages),
+    chapter.chapter_no
+  );
   record(
     '사건',
     events.map((e) => e.occurrence_page)
@@ -188,10 +222,11 @@ export async function loadOrGenerateChapter(
   chapter: Chapter,
   pages: Page[],
   known: string[],
-  previousRelationships: string[] = []
+  previousRelationships: string[] = [],
+  outDir: string = DEFAULT_OUT_DIR
 ): Promise<ChapterOutput> {
   const cacheContext = [...known, JSON.stringify(previousRelationships)];
-  const filePath = chapterFilePath(chapter.chapter_no);
+  const filePath = chapterFilePath(chapter.chapter_no, outDir);
   if (fs.existsSync(filePath)) {
     console.log(`[재생] ${chapter.chapter_no}장 "${chapter.title}" — 기존 결과 재사용`);
     const cached = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ChapterOutput;
@@ -226,16 +261,23 @@ export async function loadOrGenerateChapter(
   return { ...validated, grounding: cached.grounding };
 }
 
-async function loadOrGenerateBackground(): Promise<{ background: string; intro: string }> {
-  const filePath = path.join(OUT_DIR, 'background.json');
+async function loadOrGenerateBackground(
+  outDir: string,
+  title: string,
+  author: string
+): Promise<{ background: string; intro: string }> {
+  const filePath = path.join(outDir, 'background.json');
   if (fs.existsSync(filePath)) {
     console.log('[재생] 배경지식·소개 — 기존 결과 재사용');
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   }
 
   console.log('[생성] 배경지식·소개 게이트웨이 호출 중...');
-  const raw = await call('generate_background', buildBackgroundPrompt('탁류', '채만식'));
-  const out = parseJsonResponse<{ background: string; intro: string }>(raw);
+  const out = await callJson<{ background: string; intro: string }>(
+    'generate_background',
+    buildBackgroundPrompt(title, author),
+    '배경'
+  );
   fs.writeFileSync(filePath, JSON.stringify(out, null, 2), 'utf-8');
   return out;
 }
@@ -302,10 +344,13 @@ function mergeChapterRelationships(
 }
 
 async function main(): Promise<void> {
+  const args = bookArgsFromCli('run-generate-full');
+  const BOOK_ID = args.bookId;
+  const OUT_DIR = args.fullDir;
+  const { title, author } = requireBookMeta(args);
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const filePath = path.join(__dirname, '../../../data/raw/takryu.txt');
-  const rawText = fs.readFileSync(filePath, 'utf-8');
+  const rawText = fs.readFileSync(args.filePath, 'utf-8');
   const { pages: allPages, chapters: allChapters } = splitBook(rawText, BOOK_ID);
 
   // MAX_CHAPTERS — 전체 배치 전 소규모 스모크 테스트용. 지정 안 하면 전체 장 처리
@@ -314,7 +359,7 @@ async function main(): Promise<void> {
     : allChapters.length;
   const chapters = allChapters.slice(0, maxChapters);
   console.log(
-    `=== 「탁류」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
+    `=== 「${title}」 총 ${allChapters.length}장 중 ${chapters.length}장 처리, ${allPages.length}페이지 — 본실행 시작 ===\n`
   );
 
   const state = createEmptyState(BOOK_ID);
@@ -322,6 +367,8 @@ async function main(): Promise<void> {
   const chapterSummaries: { chapter_no: number; title: string; summary: string }[] = [];
   const allEvents: { id: string; event: string; description: string; occurrence_page: number }[] =
     [];
+  // events.id는 전역 PK다 — takryu는 기존 id를 유지하고, 다른 책은 bookId를 붙여 다른 도서와 충돌하지 않게 한다
+  const eventIdPrefix = BOOK_ID === DEFAULT_BOOK_ID ? '' : `${BOOK_ID}:`;
 
   for (const chapter of chapters) {
     const pages = allPages.filter(
@@ -340,7 +387,13 @@ async function main(): Promise<void> {
       (r) =>
         `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
     );
-    const output = await loadOrGenerateChapter(chapter, pages, known, previousRelationships);
+    const output = await loadOrGenerateChapter(
+      chapter,
+      pages,
+      known,
+      previousRelationships,
+      OUT_DIR
+    );
     chapterReviews.push({ chapter_no: chapter.chapter_no, candidates: output.review });
 
     mergeCharacters(state, output.characters);
@@ -353,7 +406,7 @@ async function main(): Promise<void> {
       summary: output.summary,
     });
     for (const e of output.events) {
-      allEvents.push({ id: `${chapter.chapter_no}-${allEvents.length}`, ...e });
+      allEvents.push({ id: `${eventIdPrefix}${chapter.chapter_no}-${allEvents.length}`, ...e });
     }
 
     console.log(
@@ -361,7 +414,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const background = await loadOrGenerateBackground();
+  const background = await loadOrGenerateBackground(OUT_DIR, title, author);
 
   const combined = {
     book_id: BOOK_ID,
