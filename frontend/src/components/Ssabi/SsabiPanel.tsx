@@ -189,7 +189,7 @@ export default function SsabiPanel({
             패널 전체에서 "아모"가 하나의 캐릭터로 일관되게 보이게 한다. */}
         <div className="flex items-center gap-2">
           <img src={ssabiFace} alt="" aria-hidden="true" className="h-7 w-auto object-contain" />
-          <h2 className="font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
+          <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         </div>
         {appliedCutoff !== null ? (
           <span className="shrink-0 rounded-full bg-brief-accent-soft px-2.5 py-1 font-dashMono text-[11px] font-bold text-brief-accent">
@@ -217,8 +217,8 @@ export default function SsabiPanel({
             onClick={() => setLastTab(it)}
             className={
               tab === it
-                ? '-mb-px rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent'
-                : 'mt-2 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink'
+                ? '-mb-px min-h-11 rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent lg:min-h-0'
+                : 'mt-2 min-h-11 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink lg:min-h-0'
             }
           >
             {TAB_LABELS[it]}

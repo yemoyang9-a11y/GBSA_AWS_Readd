@@ -218,7 +218,7 @@ export default function RelationshipTab({
         <button
           type="button"
           onClick={() => setSelected(null)}
-          className="font-bold text-brief-accent underline"
+          className="min-h-11 min-w-11 font-bold text-brief-accent underline lg:min-h-0 lg:min-w-0"
         >
           선택 해제
         </button>
@@ -244,7 +244,7 @@ export default function RelationshipTab({
                 step={1}
                 value={Math.max(0, milestones.indexOf(at))}
                 onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent
+                className={`block h-11 w-full cursor-pointer lg:h-3.5 appearance-none bg-transparent
                   [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
                   [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
                   ${
@@ -355,7 +355,7 @@ export default function RelationshipTab({
                   if (event.key === 'Escape') setQuery('');
                 }}
                 placeholder="검색"
-                className="w-20 bg-transparent text-[11px] text-brief-ink outline-none placeholder:text-brief-muted"
+                className="min-h-11 w-20 bg-transparent text-[16px] text-brief-ink outline-none placeholder:text-brief-muted lg:min-h-0 lg:text-[11px]"
               />
             </div>
 

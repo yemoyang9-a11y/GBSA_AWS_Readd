@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
@@ -33,6 +33,10 @@ function MobileReadingSession() {
   const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const [tocOpen, setTocOpen] = useState(false);
+
+  useEffect(() => {
+    if (panelOpen) setTocOpen(false);
+  }, [panelOpen]);
 
   let body: ReactNode;
   if (entryError) {
