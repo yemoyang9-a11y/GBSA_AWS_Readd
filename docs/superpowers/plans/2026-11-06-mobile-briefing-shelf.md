@@ -24,6 +24,8 @@
 - 터치 UI 테스트는 `click()`이 아니라 `tap()`으로 쓴다.
 - 커밋 형식은 `{type}(R4): {요약} — {조항 ID}`, 끝에 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`이다. 커밋 후 `git log --oneline -1`로 커밋이 실제로 생겼는지 확인한다. 본 체크아웃의 `packed-refs.lock` 경고는 무시하되, 커밋 실패 여부는 확인한다. push는 하지 않는다.
 - 패키지를 새로 설치하지 않는다.
+- 공유 컴포넌트(PC와 같이 쓰는 파일)에 휴대폰 전용 크기가 필요하면 `lg:` 화면 폭 접두사를 쓰지 않는다. 그 방식은 태블릿 PC 화면까지 바꾼다(2단계 리뷰에서 발견). 대신 `mobile:` 변형을 쓰고, 모바일 화면 루트에 `data-mobile="true"`를 단다(`tailwind.config.js`의 `addVariant('mobile', '[data-mobile] &')`). 모바일 전용 파일(`mobile/*`) 안에서는 그냥 기본 클래스를 쓰면 된다.
+- PC 회귀 범위: `e2e/pc-regression.spec.ts`에 태블릿 세로(820×1180, PC 화면) 테스트가 있다. 서재·브리핑의 PC 스크린샷 기준선도 추출 전에 추가한다.
 
 ## Review Focus
 
