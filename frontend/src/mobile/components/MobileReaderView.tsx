@@ -5,6 +5,9 @@ import { useSwipePager } from '../gestures/useSwipePager';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuoteAskButton from './QuoteAskButton';
 
+const TAP_MAX_MS = 300;
+const TAP_MAX_MOVE = 10;
+
 // FR-PRG-001 🚦 FR-PRG-003 🚦
 export default function MobileReaderView({
   content,
@@ -56,6 +59,30 @@ export default function MobileReaderView({
 
   const { containerRef, popover, clearPopover } = useQuoteSelection<HTMLElement>();
   const navRef = useRef<HTMLElement>(null);
+  const clearPopoverRef = useRef(clearPopover);
+  clearPopoverRef.current = clearPopover;
+
+  useEffect(() => {
+    let down: { x: number; y: number; t: number; onAsk: boolean } | null = null;
+    function onDown(e: PointerEvent) {
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), onAsk: !!(e.target as Element).closest?.('[data-quote-ask]') };
+    }
+    function onUp(e: PointerEvent) {
+      const start = down;
+      down = null;
+      if (!start || start.onAsk) return;
+      const quickTap = performance.now() - start.t < TAP_MAX_MS && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MAX_MOVE;
+      if (!quickTap || !document.getSelection()?.toString()) return;
+      document.getSelection()?.removeAllRanges();
+      clearPopoverRef.current();
+    }
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('pointerup', onUp, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('pointerup', onUp, true);
+    };
+  }, []);
   const liveSelectionRef = useRef('');
 
   useEffect(() => {

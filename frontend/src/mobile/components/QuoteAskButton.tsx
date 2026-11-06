@@ -24,6 +24,7 @@ export default function QuoteAskButton({
   return (
     <button
       type="button"
+      data-quote-ask
       onPointerDown={(e) => e.preventDefault()}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}

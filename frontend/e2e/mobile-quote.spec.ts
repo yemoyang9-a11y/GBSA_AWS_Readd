@@ -131,3 +131,28 @@ test('모바일 인용 버튼은 PC와 같은 디자인이다(문구·색), 크�
   await expect(ask).toHaveClass(/text-brief-accent/);
   expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
+
+test('피드백: 문장을 고른 뒤 다른 곳을 짧게 탭하면 파란 선택과 버튼이 사라지고 다시 넘길 수 있다', async ({ page }) => {
+  const { width, height } = await open(page);
+  await selectFirstWords(page);
+  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toBeVisible();
+  await page.evaluate(
+    ({ x, y }) => {
+      const target = document.elementFromPoint(x, y)!;
+      for (const type of ['pointerdown', 'pointerup'])
+        target.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true, clientX: x, clientY: y }));
+    },
+    { x: width * 0.5, y: height * 0.7 }
+  );
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toHaveCount(0);
+  await swipe(page, { fromX: width * 0.8, toX: width * 0.2, y: height * 0.6, durationMs: 400 });
+  await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
+});
+
+test('피드백: "아모에게 물어보기"를 누를 때는 선택이 먼저 풀리지 않고 인용된다', async ({ page }) => {
+  await open(page);
+  const { text } = await selectFirstWords(page);
+  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
+  await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
+});

@@ -1,4 +1,4 @@
-export const HANDLE_TOP = 'min(86%, calc(100% - var(--safe-bottom) - 92px))';
+export const HANDLE_TOP = 'min(79%, calc(100% - var(--safe-bottom) - 92px))';
 export const HANDLE_HALF_HEIGHT = '32px';
 
 // FR-NAV-001 FR-SVB-003
