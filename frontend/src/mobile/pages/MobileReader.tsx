@@ -25,7 +25,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
   const navigate = useNavigate();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote } =
+  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen } =
     useReadingSession(bookId);
 
   let body: ReactNode;
@@ -42,6 +42,7 @@ function MobileReadingSession() {
         onMove={moveTo}
         highlightedQuote={highlightedQuote}
         chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
+        swipeDisabled={panelOpen}
       />
     );
   } else if (pageError) {

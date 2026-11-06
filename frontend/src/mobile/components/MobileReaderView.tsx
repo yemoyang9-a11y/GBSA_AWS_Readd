@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { highlightContent } from '../../components/Reader/ReaderView';
 import type { ChapterSummary } from '../../types';
+import { useSwipePager } from '../gestures/useSwipePager';
 
 // FR-PRG-001 🚦 FR-PRG-003 🚦
 export default function MobileReaderView({
@@ -12,6 +13,7 @@ export default function MobileReaderView({
   onMove,
   highlightedQuote,
   chapterStart,
+  swipeDisabled,
 }: {
   content: string;
   currentPage: number;
@@ -21,6 +23,7 @@ export default function MobileReaderView({
   onMove: (page: number) => void;
   highlightedQuote: string | null;
   chapterStart: ChapterSummary | null;
+  swipeDisabled: boolean;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -39,10 +42,24 @@ export default function MobileReaderView({
     if (clamped !== currentPage) onMove(clamped);
   }
 
+  const { targetRef, bind } = useSwipePager<HTMLElement>({
+    hasPrev: prevPage !== null,
+    hasNext: nextPage !== null,
+    onNext: () => nextPage !== null && onMove(nextPage),
+    onPrev: () => prevPage !== null && onMove(prevPage),
+    disabled: swipeDisabled,
+  });
+
   return (
     <main className="flex h-full min-h-0 flex-col bg-brief-page">
-      <div data-testid="swipe-surface" className="brief-scroll min-h-0 flex-1 overflow-y-auto">
+      <div
+        data-testid="swipe-surface"
+        className="brief-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ touchAction: 'pan-y' }}
+        {...bind}
+      >
         <article
+          ref={targetRef}
           role="article"
           className="mx-auto w-full whitespace-pre-wrap px-6 pb-10 pt-8 font-dashSerif text-[18px] leading-[2] text-brief-ink"
         >
