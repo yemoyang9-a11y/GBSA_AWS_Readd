@@ -46,7 +46,7 @@ test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이
   await expect(input).toHaveValue(String(before + 1));
   await expect.poll(() => progress.at(-1)).toBe(before + 1);
 
-  await page.getByRole('button', { name: '싸비', exact: true }).tap();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).tap();
   await page.getByRole('tab', { name: '인물 관계도' }).tap();
   await page.waitForTimeout(2000);
   await page.screenshot({ path: 'test-results/real/4-relationship.png' });

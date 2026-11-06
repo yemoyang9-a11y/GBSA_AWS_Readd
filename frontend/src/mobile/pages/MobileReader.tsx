@@ -64,12 +64,12 @@ function MobileReadingSession() {
           type="button"
           onClick={() => navigate('/')}
           aria-label="뒤로 가기"
-          className="flex size-11 items-center justify-center rounded-full text-brief-ink"
+          className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
           <svg
             aria-hidden="true"
             viewBox="0 0 16 16"
-            className="size-5"
+            className="size-4"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.6"
@@ -81,7 +81,7 @@ function MobileReadingSession() {
         </button>
       </header>
       <div className="min-h-0 flex-1">{body}</div>
-      <EdgeHandle side="left" label="목차" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} hidden={panelOpen} />
+      <EdgeHandle side="left" label="목차" controls="toc-panel" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} hidden={panelOpen} />
       {tocOpen && !panelOpen ? (
         <TocList
           chapters={chapters}
@@ -92,7 +92,7 @@ function MobileReadingSession() {
           }}
         />
       ) : null}
-      <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} hidden={viewport.keyboardOpen} />
+      <EdgeHandle side="right" label="싸비" controls="ssabi-panel" open={panelOpen} onToggle={togglePanel} hidden={viewport.keyboardOpen} />
       <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop} keyboardOpen={viewport.keyboardOpen}>
         <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} reserveToggleSpace={false} requireTextToSend />
       </MobileSsabiSheet>

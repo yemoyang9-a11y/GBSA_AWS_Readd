@@ -11,7 +11,7 @@ async function openGraph(page: Page): Promise<ApiLog> {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await expect.poll(() => log.progress.length).toBe(1);
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await expect(page.getByRole('tab', { name: '인물 관계도' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('100%')).toBeVisible();
   return log;

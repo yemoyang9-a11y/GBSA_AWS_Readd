@@ -40,14 +40,14 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: 'toc',
     open: async (page) => {
-      await page.getByRole('button', { name: '목차', exact: true }).click();
+      await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).click();
       await expect(page.getByTestId('toc-list')).toBeVisible();
     },
   },
   {
     name: 'ssabi',
     open: async (page) => {
-      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
       await expect(page.getByRole('tablist', { name: '싸비' })).toBeVisible();
       await page.waitForTimeout(600);
     },
@@ -56,7 +56,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: 'ssabi-recap',
     open: async (page) => {
-      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
       await page.getByRole('tab', { name: '리캡' }).click();
       await expect(page.getByRole('tabpanel')).toContainText('줄거리');
       await page.waitForTimeout(600);
@@ -65,7 +65,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: 'ssabi-chat',
     open: async (page) => {
-      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
       await page.getByRole('tab', { name: '챗봇' }).click();
       await expect(page.getByRole('textbox', { name: '질문' })).toBeVisible();
       await page.waitForTimeout(600);
@@ -74,7 +74,7 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: 'ssabi-chat-keyboard',
     open: async (page) => {
-      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
       await page.getByRole('tab', { name: '챗봇' }).click();
       await page.getByRole('textbox', { name: '질문' }).click();
       await showKeyboard(page, 300);
@@ -116,9 +116,9 @@ test('C6: 노치·홈 막대 영역에 조작 요소가 들어가지 않는다',
   };
   await inSafe('뒤로 가기', await page.getByRole('button', { name: '뒤로 가기' }).boundingBox());
   await inSafe('다음 페이지', await page.getByRole('button', { name: '다음 페이지' }).boundingBox());
-  await inSafe('목차 손잡이', await page.getByRole('button', { name: '목차', exact: true }).boundingBox());
-  await inSafe('싸비 손잡이', await page.getByRole('button', { name: '싸비', exact: true }).boundingBox());
+  await inSafe('목차 손잡이', await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).boundingBox());
+  await inSafe('싸비 손잡이', await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).boundingBox());
 
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await inSafe('싸비 탭', await page.getByRole('tablist', { name: '싸비' }).boundingBox());
 });

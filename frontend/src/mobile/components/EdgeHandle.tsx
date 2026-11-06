@@ -2,12 +2,14 @@
 export default function EdgeHandle({
   side,
   label,
+  controls,
   open,
   onToggle,
   hidden = false,
 }: {
   side: 'left' | 'right';
   label: string;
+  controls: string;
   open: boolean;
   onToggle: () => void;
   hidden?: boolean;
@@ -17,8 +19,9 @@ export default function EdgeHandle({
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={open ? `${label} 닫기` : `${label} 열기`}
       aria-expanded={open}
+      aria-controls={controls}
       onClick={onToggle}
       className={`fixed top-[58%] z-50 flex h-16 w-11 -translate-y-1/2 items-center ${
         left ? 'left-0 justify-start' : 'right-0 justify-end'
@@ -27,11 +30,11 @@ export default function EdgeHandle({
       <span
         data-testid="edge-handle-tab"
         aria-hidden="true"
-        className={`flex h-12 w-3.5 items-center justify-center border border-brief-rule shadow-brief-soft-sm transition-colors ${
+        className={`flex h-12 w-3.5 items-center justify-center border bg-white transition-shadow hover:shadow-brief-soft-sm ${
           left ? 'rounded-r-full border-l-0' : 'rounded-l-full border-r-0'
-        } ${open ? 'bg-brief-ink opacity-90' : 'bg-brief-paper opacity-70'}`}
+        } ${open ? 'border-brief-ink' : 'border-brief-rule'}`}
       >
-        <span className={`h-5 w-[2px] rounded-full ${open ? 'bg-brief-paper' : 'bg-brief-muted'}`} />
+        <span className="h-5 w-[2px] rounded-full bg-brief-ink" />
       </span>
     </button>
   );

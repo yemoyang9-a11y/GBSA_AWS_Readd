@@ -24,6 +24,7 @@ export default function MobileSsabiSheet({
   if (!open) return null;
   return (
     <div
+      id="ssabi-panel"
       data-testid="mobile-ssabi"
       data-mobile="true"
       onPointerDown={dismissKeyboard}

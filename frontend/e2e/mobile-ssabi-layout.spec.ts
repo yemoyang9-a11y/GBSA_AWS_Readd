@@ -12,7 +12,7 @@ async function openSsabi(page: Page) {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await page.evaluate(() => document.fonts.ready);
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await expect(page.getByRole('tablist', { name: '싸비' })).toBeVisible();
 }
 
@@ -39,7 +39,7 @@ test('싸비 제목은 한 줄이다', async ({ page }) => {
 
 test('열린 싸비 위의 손잡이는 시트 내용을 가리지 않는다', async ({ page }) => {
   await openSsabi(page);
-  const handle = page.getByRole('button', { name: '싸비', exact: true });
+  const handle = page.getByRole('button', { name: /^싸비 (열기|닫기)$/ });
   const box = (await handle.boundingBox())!;
   const covered = await page.evaluate(
     ({ x, y, w, h }) => {
@@ -66,11 +66,11 @@ test('목차를 연 채 싸비를 열었다 닫으면 목차 리스트가 다시
   await installMockApi(page);
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
-  await page.getByRole('button', { name: '목차', exact: true }).click();
+  await page.getByRole('button', { name: /^목차 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('toc-list')).toBeVisible();
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await expect(page.getByTestId('mobile-ssabi')).toHaveCount(0);
   await expect(page.getByTestId('toc-list')).toHaveCount(0);
 });

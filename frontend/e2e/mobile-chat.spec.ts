@@ -14,7 +14,7 @@ async function openChat(page: Page) {
   await installMockApi(page);
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
-  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).click();
   await page.getByRole('tab', { name: '챗봇' }).click();
   const input = page.getByRole('textbox', { name: '질문' });
   await expect(input).toBeVisible();
@@ -33,12 +33,12 @@ test('G12: 키보드가 올라오면 입력창이 키보드 위에 있고 탭은
   const inputBox = (await input.boundingBox())!;
   expect(inputBox.y + inputBox.height).toBeLessThanOrEqual(visibleBottom);
   await expect(page.getByRole('tablist', { name: '싸비' })).toBeInViewport();
-  await expect(page.getByRole('button', { name: '싸비', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toHaveCount(0);
 
   await page.getByRole('tablist', { name: '싸비' }).locator('..').getByRole('tabpanel').click({ position: { x: 20, y: 20 } });
   await expect(input).not.toBeFocused();
   await hideKeyboard(page);
-  await expect(page.getByRole('button', { name: '싸비', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toBeVisible();
 });
 
 test('G13: 긴 질문은 6줄까지 늘어나다가 입력창 안에서 스크롤된다', async ({ page }) => {
@@ -71,7 +71,7 @@ test('Review fix 1: 화면을 확대해도 키보드로 오판하지 않아 손�
   await openChat(page);
   await zoomPage(page, 1.5);
   await page.waitForTimeout(300);
-  await expect(page.getByRole('button', { name: '싸비', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^싸비 (열기|닫기)$/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: '아모의 가이드북' })).toBeVisible();
 });
 
