@@ -63,12 +63,12 @@ export default function MobileBriefingView({
           type="button"
           onClick={onBack}
           aria-label="돌아가기"
-          className="-ml-2 flex size-11 items-center justify-center rounded-full text-brief-ink"
+          className="flex size-11 items-center justify-center rounded-full border border-brief-line bg-brief-paper text-brief-ink transition-opacity hover:opacity-65"
         >
           <svg
             aria-hidden="true"
             viewBox="0 0 16 16"
-            className="size-5"
+            className="size-4"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.6"
@@ -79,10 +79,10 @@ export default function MobileBriefingView({
           </svg>
         </button>
 
-        <div className="mt-3 flex items-center gap-4">
-          <div className="shrink-0 [&>div]:px-2">
-            <TypographicCover size="row" title={title} author={author} coverUrl={coverUrl} />
-          </div>
+        <div data-testid="brief-rule" className="my-5 h-[2px] w-full rounded-[1px] bg-brief-rule" />
+
+        <div className="flex items-center gap-4">
+          <TypographicCover size="brief-compact" title={title} author={author} coverUrl={coverUrl} />
           <div className="min-w-0 flex-1">
             <p className="m-0 text-sm font-bold text-[#555]">{MOCK_DAYS_SINCE_LABEL}</p>
             <h2 className="mt-2 break-keep font-dashSerif text-[22px] font-semibold leading-[1.35] tracking-[-.03em] text-brief-ink">
@@ -110,13 +110,15 @@ export default function MobileBriefingView({
           <button
             type="button"
             onClick={onContinue}
-            className="mt-4 h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink active:bg-[rgba(31,31,31,0.1)]"
+            className="mt-4 h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
           >
             이어서 읽기
           </button>
         </section>
 
-        <h3 className="mb-3 mt-8 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
+        <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
+
+        <h3 className="mb-3 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">
           그동안 이런 이야기였어요
         </h3>
         <div className="rounded-brief-panel bg-white p-5 shadow-brief-soft-sm">
@@ -170,12 +172,14 @@ export default function MobileBriefingView({
           ) : null}
         </div>
 
+        <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
+
         <button
           type="button"
           aria-expanded={tocOpen}
           aria-controls="mobileTocPanel"
           onClick={() => setTocOpen((open) => !open)}
-          className="mt-8 flex min-h-12 w-full items-center justify-between"
+          className="flex min-h-12 w-full items-center justify-between rounded-lg"
         >
           <h3 className="m-0 font-dashSerif text-lg font-semibold tracking-[-.02em] text-brief-ink">목차</h3>
           <span className="flex size-9 items-center justify-center rounded-full bg-white shadow-brief-soft-sm">
@@ -188,40 +192,52 @@ export default function MobileBriefingView({
           </span>
         </button>
 
-        {tocOpen ? (
-          <ul id="mobileTocPanel" aria-label="목차" className="mt-3 flex flex-col gap-2">
-            {chapters.map((chapter) => {
-              const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
-              return (
-                <li key={chapter.chapter_no}>
-                  <button
-                    type="button"
-                    aria-current={isNow ? 'true' : undefined}
-                    onClick={() => onSelectChapter(chapter.start_page)}
-                    className={`flex min-h-12 w-full items-center gap-3 rounded-brief-card px-4 py-2.5 text-left shadow-[0_1px_2px_rgba(42,38,32,0.05)] ${
-                      isNow ? 'bg-brief-accent-soft' : 'bg-white'
-                    }`}
-                  >
-                    <span
-                      className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
-                        isNow ? 'bg-brief-accent text-white' : 'bg-brief-paper text-brief-muted'
+        <div
+          id="mobileTocPanel"
+          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+            tocOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <ul aria-label="목차" className="flex flex-col gap-2 pt-3">
+              {chapters.map((chapter) => {
+                const isNow = chapter.chapter_no === briefing.current_chapter.chapter_no;
+                return (
+                  <li key={chapter.chapter_no}>
+                    <button
+                      type="button"
+                      aria-current={isNow ? 'true' : undefined}
+                      tabIndex={tocOpen ? 0 : -1}
+                      onClick={() => onSelectChapter(chapter.start_page)}
+                      className={`group flex min-h-12 w-full items-center gap-3 rounded-brief-card px-4 py-2.5 text-left shadow-[0_1px_2px_rgba(42,38,32,0.05)] transition-[background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent/40 focus-visible:ring-offset-2 ${
+                        isNow
+                          ? 'bg-brief-accent-soft shadow-brief-soft-sm'
+                          : 'bg-white hover:translate-x-0.5 hover:bg-brief-accent/10 hover:shadow-brief-soft-sm'
                       }`}
                     >
-                      {chapter.chapter_no}
-                    </span>
-                    <span
-                      className={`min-w-0 flex-1 break-keep text-[15px] ${
-                        isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'
-                      }`}
-                    >
-                      {chapter.title}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
+                      <span
+                        className={`flex size-[26px] shrink-0 items-center justify-center rounded-full font-dashMono text-xs font-semibold ${
+                          isNow
+                            ? 'bg-brief-accent text-white'
+                            : 'bg-brief-paper text-brief-muted transition-colors group-hover:bg-white group-hover:text-brief-accent'
+                        }`}
+                      >
+                        {chapter.chapter_no}
+                      </span>
+                      <span
+                        className={`min-w-0 flex-1 break-keep text-[15px] ${
+                          isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink transition-colors group-hover:text-brief-accent'
+                        }`}
+                      >
+                        {chapter.title}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
       </main>
     </div>
   );
