@@ -1,0 +1,61 @@
+import { expect, test, type Page } from '@playwright/test';
+import { BOOK_ID } from './support/fixtures';
+import { installMockApi } from './support/mockApi';
+import { swipe } from './support/gestures';
+
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
+});
+
+async function open(page: Page) {
+  const log = await installMockApi(page);
+  await page.goto(`/books/${BOOK_ID}/read`);
+  await expect(page.getByRole('article')).toContainText('15쪽.');
+  await expect.poll(() => log.progress.length).toBe(1);
+  const { width, height } = page.viewportSize()!;
+  return { log, width, height };
+}
+
+async function selectFirstWords(page: Page): Promise<{ text: string; bottom: number }> {
+  return page.getByRole('article').evaluate((article) => {
+    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && (node.textContent ?? '').trim().length < 20) node = walker.nextNode();
+    const range = document.createRange();
+    range.setStart(node!, 0);
+    range.setEnd(node!, 20);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new Event('touchend'));
+    return { text: range.toString().trim(), bottom: range.getBoundingClientRect().bottom };
+  });
+}
+
+test('G8: 꾹 눌러 고른 문장 아래에 "챗봇에 물어보기"가 뜨고, 누르면 챗봇에 인용된다', async ({ page }) => {
+  await open(page);
+  const { text, bottom } = await selectFirstWords(page);
+  const ask = page.getByRole('button', { name: '챗봇에 물어보기' });
+  await expect(ask).toBeVisible();
+  const box = (await ask.boundingBox())!;
+  expect(box.y).toBeGreaterThan(bottom);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+
+  await ask.click();
+  await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
+  await expect(page.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByText('선택한 문장')).toBeVisible();
+  await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
+});
+
+test('G7: 글자가 선택된 동안에는 밀어도 넘어가지 않고, 선택을 풀면 넘어간다', async ({ page }) => {
+  const { log, width, height } = await open(page);
+  await selectFirstWords(page);
+  await swipe(page, { fromX: width * 0.8, toX: width * 0.2, y: height * 0.6, durationMs: 400 });
+  await page.waitForTimeout(500);
+  expect(log.progress).toEqual([15]);
+
+  await page.evaluate(() => window.getSelection()!.removeAllRanges());
+  await swipe(page, { fromX: width * 0.8, toX: width * 0.2, y: height * 0.6, durationMs: 400 });
+  await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
+});

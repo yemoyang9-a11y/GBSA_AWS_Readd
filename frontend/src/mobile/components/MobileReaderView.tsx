@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { highlightContent } from '../../components/Reader/ReaderView';
 import type { ChapterSummary } from '../../types';
 import { useSwipePager } from '../gestures/useSwipePager';
+import { useQuoteSelection } from '../../hooks/useQuoteSelection';
+import QuoteAskButton from './QuoteAskButton';
 
 // FR-PRG-001 🚦 FR-PRG-003 🚦
 export default function MobileReaderView({
@@ -14,6 +16,7 @@ export default function MobileReaderView({
   highlightedQuote,
   chapterStart,
   swipeDisabled,
+  onQuote,
 }: {
   content: string;
   currentPage: number;
@@ -24,6 +27,7 @@ export default function MobileReaderView({
   highlightedQuote: string | null;
   chapterStart: ChapterSummary | null;
   swipeDisabled: boolean;
+  onQuote: (text: string) => void;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -50,8 +54,25 @@ export default function MobileReaderView({
     disabled: swipeDisabled,
   });
 
+  const { containerRef, popover, clearPopover } = useQuoteSelection<HTMLElement>();
+
+  function setArticleRef(el: HTMLElement | null) {
+    (targetRef as { current: HTMLElement | null }).current = el;
+    (containerRef as { current: HTMLElement | null }).current = el;
+  }
+
   return (
     <main className="flex h-full min-h-0 flex-col bg-brief-page">
+      {popover ? (
+        <QuoteAskButton
+          popover={popover}
+          onAsk={() => {
+            onQuote(popover.text);
+            document.getSelection()?.removeAllRanges();
+            clearPopover();
+          }}
+        />
+      ) : null}
       <div
         data-testid="swipe-surface"
         className="brief-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
@@ -59,7 +80,7 @@ export default function MobileReaderView({
         {...bind}
       >
         <article
-          ref={targetRef}
+          ref={setArticleRef}
           role="article"
           className="mx-auto w-full whitespace-pre-wrap px-6 pb-10 pt-8 font-dashSerif text-[18px] leading-[2] text-brief-ink"
         >
