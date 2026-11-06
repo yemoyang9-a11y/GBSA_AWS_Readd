@@ -11,7 +11,7 @@ import QuotePopover from '../common/QuotePopover';
  * 같은 문장이 본문에 여러 번 나오면 전부 강조한다 — 실제로 고른 자리 하나만 골라낼
  * 방법이 없어서, 놓치는 것보다는 안전한 쪽을 택했다.
  */
-function highlightContent(content: string, highlight: string | null): ReactNode {
+export function highlightContent(content: string, highlight: string | null): ReactNode {
   if (!highlight) return content;
   const idx = content.indexOf(highlight);
   if (idx === -1) return content;
