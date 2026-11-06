@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import Button from '../../components/common/Button';
 import { useReadingSession } from '../../hooks/useReadingSession';
+import SsabiPanel from '../../components/Ssabi/SsabiPanel';
 import MobileReaderView from '../components/MobileReaderView';
+import EdgeHandle from '../components/EdgeHandle';
+import MobileSsabiSheet from '../components/MobileSsabiSheet';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -25,8 +29,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
   const navigate = useNavigate();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen } =
+  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps } =
     useReadingSession(bookId);
+  const [tocOpen, setTocOpen] = useState(false);
 
   let body: ReactNode;
   if (entryError) {
@@ -79,6 +84,11 @@ function MobileReadingSession() {
         </button>
       </header>
       <div className="min-h-0 flex-1">{body}</div>
+      <EdgeHandle side="left" label="목차" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} />
+      <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} />
+      <MobileSsabiSheet open={panelOpen}>
+        <SsabiPanel key={currentPage} {...ssabiPanelProps} />
+      </MobileSsabiSheet>
     </div>
   );
 }
