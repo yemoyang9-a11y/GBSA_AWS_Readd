@@ -49,6 +49,30 @@ describe('FR-SPL-002: 관계와 별칭의 도서·인물 상한 SQL 계약', () 
     expect(sql).toMatch(/a\.first_appearance_page\s*<=\s*\$2/i);
   });
 
+  it('FR-SPL-002: 별칭 반복 언급은 같은 책의 읽은 페이지 안에서만 센다', async () => {
+    const { query, repository } = capture();
+    await repository.findAliases('synthetic-book', 79);
+    const [sql] = query.mock.calls[0];
+    expect(sql).toMatch(/FROM\s+pages\s+p\b/i);
+    expect(sql).toMatch(/p\.book_id\s*=\s*\$1/i);
+    expect(sql).toMatch(/p\.page_no\s+BETWEEN\s+a\.first_appearance_page\s+AND\s+\$2/i);
+    expect(sql).toMatch(/strpos\(\s*p\.content\s*,\s*a\.alias\s*\)/i);
+    expect(sql).toMatch(/>=\s*2/);
+  });
+
+  it('FR-SPL-002: 여러 인물이 함께 쓰는 지칭 판정도 읽은 범위의 별칭·인물만 본다', async () => {
+    const { query, repository } = capture();
+    await repository.findAliases('synthetic-book', 79);
+    const [sql] = query.mock.calls[0];
+    expect(sql).toMatch(/NOT\s+EXISTS/i);
+    expect(sql).toMatch(/o\.alias\s*=\s*a\.alias/i);
+    expect(sql).toMatch(/o\.character_id\s*<>\s*a\.character_id/i);
+    expect(sql).toMatch(/o\.book_id\s*=\s*\$1/i);
+    expect(sql).toMatch(/oc\.book_id\s*=\s*\$1/i);
+    expect(sql).toMatch(/o\.first_appearance_page\s*<=\s*\$2/i);
+    expect(sql).toMatch(/oc\.first_appearance_page\s*<=\s*\$2/i);
+  });
+
   it('FR-SPL-002: 노트 자체의 도서도 대상 인물과 같아야 한다', async () => {
     const { query, repository } = capture();
     await repository.findCharacterNotes('synthetic-book', 79);

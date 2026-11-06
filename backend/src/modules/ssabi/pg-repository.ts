@@ -56,6 +56,23 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
             AND c.book_id = $1
             AND c.first_appearance_page <= $2
             AND a.first_appearance_page <= $2
+            AND (SELECT count(*)
+                   FROM (SELECT 1
+                           FROM pages p
+                          WHERE p.book_id = $1
+                            AND p.page_no BETWEEN a.first_appearance_page AND $2
+                            AND strpos(p.content, a.alias) > 0
+                          LIMIT 2) mentioned) >= 2
+            AND NOT EXISTS (
+                  SELECT 1
+                    FROM aliases o
+                    JOIN characters oc ON o.character_id = oc.id
+                   WHERE o.book_id = $1
+                     AND oc.book_id = $1
+                     AND o.alias = a.alias
+                     AND o.character_id <> a.character_id
+                     AND o.first_appearance_page <= $2
+                     AND oc.first_appearance_page <= $2)
           ORDER BY a.first_appearance_page ASC`,
         [bookId, cutoff]
       );
