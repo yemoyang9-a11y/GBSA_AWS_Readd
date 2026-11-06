@@ -11,10 +11,11 @@ interface ViewportState {
 function read(): ViewportState {
   const viewport = window.visualViewport;
   const height = viewport?.height ?? window.innerHeight;
+  const scale = viewport?.scale ?? 1;
   return {
     height,
     offsetTop: viewport?.offsetTop ?? 0,
-    keyboardOpen: window.innerHeight - height > KEYBOARD_MIN_HEIGHT,
+    keyboardOpen: window.innerHeight - height * scale > KEYBOARD_MIN_HEIGHT,
   };
 }
 

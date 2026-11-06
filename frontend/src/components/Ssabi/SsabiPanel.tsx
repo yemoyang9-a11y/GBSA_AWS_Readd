@@ -61,6 +61,7 @@ export default function SsabiPanel({
   onRecapRefresh,
   compactHeader = false,
   reserveToggleSpace = true,
+  requireTextToSend = false,
 }: {
   sessionEpoch: number;
   /**
@@ -126,6 +127,7 @@ export default function SsabiPanel({
   onRecapRefresh?: () => void;
   compactHeader?: boolean;
   reserveToggleSpace?: boolean;
+  requireTextToSend?: boolean;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -223,8 +225,8 @@ export default function SsabiPanel({
             onClick={() => setLastTab(it)}
             className={
               tab === it
-                ? '-mb-px min-h-11 rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent lg:min-h-0'
-                : 'mt-2 min-h-11 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink lg:min-h-0'
+                ? '-mb-px rounded-t-lg border border-b-0 border-brief-accent bg-brief-paper px-4 py-2.5 font-dashSans text-xs font-bold text-brief-accent mobile:min-h-11'
+                : 'mt-2 rounded-t-lg border border-b-0 border-transparent px-4 py-2 font-dashSans text-xs text-brief-muted transition-colors hover:text-brief-ink mobile:min-h-11'
             }
           >
             {TAB_LABELS[it]}
@@ -260,6 +262,7 @@ export default function SsabiPanel({
         ) : null}
         {tab === 'chatbot' ? (
           <ChatbotTab
+            requireTextToSend={requireTextToSend}
             turns={chatTurns}
             streaming={chatStreaming}
             error={chatError}

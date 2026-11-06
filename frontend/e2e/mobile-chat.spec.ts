@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { BOOK_ID } from './support/fixtures';
 import { installMockApi } from './support/mockApi';
-import { hideKeyboard, installFakeKeyboard, showKeyboard } from './support/keyboard';
+import { hideKeyboard, installFakeKeyboard, showKeyboard, zoomPage } from './support/keyboard';
 
 const KEYBOARD = 300;
 
@@ -65,4 +65,37 @@ test('입력창은 16px, 보내기 버튼은 44px이고 빈 입력에서는 비�
   await expect(send).toBeDisabled();
   await input.fill('초봉은 누구야');
   await expect(send).toBeEnabled();
+});
+
+test('Review fix 1: 화면을 확대해도 키보드로 오판하지 않아 손잡이가 남는다', async ({ page }) => {
+  await openChat(page);
+  await zoomPage(page, 1.5);
+  await page.waitForTimeout(300);
+  await expect(page.getByRole('button', { name: '싸비', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '아모의 가이드북' })).toBeVisible();
+});
+
+test('Review fix 4: 키보드가 열리면 홈 막대 여백을 두지 않는다', async ({ page }) => {
+  const input = await openChat(page);
+  await page.addStyleTag({ content: ':root { --safe-bottom: 34px; }' });
+  await input.click();
+  await showKeyboard(page, KEYBOARD);
+  await expect
+    .poll(() => page.getByTestId('mobile-ssabi').evaluate((el) => getComputedStyle(el).paddingBottom))
+    .toBe('0px');
+});
+
+test('Review fix 5: 관계도 검색창을 다시 눌러도 포커스가 유지된다', async ({ page }) => {
+  await openChat(page);
+  await page.getByRole('tab', { name: '인물 관계도' }).click();
+  const search = page.getByPlaceholder('검색');
+  await search.tap();
+  await expect(search).toBeFocused();
+  await search.evaluate((el) => {
+    (window as unknown as { __blurs: number }).__blurs = 0;
+    el.addEventListener('blur', () => ((window as unknown as { __blurs: number }).__blurs += 1));
+  });
+  await search.tap();
+  await expect(search).toBeFocused();
+  expect(await page.evaluate(() => (window as unknown as { __blurs: number }).__blurs)).toBe(0);
 });

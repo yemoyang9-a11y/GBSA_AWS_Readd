@@ -6,8 +6,8 @@
 
 | 명령 | 결과 |
 | --- | --- |
-| `npx vitest run` | 416 passed |
-| `npx playwright test` | 99 passed + 1 flaky(G4 빠른 튕김, 재시도 통과 — 1단계에서 허용한 타이머 해상도 문제) |
+| `npx vitest run` | 424 passed (origin/main 병합 후) |
+| `npx playwright test` | 107 passed (리뷰 반영 후) |
 | `npx tsc --noEmit` | 오류 0 |
 
 ## 대응
@@ -28,9 +28,18 @@
 
 ## 바꾼 공유 컴포넌트
 
-- `SsabiPanel`: 선택 prop 2개 추가 — `compactHeader`(기본 false, 키보드가 열리면 모바일이 제목 줄을 접음), `reserveToggleSpace`(기본 true, 모바일은 PC 여닫기 버튼 자리를 비우지 않음).
-- 싸비 탭·리캡 새로고침·관계도 선택 해제·시점 슬라이더·검색창·챗봇 버튼: 1024px 미만에서 44px(`lg:`로 PC 크기 유지). 검색창·입력창 글자 16px(1024px 미만).
-- 챗봇 보내기 버튼: 빈 입력이면 비활성(PC 포함).
+- `tailwind.config.js`: `mobile:` 변형 추가 — `[data-mobile]` 조상 안에서만 적용된다. 모바일 싸비 시트가 `data-mobile="true"`를 단다. 그래서 PC·태블릿(PC 화면) 크기는 전혀 바뀌지 않는다(태블릿 820×1180 회귀 테스트로 확인).
+- `SsabiPanel`: 선택 prop 3개 — `compactHeader`(키보드가 열리면 제목 줄 접기), `reserveToggleSpace`(모바일은 PC 여닫기 버튼 자리 비우지 않음), `requireTextToSend`(모바일은 빈 입력에서 보내기 비활성). 기본값은 모두 PC 동작과 같다.
+- 싸비 탭·리캡 새로고침·관계도 선택 해제·시점 슬라이더·검색창·챗봇 버튼·입력창: `mobile:` 변형으로만 44px·16px.
+
+## 최종 리뷰 반영 (Opus 리뷰)
+
+- 화면 확대를 키보드로 오판 → `visualViewport.scale` 반영
+- 태블릿 PC 화면 변경 → `lg:` 대신 `mobile:` 변형
+- PC 보내기 버튼 비활성 변화 → 모바일에서만(`requireTextToSend`)
+- 키보드가 열려도 홈 막대 여백 → 키보드 열림 시 0
+- 포커스된 검색창을 다시 누르면 키보드 내림 → 입력칸 터치는 제외
+- 미룬 것(Minor): 대화 영역을 스크롤하려고 손만 대도 키보드가 내려감, 전체화면 오버레이와 손잡이가 같은 z-50(DOM 순서 의존 — G14 테스트가 지킴), 키보드 흉내가 offsetTop 변화를 다루지 않음, 120px 미만 키보드(하드웨어 키보드 막대)
 
 ## 실기기 미확인
 

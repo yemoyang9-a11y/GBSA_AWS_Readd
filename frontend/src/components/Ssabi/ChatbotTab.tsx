@@ -153,7 +153,9 @@ export default function ChatbotTab({
   onSelectConversation,
   onDeleteConversation,
   onQuoteDismissed,
+  requireTextToSend = false,
 }: {
+  requireTextToSend?: boolean;
   /** 구경로 전용(테스트 호환). turns를 쓰는 실제 화면에서는 전달하지 않는다 */
   answer?: string;
   streaming: boolean;
@@ -308,7 +310,7 @@ export default function ChatbotTab({
               type="button"
               onClick={onToggleHistory}
               aria-pressed={true}
-              className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft min-h-11 px-3 py-1.5 font-dashSans text-[11px] font-bold lg:min-h-0 text-brief-accent"
+              className="flex items-center gap-1 rounded-full border border-brief-accent bg-brief-accent-soft px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-accent"
             >
               채팅으로
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
@@ -330,7 +332,7 @@ export default function ChatbotTab({
                   type="button"
                   onClick={onToggleHistory}
                   aria-pressed={false}
-                  className="flex items-center gap-1 rounded-full border border-brief-rule bg-white min-h-11 px-3 py-1.5 font-dashSans text-[11px] font-bold lg:min-h-0 text-brief-muted"
+                  className="flex items-center gap-1 rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
                 >
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
                     <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
@@ -349,7 +351,7 @@ export default function ChatbotTab({
                     clearPinnedQuote();
                     onNewChat?.();
                   }}
-                  className="rounded-full border border-brief-rule bg-white min-h-11 px-3 py-1.5 font-dashSans text-[11px] font-bold lg:min-h-0 text-brief-muted"
+                  className="rounded-full border border-brief-rule bg-white px-3 py-1.5 font-dashSans text-[11px] font-bold mobile:min-h-11 text-brief-muted"
                 >
                   새 채팅
                 </button>
@@ -550,14 +552,14 @@ export default function ChatbotTab({
                   event.currentTarget.form?.requestSubmit();
                 }
               }}
-              className="max-h-[9.6rem] flex-1 resize-none overflow-y-auto bg-transparent py-1 text-[16px] leading-[1.6] lg:max-h-32 lg:text-xs text-brief-ink outline-none placeholder:text-brief-muted"
+              className="max-h-32 flex-1 resize-none overflow-y-auto bg-transparent py-1 text-xs leading-[1.6] mobile:max-h-[9.6rem] mobile:text-[16px] text-brief-ink outline-none placeholder:text-brief-muted"
               placeholder="스포일러 없이 답해줄게요, 궁금한 걸 물어보세요"
             />
             <button
               type="submit"
-              disabled={streaming || !query.trim()}
+              disabled={streaming || (requireTextToSend && !query.trim())}
               aria-label="질문 보내기"
-              className="flex h-11 w-11 shrink-0 items-center justify-center self-end rounded-full bg-brief-accent lg:h-7 lg:w-7 text-white disabled:opacity-40"
+              className="flex h-7 w-7 shrink-0 items-center justify-center self-end rounded-full bg-brief-accent mobile:h-11 mobile:w-11 text-white disabled:opacity-40"
             >
               <svg
                 viewBox="0 0 24 24"
