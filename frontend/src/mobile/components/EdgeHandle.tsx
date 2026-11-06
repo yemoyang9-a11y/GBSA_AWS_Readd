@@ -1,3 +1,6 @@
+export const HANDLE_TOP = 'min(86%, calc(100% - var(--safe-bottom) - 92px))';
+export const HANDLE_HALF_HEIGHT = '32px';
+
 // FR-NAV-001 FR-SVB-003
 export default function EdgeHandle({
   side,
@@ -23,7 +26,8 @@ export default function EdgeHandle({
       aria-expanded={open}
       aria-controls={controls}
       onClick={onToggle}
-      className={`fixed top-[58%] z-50 flex h-16 w-11 -translate-y-1/2 items-center ${
+      style={{ top: HANDLE_TOP }}
+      className={`fixed z-50 flex h-16 w-11 -translate-y-1/2 items-center ${
         left ? 'left-0 justify-start' : 'right-0 justify-end'
       }`}
     >

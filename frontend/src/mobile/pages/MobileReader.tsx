@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import SsabiPanel from '../../components/Ssabi/SsabiPanel';
+import SsabiToggleButton from '../../components/common/SsabiToggleButton';
 import MobileReaderView from '../components/MobileReaderView';
 import EdgeHandle from '../components/EdgeHandle';
 import MobileSsabiSheet from '../components/MobileSsabiSheet';
@@ -92,9 +93,14 @@ function MobileReadingSession() {
           }}
         />
       ) : null}
-      <EdgeHandle side="right" label="싸비" controls="ssabi-panel" open={panelOpen} onToggle={togglePanel} hidden={viewport.keyboardOpen} />
+      <EdgeHandle side="right" label="싸비" controls="ssabi-panel" open={panelOpen} onToggle={togglePanel} hidden={panelOpen || viewport.keyboardOpen} />
       <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop} keyboardOpen={viewport.keyboardOpen}>
-        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} reserveToggleSpace={false} requireTextToSend />
+        {viewport.keyboardOpen ? null : (
+          <div className="absolute right-6 z-10" style={{ top: 'calc(var(--safe-top) + 16px)' }}>
+            <SsabiToggleButton open={panelOpen} onToggle={togglePanel} />
+          </div>
+        )}
+        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} requireTextToSend />
       </MobileSsabiSheet>
     </div>
   );

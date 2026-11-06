@@ -80,3 +80,13 @@ test('FR-NAV-001: 목차 리스트 항목에 장 번호가 제목과 함께 보�
   await expect(current).toContainText('2');
   await expect(current).toContainText('생활 제일과');
 });
+
+test('피드백: 목차 리스트는 내려간 손잡이에서 위로 펼쳐지고 화면 안에 있다', async ({ page }) => {
+  await open(page);
+  const handle = page.getByRole('button', { name: /^목차 (열기|닫기)$/ });
+  await handle.click();
+  const list = (await page.getByTestId('toc-list').boundingBox())!;
+  const h = (await handle.boundingBox())!;
+  expect(Math.abs(list.y + list.height - (h.y + h.height))).toBeLessThanOrEqual(2);
+  expect(list.y).toBeGreaterThanOrEqual(0);
+});

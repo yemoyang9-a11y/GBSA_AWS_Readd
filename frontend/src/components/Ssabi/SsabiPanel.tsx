@@ -185,7 +185,7 @@ export default function SsabiPanel({
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
           패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
       <div
-        className={`flex items-center justify-between gap-2 pb-5 pl-6 pt-6 ${reserveToggleSpace ? 'pr-20' : 'pr-6'} ${compactHeader ? 'hidden' : ''}`}
+        className={`flex items-center justify-between gap-2 pb-5 pl-6 pt-6 ${reserveToggleSpace ? 'pr-20' : 'pr-6'} mobile:flex-wrap mobile:gap-y-2 ${compactHeader ? 'hidden' : ''}`}
       >
         {/*
          * pr-20(80px) — 여닫기 버튼은 Reader가 이 헤더와 같은 줄, 같은 우측 여백(right-6)에
@@ -195,7 +195,7 @@ export default function SsabiPanel({
         {/* 헤더에 아모 얼굴 추가(2026-08-26, 사용자 요청 — 캐릭터를 디자인 전반에 더
             드러내고 싶다고 함). 챗봇 탭 답변 아바타·여닫기 버튼과 같은 이미지를 써서
             패널 전체에서 "아모"가 하나의 캐릭터로 일관되게 보이게 한다. */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mobile:shrink-0">
           <img src={ssabiFace} alt="" aria-hidden="true" className="h-7 w-auto object-contain" />
           <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         </div>

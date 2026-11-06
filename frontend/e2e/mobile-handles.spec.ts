@@ -82,3 +82,32 @@ test('Review Focus 5: 손잡이에서 시작한 끌기로는 페이지가 넘어
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('15');
   expect(log.progress).toEqual([15]);
 });
+
+test('피드백: 손잡이는 기존 위치(58%)와 화면 아래 사이의 아래쪽 1/3 지점(86%)에 있고, 하단 이동 줄과 겹치지 않는다', async ({ page }) => {
+  const { height } = await open(page);
+  const nav = (await page.locator('nav').boundingBox())!;
+  for (const name of [/^목차 (열기|닫기)$/, /^싸비 (열기|닫기)$/]) {
+    const box = (await page.getByRole('button', { name }).boundingBox())!;
+    const center = box.y + box.height / 2;
+    const expected = Math.min(height * 0.86, nav.y - 8 - box.height / 2);
+    expect(Math.abs(center - expected)).toBeLessThanOrEqual(2);
+    expect(box.y + box.height).toBeLessThanOrEqual(nav.y);
+  }
+});
+
+test('피드백: 싸비가 열리면 가장자리 손잡이 대신 PC와 같은 닫기 버튼이 제목 줄 오른쪽에 있고, 누르면 닫힌다', async ({ page }) => {
+  const { width } = await open(page);
+  await page.getByRole('button', { name: '싸비 열기' }).click();
+  await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
+  await expect(page.getByTestId('edge-handle-tab')).toHaveCount(0);
+  const close = page.getByRole('button', { name: '싸비 닫기' });
+  await expect(close).toHaveClass(/rounded-full/);
+  await expect(close).toHaveClass(/border/);
+  const box = (await close.boundingBox())!;
+  const title = (await page.getByRole('heading', { name: '아모의 가이드북' }).boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(width - (box.x + box.width)).toBeLessThanOrEqual(30);
+  expect(Math.abs(box.y + box.height / 2 - (title.y + title.height / 2))).toBeLessThanOrEqual(12);
+  await close.click();
+  await expect(page.getByTestId('mobile-ssabi')).toHaveCount(0);
+});

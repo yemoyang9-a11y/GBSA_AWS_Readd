@@ -99,3 +99,25 @@ test('Review fix 5: 관계도 검색창을 다시 눌러도 포커스가 유지�
   await expect(search).toBeFocused();
   expect(await page.evaluate(() => (window as unknown as { __blurs: number }).__blurs)).toBe(0);
 });
+
+test('피드백: 키보드가 올라와도 시트 아래로 본문이 보이지 않는다', async ({ page }) => {
+  const input = await openChat(page);
+  await input.click();
+  await showKeyboard(page, KEYBOARD);
+  await page.waitForTimeout(300);
+  const covered = await page.evaluate(() => {
+    const el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 40);
+    return !!el && !el.closest('article') && !!el.closest('[data-testid="mobile-ssabi-backdrop"]');
+  });
+  expect(covered).toBe(true);
+});
+
+test('피드백: 챗봇 탭에서 손잡이가 입력창·보내기 버튼을 가리지 않는다', async ({ page }) => {
+  await openChat(page);
+  const handle = (await page.getByRole('button', { name: /^싸비 (열기|닫기)$/ }).boundingBox())!;
+  for (const target of [page.getByRole('textbox', { name: '질문' }), page.getByRole('button', { name: '질문 보내기' })]) {
+    const b = (await target.boundingBox())!;
+    const overlap = !(b.x + b.width <= handle.x || handle.x + handle.width <= b.x || b.y + b.height <= handle.y || handle.y + handle.height <= b.y);
+    expect(overlap).toBe(false);
+  }
+});

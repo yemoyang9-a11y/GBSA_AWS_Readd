@@ -79,5 +79,11 @@ test('싸비 제목과 읽음 배지가 겹치지 않는다', async ({ page }) =
   await openSsabi(page);
   const title = (await page.getByRole('heading', { name: '아모의 가이드북' }).boundingBox())!;
   const badge = (await page.getByText(/p까지 읽음/).boundingBox())!;
-  expect(title.x + title.width).toBeLessThanOrEqual(badge.x);
+  const close = (await page.getByRole('button', { name: '싸비 닫기' }).boundingBox())!;
+  type Box = { x: number; y: number; width: number; height: number };
+  const overlaps = (a: Box, b: Box) =>
+    !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
+  expect(overlaps(title, badge), '제목·배지').toBe(false);
+  expect(overlaps(title, close), '제목·닫기').toBe(false);
+  expect(overlaps(badge, close), '배지·닫기').toBe(false);
 });

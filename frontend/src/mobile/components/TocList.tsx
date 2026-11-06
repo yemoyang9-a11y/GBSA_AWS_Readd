@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { ChapterSummary } from '../../types';
+import { HANDLE_HALF_HEIGHT, HANDLE_TOP } from './EdgeHandle';
 
 // FR-NAV-001
 export default function TocList({
@@ -24,7 +25,8 @@ export default function TocList({
     <div
       id="toc-panel"
       data-testid="toc-list"
-      className="brief-scroll fixed left-11 top-[58%] z-50 max-h-[50dvh] w-max min-w-[140px] max-w-[45vw] -translate-y-1/2 overflow-y-auto rounded-2xl border border-brief-rule bg-brief-page p-1.5"
+      style={{ bottom: `calc(100% - ${HANDLE_TOP} - ${HANDLE_HALF_HEIGHT})` }}
+      className="brief-scroll fixed left-11 z-50 max-h-[50dvh] w-max min-w-[140px] max-w-[45vw] overflow-y-auto rounded-2xl border border-brief-rule bg-brief-page p-1.5"
     >
       <h2 className="px-2.5 pb-2 pt-2 font-dashSerif text-base font-extrabold text-brief-ink">목차</h2>
       {chapters.length === 0 ? (

@@ -23,20 +23,22 @@ export default function MobileSsabiSheet({
 }) {
   if (!open) return null;
   return (
-    <div
-      id="ssabi-panel"
-      data-testid="mobile-ssabi"
-      data-mobile="true"
-      onPointerDown={dismissKeyboard}
-      className="fixed inset-x-0 z-40 flex flex-col overflow-hidden bg-brief-paper"
-      style={{
-        top: offsetTop,
-        height,
-        paddingTop: 'var(--safe-top)',
-        paddingBottom: keyboardOpen ? 0 : 'var(--safe-bottom)',
-      }}
-    >
-      {children}
+    <div data-testid="mobile-ssabi-backdrop" className="fixed inset-0 z-40 bg-brief-paper">
+      <div
+        id="ssabi-panel"
+        data-testid="mobile-ssabi"
+        data-mobile="true"
+        onPointerDown={dismissKeyboard}
+        className="fixed inset-x-0 z-40 flex flex-col overflow-hidden bg-brief-paper"
+        style={{
+          top: offsetTop,
+          height,
+          paddingTop: 'var(--safe-top)',
+          paddingBottom: keyboardOpen ? 0 : 'var(--safe-bottom)',
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }

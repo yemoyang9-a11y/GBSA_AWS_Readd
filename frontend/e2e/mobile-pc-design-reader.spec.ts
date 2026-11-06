@@ -42,6 +42,10 @@ test.describe('읽기 화면 — PC와 같은 디자인', () => {
       const open = page.getByRole('button', { name: `${handle.name} 닫기`, exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator(`#${handle.controls}`)).toBeVisible();
+      if (handle.name === '싸비') {
+        await expectClasses(open, ['rounded-full', 'border', 'bg-white', 'text-brief-ink', 'border-brief-ink']);
+        return;
+      }
       const openTab = open.getByTestId('edge-handle-tab');
       await expectClasses(openTab, ['bg-white', 'border', 'border-brief-ink']);
       await expectNoClass(openTab, /opacity/);
