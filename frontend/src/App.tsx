@@ -5,6 +5,7 @@ import Briefing from './pages/Briefing';
 import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
 import MobileReader from './mobile/pages/MobileReader';
+import MobileBriefing from './mobile/pages/MobileBriefing';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { BOOK_ROUTES } from './utils/routes';
@@ -25,7 +26,7 @@ import './App.css';
 export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
   return createBrowserRouter([
     { path: '/', element: <Dashboard /> },
-    { path: BOOK_ROUTES.briefing, element: <Briefing /> },
+    { path: BOOK_ROUTES.briefing, element: isMobile ? <MobileBriefing /> : <Briefing /> },
     { path: BOOK_ROUTES.reader, element: isMobile ? <MobileReader /> : <Reader /> },
     { path: '*', element: <NotFound /> },
   ]);

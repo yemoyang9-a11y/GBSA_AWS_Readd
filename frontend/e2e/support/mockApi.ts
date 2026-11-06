@@ -5,12 +5,16 @@ export interface ApiLog {
   progress: number[];
   pageFetches: number[];
   entries: number;
+  recapStreams: number;
+  events: string[];
 }
 
 export interface MockApiOptions {
   startPage?: number;
   totalPages?: number;
   failPages?: number[];
+  briefingRecap?: 'saved' | 'none' | 'first';
+  progressDelayMs?: number;
 }
 
 const API = 'http://api.e2e.test';
@@ -36,7 +40,8 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const totalPages = opts.totalPages ?? 30;
   const startPage = opts.startPage ?? 15;
   const failPages = new Set(opts.failPages ?? []);
-  const log: ApiLog = { progress: [], pageFetches: [], entries: 0 };
+  const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
+  const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
 
   await page.route(`${API}/**`, async (route) => {
@@ -62,13 +67,25 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
 
     if (method === 'POST' && rest === '/entry') {
       log.entries += 1;
-      return json(route, { route: 'reader', page: startPage, is_new_session: false, session_epoch: 1 });
+      log.events.push('entry');
+      return json(route, { route: 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
     }
     if (method === 'GET' && rest === '/info') return json(route, bookInfo(totalPages));
     if (method === 'GET' && rest === '/briefing') {
+      if (briefingRecap === 'first') {
+        return json(route, {
+          applied_cutoff: 0,
+          recap: null,
+          current_chapter: { chapter_no: 1, title: '인간기념물' },
+          progress: { current_page: 0, total_pages: totalPages, percent: 0 },
+        });
+      }
       return json(route, {
         applied_cutoff: cutoff,
-        recap: `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장을 드나들며 재산을 잃고, 딸 초봉을 시집보내 형편을 펴 보려 한다.`,
+        recap:
+          briefingRecap === 'none'
+            ? null
+            : `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장을 드나들며 재산을 잃고, 딸 초봉을 시집보내 형편을 펴 보려 한다.`,
         current_chapter: { chapter_no: 2, title: '생활 제일과' },
         progress: { current_page: cutoff, total_pages: totalPages, percent: Math.round((cutoff / totalPages) * 100) },
       });
@@ -85,6 +102,9 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     if (method === 'POST' && rest === '/progress') {
       const body = request.postDataJSON() as { page: number };
       log.progress.push(body.page);
+      log.events.push(`progress:${body.page}`);
+      if (opts.progressDelayMs) await new Promise((resolve) => setTimeout(resolve, opts.progressDelayMs));
+      log.events.push(`progress-done:${body.page}`);
       cutoff = body.page;
       return json(route, { success: true, applied_cutoff: body.page });
     }
@@ -92,6 +112,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     if (method === 'GET' && rest === '/ssabi/graph') return json(route, { ...graph(), applied_cutoff: cutoff });
     if (method === 'GET' && rest === '/chat/conversations') return json(route, []);
     if (method === 'POST' && rest === '/recap/stream') {
+      log.recapStreams += 1;
       return route.fulfill({
         status: 200,
         contentType: 'text/event-stream',

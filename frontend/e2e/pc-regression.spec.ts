@@ -25,6 +25,15 @@ test('P2: PC 싸비를 연 화면이 기준선과 같다', async ({ page }) => {
   await expect(page).toHaveScreenshot('pc-reader-ssabi.png');
 });
 
+test('P2: PC 브리핑 화면이 기준선과 같다', async ({ page }) => {
+  await installMockApi(page);
+  await page.goto(`/books/${BOOK_ID}/briefing`);
+  await expect(page.getByText('그동안 이런 이야기였어요')).toBeVisible();
+  await expect(page.getByText('15페이지까지의 줄거리입니다.', { exact: false })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page).toHaveScreenshot('pc-briefing.png', { fullPage: true });
+});
+
 test.describe('태블릿 세로(PC 화면)', () => {
   test.use({ viewport: { width: 820, height: 1180 } });
 
