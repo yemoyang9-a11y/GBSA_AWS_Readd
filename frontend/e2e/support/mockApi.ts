@@ -69,7 +69,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       return json(route, {
         applied_cutoff: cutoff,
         recap: `${cutoff}페이지까지의 줄거리입니다. 정 주사는 미두장을 드나들며 재산을 잃고, 딸 초봉을 시집보내 형편을 펴 보려 한다.`,
-        current_chapter: { chapter_no: 2, title: '제2장 생활 제일과' },
+        current_chapter: { chapter_no: 2, title: '생활 제일과' },
         progress: { current_page: cutoff, total_pages: totalPages, percent: Math.round((cutoff / totalPages) * 100) },
       });
     }

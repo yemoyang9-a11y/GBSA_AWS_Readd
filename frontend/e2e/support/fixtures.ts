@@ -15,9 +15,9 @@ const PARAGRAPH =
 export function chapters(totalPages: number): ChapterSummary[] {
   const third = Math.floor(totalPages / 3);
   return [
-    { chapter_no: 1, title: '제1장 인간기념물', start_page: 1, end_page: third },
-    { chapter_no: 2, title: '제2장 생활 제일과', start_page: third + 1, end_page: third * 2 },
-    { chapter_no: 3, title: '제3장 신판 흥보전', start_page: third * 2 + 1, end_page: totalPages },
+    { chapter_no: 1, title: '인간기념물', start_page: 1, end_page: third },
+    { chapter_no: 2, title: '생활 제일과', start_page: third + 1, end_page: third * 2 },
+    { chapter_no: 3, title: '신판 흥보전', start_page: third * 2 + 1, end_page: totalPages },
   ];
 }
 

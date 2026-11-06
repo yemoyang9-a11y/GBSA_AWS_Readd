@@ -41,6 +41,13 @@ export default function TocList({
               }`}
             >
               <span
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full font-dashMono text-[11px] font-semibold ${
+                  isNow ? 'bg-brief-accent text-white' : 'bg-brief-line text-brief-muted'
+                }`}
+              >
+                {chapter.chapter_no}
+              </span>
+              <span
                 className={`line-clamp-2 flex-1 font-dashSans text-[13.5px] leading-snug ${
                   isNow ? 'font-semibold text-brief-accent' : 'text-brief-ink'
                 }`}
