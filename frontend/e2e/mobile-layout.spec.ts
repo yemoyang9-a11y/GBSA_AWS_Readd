@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { BOOK_ID } from './support/fixtures';
 import { installMockApi } from './support/mockApi';
 import { fontReport, noHorizontalScroll, overflowingTexts, smallTapTargets } from './support/layoutChecks';
+import { installFakeKeyboard, showKeyboard } from './support/keyboard';
 
 const SAFE_TOP = 47;
 const SAFE_BOTTOM = 34;
@@ -11,6 +12,7 @@ test.beforeEach(({}, testInfo) => {
 });
 
 async function openReader(page: Page) {
+  await installFakeKeyboard(page);
   await installMockApi(page);
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
@@ -50,6 +52,34 @@ const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
     },
   },
   { name: 'quote', open: selectWords },
+  {
+    name: 'ssabi-recap',
+    open: async (page) => {
+      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('tab', { name: '리캡' }).click();
+      await expect(page.getByRole('tabpanel')).toContainText('줄거리');
+      await page.waitForTimeout(600);
+    },
+  },
+  {
+    name: 'ssabi-chat',
+    open: async (page) => {
+      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('tab', { name: '챗봇' }).click();
+      await expect(page.getByRole('textbox', { name: '질문' })).toBeVisible();
+      await page.waitForTimeout(600);
+    },
+  },
+  {
+    name: 'ssabi-chat-keyboard',
+    open: async (page) => {
+      await page.getByRole('button', { name: '싸비', exact: true }).click();
+      await page.getByRole('tab', { name: '챗봇' }).click();
+      await page.getByRole('textbox', { name: '질문' }).click();
+      await showKeyboard(page, 300);
+      await page.waitForTimeout(600);
+    },
+  },
 ];
 
 for (const state of STATES) {
@@ -58,9 +88,9 @@ for (const state of STATES) {
     await state.open(page);
 
     expect(await noHorizontalScroll(page), 'C1 가로 스크롤').toBe(true);
-    const textScope = state.name === 'ssabi' ? '[data-testid="mobile-ssabi"]' : '[data-testid="mobile-reader"]';
+    const textScope = state.name.startsWith('ssabi') ? '[data-testid="mobile-ssabi"]' : '[data-testid="mobile-reader"]';
     expect(await overflowingTexts(page, textScope), 'C2 글자 넘침·잘림').toEqual([]);
-    expect(await smallTapTargets(page, '[data-testid="mobile-ssabi"]'), 'C4 누르는 영역').toEqual([]);
+    expect(await smallTapTargets(page), 'C4 누르는 영역').toEqual([]);
 
     await page.screenshot({ path: `test-results/screens/${testInfo.project.name}-${state.name}.png` });
   });

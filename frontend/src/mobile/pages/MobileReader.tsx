@@ -105,7 +105,7 @@ function MobileReadingSession() {
       ) : null}
       <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} hidden={viewport.keyboardOpen} />
       <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop}>
-        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} />
+        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} reserveToggleSpace={false} />
       </MobileSsabiSheet>
     </div>
   );

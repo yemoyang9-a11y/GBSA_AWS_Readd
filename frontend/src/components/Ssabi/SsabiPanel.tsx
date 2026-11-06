@@ -60,6 +60,7 @@ export default function SsabiPanel({
   onRecapQuote,
   onRecapRefresh,
   compactHeader = false,
+  reserveToggleSpace = true,
 }: {
   sessionEpoch: number;
   /**
@@ -124,6 +125,7 @@ export default function SsabiPanel({
    *  리캡을 다시 스트리밍한다. 자동 재생성(페이지 이동)은 막고 이 버튼으로만 허용한다. */
   onRecapRefresh?: () => void;
   compactHeader?: boolean;
+  reserveToggleSpace?: boolean;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -181,7 +183,7 @@ export default function SsabiPanel({
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
           패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
       <div
-        className={`flex items-center justify-between gap-2 pb-5 pl-6 pr-20 pt-6 ${compactHeader ? 'hidden' : ''}`}
+        className={`flex items-center justify-between gap-2 pb-5 pl-6 pt-6 ${reserveToggleSpace ? 'pr-20' : 'pr-6'} ${compactHeader ? 'hidden' : ''}`}
       >
         {/*
          * pr-20(80px) — 여닫기 버튼은 Reader가 이 헤더와 같은 줄, 같은 우측 여백(right-6)에

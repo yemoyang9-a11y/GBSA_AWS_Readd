@@ -74,3 +74,10 @@ test('목차를 연 채 싸비를 열었다 닫으면 목차 리스트가 다시
   await expect(page.getByTestId('mobile-ssabi')).toHaveCount(0);
   await expect(page.getByTestId('toc-list')).toHaveCount(0);
 });
+
+test('싸비 제목과 읽음 배지가 겹치지 않는다', async ({ page }) => {
+  await openSsabi(page);
+  const title = (await page.getByRole('heading', { name: '아모의 가이드북' }).boundingBox())!;
+  const badge = (await page.getByText(/p까지 읽음/).boundingBox())!;
+  expect(title.x + title.width).toBeLessThanOrEqual(badge.x);
+});
