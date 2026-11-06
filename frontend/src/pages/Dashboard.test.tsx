@@ -135,7 +135,26 @@ describe('Dashboard', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('서버가 제목순으로 셜록 홈즈를 먼저 줘도 탁류가 첫 히어로이고 서재에서 셜록 홈즈와 자리를 바꾼다 (2026-11-06 사용자 요청)', async () => {
+  it('FR-BRW-001: 순서표에 없는 도서는 서버가 준 순서 그대로 순서표 도서 뒤에 붙는다', async () => {
+    const first: BookSummary = {
+      book_id: 'unlisted-a', title: '가나다', author: '아무개', cover_url: '',
+      intro_summary: null, ssabi_ready: true,
+    };
+    const second: BookSummary = {
+      book_id: 'unlisted-b', title: '하하하', author: '아무개', cover_url: '',
+      intro_summary: null, ssabi_ready: true,
+    };
+    fetchCatalogMock.mockResolvedValue({ books: [second, first, reading] });
+    renderDashboard();
+
+    expect(await screen.findByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
+    const shelfOrder = screen
+      .getAllByRole('button', { name: / 선택$/ })
+      .map((button) => button.getAttribute('aria-label'));
+    expect(shelfOrder).toEqual(['탁류 선택', '하하하 선택', '가나다 선택', '데미안 선택', '파친코 선택']);
+  });
+
+  it('FR-BRW-001: 서버가 제목순으로 셜록 홈즈를 먼저 줘도 탁류가 첫 히어로이고 서재에서 셜록 홈즈와 자리를 바꾼다 (2026-11-06 사용자 요청)', async () => {
     const sherlock: BookSummary = {
       book_id: 'test-book-2', title: '셜록 홈즈 전집', author: '아서 코난 도일', cover_url: '',
       intro_summary: null, ssabi_ready: false,

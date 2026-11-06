@@ -36,6 +36,7 @@ function applyDashFilter(list: BookSummary[], filter: DashFilter): BookSummary[]
   return list;
 }
 
+// FR-BRW-001
 const SHELF_ORDER = ['takryu', 'test-book-1', 'test-book-2'];
 
 function shelfRank(bookId: string): number {
