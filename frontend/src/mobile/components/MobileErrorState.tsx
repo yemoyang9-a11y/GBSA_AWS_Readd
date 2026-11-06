@@ -1,8 +1,16 @@
 // FR-SPL-005 🚦 NFR-USE
-export default function MobileErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export default function MobileErrorState({
+  message,
+  onRetry,
+  tone = 'brief',
+}: {
+  message: string;
+  onRetry: () => void;
+  tone?: 'brief' | 'dash';
+}) {
   return (
     <div className="flex h-full min-h-[50dvh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <p role="alert" className="break-keep text-[14px] text-brief-muted">
+      <p role="alert" className={`break-keep text-[14px] ${tone === 'dash' ? 'text-dash-muted' : 'text-brief-muted'}`}>
         {message}
       </p>
       <button

@@ -45,7 +45,7 @@ export default function MobileShelf({
               type="button"
               aria-pressed={selected}
               onClick={() => onFilterChange(tab.id)}
-              className={`min-h-11 min-w-11 whitespace-nowrap rounded-full border px-4 font-dashSans text-[14px] ${
+              className={`min-h-11 min-w-11 whitespace-nowrap rounded-[18px] border px-4 font-dashSans text-[14px] ${
                 selected ? 'border-dash-ink bg-dash-ink text-white' : 'border-dash-line bg-transparent text-dash-muted'
               }`}
             >
@@ -68,8 +68,8 @@ export default function MobileShelf({
                   aria-label={`${book.title} 선택`}
                   aria-pressed={selected}
                   onClick={() => onPreview(book)}
-                  className={`flex w-full items-center gap-4 rounded-dash-card border bg-white p-3 pr-14 text-left shadow-dash-soft ${
-                    selected ? 'border-[#777]' : 'border-dash-line'
+                  className={`flex w-full items-center gap-4 rounded-dash-card border bg-white p-3 pr-14 text-left shadow-dash-soft transition-transform ${
+                    selected ? 'border-[#777] -translate-y-0.5' : 'border-dash-line'
                   }`}
                 >
                   <span className="shrink-0 [&>div]:px-2">

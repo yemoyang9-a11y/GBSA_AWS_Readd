@@ -4,6 +4,9 @@ import { useModalLayer } from '../../hooks/useModalLayer';
 import type { BookInfoContent } from '../../data/bookInfoContent';
 import type { BookSummary } from '../../types';
 
+const PROGRESS_RING_RADIUS = 7;
+const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS;
+
 // FR-BRW-003 R5
 export default function MobileBookInfoSheet({
   book,
@@ -38,7 +41,7 @@ export default function MobileBookInfoSheet({
         aria-label={book.title}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="brief-scroll absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-[20px] bg-brief-paper px-5 pt-2 font-dashSans text-brief-ink shadow-brief-soft outline-none"
+        className="brief-scroll absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-dash-panel bg-brief-paper px-5 pt-2 font-dashSans text-brief-ink shadow-brief-soft outline-none"
         style={{ paddingBottom: 'max(24px, var(--safe-bottom))' }}
       >
         <div aria-hidden="true" className="mx-auto mb-1 h-1 w-10 rounded-full bg-brief-rule" />
@@ -48,23 +51,47 @@ export default function MobileBookInfoSheet({
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-brief-accent"
+            className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-brief-accent opacity-70 transition hover:bg-brief-accent-soft hover:opacity-100"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
         </div>
 
         <div className="mt-2 flex items-end gap-4">
-          <span className="shrink-0 [&>div]:px-2">
-            <TypographicCover size="row" title={book.title} author={book.author} coverUrl={book.cover_url} />
-          </span>
+          <TypographicCover size="hero-compact" title={book.title} author={book.author} coverUrl={book.cover_url} />
           <div className="min-w-0">
             <h2 className="break-keep font-dashSerif text-[26px] font-bold leading-tight tracking-[-.02em]">{book.title}</h2>
             <p className="mt-1.5 font-dashSerif text-[13px] italic text-brief-muted">{book.author} 지음</p>
             {book.progress ? (
-              <p className="mt-2 text-[13px] text-brief-muted">{book.progress.percent}%까지 읽음</p>
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-brief-rule bg-brief-paper px-3 py-1.5 font-dashSans text-xs text-brief-muted">
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r={PROGRESS_RING_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-brief-rule"
+                  />
+                  <circle
+                    cx="9"
+                    cy="9"
+                    r={PROGRESS_RING_RADIUS}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={PROGRESS_RING_CIRCUMFERENCE}
+                    strokeDashoffset={PROGRESS_RING_CIRCUMFERENCE * (1 - book.progress.percent / 100)}
+                    transform="rotate(-90 9 9)"
+                    className="text-brief-accent"
+                  />
+                </svg>
+                {book.progress.percent}%까지 읽음
+              </div>
             ) : null}
           </div>
         </div>

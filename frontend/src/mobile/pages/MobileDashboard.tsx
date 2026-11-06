@@ -10,19 +10,40 @@ import MobileShelf from '../components/MobileShelf';
 import MobileBookInfoSheet from '../components/MobileBookInfoSheet';
 import MobileErrorState from '../components/MobileErrorState';
 
-function Frame({ children }: { children: ReactNode }) {
+function Frame({ children, sansRoot = true }: { children: ReactNode; sansRoot?: boolean }) {
   return (
     <div
       data-testid="mobile-dashboard"
       data-mobile="true"
-      className="min-h-[100dvh] bg-dash-paper font-dashSans text-dash-ink"
+      className={`min-h-[100dvh] bg-dash-paper text-dash-ink${sansRoot ? ' font-dashSans' : ''}`}
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      <header className="flex h-14 items-center border-b border-dash-line px-5">
+      <header className="flex h-14 items-center justify-between border-b border-dash-line px-5">
         <span className="font-dashMono text-[22px] font-medium tracking-[-1px] text-dash-ink">
           RE<ReaddMark />
           <b className="font-medium">ADD</b>
         </span>
+        <button
+          type="button"
+          disabled
+          className="flex min-h-11 items-center gap-2 border-b border-transparent pb-0.5 font-dashSans text-[15px] text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink disabled:opacity-40 disabled:hover:border-transparent disabled:hover:text-dash-muted"
+        >
+          <svg
+            aria-hidden="true"
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          도서 검색
+        </button>
       </header>
       <main className="px-5 pb-10">
         <section className="pb-5 pt-7">
@@ -59,12 +80,10 @@ function ContinueCard({
   return (
     <section aria-live="polite" className="rounded-dash-panel border border-dash-line bg-white p-4 shadow-dash-soft">
       <div className="flex items-center gap-4">
-        <span className="shrink-0 [&>div]:px-2">
-          <TypographicCover size="row" title={book.title} author={book.author} coverUrl={book.cover_url} dimmed={!ready} />
-        </span>
+        <TypographicCover size="hero-compact" title={book.title} author={book.author} coverUrl={book.cover_url} dimmed={!ready} />
         <div className="min-w-0 flex-1">
           <p className="font-dashMono text-[11px] font-medium uppercase tracking-[.06em] text-dash-muted">{caption}</p>
-          <h2 className="mt-1.5 break-keep font-dashSerif text-[22px] font-semibold leading-tight tracking-[-.05em] text-dash-ink">
+          <h2 className="mt-1.5 break-keep font-dashSerif text-[22px] font-semibold leading-tight tracking-[-.07em] text-dash-ink">
             {book.title}
           </h2>
           <p className="mt-1 break-keep text-[13px] text-dash-muted">{book.author}</p>
@@ -99,7 +118,7 @@ export default function MobileDashboard() {
   if (dash.catalogError) {
     return (
       <div data-testid="mobile-dashboard" data-mobile="true" className="flex min-h-[100dvh] bg-dash-paper">
-        <MobileErrorState message="서재를 불러오지 못했습니다" onRetry={dash.loadCatalog} />
+        <MobileErrorState message="서재를 불러오지 못했습니다" onRetry={dash.loadCatalog} tone="dash" />
       </div>
     );
   }
@@ -108,7 +127,7 @@ export default function MobileDashboard() {
 
   if (!dash.selectedBook) {
     return (
-      <Frame>
+      <Frame sansRoot={false}>
         <p className="py-16 text-center text-[13px] text-dash-muted">서재에 도서가 아직 없습니다</p>
       </Frame>
     );
