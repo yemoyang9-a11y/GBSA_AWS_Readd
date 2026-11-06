@@ -68,3 +68,11 @@
 - 책 정보 시트가 열린 동안 실제 iOS에서 배경 스크롤이 막히는지, 시트 안 스크롤의 튕김
 - Ruling 9의 뷰 전환 충돌이 실제 iOS Safari에도 있는지(Playwright WebKit Windows 빌드에서만 확인)
 - 브리핑 목차에서 장을 고른 뒤 진도 응답을 기다리는 동안 표시가 없다(PC와 같음). 느린 망에서 여러 번 누르면 진도 요청이 여러 번 갈 수 있다
+
+## 최종 리뷰 반영 (Opus 리뷰, 2026-11-06)
+
+- 결론: 병합 가능, 규칙 위반·Critical 없음. 추출 2건 동작 불변 확인.
+- 고침(Important): 브리핑을 불러오지 못하면 모바일에서 로딩에 갇힘 → `useBriefingSession`에 `briefingError`·`retryBriefing` 추가, 모바일은 재시도 화면. PC 브리핑 화면 동작은 그대로(값을 쓰지 않음). 테스트: `mobile-briefing` "Review fix" RED→GREEN.
+- 고침(Minor→Important로 올림): manifest의 `orientation: portrait`가 Android 태블릿의 PC 화면을 세로로 고정 → 제거. 테스트: `home-screen` RED→GREEN.
+- 미룬 것(Minor): 정보 시트 포커스 가두기·Esc 테스트 없음, 브리핑 장 선택 중 진행 표시 없음(PC와 같음), 데모 항목 테스트가 훅 가드를 따로 확인 못 함, `mobile-web-app-capable` 메타 미추가, 점검 데이터 첫 진입 모드의 진입 쪽수 불일치.
+- 실행 결과: vitest 424 passed, playwright 190 passed.

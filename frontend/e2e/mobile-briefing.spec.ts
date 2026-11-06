@@ -139,3 +139,12 @@ test.describe('모바일 브리핑', () => {
     expect(log.recapStreams).toBe(0);
   });
 });
+
+test('Review fix: 브리핑을 불러오지 못하면 재시도 화면이 뜨고, 다시 시도하면 브리핑이 열린다', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
+  await installMockApi(page, { failBriefingTimes: 2 });
+  await page.goto(`/books/${BOOK_ID}/briefing`);
+  await expect(page.getByRole('alert')).toContainText('브리핑을 불러오지 못했습니다');
+  await page.getByRole('button', { name: '다시 시도' }).tap();
+  await expect(page.getByRole('button', { name: '이어서 읽기' })).toBeVisible();
+});

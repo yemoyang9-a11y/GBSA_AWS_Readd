@@ -12,6 +12,8 @@ import type { BriefingResponse, ChapterSummary } from '../types';
 
 export interface BriefingSessionState {
   briefing: BriefingResponse | null;
+  briefingError: boolean;
+  retryBriefing: () => void;
   chapters: ChapterSummary[];
   title: string;
   author: string;
@@ -56,13 +58,22 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
   // 첫 진입(cutoff = 0)에서는 여기까지 오지 않는다 — 이 화면의 LLM 호출 0회 조건 (D13 ①).
   const currentPage = briefing?.progress.current_page ?? null;
 
+  const [briefingError, setBriefingError] = useState(false);
+
+  const loadBriefing = useCallback(() => {
+    setBriefingError(false);
+    void fetchBriefing(bookId)
+      .then(setBriefing)
+      .catch(() => setBriefingError(true));
+  }, [bookId]);
+
   useEffect(() => {
-    void fetchBriefing(bookId).then(setBriefing);
+    loadBriefing();
     void fetchBookInfo(bookId).then((info) => {
       setChapters(info.chapters);
       setBook({ title: info.basic_info.title, author: info.basic_info.author });
     });
-  }, [bookId]);
+  }, [bookId, loadBriefing]);
 
   useEffect(() => {
     if (currentPage === null) return;
@@ -118,6 +129,8 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
 
   return {
     briefing,
+    briefingError,
+    retryBriefing: loadBriefing,
     chapters,
     title: book?.title ?? '',
     author: book?.author ?? '',

@@ -18,6 +18,7 @@ export interface MockApiOptions {
   entryRoute?: 'reader' | 'briefing';
   failCatalog?: boolean;
   failEntry?: boolean;
+  failBriefingTimes?: number;
 }
 
 const API = 'http://api.e2e.test';
@@ -43,6 +44,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const totalPages = opts.totalPages ?? 30;
   const startPage = opts.startPage ?? 15;
   const failPages = new Set(opts.failPages ?? []);
+  let briefingFailures = 0;
   const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
@@ -79,6 +81,10 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     }
     if (method === 'GET' && rest === '/info') return json(route, bookInfo(totalPages));
     if (method === 'GET' && rest === '/briefing') {
+      if ((opts.failBriefingTimes ?? 0) > briefingFailures) {
+        briefingFailures += 1;
+        return json(route, { error: 'E2E_FAIL' }, 500);
+      }
       if (briefingRecap === 'first') {
         return json(route, {
           applied_cutoff: 0,

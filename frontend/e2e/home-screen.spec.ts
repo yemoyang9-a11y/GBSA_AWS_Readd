@@ -8,6 +8,7 @@ test('결정 10: 홈 화면 추가 manifest는 standalone이고 이름이 싸비
   expect(response.status()).toBe(200);
   const manifest = await response.json();
   expect(manifest.display).toBe('standalone');
+  expect(manifest.orientation, '태블릿 PC 화면을 세로로 고정하지 않는다').toBeUndefined();
   expect(manifest.name).toBe('싸비');
   expect(manifest.short_name).toBe('싸비');
   expect(manifest.start_url).toBe('/');

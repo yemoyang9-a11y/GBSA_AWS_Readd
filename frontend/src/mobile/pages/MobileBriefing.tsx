@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import { useBriefingSession } from '../../hooks/useBriefingSession';
 import MobileBriefingView from '../components/MobileBriefingView';
+import MobileErrorState from '../components/MobileErrorState';
 
 // FR-BRF-001 FR-SPL-005 🚦
 export default function MobileBriefing() {
@@ -9,7 +10,16 @@ export default function MobileBriefing() {
   const navigate = useNavigate();
   const session = useBriefingSession(bookId);
 
-  if (!session.briefing) return <Loading />;
+  if (!session.briefing) {
+    if (session.briefingError) {
+      return (
+        <div className="h-[100dvh] bg-brief-paper" style={{ paddingTop: 'var(--safe-top)' }}>
+          <MobileErrorState message="브리핑을 불러오지 못했습니다" onRetry={session.retryBriefing} />
+        </div>
+      );
+    }
+    return <Loading />;
+  }
 
   return (
     <MobileBriefingView
