@@ -55,6 +55,10 @@ test.describe('서재 — PC와 같은 디자인', () => {
     await expect(alert).toHaveText('서재를 불러오지 못했습니다');
     await expectClasses(alert, ['text-dash-muted']);
     await expectNoClass(alert, /brief/);
+    const { width, height } = page.viewportSize()!;
+    const box = (await alert.boundingBox())!;
+    expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThanOrEqual(2);
+    expect(box.y).toBeGreaterThan(height * 0.3);
   });
 
   test('A26: 빈 서재 화면의 바탕 글꼴은 PC처럼 지정하지 않는다', async ({ page }) => {

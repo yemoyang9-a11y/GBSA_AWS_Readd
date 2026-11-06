@@ -117,7 +117,7 @@ export default function MobileDashboard() {
 
   if (dash.catalogError) {
     return (
-      <div data-testid="mobile-dashboard" data-mobile="true" className="flex min-h-[100dvh] bg-dash-paper">
+      <div data-testid="mobile-dashboard" data-mobile="true" className="flex min-h-[100dvh] flex-col justify-center bg-dash-paper">
         <MobileErrorState message="서재를 불러오지 못했습니다" onRetry={dash.loadCatalog} tone="dash" />
       </div>
     );
