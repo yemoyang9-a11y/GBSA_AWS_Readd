@@ -34,6 +34,19 @@ test('P2: PC 브리핑 화면이 기준선과 같다', async ({ page }) => {
   await expect(page).toHaveScreenshot('pc-briefing.png', { fullPage: true });
 });
 
+test('P2: PC 서재 화면이 기준선과 같다', async ({ page }) => {
+  await installMockApi(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: '오늘도, 이야기 속으로.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '읽기 시작' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '파친코 선택' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() =>
+    Promise.all(Array.from(document.images).map((img) => (img.complete ? null : img.decode().catch(() => null))))
+  );
+  await expect(page).toHaveScreenshot('pc-dashboard.png', { fullPage: true });
+});
+
 test.describe('태블릿 세로(PC 화면)', () => {
   test.use({ viewport: { width: 820, height: 1180 } });
 

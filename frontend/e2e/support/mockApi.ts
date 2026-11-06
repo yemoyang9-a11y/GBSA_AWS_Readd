@@ -15,6 +15,7 @@ export interface MockApiOptions {
   failPages?: number[];
   briefingRecap?: 'saved' | 'none' | 'first';
   progressDelayMs?: number;
+  entryRoute?: 'reader' | 'briefing';
 }
 
 const API = 'http://api.e2e.test';
@@ -68,7 +69,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     if (method === 'POST' && rest === '/entry') {
       log.entries += 1;
       log.events.push('entry');
-      return json(route, { route: 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
+      return json(route, { route: opts.entryRoute ?? 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
     }
     if (method === 'GET' && rest === '/info') return json(route, bookInfo(totalPages));
     if (method === 'GET' && rest === '/briefing') {
