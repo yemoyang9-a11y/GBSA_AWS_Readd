@@ -135,6 +135,31 @@ describe('Dashboard', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('서버가 제목순으로 셜록 홈즈를 먼저 줘도 탁류가 첫 히어로이고 서재에서 셜록 홈즈와 자리를 바꾼다 (2026-11-06 사용자 요청)', async () => {
+    const sherlock: BookSummary = {
+      book_id: 'test-book-2', title: '셜록 홈즈 전집', author: '아서 코난 도일', cover_url: '',
+      intro_summary: null, ssabi_ready: false,
+    };
+    const tonight: BookSummary = {
+      book_id: 'test-book-1', title: '오늘 밤, 세계에서 이 사랑이 사라진다 해도', author: '이치조 미사키',
+      cover_url: '', intro_summary: null, ssabi_ready: true,
+    };
+    fetchCatalogMock.mockResolvedValue({ books: [sherlock, tonight, reading] });
+    renderDashboard();
+
+    expect(await screen.findByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
+    const shelfOrder = screen
+      .getAllByRole('button', { name: / 선택$/ })
+      .map((button) => button.getAttribute('aria-label'));
+    expect(shelfOrder).toEqual([
+      '탁류 선택',
+      '오늘 밤, 세계에서 이 사랑이 사라진다 해도 선택',
+      '셜록 홈즈 전집 선택',
+      '데미안 선택',
+      '파친코 선택',
+    ]);
+  });
+
   it('선택된 책이 새 필터에서도 여전히 걸리면 히어로를 그대로 둔다', async () => {
     fetchCatalogMock.mockResolvedValue({ books: [reading] });
     renderDashboard();
