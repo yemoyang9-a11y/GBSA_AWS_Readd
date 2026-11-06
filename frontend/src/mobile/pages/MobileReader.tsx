@@ -8,6 +8,7 @@ import SsabiPanel from '../../components/Ssabi/SsabiPanel';
 import MobileReaderView from '../components/MobileReaderView';
 import EdgeHandle from '../components/EdgeHandle';
 import MobileSsabiSheet from '../components/MobileSsabiSheet';
+import TocList from '../components/TocList';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -85,6 +86,16 @@ function MobileReadingSession() {
       </header>
       <div className="min-h-0 flex-1">{body}</div>
       <EdgeHandle side="left" label="목차" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} />
+      {tocOpen ? (
+        <TocList
+          chapters={chapters}
+          currentPage={currentPage}
+          onSelect={(startPage) => {
+            moveTo(startPage);
+            setTocOpen(false);
+          }}
+        />
+      ) : null}
       <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} />
       <MobileSsabiSheet open={panelOpen}>
         <SsabiPanel key={currentPage} {...ssabiPanelProps} />

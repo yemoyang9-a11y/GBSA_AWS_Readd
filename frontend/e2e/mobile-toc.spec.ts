@@ -1,0 +1,56 @@
+import { expect, test, type Page } from '@playwright/test';
+import { BOOK_ID } from './support/fixtures';
+import { installMockApi, type MockApiOptions } from './support/mockApi';
+import { swipe } from './support/gestures';
+
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
+});
+
+async function open(page: Page, opts: MockApiOptions = {}) {
+  const log = await installMockApi(page, opts);
+  await page.goto(`/books/${BOOK_ID}/read`);
+  await expect(page.getByRole('article')).toContainText(`${opts.startPage ?? 15}쪽.`);
+  await expect.poll(() => log.progress.length).toBe(1);
+  const { width, height } = page.viewportSize()!;
+  return { log, width, height, pageInput: page.getByRole('textbox', { name: '페이지로 이동' }) };
+}
+
+test('G10: 목차 손잡이로 리스트를 펼치고, 장을 고르면 이동 후 닫힌다', async ({ page }) => {
+  const { log, width, pageInput } = await open(page);
+  const handle = page.getByRole('button', { name: '목차', exact: true });
+  await handle.click();
+  const list = page.getByTestId('toc-list');
+  await expect(list).toBeVisible();
+  expect((await list.boundingBox())!.width).toBeLessThan(width * 0.5);
+  const current = list.locator('[aria-current="true"]');
+  await expect(current).toContainText('제2장 생활 제일과');
+  await expect(current).toBeInViewport();
+
+  await list.getByRole('button', { name: /제3장 신판 흥보전/ }).click();
+  await expect(pageInput).toHaveValue('21');
+  await expect(list).toHaveCount(0);
+  expect(log.progress.at(-1)).toBe(21);
+
+  await handle.click();
+  await expect(page.getByTestId('toc-list')).toBeVisible();
+  await handle.click();
+  await expect(page.getByTestId('toc-list')).toHaveCount(0);
+});
+
+test('G11: 리스트를 연 채로 넘기면 현재 장 강조가 바뀐다', async ({ page }) => {
+  const { width, height, pageInput } = await open(page, { startPage: 20 });
+  await page.getByRole('button', { name: '목차', exact: true }).click();
+  const list = page.getByTestId('toc-list');
+  await expect(list.locator('[aria-current="true"]')).toContainText('제2장');
+  await swipe(page, { fromX: width * 0.9, toX: width * 0.55, y: height * 0.3, durationMs: 400 });
+  await expect(pageInput).toHaveValue('21');
+  await expect(list.locator('[aria-current="true"]')).toContainText('제3장');
+});
+
+test('C1: 리스트를 연 상태에서 가로 스크롤이 없다', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '목차', exact: true }).click();
+  await expect(page.getByTestId('toc-list')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
