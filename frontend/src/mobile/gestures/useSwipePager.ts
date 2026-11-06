@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { decideSwipe } from './swipeDecision';
 
@@ -35,6 +35,9 @@ export function useSwipePager<T extends HTMLElement>(o: {
   const targetRef = useRef<T>(null);
   const gestureRef = useRef<Gesture | null>(null);
   const settlingRef = useRef(false);
+  const settleTimerRef = useRef(0);
+
+  useEffect(() => () => window.clearTimeout(settleTimerRef.current), []);
 
   const moveTarget = useCallback((x: number, animate: boolean) => {
     const el = targetRef.current;
@@ -47,7 +50,8 @@ export function useSwipePager<T extends HTMLElement>(o: {
     (target: number, then?: () => void) => {
       settlingRef.current = true;
       moveTarget(target, true);
-      window.setTimeout(() => {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = window.setTimeout(() => {
         then?.();
         moveTarget(0, false);
         settlingRef.current = false;

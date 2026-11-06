@@ -98,3 +98,12 @@ test('Review Focus 4: 페이지 불러오기 실패 상태에서는 밀어도 �
   await page.waitForTimeout(500);
   expect(log.pageFetches).not.toContain(17);
 });
+
+test('Final fix 3: 넘김 애니메이션 중 다른 이동을 하면 예전 다음 페이지로 다시 가지 않는다', async ({ page }) => {
+  const { log, width, y, pageInput } = await open(page);
+  await swipe(page, { fromX: width * 0.8, toX: width * 0.3, y, durationMs: 300 });
+  await page.getByRole('button', { name: '이전 페이지' }).click();
+  await page.waitForTimeout(800);
+  await expect(pageInput).toHaveValue('14');
+  expect(log.progress).toEqual([15, 14]);
+});

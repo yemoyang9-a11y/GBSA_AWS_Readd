@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { highlightContent } from '../../components/Reader/ReaderView';
 import type { ChapterSummary } from '../../types';
 import { useSwipePager } from '../gestures/useSwipePager';
@@ -55,6 +55,21 @@ export default function MobileReaderView({
   });
 
   const { containerRef, popover, clearPopover } = useQuoteSelection<HTMLElement>();
+  const navRef = useRef<HTMLElement>(null);
+  const liveSelectionRef = useRef('');
+
+  useEffect(() => {
+    function track() {
+      const selection = document.getSelection();
+      const text = selection?.toString().trim() ?? '';
+      const article = (containerRef as { current: HTMLElement | null }).current;
+      if (text && selection && selection.rangeCount > 0 && article?.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+        liveSelectionRef.current = text;
+      }
+    }
+    document.addEventListener('selectionchange', track);
+    return () => document.removeEventListener('selectionchange', track);
+  }, [containerRef]);
 
   function setArticleRef(el: HTMLElement | null) {
     (targetRef as { current: HTMLElement | null }).current = el;
@@ -66,8 +81,10 @@ export default function MobileReaderView({
       {popover ? (
         <QuoteAskButton
           popover={popover}
+          limitBottom={navRef.current?.getBoundingClientRect().top ?? window.innerHeight}
           onAsk={() => {
-            onQuote(popover.text);
+            onQuote(liveSelectionRef.current || popover.text);
+            liveSelectionRef.current = '';
             document.getSelection()?.removeAllRanges();
             clearPopover();
           }}
@@ -97,6 +114,7 @@ export default function MobileReaderView({
       </div>
 
       <nav
+        ref={navRef}
         className="flex shrink-0 items-center justify-between border-t border-brief-rule px-3 pt-1 font-dashSans text-[14px] text-brief-muted"
         style={{ paddingBottom: 'max(4px, var(--safe-bottom))' }}
       >

@@ -12,6 +12,7 @@ async function open(page: Page) {
   await page.goto(`/books/${BOOK_ID}/read`);
   await expect(page.getByRole('article')).toContainText('15쪽.');
   await expect.poll(() => log.progress.length).toBe(1);
+  await page.evaluate(() => document.fonts.ready);
   const { width, height } = page.viewportSize()!;
   return { log, width, height };
 }
@@ -58,4 +59,61 @@ test('G7: 글자가 선택된 동안에는 밀어도 넘어가지 않고, 선택
   await page.evaluate(() => window.getSelection()!.removeAllRanges());
   await swipe(page, { fromX: width * 0.8, toX: width * 0.2, y: height * 0.6, durationMs: 400 });
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
+});
+
+test('Final fix 1: 실제 탭으로 "챗봇에 물어보기"를 누르면 인용된다', async ({ page }) => {
+  await open(page);
+  const { text } = await selectFirstWords(page);
+  await page.getByRole('button', { name: '챗봇에 물어보기' }).tap();
+  await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
+  await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
+});
+
+test('Final fix 2: 손잡이로 선택 범위를 늘리면 늘어난 문장이 인용된다', async ({ page }) => {
+  await open(page);
+  await selectFirstWords(page);
+  const extended = await page.getByRole('article').evaluate(() => {
+    const selection = window.getSelection()!;
+    const current = selection.getRangeAt(0);
+    const range = document.createRange();
+    range.setStart(current.startContainer, current.startOffset);
+    range.setEnd(current.endContainer, 40);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return range.toString().trim();
+  });
+  await page.getByRole('button', { name: '챗봇에 물어보기' }).tap();
+  await expect(page.getByTestId('mobile-ssabi')).toContainText(extended);
+});
+
+test('Final fix 4: 화면 아래쪽 문장을 골라도 버튼이 화면 안, 하단 바 위에 뜬다', async ({ page }) => {
+  await open(page);
+  await page.getByRole('article').evaluate((article) => {
+    const navTop = document.querySelector('nav')!.getBoundingClientRect().top;
+    const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const text = node.textContent ?? '';
+      for (let i = 0; i + 4 < text.length; i += 1) {
+        const range = document.createRange();
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const rect = range.getBoundingClientRect();
+        if (rect.height > 0 && rect.bottom > navTop - 60 && rect.bottom < navTop) {
+          range.setEnd(node, i + 4);
+          window.getSelection()!.removeAllRanges();
+          window.getSelection()!.addRange(range);
+          document.dispatchEvent(new Event('touchend'));
+          return;
+        }
+      }
+      node = walker.nextNode();
+    }
+    throw new Error('하단 근처 글줄을 찾지 못함');
+  });
+  const ask = page.getByRole('button', { name: '챗봇에 물어보기' });
+  await expect(ask).toBeVisible();
+  const box = (await ask.boundingBox())!;
+  const navTop = (await page.locator('nav').boundingBox())!.y;
+  expect(box.y + box.height).toBeLessThanOrEqual(navTop);
 });
