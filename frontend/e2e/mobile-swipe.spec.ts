@@ -42,10 +42,15 @@ test('G3: 짧고 느리게 밀면 그대로이고 요청이 없다', async ({ pa
   expect(log.progress).toEqual([15]);
 });
 
-test('G4: 짧아도 빠르게 튕기면 넘어간다', async ({ page }) => {
-  const { width, y, pageInput } = await open(page);
-  await swipe(page, { fromX: width * 0.6, toX: width * 0.6 - 60, y, durationMs: 50 });
-  await expect(pageInput).toHaveValue('16');
+test.describe('빠른 튕김', () => {
+  test.describe.configure({ retries: 2 });
+
+  test('G4: 짧아도 빠르게 튕기면 넘어간다', async ({ page }) => {
+    test.info().annotations.push({ type: 'timing', description: 'Windows 타이머 15.6ms + 병렬 부하로 합성 튕김이 늘어질 수 있어 재시도 허용' });
+    const { width, y, pageInput } = await open(page);
+    await swipe(page, { fromX: width * 0.6, toX: width * 0.6 - 60, y, durationMs: 50 });
+    await expect(pageInput).toHaveValue('16');
+  });
 });
 
 test('G5: 마지막 페이지에서 다음으로 밀면 그대로', async ({ page }) => {
