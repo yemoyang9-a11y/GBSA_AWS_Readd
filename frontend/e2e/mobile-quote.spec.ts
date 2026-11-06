@@ -33,11 +33,12 @@ async function selectFirstWords(page: Page): Promise<{ text: string; bottom: num
   });
 }
 
-test('G8: 꾹 눌러 고른 문장 아래에 "챗봇에 물어보기"가 뜨고, 누르면 챗봇에 인용된다', async ({ page }) => {
+test('G8: 꾹 눌러 고른 문장 아래에 "아모에게 물어보기"가 뜨고, 누르면 챗봇에 인용된다', async ({ page }) => {
   await open(page);
   const { text, bottom } = await selectFirstWords(page);
-  const ask = page.getByRole('button', { name: '챗봇에 물어보기' });
+  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
   await expect(ask).toBeVisible();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const box = (await ask.boundingBox())!;
   expect(box.y).toBeGreaterThan(bottom);
   expect(box.height).toBeGreaterThanOrEqual(44);
@@ -61,10 +62,10 @@ test('G7: 글자가 선택된 동안에는 밀어도 넘어가지 않고, 선택
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('16');
 });
 
-test('Final fix 1: 실제 탭으로 "챗봇에 물어보기"를 누르면 인용된다', async ({ page }) => {
+test('Final fix 1: 실제 탭으로 "아모에게 물어보기"를 누르면 인용된다', async ({ page }) => {
   await open(page);
   const { text } = await selectFirstWords(page);
-  await page.getByRole('button', { name: '챗봇에 물어보기' }).tap();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });
@@ -82,7 +83,7 @@ test('Final fix 2: 손잡이로 선택 범위를 늘리면 늘어난 문장이 �
     selection.addRange(range);
     return range.toString().trim();
   });
-  await page.getByRole('button', { name: '챗봇에 물어보기' }).tap();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(extended);
 });
 
@@ -111,9 +112,22 @@ test('Final fix 4: 화면 아래쪽 문장을 골라도 버튼이 화면 안, �
     }
     throw new Error('하단 근처 글줄을 찾지 못함');
   });
-  const ask = page.getByRole('button', { name: '챗봇에 물어보기' });
+  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
   await expect(ask).toBeVisible();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const box = (await ask.boundingBox())!;
   const navTop = (await page.locator('nav').boundingBox())!.y;
   expect(box.y + box.height).toBeLessThanOrEqual(navTop);
+});
+
+test('모바일 인용 버튼은 PC와 같은 디자인이다(문구·색), 크기만 44px', async ({ page }) => {
+  await open(page);
+  await selectFirstWords(page);
+  const ask = page.getByRole('button', { name: '아모에게 물어보기' });
+  await expect(ask).toBeVisible();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(ask).toHaveClass(/border-brief-accent/);
+  await expect(ask).toHaveClass(/bg-brief-accent-soft/);
+  await expect(ask).toHaveClass(/text-brief-accent/);
+  expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });

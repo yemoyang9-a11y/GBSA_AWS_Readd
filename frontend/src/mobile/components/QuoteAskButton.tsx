@@ -31,9 +31,9 @@ export default function QuoteAskButton({
       onTouchEnd={(e) => e.stopPropagation()}
       onClick={onAsk}
       style={{ top, left, width: WIDTH, minHeight: HEIGHT }}
-      className="fixed z-50 rounded-full bg-brief-ink px-4 font-dashSans text-[14px] font-semibold text-white shadow-brief-soft-sm"
+      className="fixed z-50 animate-pop-in whitespace-nowrap rounded-2xl border border-brief-accent bg-brief-accent-soft px-3.5 text-[13px] font-bold text-brief-accent shadow-brief-soft-sm"
     >
-      챗봇에 물어보기
+      아모에게 물어보기
     </button>
   );
 }

@@ -31,7 +31,8 @@ async function selectWords(page: Page) {
     window.getSelection()!.addRange(range);
     document.dispatchEvent(new Event('touchend'));
   });
-  await expect(page.getByRole('button', { name: '챗봇에 물어보기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '아모에게 물어보기' })).toBeVisible();
+  await page.getByRole('button', { name: '아모에게 물어보기' }).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
 }
 
 const STATES: { name: string; open: (page: Page) => Promise<void> }[] = [
