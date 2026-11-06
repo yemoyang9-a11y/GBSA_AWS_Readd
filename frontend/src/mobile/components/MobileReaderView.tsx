@@ -98,7 +98,7 @@ export default function MobileReaderView({
 
       <nav
         className="flex shrink-0 items-center justify-between border-t border-brief-rule px-3 pt-1 font-dashSans text-[14px] text-brief-muted"
-        style={{ paddingBottom: 'max(4px, env(safe-area-inset-bottom, var(--sab, 0px)))' }}
+        style={{ paddingBottom: 'max(4px, var(--safe-bottom))' }}
       >
         <button
           type="button"
@@ -121,7 +121,7 @@ export default function MobileReaderView({
               if (e.key === 'Enter') e.currentTarget.blur();
             }}
             onBlur={commit}
-            className="min-h-11 w-[4ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center text-[16px] text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
+            className="min-h-11 min-w-11 w-[4ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center text-[16px] text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
           />
           <span className="text-[14px] text-brief-muted">/ {totalPages}</span>
         </div>

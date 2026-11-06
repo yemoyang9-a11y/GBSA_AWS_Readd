@@ -28,8 +28,11 @@ test('G9: 싸비 손잡이로 전체 화면 싸비를 열고, 같은 손잡이�
   expect(Math.abs(box.width - width)).toBeLessThanOrEqual(1);
   expect(Math.abs(box.height - height)).toBeLessThanOrEqual(1);
 
+  await expect(page.getByRole('button', { name: '목차', exact: true })).toHaveCount(0);
+
   await page.getByRole('button', { name: '싸비' }).click();
   await expect(sheet).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '목차', exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: '페이지로 이동' })).toHaveValue('15');
 });
 

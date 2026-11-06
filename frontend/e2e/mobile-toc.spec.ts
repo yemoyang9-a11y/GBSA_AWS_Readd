@@ -23,6 +23,8 @@ test('G10: 목차 손잡이로 리스트를 펼치고, 장을 고르면 이동 �
   const list = page.getByTestId('toc-list');
   await expect(list).toBeVisible();
   expect((await list.boundingBox())!.width).toBeLessThan(width * 0.5);
+  const background = await list.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(background, '리스트 배경은 불투명').toMatch(/^rgb\(/);
   const current = list.locator('[aria-current="true"]');
   await expect(current).toContainText('제2장 생활 제일과');
   await expect(current).toBeInViewport();
@@ -53,4 +55,13 @@ test('C1: 리스트를 연 상태에서 가로 스크롤이 없다', async ({ pa
   await page.getByRole('button', { name: '목차', exact: true }).click();
   await expect(page.getByTestId('toc-list')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('목차 리스트가 열린 채로 싸비를 열면 리스트가 싸비 위에 남지 않는다', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '목차', exact: true }).click();
+  await expect(page.getByTestId('toc-list')).toBeVisible();
+  await page.getByRole('button', { name: '싸비', exact: true }).click();
+  await expect(page.getByTestId('mobile-ssabi')).toBeVisible();
+  await expect(page.getByTestId('toc-list')).toHaveCount(0);
 });

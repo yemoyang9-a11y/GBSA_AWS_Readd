@@ -25,7 +25,7 @@ export default function TocList({
       data-testid="toc-list"
       role="list"
       aria-label="목차"
-      className="brief-scroll fixed left-11 top-[58%] z-50 max-h-[50dvh] w-max min-w-[140px] max-w-[45vw] -translate-y-1/2 overflow-y-auto rounded-2xl border border-brief-rule bg-brief-paper/95 p-1.5 shadow-brief-soft-sm backdrop-blur"
+      className="brief-scroll fixed left-11 top-[58%] z-50 max-h-[50dvh] w-max min-w-[140px] max-w-[45vw] -translate-y-1/2 overflow-y-auto rounded-2xl border border-brief-rule bg-brief-paper p-1.5 shadow-brief-soft-sm"
     >
       {chapters.map((chapter) => {
         const isNow = chapter.chapter_no === currentChapterNo;

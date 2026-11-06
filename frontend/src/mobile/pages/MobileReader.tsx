@@ -62,7 +62,7 @@ function MobileReadingSession() {
     <div
       data-testid="mobile-reader"
       className="flex h-[100dvh] flex-col overflow-hidden bg-brief-page"
-      style={{ paddingTop: 'env(safe-area-inset-top, var(--sat, 0px))' }}
+      style={{ paddingTop: 'var(--safe-top)' }}
     >
       <header className="flex h-14 shrink-0 items-center border-b border-brief-rule bg-brief-paper px-2">
         <button
@@ -86,8 +86,8 @@ function MobileReadingSession() {
         </button>
       </header>
       <div className="min-h-0 flex-1">{body}</div>
-      <EdgeHandle side="left" label="목차" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} />
-      {tocOpen ? (
+      <EdgeHandle side="left" label="목차" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} hidden={panelOpen} />
+      {tocOpen && !panelOpen ? (
         <TocList
           chapters={chapters}
           currentPage={currentPage}
