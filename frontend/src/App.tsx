@@ -7,6 +7,7 @@ import NotFound from './pages/NotFound';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
 import MobileDashboard from './mobile/pages/MobileDashboard';
+import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { BOOK_ROUTES } from './utils/routes';
@@ -29,7 +30,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     { path: '/', element: isMobile ? <MobileDashboard /> : <Dashboard /> },
     { path: BOOK_ROUTES.briefing, element: isMobile ? <MobileBriefing /> : <Briefing /> },
     { path: BOOK_ROUTES.reader, element: isMobile ? <MobileReader /> : <Reader /> },
-    { path: '*', element: <NotFound /> },
+    { path: '*', element: isMobile ? <MobileNotFound /> : <NotFound /> },
   ]);
 }
 

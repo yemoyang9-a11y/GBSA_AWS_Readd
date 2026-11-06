@@ -2,29 +2,18 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
-import Button from '../../components/common/Button';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import SsabiPanel from '../../components/Ssabi/SsabiPanel';
 import MobileReaderView from '../components/MobileReaderView';
 import EdgeHandle from '../components/EdgeHandle';
 import MobileSsabiSheet from '../components/MobileSsabiSheet';
 import TocList from '../components/TocList';
+import MobileErrorState from '../components/MobileErrorState';
 import { useVisualViewport } from '../useVisualViewport';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
   return <MobileReadingSession key={bookId} />;
-}
-
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <p role="alert" className="text-[14px] text-brief-muted">
-        {message}
-      </p>
-      <Button onClick={onRetry}>다시 시도</Button>
-    </div>
-  );
 }
 
 // FR-PRG-003 🚦 FR-BRF-001
@@ -42,7 +31,7 @@ function MobileReadingSession() {
 
   let body: ReactNode;
   if (entryError) {
-    body = <ErrorState message="읽기를 시작하지 못했습니다" onRetry={retryEntry} />;
+    body = <MobileErrorState message="읽기를 시작하지 못했습니다" onRetry={retryEntry} />;
   } else if (page && page.page_no === currentPage) {
     body = (
       <MobileReaderView
@@ -59,7 +48,7 @@ function MobileReadingSession() {
       />
     );
   } else if (pageError) {
-    body = <ErrorState message="페이지를 불러오지 못했습니다" onRetry={retryPage} />;
+    body = <MobileErrorState message="페이지를 불러오지 못했습니다" onRetry={retryPage} />;
   } else {
     body = <Loading message={page ? '페이지를 불러오는 중' : '책을 펼치는 중'} />;
   }
@@ -73,7 +62,7 @@ function MobileReadingSession() {
       <header className="flex h-14 shrink-0 items-center border-b border-brief-rule bg-brief-paper px-2">
         <button
           type="button"
-          onClick={() => navigate('/', { viewTransition: true })}
+          onClick={() => navigate('/')}
           aria-label="뒤로 가기"
           className="flex size-11 items-center justify-center rounded-full text-brief-ink"
         >

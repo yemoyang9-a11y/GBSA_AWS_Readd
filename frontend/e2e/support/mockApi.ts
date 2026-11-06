@@ -16,6 +16,8 @@ export interface MockApiOptions {
   briefingRecap?: 'saved' | 'none' | 'first';
   progressDelayMs?: number;
   entryRoute?: 'reader' | 'briefing';
+  failCatalog?: boolean;
+  failEntry?: boolean;
 }
 
 const API = 'http://api.e2e.test';
@@ -61,7 +63,10 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       });
     }
 
-    if (method === 'GET' && path === '/books') return json(route, catalog());
+    if (method === 'GET' && path === '/books') {
+      if (opts.failCatalog) return json(route, { error: 'E2E_FAIL' }, 500);
+      return json(route, catalog());
+    }
 
     const match = path.match(/^\/books\/[^/]+(\/.*)$/);
     const rest = match?.[1] ?? '';
@@ -69,6 +74,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     if (method === 'POST' && rest === '/entry') {
       log.entries += 1;
       log.events.push('entry');
+      if (opts.failEntry) return json(route, { error: 'E2E_FAIL' }, 500);
       return json(route, { route: opts.entryRoute ?? 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
     }
     if (method === 'GET' && rest === '/info') return json(route, bookInfo(totalPages));

@@ -1,0 +1,15 @@
+{
+  "name": "싸비",
+  "short_name": "싸비",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfdfa",
+  "theme_color": "#fdfdfa",
+  "lang": "ko",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

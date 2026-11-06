@@ -149,4 +149,19 @@ test.describe('모바일 서재', () => {
     await page.getByRole('button', { name: '전체' }).tap();
     await expect(page.getByRole('button', { name: '탁류 선택' })).toBeVisible();
   });
+
+  for (const from of [
+    { name: '브리핑 돌아가기', url: `/books/${BOOK_ID}/briefing`, button: '돌아가기' },
+    { name: '읽기 뒤로 가기', url: `/books/${BOOK_ID}/read`, button: '뒤로 가기' },
+    { name: '404 서재로', url: '/no-such-page', button: '서재로' },
+  ]) {
+    test(`${from.name}로 서재에 돌아오면 서재가 그려진다(페이지가 멈추지 않는다)`, async ({ page }) => {
+      await installMockApi(page);
+      await page.goto(from.url);
+      await page.getByRole('button', { name: from.button }).tap();
+      await expect(page.getByRole('button', { name: '데미안 선택' })).toBeVisible();
+      await page.waitForTimeout(800);
+      await expect(page.getByRole('button', { name: '데미안 선택' })).toBeVisible();
+    });
+  }
 });
