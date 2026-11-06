@@ -126,6 +126,8 @@ export async function findCharacters(bookId: string, K: number): Promise<Charact
  *
  * A6: 이력 전체를 확립 페이지와 병기
  * FR-QNA-006 🚦: 확립 페이지 <= K
+ * FR-CHR-001: semantics(방향·확정 여부)를 함께 읽고, 그 근거 인용이 K 안 페이지에 실제로
+ * 있는 행만 쓴다 — 관계도의 boundedRelationships(ssabi/pg-repository.ts)와 같은 조건이다.
  */
 export async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
   const query = `
@@ -135,14 +137,32 @@ export async function findRelationships(bookId: string, K: number): Promise<Rela
       r.character_a_id,
       r.character_b_id,
       r.label,
-      r.established_page
+      r.established_page,
+      r.semantics
     FROM relationships r
     JOIN characters a ON r.character_a_id = a.id
     JOIN characters b ON r.character_b_id = b.id
+    LEFT JOIN pages proof ON proof.book_id = r.book_id
+      AND proof.page_no = (r.semantics #>> '{evidence,source_page}')::numeric
+      AND proof.page_no <= $2
+    LEFT JOIN pages change_proof ON change_proof.book_id = r.book_id
+      AND change_proof.page_no = (r.semantics #>> '{change_evidence,source_page}')::numeric
+      AND change_proof.page_no <= $2
     WHERE r.book_id = $1
       AND a.book_id = $1 AND b.book_id = $1
       AND a.first_appearance_page <= $2 AND b.first_appearance_page <= $2
       AND r.established_page <= $2
+      AND (r.semantics IS NULL OR (
+        r.semantics->>'version' = '2'
+        AND proof.page_no <= r.established_page
+        AND length(r.semantics #>> '{evidence,quote}') > 0
+        AND strpos(proof.content, r.semantics #>> '{evidence,quote}') > 0
+        AND (NOT r.semantics ? 'change_evidence' OR (
+          change_proof.page_no <= r.established_page
+          AND length(r.semantics #>> '{change_evidence,quote}') > 0
+          AND strpos(change_proof.content, r.semantics #>> '{change_evidence,quote}') > 0
+        ))
+      ))
     ORDER BY r.character_a_id, r.character_b_id, r.established_page
   `;
 

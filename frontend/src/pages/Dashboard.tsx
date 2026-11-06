@@ -35,6 +35,15 @@ function applyDashFilter(list: BookSummary[], filter: DashFilter): BookSummary[]
   if (filter === 'done') return []; // 완독 판정 데이터 없음 (스펙 §7 #1)
   return list;
 }
+
+// FR-BRW-001
+const SHELF_ORDER = ['takryu', 'test-book-1', 'test-book-2'];
+
+function shelfRank(bookId: string): number {
+  const rank = SHELF_ORDER.indexOf(bookId);
+  return rank === -1 ? SHELF_ORDER.length : rank;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<BookSummary[] | null>(null);
@@ -59,10 +68,12 @@ export default function Dashboard() {
   // (빈 서재 화면 자체가 데모 항목 때문에 가려지면 안 된다)
   const displayBooks = useMemo(() => {
     if (!books || books.length === 0) return books ?? [];
-    const realBooksWithCover = books.map((book) => ({
-      ...book,
-      cover_url: resolveCoverUrl(book.book_id, book.cover_url) ?? '',
-    }));
+    const realBooksWithCover = [...books]
+      .sort((a, b) => shelfRank(a.book_id) - shelfRank(b.book_id))
+      .map((book) => ({
+        ...book,
+        cover_url: resolveCoverUrl(book.book_id, book.cover_url) ?? '',
+      }));
     return [...realBooksWithCover, ...DEMO_SHELF_BOOKS];
   }, [books]);
 

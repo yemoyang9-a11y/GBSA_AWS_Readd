@@ -11,6 +11,12 @@
  */
 import { v5 as uuidv5 } from 'uuid';
 import { RelationshipSemantics } from '../../shared/types';
+import {
+  currentRelationshipVersions,
+  normalizedDirection,
+  relationshipGroup,
+  relationshipSlots,
+} from '../../modules/ssabi/relationship-versions';
 import { relationshipKey } from './semantic-guards';
 import { ReviewCandidate, SourceEvidence } from './grounding';
 
@@ -393,7 +399,11 @@ export function canonicalRelationship<
   };
 }
 
-/** Must match runtime track selection. Legacy rows retain their unverified pair-only track. */
+/**
+ * 행 식별 키 — stableId와 같은 페이지 라벨 충돌 검사에 쓴다. 무엇이 무엇을 대체하는지는 이 키가 아니라
+ * 런타임과 공유하는 currentRelationshipVersions(ssabi/relationship-versions.ts)가 정한다.
+ * Legacy rows retain their unverified pair-only track.
+ */
 export function relationshipTrack(r: {
   character_a_id: string;
   character_b_id: string;
@@ -427,9 +437,9 @@ export function mergeRelationships(
     const r = canonicalRelationship(candidate);
     const { character_a_id, character_b_id } = r;
     const key = relationshipTrack(r);
-    const history = state.relationships.filter((x) => relationshipTrack(x) === key);
+    const group = state.relationships.filter((x) => relationshipGroup(x) === relationshipGroup(r));
     if (
-      history.some(
+      group.some(
         (x) =>
           x.established_page === r.established_page &&
           x.label === normalize(r.label) &&
@@ -437,20 +447,28 @@ export function mergeRelationships(
       )
     )
       continue;
-    const latest = history.sort((a, b) => a.established_page - b.established_page).at(-1);
+    // FR-CHR-001: 이 후보가 칸을 빼앗아 대체하게 될 현재 관계들 — 런타임과 같은 규칙
+    const candidateSlots = relationshipSlots(r);
+    const replaced = currentRelationshipVersions(group).filter((x) =>
+      relationshipSlots(x).some((slot) => candidateSlots.includes(slot))
+    );
 
     const semanticKey = relationshipKey(r.label);
     if (
-      latest &&
-      relationshipKey(latest.label) === semanticKey &&
-      latest.semantics?.assertion_status === r.semantics?.assertion_status &&
-      latest.semantics?.state === r.semantics?.state
+      replaced.length > 0 &&
+      replaced.every(
+        (x) =>
+          relationshipKey(x.label) === semanticKey &&
+          normalizedDirection(x) === normalizedDirection(r) &&
+          x.semantics?.assertion_status === r.semantics?.assertion_status &&
+          x.semantics?.state === r.semantics?.state
+      )
     ) {
       continue;
     }
     const explicitChange =
       ['transition', 'disclosure'].includes(r.change_type ?? '') && r.change_evidence;
-    if (latest && !explicitChange) {
+    if (replaced.length > 0 && !explicitChange) {
       state.review.push({
         kind: 'relationship',
         candidate: r,

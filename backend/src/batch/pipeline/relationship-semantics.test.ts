@@ -135,6 +135,47 @@ test('FR-DAT-005: 의미 설명에 쓰인 근거는 확립 페이지 뒤를 참�
   expect(out.review).toHaveLength(1);
 });
 
+test('FR-CHR-001: 같은 관계 키의 방향 변화는 변화 근거 없이 기존 관계를 대체하지 않는다', () => {
+  const state = createEmptyState('synthetic-contract');
+  mergeRelationships(state, [
+    resolved(),
+    resolved({
+      established_page: 2,
+      semantics: semantic({ direction: 'mutual', summary: '민수와 영희는 서로 사랑한다.' }),
+    }),
+  ] as never);
+  expect(state.relationships).toHaveLength(1);
+  expect(state.review).toHaveLength(1);
+});
+
+test('FR-CHR-001: 변화 근거가 있는 방향 변화는 기존 관계를 대체하는 이력으로 등록된다', () => {
+  const state = createEmptyState('synthetic-contract');
+  mergeRelationships(state, [
+    resolved(),
+    resolved({
+      established_page: 2,
+      change_type: 'transition',
+      change_evidence: { ...evidence, source_page: 2 },
+      semantics: semantic({ direction: 'mutual', summary: '민수와 영희는 서로 사랑한다.' }),
+    }),
+  ] as never);
+  expect(state.relationships.map((r) => r.semantics?.direction)).toEqual(['b_to_a', 'mutual']);
+  expect(state.review).toEqual([]);
+});
+
+test('FR-CHR-001: 같은 관계 키라도 반대쪽 인물의 감정은 변화 근거 없이 함께 보존한다', () => {
+  const state = createEmptyState('synthetic-contract');
+  mergeRelationships(state, [
+    resolved(),
+    resolved({
+      established_page: 2,
+      semantics: semantic({ direction: 'b_to_a', summary: '영희는 민수를 사랑한다.' }),
+    }),
+  ] as never);
+  expect(state.relationships).toHaveLength(2);
+  expect(state.review).toEqual([]);
+});
+
 test('FR-CHR-001: 사건은 이후 같은 행동이 반복되어도 서로 다른 페이지에 보존한다', () => {
   const state = createEmptyState('synthetic-contract');
   const event = semantic({ kind: 'action', relation_key: 'help', temporal_scope: 'event' });

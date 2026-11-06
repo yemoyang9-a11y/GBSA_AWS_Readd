@@ -10,6 +10,51 @@ import { computeDegrees } from './graphLayout';
 import type { GraphResponse } from '../../types';
 import { relationshipFixture } from './relationshipFixture';
 
+describe('FR-CHR-001: 같은 관계 키에서 방향이 바뀌면 이전 관계를 대체한다 (서버와 같은 규칙)', () => {
+  const nodes = [
+    { id: 'a', name: '가', first_appearance_page: 1, aliases: [] },
+    { id: 'b', name: '나', first_appearance_page: 1, aliases: [] },
+  ];
+  const at = (history: GraphResponse['edges'], page: number) =>
+    graphUpTo({ nodes, edges: [], history, applied_cutoff: 90 }, page)
+      .edges.map((e) => e.id)
+      .sort();
+  const oneway = relationshipFixture('oneway', 10, { relation_key: 'love' });
+  const mutual = relationshipFixture('mutual', 50, { relation_key: 'love', direction: 'mutual' });
+
+  it('한쪽 방향이 쌍방으로 바뀌면 그 시점부터 쌍방만 남고, 되감으면 한쪽 방향이 보인다', () => {
+    expect(at([oneway, mutual], 30)).toEqual(['oneway']);
+    expect(at([oneway, mutual], 50)).toEqual(['mutual']);
+  });
+
+  it('쌍방이 한쪽 방향으로 바뀌면 한쪽 방향만 남는다', () => {
+    const before = relationshipFixture('mutual', 10, { relation_key: 'love', direction: 'mutual' });
+    const after = relationshipFixture('oneway', 50, { relation_key: 'love' });
+    expect(at([before, after], 50)).toEqual(['oneway']);
+  });
+
+  it('미확인 방향이 확정되면 확정된 관계만 남는다', () => {
+    const unknown = relationshipFixture('unknown', 10, {
+      relation_key: 'love',
+      direction: 'unknown',
+    });
+    const known = relationshipFixture('known', 50, { relation_key: 'love', direction: 'a_to_b' });
+    expect(at([unknown, known], 50)).toEqual(['known']);
+  });
+
+  it('양쪽 한쪽 방향 관계는 쌍방 하나로 함께 대체되고, 그 전에는 둘 다 보인다', () => {
+    const aSide = relationshipFixture('a-side', 10, { relation_key: 'love', direction: 'a_to_b' });
+    const bSide = relationshipFixture('b-side', 20, { relation_key: 'love' });
+    expect(at([aSide, bSide, mutual], 30)).toEqual(['a-side', 'b-side']);
+    expect(at([aSide, bSide, mutual], 50)).toEqual(['mutual']);
+  });
+
+  it('저장 순서가 뒤집힌 행도 같은 묶음으로 보고 대체한다', () => {
+    const reversed = { ...mutual, source: 'b', target: 'a' };
+    expect(at([oneway, reversed], 50)).toEqual(['mutual']);
+  });
+});
+
 describe('FR-CHR-001: 읽은 범위의 관계 이력을 독립 관계별로 되감는다', () => {
   const initial = relationshipFixture('jealousy', 5, { relation_key: 'jealousy' });
   const event = relationshipFixture('matchmaking', 8, {

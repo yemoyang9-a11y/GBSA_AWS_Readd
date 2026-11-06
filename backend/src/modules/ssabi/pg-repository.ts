@@ -19,6 +19,62 @@ import type {
 import type { SsabiRepository } from './repository';
 import { latestRelationshipVersions, relationshipToEdge } from './relationship-versions';
 
+const GENERIC_ALIASES = [
+  '그',
+  '그녀',
+  '딸',
+  '맏딸',
+  '큰딸',
+  '작은딸',
+  '아들',
+  '큰아들',
+  '작은아들',
+  '막내',
+  '동생',
+  '어린 동생',
+  '누이',
+  '누이동생',
+  '언니',
+  '형',
+  '오빠',
+  '누나',
+  '아내',
+  '남편',
+  '마누라',
+  '여편네',
+  '어머니',
+  '엄마',
+  '아버지',
+  '아빠',
+  '부친',
+  '모친',
+  '할머니',
+  '할아버지',
+  '아재',
+  '아주머니',
+  '아저씨',
+  '아낙',
+  '아낙네',
+  '안주인',
+  '바깥주인',
+  '주인',
+  '주인여자',
+  '영감',
+  '영감님',
+  '새끼',
+  '아이',
+  '어린애',
+  '어린것',
+  '계집아이',
+  '계집애',
+  '사내',
+  '총각',
+  '처녀',
+  '과부',
+  '선생',
+  '선생님',
+];
+
 export interface QueryClient {
   query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
 }
@@ -56,8 +112,44 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
             AND c.book_id = $1
             AND c.first_appearance_page <= $2
             AND a.first_appearance_page <= $2
+            AND a.alias <> ALL($3::text[])
+            AND a.alias NOT LIKE '%네'
+            AND a.alias NOT IN (c.name, c.name || '야', c.name || '아')
+            AND ((SELECT count(*)
+                    FROM (SELECT 1
+                            FROM pages p
+                           WHERE p.book_id = $1
+                             AND p.page_no BETWEEN a.first_appearance_page AND $2
+                             AND strpos(p.content, a.alias) > 0
+                           LIMIT 2) mentioned) >= 2
+                 OR EXISTS (
+                      SELECT 1
+                        FROM characters r
+                        LEFT JOIN aliases ra
+                          ON ra.character_id = r.id
+                         AND ra.book_id = $1
+                         AND ra.first_appearance_page <= $2
+                         AND ra.alias <> ALL($3::text[])
+                       WHERE r.book_id = $1
+                         AND r.id <> a.character_id
+                         AND r.first_appearance_page <= $2
+                         AND ((r.name <> ALL($3::text[])
+                               AND (strpos(' ' || a.alias, ' ' || r.name || '의 ') > 0
+                                    OR strpos(' ' || a.alias, ' ' || r.name || '네 ') > 0))
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '의 ') > 0
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '네 ') > 0)))
+            AND NOT EXISTS (
+                  SELECT 1
+                    FROM aliases o
+                    JOIN characters oc ON o.character_id = oc.id
+                   WHERE o.book_id = $1
+                     AND oc.book_id = $1
+                     AND o.alias = a.alias
+                     AND o.character_id <> a.character_id
+                     AND o.first_appearance_page <= $2
+                     AND oc.first_appearance_page <= $2)
           ORDER BY a.first_appearance_page ASC`,
-        [bookId, cutoff]
+        [bookId, cutoff, GENERIC_ALIASES]
       );
       return rows;
     },
