@@ -134,10 +134,10 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
                          AND r.id <> a.character_id
                          AND r.first_appearance_page <= $2
                          AND ((r.name <> ALL($3::text[])
-                               AND (strpos(a.alias, r.name || '의 ') > 0
-                                    OR strpos(a.alias, r.name || '네 ') > 0))
-                              OR strpos(a.alias, ra.alias || '의 ') > 0
-                              OR strpos(a.alias, ra.alias || '네 ') > 0)))
+                               AND (strpos(' ' || a.alias, ' ' || r.name || '의 ') > 0
+                                    OR strpos(' ' || a.alias, ' ' || r.name || '네 ') > 0))
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '의 ') > 0
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '네 ') > 0)))
             AND NOT EXISTS (
                   SELECT 1
                     FROM aliases o

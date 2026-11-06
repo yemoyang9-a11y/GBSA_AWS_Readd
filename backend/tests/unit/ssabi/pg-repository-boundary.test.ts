@@ -91,10 +91,18 @@ describe('FR-SPL-002: 관계와 별칭의 도서·인물 상한 SQL 계약', () 
     expect(sql).toMatch(/r\.first_appearance_page\s*<=\s*\$2/i);
     expect(sql).toMatch(/ra\.book_id\s*=\s*\$1/i);
     expect(sql).toMatch(/ra\.first_appearance_page\s*<=\s*\$2/i);
-    expect(sql).toMatch(/strpos\(\s*a\.alias\s*,\s*r\.name\s*\|\|\s*'의 '\s*\)/i);
-    expect(sql).toMatch(/strpos\(\s*a\.alias\s*,\s*r\.name\s*\|\|\s*'네 '\s*\)/i);
-    expect(sql).toMatch(/strpos\(\s*a\.alias\s*,\s*ra\.alias\s*\|\|\s*'의 '\s*\)/i);
-    expect(sql).toMatch(/strpos\(\s*a\.alias\s*,\s*ra\.alias\s*\|\|\s*'네 '\s*\)/i);
+    expect(sql).toMatch(
+      /strpos\(\s*' '\s*\|\|\s*a\.alias\s*,\s*' '\s*\|\|\s*r\.name\s*\|\|\s*'의 '\s*\)/i
+    );
+    expect(sql).toMatch(
+      /strpos\(\s*' '\s*\|\|\s*a\.alias\s*,\s*' '\s*\|\|\s*r\.name\s*\|\|\s*'네 '\s*\)/i
+    );
+    expect(sql).toMatch(
+      /strpos\(\s*' '\s*\|\|\s*a\.alias\s*,\s*' '\s*\|\|\s*ra\.alias\s*\|\|\s*'의 '\s*\)/i
+    );
+    expect(sql).toMatch(
+      /strpos\(\s*' '\s*\|\|\s*a\.alias\s*,\s*' '\s*\|\|\s*ra\.alias\s*\|\|\s*'네 '\s*\)/i
+    );
     expect(sql).toMatch(/ra\.alias\s*<>\s*ALL\(\s*\$3::text\[\]\s*\)/i);
     expect(sql).toMatch(/r\.name\s*<>\s*ALL\(\s*\$3::text\[\]\s*\)/i);
   });
