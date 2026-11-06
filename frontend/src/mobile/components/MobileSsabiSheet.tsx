@@ -1,13 +1,33 @@
-import type { ReactNode } from 'react';
+import type { PointerEvent, ReactNode } from 'react';
 
-// FR-SVB-003
-export default function MobileSsabiSheet({ open, children }: { open: boolean; children: ReactNode }) {
+function dismissKeyboard(e: PointerEvent<HTMLDivElement>) {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement)) return;
+  if ((e.target as Element).closest('form')) return;
+  active.blur();
+}
+
+// FR-SVB-003 NFR-USE
+export default function MobileSsabiSheet({
+  open,
+  height,
+  offsetTop,
+  children,
+}: {
+  open: boolean;
+  height: number;
+  offsetTop: number;
+  children: ReactNode;
+}) {
   if (!open) return null;
   return (
     <div
       data-testid="mobile-ssabi"
-      className="fixed inset-0 z-40 flex h-[100dvh] flex-col overflow-hidden bg-brief-paper"
+      onPointerDown={dismissKeyboard}
+      className="fixed inset-x-0 z-40 flex flex-col overflow-hidden bg-brief-paper"
       style={{
+        top: offsetTop,
+        height,
         paddingTop: 'var(--safe-top)',
         paddingBottom: 'var(--safe-bottom)',
       }}

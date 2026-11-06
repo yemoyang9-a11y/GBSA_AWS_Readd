@@ -59,6 +59,7 @@ export default function SsabiPanel({
   onQuoteDismissed,
   onRecapQuote,
   onRecapRefresh,
+  compactHeader = false,
 }: {
   sessionEpoch: number;
   /**
@@ -122,6 +123,7 @@ export default function SsabiPanel({
   /** 리캡 새로고침 버튼 클릭(2026-08-25, 사용자 요청) — Reader.tsx가 현재 페이지 기준으로
    *  리캡을 다시 스트리밍한다. 자동 재생성(페이지 이동)은 막고 이 버튼으로만 허용한다. */
   onRecapRefresh?: () => void;
+  compactHeader?: boolean;
 }) {
   const [lastTab, setLastTab] = useState<SsabiTab | null>(initialTab);
   const previousEpoch = useRef<number | null>(initialTabEpoch);
@@ -178,7 +180,9 @@ export default function SsabiPanel({
     <section className="flex h-full flex-col border-l border-brief-rule bg-brief-paper">
       {/* 여닫기 버튼은 이 헤더 우측에 겹쳐 보이지만 Reader 가 고정 위치로 그린다 —
           패널이 닫혀도 같은 자리에 남아야 하므로 패널 안에 두지 않는다 */}
-      <div className="flex items-center justify-between gap-2 pb-5 pl-6 pr-20 pt-6">
+      <div
+        className={`flex items-center justify-between gap-2 pb-5 pl-6 pr-20 pt-6 ${compactHeader ? 'hidden' : ''}`}
+      >
         {/*
          * pr-20(80px) — 여닫기 버튼은 Reader가 이 헤더와 같은 줄, 같은 우측 여백(right-6)에
          * 고정 위치로 그린다(size-9=36px). px-6만 쓰면 이 배지의 오른쪽 끝이 버튼과 정확히

@@ -9,6 +9,7 @@ import MobileReaderView from '../components/MobileReaderView';
 import EdgeHandle from '../components/EdgeHandle';
 import MobileSsabiSheet from '../components/MobileSsabiSheet';
 import TocList from '../components/TocList';
+import { useVisualViewport } from '../useVisualViewport';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -33,6 +34,7 @@ function MobileReadingSession() {
   const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
   const [tocOpen, setTocOpen] = useState(false);
+  const viewport = useVisualViewport();
 
   useEffect(() => {
     if (panelOpen) setTocOpen(false);
@@ -101,9 +103,9 @@ function MobileReadingSession() {
           }}
         />
       ) : null}
-      <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} />
-      <MobileSsabiSheet open={panelOpen}>
-        <SsabiPanel key={currentPage} {...ssabiPanelProps} />
+      <EdgeHandle side="right" label="싸비" open={panelOpen} onToggle={togglePanel} hidden={viewport.keyboardOpen} />
+      <MobileSsabiSheet open={panelOpen} height={viewport.height} offsetTop={viewport.offsetTop}>
+        <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} />
       </MobileSsabiSheet>
     </div>
   );
