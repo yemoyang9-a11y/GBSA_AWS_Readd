@@ -627,10 +627,7 @@ export default function RelationshipGraph({
                 // 돌아온다(반대편 dimmed 분기는 원래도 0.15).
                 opacity={dimmed ? 0.15 : validSelectedId ? 1 : 0.55}
               >
-                <title>
-                  {graphEdgeLabel(edge)}
-                  {edge.semantics ? '' : ' · 방향 미검증'}
-                </title>
+                <title>{graphEdgeLabel(edge)}</title>
               </path>
             );
           })}

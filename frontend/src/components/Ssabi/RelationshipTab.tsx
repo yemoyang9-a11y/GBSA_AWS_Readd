@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GraphResponse } from '../../types';
 import Loading from '../common/Loading';
 import RelationshipGraph from './RelationshipGraph';
-import RelationshipDetails from './RelationshipDetails';
-import { graphEdgeKey } from './graphEdges';
 import { filterMajorCharacters, graphMilestones, graphUpTo } from './graphFilter';
 
 /**
@@ -188,15 +186,12 @@ export default function RelationshipTab({
     setResultsOpen(false);
   }
 
-  const relationsOf = (id: string) =>
-    shown.edges.filter((edge) => edge.source === id || edge.target === id);
-
   return (
     <div className="space-y-5">
       <RelationshipGraph graph={displayed} selectedId={activeSelected} onSelect={setSelected} />
       <p className="text-[11px] leading-relaxed text-brief-muted">
-        화살표는 감정·행동의 방향입니다. 점선 관계는 아래 카드에서 주장·소문·종료 여부를 확인하세요.
-        인물을 선택하면 관계 설명과 원문 근거를 볼 수 있습니다.
+        화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다. 인물을 선택하면 그
+        인물의 관계가 그래프에 글자로 나옵니다.
       </p>
       {!graph?.history ? (
         <p className="text-[11px] leading-relaxed text-brief-muted">
@@ -399,7 +394,6 @@ export default function RelationshipTab({
         <ul className="space-y-3">
           {displayed.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
-            const relations = isOpen ? relationsOf(node.id) : [];
             return (
               <li
                 key={node.id}
@@ -410,7 +404,7 @@ export default function RelationshipTab({
               >
                 <button
                   type="button"
-                  aria-expanded={isOpen}
+                  aria-pressed={isOpen}
                   onClick={() => setSelected(isOpen ? null : node.id)}
                   className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
                     isOpen
@@ -443,19 +437,6 @@ export default function RelationshipTab({
                     ) : null}
                   </div>
                 </button>
-                {isOpen && relations.length > 0 ? (
-                  <ul aria-label="관계" className="mt-2 space-y-2">
-                    {relations.map((rel) => (
-                      <li
-                        key={graphEdgeKey(rel)}
-                        data-relationship-id={rel.id ?? graphEdgeKey(rel)}
-                        className="rounded-xl border border-brief-rule bg-white p-3 text-[11px]"
-                      >
-                        <RelationshipDetails edge={rel} nodes={shown.nodes} selectedId={node.id} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </li>
             );
           })}
