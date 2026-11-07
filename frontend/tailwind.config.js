@@ -144,5 +144,8 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // NFR-USE
+    ({ addVariant }) => addVariant('mobile', '[data-mobile] &'),
+  ],
 };

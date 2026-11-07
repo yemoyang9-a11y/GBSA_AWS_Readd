@@ -18,7 +18,7 @@
  * (#6e6b42)으로 교체했다(2026-08-27) — RE/ADD 글자색(dash-ink)을 따라가던 currentColor
  * 연동은 이제 없고, 실루엣과 무관하게 고정된 색이다.
  */
-function ReaddMark() {
+export function ReaddMark() {
   return (
     <svg
       viewBox="0 0 24 24"

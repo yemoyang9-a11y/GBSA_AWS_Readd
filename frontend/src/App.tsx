@@ -4,6 +4,11 @@ import Dashboard from './pages/Dashboard';
 import Briefing from './pages/Briefing';
 import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
+import MobileReader from './mobile/pages/MobileReader';
+import MobileBriefing from './mobile/pages/MobileBriefing';
+import MobileDashboard from './mobile/pages/MobileDashboard';
+import MobileNotFound from './mobile/pages/MobileNotFound';
+import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { BOOK_ROUTES } from './utils/routes';
 import './App.css';
@@ -20,12 +25,12 @@ import './App.css';
  * `<BrowserRouter>`에서는 조용히 무시돼서 "안 된다"는 재보고를 받고서야 발견했다.
  * 라우트 트리 구조·화면 목록은 그대로이고, JSX `<Routes>` 대신 배열로만 옮겼다.
  */
-export function createAppRouter() {
+export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
   return createBrowserRouter([
-    { path: '/', element: <Dashboard /> },
-    { path: BOOK_ROUTES.briefing, element: <Briefing /> },
-    { path: BOOK_ROUTES.reader, element: <Reader /> },
-    { path: '*', element: <NotFound /> },
+    { path: '/', element: isMobile ? <MobileDashboard /> : <Dashboard /> },
+    { path: BOOK_ROUTES.briefing, element: isMobile ? <MobileBriefing /> : <Briefing /> },
+    { path: BOOK_ROUTES.reader, element: isMobile ? <MobileReader /> : <Reader /> },
+    { path: '*', element: isMobile ? <MobileNotFound /> : <NotFound /> },
   ]);
 }
 

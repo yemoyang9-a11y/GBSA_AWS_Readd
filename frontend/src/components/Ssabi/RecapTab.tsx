@@ -64,7 +64,7 @@ export default function RecapTab({
       disabled={streaming}
       aria-label="리캡 새로고침"
       title="리캡 새로고침"
-      className="flex size-8 shrink-0 items-center justify-center rounded-full text-brief-muted transition-colors hover:text-brief-ink disabled:opacity-40"
+      className="flex size-8 shrink-0 items-center mobile:size-11 justify-center rounded-full text-brief-muted transition-colors hover:text-brief-ink disabled:opacity-40"
     >
       <svg
         aria-hidden="true"
