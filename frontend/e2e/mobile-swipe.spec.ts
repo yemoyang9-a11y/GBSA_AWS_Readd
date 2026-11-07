@@ -120,3 +120,20 @@ test('Final fix 3: 넘김 애니메이션 중 다른 이동을 하면 예전 다
   await expect(pageInput).toHaveValue('14');
   expect(log.progress).toEqual([15, 14]);
 });
+
+test('PR 리뷰: 넘김이 확정되면 옛 페이지가 가운데로 되돌아와 보이지 않는다', async ({ page }) => {
+  const log = await installMockApi(page, { pageDelayMs: 1500 });
+  await page.goto(`/books/${BOOK_ID}/read`);
+  await expect(page.getByRole('article')).toContainText('15쪽.');
+  await expect.poll(() => log.progress.length).toBe(1);
+  const { width, height } = page.viewportSize()!;
+  await swipe(page, { fromX: width * 0.8, toX: width * 0.3, y: height / 2, durationMs: 400 });
+  await page.waitForTimeout(500);
+  const snappedBack = await page.evaluate(() => {
+    const article = document.querySelector('article');
+    if (!article || !article.textContent?.includes('15쪽.')) return false;
+    const r = article.getBoundingClientRect();
+    return r.left >= 0 && r.left < window.innerWidth / 2;
+  });
+  expect(snappedBack).toBe(false);
+});

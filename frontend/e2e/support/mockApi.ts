@@ -19,6 +19,8 @@ export interface MockApiOptions {
   failCatalog?: boolean;
   failEntry?: boolean;
   failBriefingTimes?: number;
+  failInfo?: boolean;
+  pageDelayMs?: number;
 }
 
 const API = 'http://api.e2e.test';
@@ -79,7 +81,10 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       if (opts.failEntry) return json(route, { error: 'E2E_FAIL' }, 500);
       return json(route, { route: opts.entryRoute ?? 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
     }
-    if (method === 'GET' && rest === '/info') return json(route, bookInfo(totalPages));
+    if (method === 'GET' && rest === '/info') {
+      if (opts.failInfo) return json(route, { error: 'E2E_FAIL' }, 500);
+      return json(route, bookInfo(totalPages));
+    }
     if (method === 'GET' && rest === '/briefing') {
       if ((opts.failBriefingTimes ?? 0) > briefingFailures) {
         briefingFailures += 1;
@@ -109,6 +114,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       const pageNo = Number(pageMatch[1]);
       log.pageFetches.push(pageNo);
       if (failPages.has(pageNo)) return json(route, { error: 'E2E_FAIL' }, 500);
+      if (opts.pageDelayMs && log.pageFetches.length > 1) await new Promise((r) => setTimeout(r, opts.pageDelayMs));
       return json(route, pageResponse(pageNo, totalPages));
     }
 

@@ -165,3 +165,14 @@ test.describe('모바일 서재', () => {
     });
   }
 });
+
+test('PR 리뷰: 아래쪽 서재 행을 누르면 위쪽 이어 읽기 카드가 보이도록 스크롤된다', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
+  await installMockApi(page);
+  await page.goto('/');
+  await expect(page.getByTestId('mobile-dashboard')).toBeVisible();
+  const rows = page.getByRole('button', { pressed: false }).filter({ hasText: '파친코' });
+  await rows.first().scrollIntoViewIfNeeded();
+  await rows.first().tap();
+  await expect(page.getByRole('button', { name: /이어서 읽기|읽기 시작/ }).first()).toBeInViewport();
+});

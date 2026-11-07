@@ -44,6 +44,10 @@ export default function MobileReaderView({
       setInputValue(String(currentPage));
       return;
     }
+    if (totalPages <= 0) {
+      setInputValue(String(currentPage));
+      return;
+    }
     const clamped = Math.max(1, Math.min(totalPages, n));
     setInputValue(String(clamped));
     if (clamped !== currentPage) onMove(clamped);
@@ -72,7 +76,9 @@ export default function MobileReaderView({
       down = null;
       if (!start || start.onAsk) return;
       const quickTap = performance.now() - start.t < TAP_MAX_MS && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MAX_MOVE;
-      if (!quickTap || !document.getSelection()?.toString()) return;
+      const selection = document.getSelection();
+      const article = (containerRef as { current: HTMLElement | null }).current;
+      if (!quickTap || !selection?.toString() || !selection.anchorNode || !article?.contains(selection.anchorNode)) return;
       document.getSelection()?.removeAllRanges();
       clearPopoverRef.current();
     }
@@ -82,7 +88,7 @@ export default function MobileReaderView({
       document.removeEventListener('pointerdown', onDown, true);
       document.removeEventListener('pointerup', onUp, true);
     };
-  }, []);
+  }, [containerRef]);
   const liveSelectionRef = useRef('');
 
   useEffect(() => {

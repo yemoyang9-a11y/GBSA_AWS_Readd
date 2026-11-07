@@ -156,3 +156,26 @@ test('피드백: "아모에게 물어보기"를 누를 때는 선택이 먼저 �
   await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
   await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
 });
+
+test('PR 리뷰: 싸비 리캡에서 고른 문장도 "아모에게 물어보기"로 챗봇에 인용된다', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '싸비 열기' }).click();
+  await page.getByRole('tab', { name: '리캡' }).click();
+  const recap = page.getByRole('tabpanel');
+  await expect(recap).toContainText('줄거리');
+  const text = await recap.evaluate((panel) => {
+    const walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && (node.textContent ?? '').trim().length < 12) node = walker.nextNode();
+    const range = document.createRange();
+    range.setStart(node!, 0);
+    range.setEnd(node!, 10);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    document.dispatchEvent(new Event('touchend'));
+    return range.toString().trim();
+  });
+  await page.getByRole('button', { name: '아모에게 물어보기' }).tap();
+  await expect(page.getByRole('tab', { name: '챗봇' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('mobile-ssabi')).toContainText(text);
+});

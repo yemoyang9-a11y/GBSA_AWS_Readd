@@ -23,7 +23,6 @@ export interface ReadingSessionState {
   chapters: ChapterSummary[];
   moveTo: (page: number) => void;
   panelOpen: boolean;
-  setPanelOpen: (open: boolean) => void;
   togglePanel: () => void;
   highlightedQuote: string | null;
   quote: (text: string) => void;
@@ -343,7 +342,6 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     chapters,
     moveTo: setCurrentPage,
     panelOpen,
-    setPanelOpen,
     togglePanel,
     highlightedQuote,
     quote: handleQuote,

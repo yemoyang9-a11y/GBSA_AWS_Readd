@@ -42,3 +42,15 @@ test.describe('가로 화면', () => {
     expect(fits).toBe(true);
   });
 });
+
+test('PR 리뷰: 총 쪽수를 못 받았을 때 페이지 번호를 입력해도 1쪽으로 되감기지 않는다', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'desktop', '모바일 프로젝트에서만');
+  const log = await installMockApi(page, { failInfo: true });
+  await page.goto(READ_URL);
+  await expect(page.getByRole('article')).toContainText('15쪽.');
+  const input = page.getByRole('textbox', { name: '페이지로 이동' });
+  await input.fill('20');
+  await input.press('Enter');
+  await page.waitForTimeout(800);
+  expect(log.progress).not.toContain(1);
+});

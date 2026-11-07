@@ -146,7 +146,10 @@ export default function MobileDashboard() {
         books={dash.displayBooks}
         visibleBooks={dash.visibleBooks}
         selectedId={dash.selectedBook.book_id}
-        onPreview={dash.previewBook}
+        onPreview={(book) => {
+          dash.previewBook(book);
+          requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+        }}
         filter={dash.filter}
         onFilterChange={dash.handleFilterChange}
         emptyMessage={dash.emptyMessage}
