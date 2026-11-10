@@ -176,3 +176,37 @@ describe('FR-CHR-001: independent directed relationship histories', () => {
     expect(at5.applied_cutoff).toBe(5);
   });
 });
+
+describe('FR-CHR-001: 같은 쪽 안의 관계 변화는 근거 위치 순서로 정한다', () => {
+  const at = (start_char: number) => ({
+    source_page: 5,
+    quote: 'q',
+    start_char,
+    end_char: start_char + 1,
+  });
+
+  it('같은 쪽에서 바뀐 관계는 id 순서가 아니라 근거 위치가 뒤인 쪽이 현재 관계다', () => {
+    const before = row('z-before', 5, semantics({ evidence: at(0) }));
+    const after = row(
+      'a-after',
+      5,
+      semantics({ direction: 'mutual', evidence: at(0), change_evidence: at(40) })
+    );
+    expect(latestRelationshipVersions([before, after]).map((r) => r.id)).toEqual(['a-after']);
+    expect(latestRelationshipVersions([after, before]).map((r) => r.id)).toEqual(['a-after']);
+  });
+
+  it('근거 위치가 같으면 변화 근거가 있는 쪽이 나중이다', () => {
+    const active = row('z-active', 5, semantics({ evidence: at(10) }));
+    const ended = row(
+      'a-ended',
+      5,
+      semantics({ state: 'ended', evidence: at(10), change_evidence: at(10) })
+    );
+    expect(latestRelationshipVersions([active, ended]).map((r) => r.id)).toEqual(['a-ended']);
+  });
+
+  it('기존 행(semantics 없음)은 같은 쪽에서 예전처럼 id 순서를 따른다', () => {
+    expect(latestRelationshipVersions([row('b', 5), row('a', 5)]).map((r) => r.id)).toEqual(['b']);
+  });
+});

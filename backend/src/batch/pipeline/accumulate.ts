@@ -12,6 +12,7 @@
 import { v5 as uuidv5 } from 'uuid';
 import { RelationshipSemantics } from '../../shared/types';
 import {
+  compareRelationshipOrder,
   currentRelationshipVersions,
   normalizedDirection,
   relationshipGroup,
@@ -431,9 +432,8 @@ export function mergeRelationships(
   state: GenerationState,
   chapterRelationships: ChapterRelationshipInput[]
 ): void {
-  for (const candidate of [...chapterRelationships].sort(
-    (a, b) => a.established_page - b.established_page
-  )) {
+  // FR-CHR-001: 런타임과 같은 순서(페이지, 같은 페이지면 근거 위치)로 병합해야 대체 판단이 일치한다
+  for (const candidate of [...chapterRelationships].sort(compareRelationshipOrder)) {
     const r = canonicalRelationship(candidate);
     const { character_a_id, character_b_id } = r;
     const key = relationshipTrack(r);
@@ -478,15 +478,46 @@ export function mergeRelationships(
       continue;
     }
 
+    // 같은 페이지·라벨에서 확정 여부나 상태만 바뀐 행도 id가 겹치지 않게 한다. 흔한 (fact, active)
+    // 행은 예전 id를 그대로 둔다 — 등록은 upsert라 id가 바뀌면 옛 행이 남는다
+    const status =
+      r.semantics && (r.semantics.assertion_status !== 'fact' || r.semantics.state !== 'active')
+        ? [r.semantics.assertion_status, r.semantics.state]
+        : [];
     state.relationships.push({
       ...r,
-      id: stableId(state, 'relationship', key, r.established_page, normalize(r.label)),
+      id: stableId(state, 'relationship', key, r.established_page, normalize(r.label), ...status),
       character_a_id,
       character_b_id,
       label: normalize(r.label),
       established_page: r.established_page,
     });
   }
+}
+
+/**
+ * FR-CHR-001: 다음 장 프롬프트에 넣는 이전 관계 — 런타임과 같은 규칙으로 대체된 관계는 뺀다.
+ * 줄 형식과 순서(트랙이 처음 나온 순서)는 예전과 같다. 이 문자열은 장 캐시 키다 — 대체된 관계가 있거나,
+ * 같은 쪽 관계의 병합 순서(이제 근거 위치 순)가 LLM 출력 순서와 다르면 이후 장의 캐시가 맞지 않는다.
+ */
+export function previousRelationshipHints(state: GenerationState): string[] {
+  // 현재 관계는 트랙마다 하나다(같은 트랙은 같은 칸을 차지해 서로 대체한다)
+  const currentByTrack = new Map(
+    currentRelationshipVersions(state.relationships).map((r) => [relationshipTrack(r), r])
+  );
+  // 순서는 예전 그대로 — 페이지 순(같은 페이지는 병합 순서)으로 트랙이 처음 나온 순서
+  const tracks = new Set(
+    [...state.relationships]
+      .sort((a, b) => a.established_page - b.established_page)
+      .map((r) => relationshipTrack(r))
+  );
+  const names = new Map(state.characters.map((c) => [c.id, c.name]));
+  return [...tracks]
+    .flatMap((track) => currentByTrack.get(track) ?? [])
+    .map(
+      (r) =>
+        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
+    );
 }
 
 interface ChapterTermInput {

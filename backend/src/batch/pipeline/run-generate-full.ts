@@ -38,7 +38,7 @@ import {
   mergeTerms,
   resolveCharacterId,
   GenerationState,
-  relationshipTrack,
+  previousRelationshipHints,
 } from './accumulate';
 import { Chapter, Page } from '../../shared/types';
 import {
@@ -376,17 +376,7 @@ async function main(): Promise<void> {
     );
     const known = knownCharacterNames(state);
 
-    const latestRelationships = new Map<string, (typeof state.relationships)[number]>();
-    for (const relation of [...state.relationships].sort(
-      (a, b) => a.established_page - b.established_page
-    )) {
-      latestRelationships.set(relationshipTrack(relation), relation);
-    }
-    const names = new Map(state.characters.map((c) => [c.id, c.name]));
-    const previousRelationships = [...latestRelationships.values()].map(
-      (r) =>
-        `${names.get(r.character_a_id)} / ${names.get(r.character_b_id)}: ${r.label} (p.${r.established_page}) ${r.semantics ? JSON.stringify(r.semantics) : 'legacy-unverified'}`
-    );
+    const previousRelationships = previousRelationshipHints(state);
     const output = await loadOrGenerateChapter(
       chapter,
       pages,
