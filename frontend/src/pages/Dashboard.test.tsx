@@ -47,6 +47,21 @@ describe('Dashboard', () => {
     expect(screen.getAllByText('25.3% 완료').length).toBeGreaterThan(0);
   });
 
+  it('의견 남기기 버튼은 서재 목록 아래 main의 맨 끝에 있고 누르면 모달이 열린다', async () => {
+    renderDashboard();
+    await screen.findByRole('heading', { level: 2, name: '탁류' });
+
+    const button = screen.getByRole('button', { name: '의견 남기기' });
+    expect(
+      screen.getByText('내 서재').compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(screen.getByRole('main').lastElementChild).toContainElement(button);
+
+    await userEvent.click(button);
+
+    expect(screen.getByRole('dialog', { name: '의견 남기기' })).toBeInTheDocument();
+  });
+
   it('목록 행을 클릭하면 이동 없이 히어로 미리보기만 바뀐다', async () => {
     renderDashboard();
     await screen.findByRole('heading', { level: 2, name: '탁류' });

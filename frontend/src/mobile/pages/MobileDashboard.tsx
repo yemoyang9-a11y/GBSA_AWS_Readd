@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Loading from '../../components/common/Loading';
 import ProgressBar from '../../components/Reader/ProgressBar';
 import TypographicCover from '../../components/common/TypographicCover';
+import FeedbackEntry from '../../components/Dashboard/FeedbackEntry';
 import { ReaddMark } from '../../components/Layout/Header';
 import { BOOK_INFO_CONTENT } from '../../data/bookInfoContent';
 import { useDashboard } from '../../hooks/useDashboard';
@@ -162,6 +163,7 @@ export default function MobileDashboard() {
           onClose={() => dash.setInfoBook(null)}
         />
       ) : null}
+      <FeedbackEntry variant="sheet" />
     </Frame>
   );
 }

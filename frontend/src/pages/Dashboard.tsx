@@ -1,6 +1,7 @@
 import Button from '../components/common/Button';
 import BookInfoModal from '../components/Dashboard/BookInfoModal';
 import ContinueReadingHero from '../components/Dashboard/ContinueReadingHero';
+import FeedbackEntry from '../components/Dashboard/FeedbackEntry';
 import ShelfList from '../components/Dashboard/ShelfList';
 import WelcomeBanner from '../components/Dashboard/WelcomeBanner';
 import Loading from '../components/common/Loading';
@@ -95,6 +96,8 @@ export default function Dashboard() {
           emptyMessage={emptyMessage}
           onInfo={setInfoBook}
         />
+
+        <FeedbackEntry variant="modal" />
       </main>
 
       {infoBook ? (
