@@ -57,7 +57,7 @@ app.use((req, res, next) => {
   // 목록이 있는데 매칭 안 되면 CORS 헤더를 아예 안 붙인다 → 브라우저가 차단한다
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, X-Device-Id');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, X-Device-Id, Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);

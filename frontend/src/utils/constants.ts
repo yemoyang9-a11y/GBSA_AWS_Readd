@@ -13,6 +13,7 @@ export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 export const STORAGE_KEYS = {
   /** 디바이스 식별자 — 8/20 팀 결정으로 클라이언트가 생성한다 (team-sync-r4.md §4.8) */
   deviceId: 'ssabi.device_id',
+  authToken: 'ssabi.auth_token',
 } as const;
 
 /** 하트비트 주기 5분 (A2) */

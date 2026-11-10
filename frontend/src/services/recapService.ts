@@ -11,7 +11,7 @@
 import { api } from './api';
 import { readSseStream } from './stream';
 import { API_BASE_URL, USE_MOCK } from '../utils/constants';
-import { getDeviceId } from '../utils/storage';
+import { authHeaders, clearAuthToken, getDeviceId } from '../utils/storage';
 import type { BriefingResponse, SseFrame } from '../types';
 
 export async function fetchBriefing(bookId: string): Promise<BriefingResponse> {
@@ -38,9 +38,15 @@ export async function* streamRecap(
   // axios 는 브라우저에서 스트림 본문을 주지 않으므로 이 경로만 fetch 를 쓴다
   const response = await fetch(`${API_BASE_URL}/books/${bookId}/recap/stream`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() ?? '' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Device-Id': getDeviceId() ?? '',
+      ...authHeaders(),
+    },
     body: JSON.stringify({ page, seq }),
   });
+
+  if (response.status === 401) clearAuthToken();
 
   if (!response.ok || !response.body) {
     yield { type: 'error', message: `recap stream failed (${response.status})` };

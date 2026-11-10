@@ -23,6 +23,12 @@ import { createContentServices } from '../modules/content/composition';
 import { createSsabiServices } from '../modules/ssabi/composition';
 import { createFeedbackRouter } from '../modules/feedback/feedback-router';
 import { sendFeedbackMail } from '../modules/feedback/resend-mailer';
+import { createAuthRoutes } from '../modules/auth/composition';
+import {
+  attachReaderIdentity,
+  resolveReaderId,
+  resolveWriterDeviceId,
+} from '../modules/auth/reader-id.middleware';
 import { ensureBookReady } from './book-ready.guard';
 import { pageIsIncludedInCutoff } from './cutoff-inclusion';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
@@ -37,13 +43,31 @@ const contentServices = createContentServices(pool, readingState);
 // R3 싸비 조회 서비스 조립 — 관계도·인물 상세 (G1: 모든 메서드가 cutoff 인자)
 const ssabiServices = createSsabiServices(pool);
 
+router.use(createAuthRoutes(pool));
+router.use(attachReaderIdentity());
+
 function requireDeviceId(req: Request, res: Response): string | null {
-  const deviceId = req.headers['x-device-id'] as string | undefined;
+  const deviceId = resolveReaderId(req);
   if (!deviceId) {
     res.status(400).json({ error: 'BAD_REQUEST', message: 'X-Device-Id header is required' });
     return null;
   }
   return deviceId;
+}
+
+// FR-PRG-003
+function acceptProgress(
+  req: Request,
+  deviceId: string,
+  bookId: string,
+  event: { page: number; seq: number }
+): Promise<void> {
+  return readingState.progressService.acceptProgressEvent(
+    deviceId,
+    bookId,
+    event,
+    resolveWriterDeviceId(req)
+  );
 }
 
 /** UI position is a precondition, never an alternative source for the server cutoff. */
@@ -143,7 +167,7 @@ router.get('/diag/sse', (_req: Request, res: Response) => {
 router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   const { bookId } = req.params;
   const { query, quote, page, seq, conversationId: requestedConversationId } = req.body;
-  const deviceId = req.headers['x-device-id'] as string;
+  const deviceId = resolveReaderId(req);
 
   // 입력 검증
   if (!query || typeof query !== 'string') {
@@ -197,7 +221,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
       // 페이지 넘기고 바로 물으면 반영돼야 함
       // ⚠️ 호출 순서: recordProgressEvent → getCutoffSnapshot (R2 답신)
       if (typeof page === 'number' && typeof seq === 'number') {
-        await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+        await acceptProgress(req, deviceId, bookId, { page, seq });
       }
       await readingState.sessionService.touchActivity(deviceId, bookId);
 
@@ -431,7 +455,7 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
   }
 
   try {
-    await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+    await acceptProgress(req, deviceId, bookId, { page, seq });
     await readingState.sessionService.touchActivity(deviceId, bookId);
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
     res.json({ success: true, applied_cutoff: snapshot.cutoff });
@@ -523,7 +547,7 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
   try {
     if (typeof page === 'number' && typeof seq === 'number') {
       // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
-      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+      await acceptProgress(req, deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 리캡 요청도 조작 이벤트
 
@@ -692,7 +716,7 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
     const seq = Number(req.query.seq);
     if (Number.isFinite(page) && Number.isFinite(seq)) {
       // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
-      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+      await acceptProgress(req, deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
 
@@ -736,7 +760,7 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
     const seq = Number(req.query.seq);
     if (Number.isFinite(page) && Number.isFinite(seq)) {
       // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
-      await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
+      await acceptProgress(req, deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
 

@@ -11,7 +11,7 @@
 import { readSseStream } from './stream';
 import { api } from './api';
 import { API_BASE_URL, USE_MOCK } from '../utils/constants';
-import { getDeviceId } from '../utils/storage';
+import { authHeaders, clearAuthToken, getDeviceId } from '../utils/storage';
 import type { ChatbotConversationDetail, ChatbotConversationSummary, SseFrame } from '../types';
 
 export async function* askChatbot(
@@ -30,9 +30,15 @@ export async function* askChatbot(
 
   const response = await fetch(`${API_BASE_URL}/books/${bookId}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() ?? '' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Device-Id': getDeviceId() ?? '',
+      ...authHeaders(),
+    },
     body: JSON.stringify({ query, quote, page, seq, conversationId }),
   });
+
+  if (response.status === 401) clearAuthToken();
 
   if (response.status === 429) {
     const body = (await response.json().catch(() => null)) as { retry_after?: number } | null;
