@@ -36,12 +36,19 @@ function mockClient(rows: any[] = []): {
 
 describe('진도 — createPgReadingPositionRepository', () => {
   test('findPosition은 device_id·book_id로 조회하고 event_seq(bigint)를 number로 변환한다', async () => {
-    const { client, calls } = mockClient([{ current_page: 15, event_seq: '99' }]); // pg bigint → string
+    const { client, calls } = mockClient([
+      { current_page: 15, event_seq: '99', updated_at: new Date('2026-11-09T12:34:56.000Z') },
+    ]); // pg bigint → string
     const repo = createPgReadingPositionRepository(client);
 
     const result = await repo.findPosition('dev-1', 'book-1');
 
-    expect(result).toEqual({ current_page: 15, event_seq: 99 });
+    expect(result).toEqual({
+      current_page: 15,
+      event_seq: 99,
+      updated_at: '2026-11-09T12:34:56.000Z',
+    });
+    expect(calls[0].sql).toMatch(/\bupdated_at\b/);
     expect(calls[0].params).toEqual(['dev-1', 'book-1']);
   });
 
@@ -121,6 +128,18 @@ describe('공개 콘텐츠 스토어 읽기 — createPgBookContentReader', () =
     expect(chapter).toEqual({ chapter_no: 2, title: '2장', start_page: 11, end_page: 20 });
     expect(calls[0].sql).toMatch(/start_page <= \$2 AND \$2 <= end_page/);
     expect(calls[0].params).toEqual(['takryu', 15]);
+  });
+
+  test('FR-SPL-002 🚦: findCompletedChapterNos는 end_page <= cutoff를 WHERE에 걸고 cutoff를 파라미터로 받는다', async () => {
+    const { client, calls } = mockClient([{ chapter_no: 1 }, { chapter_no: 2 }]);
+    const reader = createPgBookContentReader(client);
+
+    const chapterNos = await reader.findCompletedChapterNos('takryu', 40);
+
+    expect(chapterNos).toEqual([1, 2]);
+    expect(calls[0].sql).toMatch(/WHERE book_id = \$1 AND end_page <= \$2/);
+    expect(calls[0].sql).toMatch(/ORDER BY chapter_no ASC/);
+    expect(calls[0].params).toEqual(['takryu', 40]);
   });
 
   test('FR-SPL-003 🚦: findCompletedChapterSummaries는 end_page <= cutoff를 WHERE에 걸고 cutoff를 파라미터로 받는다', async () => {

@@ -16,6 +16,8 @@ export interface BookSummary {
   intro_summary: string | null;
   /** 미완비 도서는 클릭 불가 + 서버도 거절 (FR-BRW-002 🚦) */
   ssabi_ready: boolean;
+  genre?: string | null;
+  registered_at?: string;
 
   /*
    * total_pages 를 두지 않는다 (엔드포인트 계획 D-1 확정, 2026-08-21, team-sync §4.5).
@@ -27,6 +29,8 @@ export interface BookSummary {
   progress?: {
     current_page: number;
     percent: number;
+    is_complete?: boolean;
+    last_read_at?: string;
   };
 }
 

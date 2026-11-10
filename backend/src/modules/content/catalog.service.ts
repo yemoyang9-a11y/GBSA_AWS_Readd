@@ -20,8 +20,10 @@ export interface CatalogItem {
   /** 대시보드 카드 소개 문구. 상한 예외 (R5) — D-3 */
   intro_summary: string | null;
   ssabi_ready: boolean;
+  genre: string | null;
+  registered_at: string;
   /** 읽던 도서만. 저장 위치가 없으면 필드 자체가 없다 */
-  progress?: { current_page: number; percent: number };
+  progress?: { current_page: number; percent: number; is_complete: boolean; last_read_at: string };
 }
 
 export interface CatalogResponse {
@@ -54,21 +56,26 @@ export function createCatalogService(deps: CatalogServiceDeps): CatalogService {
             cover_url: row.cover_url,
             intro_summary: row.intro_summary,
             ssabi_ready: row.ssabi_ready,
+            genre: row.genre,
+            registered_at: row.registered_at,
             // total_pages 를 싣지 않는다 — 프론트에 current_page / total_pages 재계산
             // 재료를 주지 않기 위해서다 (절대 규칙 2번, D-1, team-sync §4.5)
           };
 
-          // 저장 위치가 없으면 "읽던 도서"가 아니다. getCutoffSnapshot 은 위치가 없어도
-          // current_page=1 로 스냅샷을 만들어 주므로, 그것만 보고 판단하면 읽지 않은 책에
-          // 0.2% 진도가 생긴다 — 먼저 저장 위치의 존재를 확인한다
-          const stored = await positions.findPosition(deviceId, row.book_id);
-          if (stored === null) return item;
-
+          // R11, FR-SPL-005 🚦
           try {
+            // 저장 위치가 없으면 "읽던 도서"가 아니다. getCutoffSnapshot 은 위치가 없어도
+            // current_page=1 로 스냅샷을 만들어 주므로, 그것만 보고 판단하면 읽지 않은 책에
+            // 0.2% 진도가 생긴다 — 먼저 저장 위치의 존재를 확인한다
+            const stored = await positions.findPosition(deviceId, row.book_id);
+            if (stored === null) return item;
+
             const snapshot = await cutoffService.getCutoffSnapshot(deviceId, row.book_id);
             item.progress = {
               current_page: snapshot.current_page,
               percent: snapshot.percent, // R2 계산값 — 그대로 옮긴다 (FR-BRF-005 🚦)
+              is_complete: snapshot.is_complete, // FR-BRF-005 🚦
+              last_read_at: stored.updated_at,
             };
           } catch {
             // 스냅샷 실패(장 커버리지 결함 등)는 진도 미표시로 끝낸다. 기본값으로 메우지 않는다

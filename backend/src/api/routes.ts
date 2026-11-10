@@ -485,6 +485,25 @@ router.get('/books/:bookId/briefing', async (req: Request, res: Response) => {
   }
 });
 
+// FR-SPL-002 🚦
+router.get('/books/:bookId/position', async (req: Request, res: Response) => {
+  const { bookId } = req.params;
+  const deviceId = requireDeviceId(req, res);
+  if (!deviceId) return;
+
+  try {
+    // FR-BRW-002 🚦
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
+    const position = await readingState.cutoffService.getReadChapters(deviceId, bookId);
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json(position);
+  } catch (error) {
+    console.error('[API] position error', { bookId, error });
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+  }
+});
+
 /**
  * POST /books/:bookId/recap/stream
  *

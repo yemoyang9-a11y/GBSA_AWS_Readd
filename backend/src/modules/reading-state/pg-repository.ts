@@ -27,6 +27,7 @@ import type {
   SavedRecapRepository,
   SessionRecapCacheRepository,
   StoredPosition,
+  StoredPositionRecord,
   StoredSavedRecap,
   StoredSession,
   SweepTarget,
@@ -43,13 +44,17 @@ export interface QueryClient {
 
 export function createPgReadingPositionRepository(db: QueryClient): ReadingPositionRepository {
   return {
-    async findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null> {
+    async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
       const { rows } = await db.query(
-        `SELECT current_page, event_seq FROM reading_position WHERE device_id = $1 AND book_id = $2`,
+        `SELECT current_page, event_seq, updated_at FROM reading_position WHERE device_id = $1 AND book_id = $2`,
         [deviceId, bookId]
       );
       if (rows.length === 0) return null;
-      return { current_page: rows[0].current_page, event_seq: Number(rows[0].event_seq) };
+      return {
+        current_page: rows[0].current_page,
+        event_seq: Number(rows[0].event_seq),
+        updated_at: rows[0].updated_at.toISOString(),
+      };
     },
 
     async savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void> {
@@ -112,6 +117,17 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
         start_page: row.start_page,
         end_page: row.end_page,
       };
+    },
+
+    async findCompletedChapterNos(bookId: string, cutoff: number): Promise<number[]> {
+      // FR-SPL-002 🚦
+      const { rows } = await db.query(
+        `SELECT chapter_no FROM chapters
+         WHERE book_id = $1 AND end_page <= $2
+         ORDER BY chapter_no ASC`,
+        [bookId, cutoff]
+      );
+      return rows.map((row) => row.chapter_no);
     },
 
     async findCompletedChapterSummaries(

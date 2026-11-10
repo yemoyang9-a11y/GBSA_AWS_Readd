@@ -29,6 +29,8 @@ export interface BookCatalogRow {
    */
   intro_summary: string | null;
   ssabi_ready: boolean;
+  genre: string | null;
+  registered_at: string;
 }
 
 /**

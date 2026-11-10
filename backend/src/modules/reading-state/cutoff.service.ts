@@ -34,6 +34,13 @@ export interface CutoffServiceDeps {
   books: BookMetaReader;
 }
 
+export interface PositionResponse {
+  applied_cutoff: number;
+  current_chapter_no: number | null;
+  read_chapter_nos: number[];
+  is_complete: boolean;
+}
+
 export interface CutoffService {
   /**
    * 기준점 스냅샷을 1회 만든다.
@@ -48,6 +55,11 @@ export interface CutoffService {
   getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot>;
 }
 
+export interface ReadChaptersService {
+  // FR-SPL-002 🚦
+  getReadChapters(deviceId: string, bookId: string): Promise<PositionResponse>;
+}
+
 /**
  * 진도 레코드가 없을 때(첫 진입) 화면에 보여줄 위치.
  *
@@ -60,10 +72,10 @@ export const FIRST_ENTRY_PAGE = 1;
 /** 진도 % 표시 자리수. API_CONTRACT.md 예시(80 / 340 → 23.5)와 같은 규칙 */
 const PERCENT_DECIMALS = 1;
 
-export function createCutoffService(deps: CutoffServiceDeps): CutoffService {
+export function createCutoffService(deps: CutoffServiceDeps): CutoffService & ReadChaptersService {
   const { positions, books } = deps;
 
-  return {
+  const service: CutoffService & ReadChaptersService = {
     async getCutoffSnapshot(deviceId: string, bookId: string): Promise<CutoffSnapshot> {
       const stored = await positions.findPosition(deviceId, bookId);
 
@@ -116,7 +128,20 @@ export function createCutoffService(deps: CutoffServiceDeps): CutoffService {
         },
       };
     },
+
+    async getReadChapters(deviceId: string, bookId: string): Promise<PositionResponse> {
+      const snapshot = await service.getCutoffSnapshot(deviceId, bookId);
+      return {
+        applied_cutoff: snapshot.cutoff,
+        current_chapter_no: snapshot.cutoff === 0 ? null : snapshot.chapter.chapter_no,
+        // FR-SPL-002 🚦
+        read_chapter_nos: await books.findCompletedChapterNos(bookId, snapshot.cutoff),
+        is_complete: snapshot.is_complete,
+      };
+    },
   };
+
+  return service;
 }
 
 function round(value: number, decimals: number): number {
