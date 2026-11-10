@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Briefing from './pages/Briefing';
 import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
+import AuthCallback from './pages/AuthCallback';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
 import MobileDashboard from './mobile/pages/MobileDashboard';
@@ -30,6 +31,7 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     { path: '/', element: isMobile ? <MobileDashboard /> : <Dashboard /> },
     { path: BOOK_ROUTES.briefing, element: isMobile ? <MobileBriefing /> : <Briefing /> },
     { path: BOOK_ROUTES.reader, element: isMobile ? <MobileReader /> : <Reader /> },
+    { path: '/auth/callback', element: <AuthCallback /> },
     { path: '*', element: isMobile ? <MobileNotFound /> : <NotFound /> },
   ]);
 }

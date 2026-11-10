@@ -15,6 +15,26 @@ export function setDeviceId(deviceId: string): void {
   localStorage.setItem(STORAGE_KEYS.deviceId, deviceId);
 }
 
+export const AUTH_TOKEN_CLEARED_EVENT = 'ssabi:auth-token-cleared';
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.authToken);
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem(STORAGE_KEYS.authToken, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(STORAGE_KEYS.authToken);
+  window.dispatchEvent(new Event(AUTH_TOKEN_CLEARED_EVENT));
+}
+
+export function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function activeConversationKey(bookId: string): string {
   return `ssabi.chat_conversation.${bookId}`;
 }

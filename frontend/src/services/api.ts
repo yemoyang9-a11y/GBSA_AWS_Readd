@@ -11,7 +11,7 @@
 
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
-import { getDeviceId, setDeviceId } from '../utils/storage';
+import { authHeaders, clearAuthToken, getDeviceId, setDeviceId } from '../utils/storage';
 
 /**
  * 디바이스 식별자를 확보한다.
@@ -24,7 +24,7 @@ import { getDeviceId, setDeviceId } from '../utils/storage';
  *
  * 설정하지 않으면 종전대로 최초 실행 시 UUID 를 생성한다 (8/20 팀 결정, team-sync §4.8).
  */
-function ensureDeviceId(): string {
+export function ensureDeviceId(): string {
   const demo = import.meta.env.VITE_DEMO_DEVICE_ID;
   if (typeof demo === 'string' && demo.length > 0) {
     if (getDeviceId() !== demo) setDeviceId(demo);
@@ -45,14 +45,21 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   config.headers['X-Device-Id'] = ensureDeviceId();
+  Object.assign(config.headers, authHeaders());
   return config;
 });
 
 /** 서버가 값을 바꿔서 내려주는 경우를 대비한 방어적 동기화 (현재 계약상 발생하지 않는다) */
-api.interceptors.response.use((response) => {
-  const issued = response.headers['x-device-id'];
-  if (typeof issued === 'string' && issued.length > 0 && issued !== getDeviceId()) {
-    setDeviceId(issued);
+api.interceptors.response.use(
+  (response) => {
+    const issued = response.headers['x-device-id'];
+    if (typeof issued === 'string' && issued.length > 0 && issued !== getDeviceId()) {
+      setDeviceId(issued);
+    }
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) clearAuthToken();
+    return Promise.reject(error);
   }
-  return response;
-});
+);
