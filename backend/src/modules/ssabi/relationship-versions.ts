@@ -57,16 +57,40 @@ export function normalizedDirection(row: VersionedRelationship): string | undefi
 }
 
 /**
- * FR-CHR-001: 묶음마다 페이지 순서로 칸을 채운다. 칸을 하나라도 빼앗긴 관계는 통째로 대체된다 —
+ * 같은 확립 페이지 안의 위치 — 변화 근거가 있으면 그 위치, 없으면 관계 근거 위치. 두 근거는 확립
+ * 페이지에 있다(grounding이 강제). 위치가 같으면 변화 근거가 있는 쪽이 나중이다. 기존 행은 위치가 없다.
+ */
+function inPagePosition(row: VersionedRelationship): [number, number] {
+  const s = row.semantics;
+  if (!s) return [-1, 0];
+  return [(s.change_evidence ?? s.evidence).start_char, s.change_evidence ? 1 : 0];
+}
+
+/**
+ * FR-CHR-001: 관계가 생긴 순서 — 페이지, 같은 페이지면 근거 위치, 그래도 같으면 id.
+ * 해시 id만으로 같은 페이지 순서를 정하면 바뀐 관계가 이전 관계에 덮일 수 있다.
+ */
+export function compareRelationshipOrder(
+  x: VersionedRelationship,
+  y: VersionedRelationship
+): number {
+  const [px, cx] = inPagePosition(x);
+  const [py, cy] = inPagePosition(y);
+  return (
+    x.established_page - y.established_page ||
+    px - py ||
+    cx - cy ||
+    ((x.id ?? '') < (y.id ?? '') ? -1 : (x.id ?? '') > (y.id ?? '') ? 1 : 0)
+  );
+}
+
+/**
+ * FR-CHR-001: 묶음마다 생긴 순서로 칸을 채운다. 칸을 하나라도 빼앗긴 관계는 통째로 대체된다 —
  * 한쪽→쌍방, 쌍방→한쪽, 미확인→확정 모두 새 관계만 남고, A→B와 B→A는 칸이 달라 함께 남는다.
- * 같은 페이지면 id가 큰 쪽이 나중이다. 기준점으로 이미 잘린 행만 받는다 — 미래 행으로 끝을 추론하지 않는다.
+ * 기준점으로 이미 잘린 행만 받는다 — 미래 행으로 끝을 추론하지 않는다.
  */
 export function currentRelationshipVersions<T extends VersionedRelationship>(rows: T[]): T[] {
-  const ordered = [...rows].sort(
-    (x, y) =>
-      x.established_page - y.established_page ||
-      ((x.id ?? '') < (y.id ?? '') ? -1 : (x.id ?? '') > (y.id ?? '') ? 1 : 0)
-  );
+  const ordered = [...rows].sort(compareRelationshipOrder);
   const groups = new Map<string, Map<Slot, T>>();
   for (const row of ordered) {
     const key = relationshipGroup(row);
