@@ -21,6 +21,8 @@ import { createReadingStateServices } from '../modules/reading-state/composition
 import { BookNotReadyError } from '../modules/reading-state/session.service';
 import { createContentServices } from '../modules/content/composition';
 import { createSsabiServices } from '../modules/ssabi/composition';
+import { createFeedbackRouter } from '../modules/feedback/feedback-router';
+import { sendFeedbackMail } from '../modules/feedback/resend-mailer';
 import { ensureBookReady } from './book-ready.guard';
 import { pageIsIncludedInCutoff } from './cutoff-inclusion';
 import { mockGetCutoffSnapshot } from '../modules/chatbot/__mocks__/mock-data';
@@ -735,5 +737,7 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
     return res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
   }
 });
+
+router.use(createFeedbackRouter({ sendMail: sendFeedbackMail }));
 
 export default router;
