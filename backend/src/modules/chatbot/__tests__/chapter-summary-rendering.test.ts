@@ -90,4 +90,11 @@ describe('장 요약 렌더링 (2026-08-26 회귀)', () => {
 
     expect(prompt).not.toContain('## 장 요약');
   });
+
+  test('장 요약 옆에서 요청 범위를 넘는 요약과 근거 없는 답변을 금지한다', () => {
+    const prompt = buildStableContext(makeContext());
+    expect(prompt).toContain('요청 범위에 완전히 포함되는 장은 제공된 장 요약을 사용하세요');
+    expect(prompt).toContain('요청 끝 페이지가 장 중간이면 그 장 전체 요약을 쓰지 말고 해당 범위 원문만 사용하세요');
+    expect(prompt).toContain('그 부분 원문이 없으면 확인할 수 있는 범위와 한계를 설명하세요');
+  });
 });
