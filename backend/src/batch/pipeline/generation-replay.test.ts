@@ -93,6 +93,28 @@ test('partial and null model candidates reach the review boundary before page re
   expect(out.review.map((r) => r.kind)).toEqual(['character', 'relationship']);
 });
 
+test('JSON 파싱 실패는 그 호출만 최대 2회 재시도하고, 3회째도 실패하면 장 저장 없이 실패한다', async () => {
+  (fs.existsSync as jest.Mock).mockReturnValue(false);
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  (call as jest.Mock)
+    .mockResolvedValueOnce('요약 산문만 반환')
+    .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
+    .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
+    .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+  const out = await loadOrGenerateChapter(chapter, pages, []);
+  expect(out.summary).toBe('요약');
+  expect(call).toHaveBeenCalledTimes(6);
+  expect(warn).toHaveBeenCalledWith('[JSON 재시도] task=generate_summary 장=1 시도=2');
+
+  (call as jest.Mock).mockReset().mockResolvedValue('{"summary": 깨진}');
+  (fs.writeFileSync as jest.Mock).mockClear();
+  await expect(loadOrGenerateChapter(chapter, pages, [])).rejects.toThrow(SyntaxError);
+  expect(call).toHaveBeenCalledTimes(3);
+  expect(fs.writeFileSync).not.toHaveBeenCalled();
+});
+
 test('replay preserves an existing corrected resolved artifact and saves changed output separately', () => {
   const persist = (
     runner as unknown as {

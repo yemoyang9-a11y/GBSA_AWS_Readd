@@ -1,4 +1,5 @@
 import { checkIntegrity, ResolvedBookData } from './check-integrity';
+import type { RelationshipSemantics } from '../../shared/types';
 
 const TOTAL_PAGES = 100;
 
@@ -159,6 +160,70 @@ describe('REVIEW — 같은 쌍·같은 페이지에 라벨 충돌', () => {
     expect(
       report.issues.filter((i) => i.rule === 'REVIEW-relationship-label-conflict')
     ).toHaveLength(0);
+  });
+});
+
+describe('REVIEW — 같은 관계 묶음·같은 페이지 라벨 충돌 (FR-CHR-001)', () => {
+  const sem = (direction: RelationshipSemantics['direction']): RelationshipSemantics => ({
+    version: 2,
+    direction,
+    kind: 'emotion',
+    relation_key: 'affection',
+    summary: '요약',
+    assertion_status: 'fact',
+    temporal_scope: 'ongoing',
+    state: 'active',
+    evidence: { source_page: 30, quote: 'q', start_char: 0, end_char: 1 },
+  });
+  const conflicts = (data: ResolvedBookData) =>
+    checkIntegrity(data, TOTAL_PAGES).issues.filter(
+      (i) => i.rule === 'REVIEW-relationship-label-conflict'
+    );
+
+  test('방향만 다른 같은 관계(한쪽→쌍방)가 같은 페이지에 라벨이 다르면 review 항목', () => {
+    const data = baseData();
+    data.relationships.push(
+      {
+        id: 'r1',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '연모',
+        established_page: 30,
+        semantics: sem('a_to_b'),
+      },
+      {
+        id: 'r2',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '연인',
+        established_page: 30,
+        semantics: sem('mutual'),
+      }
+    );
+    expect(conflicts(data)).toHaveLength(1);
+  });
+
+  test('반대 방향 한쪽 관계끼리는 칸이 달라 충돌이 아니다(positive)', () => {
+    const data = baseData();
+    data.relationships.push(
+      {
+        id: 'r1',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '연모',
+        established_page: 30,
+        semantics: sem('a_to_b'),
+      },
+      {
+        id: 'r2',
+        character_a_id: 'c1',
+        character_b_id: 'c2',
+        label: '무관심',
+        established_page: 30,
+        semantics: sem('b_to_a'),
+      }
+    );
+    expect(conflicts(data)).toHaveLength(0);
   });
 });
 

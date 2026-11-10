@@ -49,6 +49,30 @@ describe('Anthropic trusted system role (SDK mocked, no network)', () => {
     expect(request.messages).toEqual([{ role: 'user', content: source }]);
   });
 
+  test('A8-2: context parts are concatenated as-is into one first user message', async () => {
+    await call('chatbot', 'tail', { context: ['a\n', '\n[p.2]\nb'] });
+    expect(messages.create.mock.calls[0][0].messages).toEqual([
+      { role: 'user', content: 'a\n\n[p.2]\nb' },
+      { role: 'user', content: 'tail' },
+    ]);
+  });
+
+  test.each([[[]], [['', '']], ['']])(
+    'A8-2: an empty context (%j) adds no empty user message on call and stream',
+    async (context) => {
+      await call('chatbot', 'tail', { context });
+      expect(messages.create.mock.calls[0][0].messages).toEqual([
+        { role: 'user', content: 'tail' },
+      ]);
+      for await (const _ of stream('chatbot', 'tail', { context })) {
+        /* consume */
+      }
+      expect(messages.stream.mock.calls[0][0].messages).toEqual([
+        { role: 'user', content: 'tail' },
+      ]);
+    }
+  );
+
   test('stream forwards trusted policy independently while preserving text and usage', async () => {
     const options = { system: rules, maxTokens: 99 };
     const iterator = stream('chatbot', source, options);

@@ -5,7 +5,7 @@
  * FR-QNA-006 🚦: 모든 엔티티 조회는 <= K 필터
  */
 
-import { assembleContext, buildPrompt } from '../context-assembly';
+import { assembleContext, buildStableContext } from '../context-assembly';
 import type { ChatbotContext } from '../../../shared/types';
 
 describe('근거 조립 - NFR-SEC-006 🚦', () => {
@@ -99,7 +99,7 @@ describe('관계 프롬프트 렌더링 - FR-QNA-006 🚦', () => {
   };
 
   test('관계 목록에 당사자 이름이 라벨과 함께 포함된다 (uuid 그대로 노출되지 않음)', () => {
-    const prompt = buildPrompt(baseContext, '');
+    const prompt = buildStableContext(baseContext);
 
     expect(prompt).toContain('정주사');
     expect(prompt).toContain('병주');
@@ -114,8 +114,8 @@ describe('관계 프롬프트 렌더링 - FR-QNA-006 🚦', () => {
       entities: { ...baseContext.entities, characters: [] },
     };
 
-    expect(() => buildPrompt(context, '')).not.toThrow();
-    expect(buildPrompt(context, '')).toContain('char-jeongjusa');
+    expect(() => buildStableContext(context)).not.toThrow();
+    expect(buildStableContext(context)).toContain('char-jeongjusa');
   });
 });
 
@@ -142,7 +142,7 @@ describe('인물 노트 프롬프트 렌더링 - FR-QNA-006 🚦', () => {
       background: '',
     };
 
-    const prompt = buildPrompt(context, '');
+    const prompt = buildStableContext(context);
 
     expect(prompt).toContain('정주사');
     expect(prompt).toContain('한때 마름 노릇을 했다');

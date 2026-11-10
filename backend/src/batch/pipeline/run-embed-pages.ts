@@ -1,6 +1,6 @@
 /**
  * S6 — 페이지 임베딩 배치 적재. DATABASE_URL이 대상 DB를 가리켜야 동작한다.
- * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-embed-pages.ts
+ * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-embed-pages.ts [--book <bookId>]
  *
  * 선행: run-register.ts로 페이지가 이미 등록돼 있어야 한다.
  * 청킹 없음 — 페이지 1장 = 검색 단위 1개(5.3절, 1:1). embedding이 NULL인 페이지만
@@ -16,10 +16,10 @@ dotenv.config();
 
 import { pool } from '../../config/database';
 import { embedDocuments, toVectorLiteral, EMBEDDING_DIM, EMBED_BATCH_SIZE } from './embed';
-
-const BOOK_ID = 'takryu';
+import { bookArgsFromCli } from './run-args';
 
 async function main(): Promise<void> {
+  const BOOK_ID = bookArgsFromCli('run-embed-pages').bookId;
   const pending = (await pool.query(
     'SELECT page_no, content FROM pages WHERE book_id = $1 AND embedding IS NULL ORDER BY page_no',
     [BOOK_ID]

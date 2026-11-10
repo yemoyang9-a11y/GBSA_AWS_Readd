@@ -1,4 +1,4 @@
-import { createEmptyState, mergeRelationships } from './accumulate';
+import { createEmptyState, mergeRelationships, previousRelationshipHints } from './accumulate';
 import { validateGroundedChapter } from './grounding';
 import { Page } from '../../shared/types';
 
@@ -317,4 +317,92 @@ test('FR-CHR-001: 같은 페이지의 상충하는 의미 판정은 조용히 �
   ] as never);
   expect(state.relationships).toHaveLength(1);
   expect(state.review).toHaveLength(1);
+});
+
+describe('FR-CHR-001: 같은 쪽 안의 관계 변화', () => {
+  const at = (start_char: number) => ({ ...evidence, start_char, end_char: start_char + 2 });
+
+  test('같은 쪽에서 상태만 바뀐 관계도 행 id가 겹치지 않는다', () => {
+    const state = createEmptyState('synthetic-contract');
+    mergeRelationships(state, [
+      resolved(),
+      resolved({
+        change_type: 'transition',
+        change_evidence: evidence,
+        semantics: semantic({ state: 'ended', change_evidence: evidence }),
+      }),
+    ] as never);
+    expect(state.relationships).toHaveLength(2);
+    expect(new Set(state.relationships.map((r) => r.id)).size).toBe(2);
+  });
+
+  test('같은 쪽 후보는 출력 순서가 아니라 근거 위치 순서로 병합한다', () => {
+    const state = createEmptyState('synthetic-contract');
+    mergeRelationships(state, [
+      resolved({
+        change_type: 'transition',
+        change_evidence: at(20),
+        semantics: semantic({
+          direction: 'mutual',
+          summary: '민수와 영희는 서로 사랑한다.',
+          evidence: at(20),
+          change_evidence: at(20),
+        }),
+      }),
+      resolved({ evidence: at(0), semantics: semantic({ evidence: at(0) }) }),
+    ] as never);
+    expect(state.relationships.map((r) => r.semantics?.direction)).toEqual(['b_to_a', 'mutual']);
+    expect(state.review).toEqual([]);
+  });
+});
+
+test('FR-CHR-001: 다음 장 프롬프트의 이전 관계 힌트는 대체된 관계를 빼고 현재 관계만 싣는다', () => {
+  const state = createEmptyState('synthetic-contract');
+  state.characters.push(
+    { id: 'a', name: '영희', first_appearance_page: 1, aliases: [], notes: [] },
+    { id: 'z', name: '민수', first_appearance_page: 1, aliases: [], notes: [] }
+  );
+  mergeRelationships(state, [
+    resolved(),
+    resolved({
+      established_page: 2,
+      label: '서로 사랑한다',
+      change_type: 'transition',
+      change_evidence: { ...evidence, source_page: 2 },
+      semantics: semantic({
+        direction: 'mutual',
+        summary: '민수와 영희는 서로 사랑한다.',
+        change_evidence: { ...evidence, source_page: 2 },
+      }),
+    }),
+  ] as never);
+  expect(state.relationships).toHaveLength(2);
+  const hints = previousRelationshipHints(state);
+  expect(hints).toHaveLength(1);
+  expect(hints[0]).toContain('서로 사랑한다 (p.2)');
+});
+
+test('FR-CHR-001: 대체가 없는 기존 행만 있으면 이전 관계 힌트는 예전과 같은 줄·순서다(장 캐시 키 유지)', () => {
+  const state = createEmptyState('synthetic-contract');
+  state.characters.push(
+    { id: 'a', name: '영희', first_appearance_page: 1, aliases: [], notes: [] },
+    { id: 'b', name: '철수', first_appearance_page: 1, aliases: [], notes: [] },
+    { id: 'z', name: '민수', first_appearance_page: 1, aliases: [], notes: [] }
+  );
+  const legacy = (id: string, b: string, label: string, page: number) => ({
+    id,
+    character_a_id: 'a',
+    character_b_id: b,
+    label,
+    established_page: page,
+  });
+  state.relationships.push(
+    legacy('r1', 'z', '이웃', 1),
+    legacy('r2', 'b', '남매', 2),
+    legacy('r3', 'z', '연인', 3)
+  );
+  expect(previousRelationshipHints(state)).toEqual([
+    '영희 / 민수: 연인 (p.3) legacy-unverified',
+    '영희 / 철수: 남매 (p.2) legacy-unverified',
+  ]);
 });

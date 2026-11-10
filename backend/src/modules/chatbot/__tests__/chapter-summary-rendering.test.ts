@@ -14,7 +14,7 @@
  * 프롬프트에 실린다**는 것을 기계적으로 고정한다.
  */
 
-import { buildPrompt } from '../context-assembly';
+import { buildStableContext } from '../context-assembly';
 import type { ChatbotContext } from '../../../shared/types';
 
 function makeContext(overrides: Partial<ChatbotContext> = {}): ChatbotContext {
@@ -51,21 +51,21 @@ function makeContext(overrides: Partial<ChatbotContext> = {}): ChatbotContext {
 
 describe('장 요약 렌더링 (2026-08-26 회귀)', () => {
   test('장 번호가 프롬프트에 들어간다 — "1장"으로 물어도 모델이 찾을 수 있어야 한다', () => {
-    const prompt = buildPrompt(makeContext(), '(규칙)');
+    const prompt = buildStableContext(makeContext());
 
     expect(prompt).toContain('1장');
     expect(prompt).toContain('2장');
   });
 
   test('장 제목도 그대로 들어간다 (기존 동작 유지)', () => {
-    const prompt = buildPrompt(makeContext(), '(규칙)');
+    const prompt = buildStableContext(makeContext());
 
     expect(prompt).toContain('인간기념물');
     expect(prompt).toContain('생활 제일과');
   });
 
   test('시작·종료 페이지가 범위로 들어간다 — "15페이지까지 요약해줘"를 판단할 근거', () => {
-    const prompt = buildPrompt(makeContext(), '(규칙)');
+    const prompt = buildStableContext(makeContext());
 
     // 1장 = p.1~17 이므로 "15페이지까지"가 1장 안에 든다는 걸 모델이 알 수 있어야 한다
     expect(prompt).toMatch(/p\.1\s*~\s*17/);
@@ -74,7 +74,7 @@ describe('장 요약 렌더링 (2026-08-26 회귀)', () => {
 
   test('ChapterSummary의 모든 필드가 프롬프트에 실린다 — 필드 추가 시 렌더링 누락을 막는다', () => {
     const ctx = makeContext();
-    const prompt = buildPrompt(ctx, '(규칙)');
+    const prompt = buildStableContext(ctx);
     const ch = ctx.chapter_summaries[0];
 
     // 같은 패턴의 버그가 세 번 반복돼서, 개별 필드가 아니라 전 필드를 기계적으로 확인한다
@@ -86,7 +86,7 @@ describe('장 요약 렌더링 (2026-08-26 회귀)', () => {
   });
 
   test('장 요약이 없으면 섹션 자체가 없다', () => {
-    const prompt = buildPrompt(makeContext({ chapter_summaries: [] }), '(규칙)');
+    const prompt = buildStableContext(makeContext({ chapter_summaries: [] }));
 
     expect(prompt).not.toContain('## 장 요약');
   });
