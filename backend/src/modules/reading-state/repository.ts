@@ -21,6 +21,10 @@ export interface StoredPosition {
   event_seq: number;
 }
 
+export interface StoredPositionRecord extends StoredPosition {
+  updated_at: string;
+}
+
 /** 장 경계 테이블에서 뽑은 장 식별 정보 */
 export interface ChapterRef {
   chapter_no: number;
@@ -47,7 +51,7 @@ export interface ReadingPositionRepository {
    * cutoff 인자 없음의 근거 — 이 조회가 **cutoff의 원천**이다. 상한을 적용받는 쪽이
    * 아니라 상한을 만들어내는 쪽이므로 상한 개념이 성립하지 않는다 (3.3절).
    */
-  findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null>;
+  findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null>;
 
   /**
    * 진도 이벤트를 그대로 저장한다. "더 새로운 seq일 때만 수용"의 판단은 이 함수의

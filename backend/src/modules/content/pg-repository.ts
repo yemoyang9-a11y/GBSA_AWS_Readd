@@ -27,11 +27,11 @@ export function createPgContentRepository(db: QueryClient): ContentRepository {
       // 미완비 도서도 내려보낸다 — 대시보드가 표지만 띄우고 클릭을 잠근다 (S2, FR-BRW-002 🚦).
       // 진입 차단은 UI가 아니라 book-ready.guard.ts와 R2의 POST /entry가 한다.
       const { rows } = await db.query(
-        `SELECT book_id, title, author, cover_url, intro_summary, ssabi_ready
+        `SELECT book_id, title, author, cover_url, intro_summary, ssabi_ready, genre, registered_at
            FROM books
           ORDER BY title ASC`
       );
-      return rows;
+      return rows.map((row) => ({ ...row, registered_at: row.registered_at.toISOString() }));
     },
 
     async findReadiness(bookId: string): Promise<boolean | null> {

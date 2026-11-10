@@ -33,6 +33,8 @@ describe('createPgContentRepository', () => {
         cover_url: null,
         intro_summary: '소개',
         ssabi_ready: true,
+        genre: null,
+        registered_at: new Date('2026-11-01T00:00:00.000Z'),
       },
     ]);
     const repo = createPgContentRepository(client);
@@ -44,6 +46,36 @@ describe('createPgContentRepository', () => {
     expect(calls[0].sql).toMatch(/FROM books/);
     // 미완비 도서를 제외하는 WHERE가 없어야 한다
     expect(calls[0].sql).not.toMatch(/ssabi_ready\s*=\s*(TRUE|true)/);
+  });
+
+  test('findCatalog는 genre와 registered_at을 읽고 registered_at을 ISO 문자열로 준다', async () => {
+    const { client, calls } = mockClient([
+      {
+        book_id: 'takryu',
+        title: '탁류',
+        author: '채만식',
+        cover_url: null,
+        intro_summary: null,
+        ssabi_ready: true,
+        genre: '장편소설',
+        registered_at: new Date('2026-11-01T00:00:00.000Z'),
+      },
+    ]);
+
+    const rows = await createPgContentRepository(client).findCatalog();
+
+    expect(calls[0].sql).toMatch(/\bgenre\b/);
+    expect(calls[0].sql).toMatch(/\bregistered_at\b/);
+    expect(rows[0]).toHaveProperty('genre', '장편소설');
+    expect(rows[0]).toHaveProperty('registered_at', '2026-11-01T00:00:00.000Z');
+  });
+
+  test('D-1: findCatalog는 total_pages를 읽지 않는다', async () => {
+    const { client, calls } = mockClient([]);
+
+    await createPgContentRepository(client).findCatalog();
+
+    expect(calls[0].sql).not.toMatch(/total_pages/);
   });
 
   test('findReadiness는 ssabi_ready를 읽고, 도서가 없으면 null (FR-BRW-002 🚦)', async () => {

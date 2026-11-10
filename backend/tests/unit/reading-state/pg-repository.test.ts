@@ -36,12 +36,19 @@ function mockClient(rows: any[] = []): {
 
 describe('진도 — createPgReadingPositionRepository', () => {
   test('findPosition은 device_id·book_id로 조회하고 event_seq(bigint)를 number로 변환한다', async () => {
-    const { client, calls } = mockClient([{ current_page: 15, event_seq: '99' }]); // pg bigint → string
+    const { client, calls } = mockClient([
+      { current_page: 15, event_seq: '99', updated_at: new Date('2026-11-09T12:34:56.000Z') },
+    ]); // pg bigint → string
     const repo = createPgReadingPositionRepository(client);
 
     const result = await repo.findPosition('dev-1', 'book-1');
 
-    expect(result).toEqual({ current_page: 15, event_seq: 99 });
+    expect(result).toEqual({
+      current_page: 15,
+      event_seq: 99,
+      updated_at: '2026-11-09T12:34:56.000Z',
+    });
+    expect(calls[0].sql).toMatch(/\bupdated_at\b/);
     expect(calls[0].params).toEqual(['dev-1', 'book-1']);
   });
 

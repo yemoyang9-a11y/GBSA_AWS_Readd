@@ -21,6 +21,7 @@ import type {
   SavedRecapRepository,
   SessionRecapCacheRepository,
   StoredPosition,
+  StoredPositionRecord,
   StoredSavedRecap,
   StoredSession,
   SweepTarget,
@@ -37,8 +38,9 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
     this.rows.set(this.key(deviceId, bookId), position);
   }
 
-  async findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null> {
-    return this.rows.get(this.key(deviceId, bookId)) ?? null;
+  async findPosition(deviceId: string, bookId: string): Promise<StoredPositionRecord | null> {
+    const row = this.rows.get(this.key(deviceId, bookId));
+    return row ? { ...row, updated_at: '2026-01-01T00:00:00.000Z' } : null;
   }
 
   async savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void> {
