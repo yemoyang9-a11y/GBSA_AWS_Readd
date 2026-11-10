@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useSsabiData } from './useSsabiData';
 import type { GraphResponse } from '../types';
 
@@ -13,6 +13,55 @@ function graph(nodeNames: string[]): GraphResponse {
     edges: [],
   };
 }
+
+it('does not query a graph before entry supplies a reading position', async () => {
+  const fetchGraph = vi.fn().mockResolvedValue(graph([]));
+  const { rerender } = renderHook(
+    (page: number | null) =>
+      useSsabiData({ bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
+    { initialProps: null as number | null }
+  );
+  await act(async () => {});
+  expect(fetchGraph).not.toHaveBeenCalled();
+  rerender(21);
+  await waitFor(() => expect(fetchGraph).toHaveBeenCalledWith('book', 21, expect.any(Number)));
+});
+
+it('hides K90 graph while K40 is loading and ignores late K90 responses', async () => {
+  let releaseOld!: (value: GraphResponse) => void;
+  let releaseNew!: (value: GraphResponse) => void;
+  const fetchGraph = vi
+    .fn()
+    .mockResolvedValueOnce(graph(['future alias']))
+    .mockImplementationOnce(
+      () =>
+        new Promise<GraphResponse>((resolve) => {
+          releaseOld = resolve;
+        })
+    )
+    .mockImplementationOnce(
+      () =>
+        new Promise<GraphResponse>((resolve) => {
+          releaseNew = resolve;
+        })
+    );
+  const { result, rerender } = renderHook(
+    (page) => useSsabiData({ bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
+    { initialProps: 90 }
+  );
+  await waitFor(() => expect(result.current.graph).not.toBeNull());
+  rerender(91);
+  expect(result.current.graph).toBeNull();
+  rerender(40);
+  await act(async () => {
+    releaseOld(graph(['future leak']));
+  });
+  expect(result.current.graph).toBeNull();
+  await act(async () => {
+    releaseNew(graph(['known name']));
+  });
+  expect(result.current.graph).toEqual(graph(['known name']));
+});
 
 /**
  * 싸비 탭 데이터 (FR-SVB-003)
@@ -35,9 +84,11 @@ describe('싸비 탭 데이터', () => {
 
   it('FR-SVB-003: 페이지가 바뀌면 열려 있는 탭을 다시 조회한다', async () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
-    const { rerender } = renderHook((page: number) =>
-      useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph })
-    , { initialProps: 21 });
+    const { rerender } = renderHook(
+      (page: number) =>
+        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+      { initialProps: 21 }
+    );
 
     await waitFor(() => expect(fetchGraph).toHaveBeenCalledTimes(1));
 
@@ -48,9 +99,11 @@ describe('싸비 탭 데이터', () => {
 
   it('같은 페이지로 다시 그려지면 재조회하지 않는다', async () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
-    const { rerender } = renderHook((page: number) =>
-      useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph })
-    , { initialProps: 21 });
+    const { rerender } = renderHook(
+      (page: number) =>
+        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+      { initialProps: 21 }
+    );
 
     await waitFor(() => expect(fetchGraph).toHaveBeenCalledTimes(1));
 
@@ -76,9 +129,11 @@ describe('싸비 탭 데이터', () => {
       .mockResolvedValueOnce(graph(['정주사']))
       .mockRejectedValueOnce(new Error('boom'));
 
-    const { rerender, result } = renderHook((page: number) =>
-      useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph })
-    , { initialProps: 21 });
+    const { rerender, result } = renderHook(
+      (page: number) =>
+        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+      { initialProps: 21 }
+    );
 
     await waitFor(() => expect(result.current.graph).not.toBeNull());
 

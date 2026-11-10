@@ -26,35 +26,37 @@ export default function TypographicCover({
    * 건드리지 않는다 — 카드 전체에 opacity 를 걸면 본문 글자의 명도 대비까지 같이 떨어진다.
    */
   dimmed?: boolean;
-  size?: 'card' | 'hero' | 'row' | 'brief';
+  size?: 'card' | 'hero' | 'row' | 'brief' | 'hero-compact' | 'brief-compact';
 }) {
   const dim = dimmed ? ' opacity-60' : '';
-  const isDash = size === 'hero' || size === 'row';
-  const isBrief = size === 'brief';
+  const isCompact = size === 'hero-compact' || size === 'brief-compact';
+  const isDash = size === 'hero' || size === 'row' || size === 'hero-compact';
+  const isBrief = size === 'brief' || size === 'brief-compact';
   const heightClass =
     size === 'hero'
       ? 'h-hero-cover'
-      : size === 'row'
+      : size === 'row' || isCompact
         ? 'h-row-cover'
         : size === 'brief'
           ? 'h-brief-cover'
           : 'h-cover';
   const widthClass =
-    size === 'row' ? 'w-row-cover flex-none' : size === 'brief' ? 'w-brief-cover flex-none' : 'w-full';
+    size === 'row' || isCompact ? 'w-row-cover flex-none' : size === 'brief' ? 'w-brief-cover flex-none' : 'w-full';
   const roundedClass =
     size === 'card'
       ? ' rounded-cover'
-      : size === 'hero'
+      : size === 'hero' || size === 'hero-compact'
         ? ' rounded-dash-hero-cover'
         : size === 'row'
           ? ' rounded-dash-row-cover'
           : ' rounded-brief-panel';
   const shadowClass = isBrief ? ' shadow-brief-soft' : '';
   const titleFont = isDash || isBrief ? 'font-dashSerif' : 'font-serif';
-  const titleSize = size === 'row' ? 'text-xs' : size === 'hero' || size === 'brief' ? 'text-xl' : 'text-2xl';
+  const titleSize = size === 'row' || isCompact ? 'text-xs' : size === 'hero' || size === 'brief' ? 'text-xl' : 'text-2xl';
   const authorFont = isDash || isBrief ? 'font-dashSans' : 'font-sans';
   const borderColor = isBrief ? '' : isDash ? 'border-dash-line' : 'border-line';
   const bgColor = isBrief ? 'bg-white' : isDash ? 'bg-dash-paper' : 'bg-canvas';
+  const paddingX = isCompact ? 'px-2' : 'px-6';
 
   if (coverUrl) {
     return (
@@ -68,7 +70,7 @@ export default function TypographicCover({
 
   return (
     <div
-      className={`flex ${heightClass} ${widthClass} flex-col items-center justify-center gap-3${roundedClass}${shadowClass}${borderColor ? ` border ${borderColor}` : ''} ${bgColor} px-6 text-center${dim}`}
+      className={`flex ${heightClass} ${widthClass} flex-col items-center justify-center gap-3${roundedClass}${shadowClass}${borderColor ? ` border ${borderColor}` : ''} ${bgColor} ${paddingX} text-center${dim}`}
       data-testid="typographic-cover"
       aria-hidden="true"
     >

@@ -25,7 +25,7 @@ export default function SsabiToggleButton({
       aria-expanded={open}
       aria-controls="ssabi-panel"
       aria-label={open ? '싸비 닫기' : '싸비 열기'}
-      className={`flex size-[38px] shrink-0 items-center justify-center rounded-full border bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm ${
+      className={`flex size-[38px] shrink-0 items-center mobile:size-11 justify-center rounded-full border bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm ${
         open ? 'border-brief-ink' : 'border-brief-rule'
       }`}
     >

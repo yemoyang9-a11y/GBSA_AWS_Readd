@@ -1,0 +1,906 @@
+{
+  "1": {
+    "nodes": [],
+    "edges": [],
+    "history": [],
+    "applied_cutoff": 1
+  },
+  "2": {
+    "nodes": [
+      {
+        "id": "z-jiu",
+        "name": "지우",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      },
+      {
+        "id": "a-minseo",
+        "name": "민서",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "history": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "applied_cutoff": 2
+  },
+  "3": {
+    "nodes": [
+      {
+        "id": "z-jiu",
+        "name": "지우",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      },
+      {
+        "id": "a-minseo",
+        "name": "민서",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "history": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "applied_cutoff": 3
+  },
+  "5": {
+    "nodes": [
+      {
+        "id": "z-jiu",
+        "name": "지우",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      },
+      {
+        "id": "a-minseo",
+        "name": "민서",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust-ended",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust-ended",
+        "established_page": 5,
+        "semantics": {
+          "kind": "emotion",
+          "state": "ended",
+          "summary": "지우는 더는 민서를 신뢰하지 않는다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "change_evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "history": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust-ended",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust-ended",
+        "established_page": 5,
+        "semantics": {
+          "kind": "emotion",
+          "state": "ended",
+          "summary": "지우는 더는 민서를 신뢰하지 않는다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "change_evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "applied_cutoff": 5
+  },
+  "6": {
+    "nodes": [
+      {
+        "id": "z-jiu",
+        "name": "지우",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      },
+      {
+        "id": "a-minseo",
+        "name": "민서",
+        "first_appearance_page": 2,
+        "aliases": [],
+        "alias_details": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust-ended",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust-ended",
+        "established_page": 5,
+        "semantics": {
+          "kind": "emotion",
+          "state": "ended",
+          "summary": "지우는 더는 민서를 신뢰하지 않는다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "change_evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-twice",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-twice",
+        "established_page": 6,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 다시 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 다시 들어 주었다.",
+            "end_char": 21,
+            "start_char": 0,
+            "source_page": 6
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "history": [
+      {
+        "id": "distrust-reverse",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "distrust-reverse",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "민서는 지우를 의심한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "민서는 지우를 의심했다.",
+            "end_char": 27,
+            "start_char": 14,
+            "source_page": 2
+          },
+          "direction": "a_to_b",
+          "relation_key": "distrust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "siblings",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "siblings",
+        "established_page": 2,
+        "semantics": {
+          "kind": "family",
+          "state": "active",
+          "summary": "두 사람은 남매다.",
+          "version": 2,
+          "evidence": {
+            "quote": "두 사람은 남매였다.",
+            "end_char": 39,
+            "start_char": 28,
+            "source_page": 2
+          },
+          "direction": "mutual",
+          "relation_key": "siblings",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust",
+        "established_page": 2,
+        "semantics": {
+          "kind": "emotion",
+          "state": "active",
+          "summary": "지우는 민서를 신뢰한다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서를 신뢰했다.",
+            "end_char": 13,
+            "start_char": 0,
+            "source_page": 2
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-once",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-once",
+        "established_page": 3,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 들어 주었다.",
+            "end_char": 18,
+            "start_char": 0,
+            "source_page": 3
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "trust-ended",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "trust-ended",
+        "established_page": 5,
+        "semantics": {
+          "kind": "emotion",
+          "state": "ended",
+          "summary": "지우는 더는 민서를 신뢰하지 않는다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "direction": "b_to_a",
+          "relation_key": "trust",
+          "temporal_scope": "ongoing",
+          "change_evidence": {
+            "quote": "지우는 이제 민서를 신뢰하지 않게 되었다.",
+            "end_char": 23,
+            "start_char": 0,
+            "source_page": 5
+          },
+          "assertion_status": "fact"
+        }
+      },
+      {
+        "id": "help-twice",
+        "source": "a-minseo",
+        "target": "z-jiu",
+        "label": "help-twice",
+        "established_page": 6,
+        "semantics": {
+          "kind": "action",
+          "state": "active",
+          "summary": "지우가 민서의 짐을 다시 들어 주었다.",
+          "version": 2,
+          "evidence": {
+            "quote": "지우는 민서의 짐을 다시 들어 주었다.",
+            "end_char": 21,
+            "start_char": 0,
+            "source_page": 6
+          },
+          "direction": "b_to_a",
+          "relation_key": "help",
+          "temporal_scope": "event",
+          "assertion_status": "fact"
+        }
+      }
+    ],
+    "applied_cutoff": 6
+  }
+}

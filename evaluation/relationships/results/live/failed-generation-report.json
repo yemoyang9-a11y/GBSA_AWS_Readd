@@ -1,0 +1,41 @@
+{
+  "status": "blocked-authentication",
+  "observed_at": "2026-10-22T13:53:53.546057+00:00",
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "effort": "low",
+  "requested_cases": [
+    "takryu-p91",
+    "takryu-p129",
+    "austen-jealousy",
+    "austen-negated-envy"
+  ],
+  "initial_generation_runs": 4,
+  "diagnostic_retry_runs": 1,
+  "model_output_count": 0,
+  "accepted_candidate_count": 0,
+  "public_store_updated": false,
+  "deployed": false,
+  "environment_ready_does_not_establish_api_authorization": true,
+  "diagnostic_retry": {
+    "case_id": "austen-negated-envy",
+    "node_use_env_proxy": true,
+    "error": "OPENAI_REQUEST_FAILED status=401 code=invalid_api_key"
+  },
+  "initial_failures": {
+    "error": "Gateway invocation failed before any preserved model response; initial CLI suppressed the detailed error.",
+    "case_ids": [
+      "takryu-p91",
+      "takryu-p129",
+      "austen-jealousy",
+      "austen-negated-envy"
+    ]
+  },
+  "source_inputs": [
+    "takryu-p91/source-input.json",
+    "takryu-p129/source-input.json",
+    "austen-jealousy/source-input.json",
+    "austen-negated-envy/source-input.json"
+  ],
+  "note": "No generated candidate is available. Source inputs are real-novel excerpts only. Environment credential readiness was observed; actual authenticated request failed. No secrets or credential values are recorded."
+}

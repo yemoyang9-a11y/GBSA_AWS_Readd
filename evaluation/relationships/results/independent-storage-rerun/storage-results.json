@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "engine": "PGlite (PostgreSQL WASM), local only",
+  "real_sql": true,
+  "mock_model": true,
+  "checks": [
+    "migration twice",
+    "pipeline register -> PostgreSQL -> production repository",
+    "canonical reversal preserves direction",
+    "parallel reverse/kind tracks",
+    "event occurrences",
+    "bounded history/rewind",
+    "end state not visible early",
+    "future evidence rejected by DB",
+    "missing semantics rejected",
+    "mismatched source quote excluded",
+    "future endpoint excluded"
+  ],
+  "limitations": [
+    "Synthetic source/candidates; no live model in this run",
+    "Embedding columns omitted from baseline schema; not relevant to relationship queries",
+    "No remote deployed DB migration"
+  ]
+}

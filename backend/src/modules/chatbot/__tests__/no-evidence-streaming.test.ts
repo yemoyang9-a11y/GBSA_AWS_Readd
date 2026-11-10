@@ -3,11 +3,12 @@
  *
  * 실사용 중 발견(2026-08-24): "[NO_EVIDENCE"까지가 한 청크, "]"가 다음 청크로 나뉘어
  * 오면, 완성 판정 전에 앞 조각이 그대로 클라이언트로 새어 나가 화면에
- * "[NO_EVIDENCE현재까지 읽은..." 처럼 깨진 토큰이 답변 앞에 붙었다. 근거 부재 문구는
- * "항상 같은 문구"여야 하는데(FR-QNA-004 🚦) 청크 분할 여부에 따라 달라지면 안 된다.
+ * "[NO_EVIDENCE현재까지 읽은..." 처럼 깨진 토큰이 답변 앞에 붙었다.
+ * 내부 토큰은 청크 분할 여부와 무관하게 사용자에게 노출하지 않는다.
+ * 토큰이 발생하면 추가 모델 호출이나 고정 거절문 없이 오류를 반환한다.
  */
 
-import { handleQuery, NO_EVIDENCE_MESSAGE } from '../service';
+import { handleQuery } from '../service';
 import * as repo from '../repository';
 import { vectorSearch } from '../vector-search';
 import { stream as llmStream } from '../../llm-gateway/gateway';
@@ -52,12 +53,15 @@ describe('근거 부재 토큰의 청크 분할 (FR-QNA-004 🚦)', () => {
     });
 
     const chunks: string[] = [];
-    for await (const chunk of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID)) {
-      chunks.push(chunk);
-    }
+    const consume = async (): Promise<void> => {
+      for await (const chunk of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID)) {
+        chunks.push(chunk);
+      }
+    };
 
-    const output = chunks.join('');
-    expect(output).toBe(NO_EVIDENCE_MESSAGE);
+    await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+    expect(chunks).toEqual([]);
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 
   test('토큰이 한 글자씩 쪼개져도 깨진 조각이 새지 않는다', async () => {
@@ -66,11 +70,29 @@ describe('근거 부재 토큰의 청크 분할 (FR-QNA-004 🚦)', () => {
     });
 
     const chunks: string[] = [];
-    for await (const chunk of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID)) {
-      chunks.push(chunk);
-    }
+    const consume = async (): Promise<void> => {
+      for await (const chunk of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID)) {
+        chunks.push(chunk);
+      }
+    };
 
-    expect(chunks.join('')).toBe(NO_EVIDENCE_MESSAGE);
+    await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+    expect(chunks).toEqual([]);
+    expect(llmStream).toHaveBeenCalledTimes(1);
+  });
+
+  test('이미 전송한 문장 뒤의 내부 토큰은 숨기고 추가 호출 없이 오류를 반환한다', async () => {
+    (llmStream as jest.Mock).mockImplementation(async function* () {
+      yield '확인해 볼게요. [NO_EVIDENC';
+      yield 'E]';
+    });
+    const chunks: string[] = [];
+    const consume = async () => {
+      for await (const chunk of handleQuery(BOOK_ID, QUERY, K, DEVICE_ID)) chunks.push(chunk);
+    };
+    await expect(consume()).rejects.toThrow('CHATBOT_INTERNAL_TOKEN');
+    expect(chunks).toEqual(['확인해 볼게요. ']);
+    expect(llmStream).toHaveBeenCalledTimes(1);
   });
 
   test('정상 답변 중간에 토큰과 비슷하지만 다른 텍스트("[NO_한강]")가 있어도 그대로 통과한다', async () => {

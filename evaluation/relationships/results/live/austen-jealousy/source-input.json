@@ -1,0 +1,36 @@
+{
+  "book_id": "evaluation-austen-jealousy",
+  "source": {
+    "kind": "actual_novel",
+    "description": "Jane Austen, Pride and Prejudice, source lines 1819-1829. Page 1 is excerpt-fixture numbering, not book pagination.",
+    "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+    "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+  },
+  "known_character_names": [
+    "Elizabeth",
+    "Miss Bingley",
+    "Darcy",
+    "Kitty",
+    "Lydia",
+    "Miss Lucas",
+    "Jane",
+    "Mr. Collins"
+  ],
+  "chapters": [
+    {
+      "id": "austen-jealousy",
+      "book_id": "evaluation-austen-jealousy",
+      "chapter_no": 1,
+      "title": "Independent holdout excerpt: jealousy",
+      "start_page": 1,
+      "end_page": 1
+    }
+  ],
+  "pages": [
+    {
+      "page_no": 1,
+      "content": "\nElizabeth, having rather expected to affront him, was amazed at his\ngallantry; but there was a mixture of sweetness and archness in her\nmanner which made it difficult for her to affront anybody; and Darcy\nhad never been so bewitched by any woman as he was by her. He really\nbelieved, that were it not for the inferiority of her connections, he\nshould be in some danger.\n\nMiss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth.",
+      "book_id": "evaluation-austen-jealousy"
+    }
+  ]
+}

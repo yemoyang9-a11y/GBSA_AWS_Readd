@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "id": "dd299e00-e5b9-5eb3-8d75-c93c23ac339f",
+      "name": "형보",
+      "first_appearance_page": 129,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "2d5257e4-5dc1-5ca3-bb85-e1905096d928",
+      "name": "초봉이",
+      "first_appearance_page": 129,
+      "aliases": [],
+      "alias_details": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "08b6eda3-f679-5d31-bb81-b20c0bac87e7",
+      "source": "2d5257e4-5dc1-5ca3-bb85-e1905096d928",
+      "target": "dd299e00-e5b9-5eb3-8d75-c93c23ac339f",
+      "label": "일방적으로 탐냄",
+      "established_page": 129,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "형보는 초봉이를 일방적으로 탐낸다.",
+        "version": 2,
+        "evidence": {
+          "quote": "시방 형보가 초봉이를 탐내는 품은 태수가 초봉이한테 반한 것보다 훨씬 더했다.",
+          "end_char": 934,
+          "start_char": 891,
+          "source_page": 129
+        },
+        "direction": "b_to_a",
+        "relation_key": "possessive_desire",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "history": [
+    {
+      "id": "08b6eda3-f679-5d31-bb81-b20c0bac87e7",
+      "source": "2d5257e4-5dc1-5ca3-bb85-e1905096d928",
+      "target": "dd299e00-e5b9-5eb3-8d75-c93c23ac339f",
+      "label": "일방적으로 탐냄",
+      "established_page": 129,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "형보는 초봉이를 일방적으로 탐낸다.",
+        "version": 2,
+        "evidence": {
+          "quote": "시방 형보가 초봉이를 탐내는 품은 태수가 초봉이한테 반한 것보다 훨씬 더했다.",
+          "end_char": 934,
+          "start_char": 891,
+          "source_page": 129
+        },
+        "direction": "b_to_a",
+        "relation_key": "possessive_desire",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "applied_cutoff": 129
+}

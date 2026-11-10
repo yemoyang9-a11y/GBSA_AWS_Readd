@@ -1,66 +1,33 @@
-/**
- * 챗봇 근거 조립기
- *
- * ⚠️ 중요: 질의 텍스트를 인자로 받지 않음! (NFR-SEC-006 🚦)
- * 이것이 1차 방어선입니다.
- *
- * @see dev-spec-R3-ai.md 3장
- * @see architecture-r1.md 5.3절
- */
-
 import type {
   ChatbotContext,
   ChatbotChapterSummary,
   Character,
   Relationship,
+  RelationshipSemantics,
   CharacterNote,
   Term,
   Event,
 } from '../../shared/types';
 import * as repo from './repository';
 
-/**
- * 챗봇 근거 조립
- *
- * FR-QNA-006 🚦: 근거 조립 범위
- *
- * ⚠️ 이 함수는 질의 텍스트(query)를 인자로 받지 않습니다!
- * 질의는 검색(vector-search)에만 사용되며, 전량 주입분은 질의와 무관합니다.
- *
- * @param bookId - 도서 ID
- * @param K - 기준점 (진도 레코드가 없으면 0, 있으면 current_page)
- * @returns 챗봇 근거 컨텍스트
- *
- * @example
- * const snapshot = await getCutoffSnapshot(deviceId, bookId);
- * const context = await assembleContext(bookId, snapshot.cutoff);
- */
 export async function assembleContext(
   bookId: string,
   K: number // cutoff (기준점)
-  // ⚠️ query는 인자로 받지 않는다! (NFR-SEC-006 🚦)
 ): Promise<ChatbotContext> {
-  // ① 전량 주입분 (질의 비관여, 결정적)
-  // 같은 K에서 질의를 바꿔도 이 부분은 동일해야 함
-
-  // ①-0 책 제목·저자 (상한 없음 — 배경지식과 동일한 방식)
   const book = await getBookMeta(bookId);
 
-  // ①-a 장 요약 전부 (종료 페이지 <= K)
   const chapterSummaries = await findChapterSummaries(bookId, K);
 
-  // ①-b 현재 장 원문 절단 [현재 장 시작 .. K]
   const currentChapterText = await getCurrentChapterText(bookId, K);
 
-  // ② 엔티티 전량 (각 <= K)
   const characters = await findCharacters(bookId, K);
   const relationships = await findRelationships(bookId, K); // A6: 이력 전체, 페이지 병기
   const characterNotes = await findCharacterNotes(bookId, K);
   const terms = await findTerms(bookId, K);
   const events = await findEvents(bookId, K);
 
-  // ③ 배경지식 전문 (R5: 상한 없음)
-  const background = await getBackgroundKnowledge(bookId);
+  // Whole-book generated background has no cutoff-scoped source provenance.
+  const background = '';
 
   return {
     book,
@@ -77,117 +44,77 @@ export async function assembleContext(
   };
 }
 
-/**
- * 책 제목·저자 조회
- *
- * 상한 없음 — 배경지식(getBackgroundKnowledge)과 같은 고정 메타데이터라 K를 받지 않는다.
- */
 async function getBookMeta(bookId: string): Promise<{ title: string; author: string }> {
   return repo.getBookMeta(bookId);
 }
 
-/**
- * 장 요약 조회 (완결된 장만)
- *
- * FR-QNA-006 🚦: 종료 페이지 <= K
- */
 async function findChapterSummaries(bookId: string, K: number): Promise<ChatbotChapterSummary[]> {
   return repo.findChapterSummaries(bookId, K);
 }
 
-/**
- * 현재 장 원문 절단
- *
- * FR-QNA-006 🚦: [현재 장 시작 .. K]
- *
- * @returns 절단된 원문 (페이지 연결)
- */
 async function getCurrentChapterText(bookId: string, K: number): Promise<string | null> {
   return repo.getCurrentChapterText(bookId, K);
 }
 
-/**
- * 인물 조회
- *
- * FR-QNA-006 🚦: 최초 등장 페이지 <= K
- */
 async function findCharacters(bookId: string, K: number): Promise<Character[]> {
   return repo.findCharacters(bookId, K);
 }
 
-/**
- * 관계 조회 (이력 전체, 페이지 병기)
- *
- * A6: 챗봇 근거에는 이력 전체를 확립 페이지와 병기해 넣는다
- * (표시는 최신 라벨 1개지만, 챗봇은 변화 자체가 답이 되는 질의에 대응)
- *
- * FR-QNA-006 🚦: 확립 페이지 <= K
- */
 async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
   return repo.findRelationships(bookId, K);
 }
 
-/**
- * 인물 노트 조회
- *
- * FR-QNA-006 🚦: 근거 페이지 <= K
- */
 async function findCharacterNotes(bookId: string, K: number): Promise<CharacterNote[]> {
   return repo.findCharacterNotes(bookId, K);
 }
 
-/**
- * 용어 조회
- *
- * FR-QNA-006 🚦: 최초 등장 페이지 <= K
- */
 async function findTerms(bookId: string, K: number): Promise<Term[]> {
   return repo.findTerms(bookId, K);
 }
 
-/**
- * 사건 조회
- *
- * FR-QNA-006 🚦: 발생 페이지 <= K
- */
 async function findEvents(bookId: string, K: number): Promise<Event[]> {
   return repo.findEvents(bookId, K);
 }
 
+const ASSERTION_LABEL: Record<RelationshipSemantics['assertion_status'], string> = {
+  fact: '사실',
+  belief: '인물의 믿음',
+  claim: '인물의 주장',
+  rumor: '소문',
+  uncertain: '불확실',
+  negated: '부정 — 성립하지 않음',
+};
+
 /**
- * 배경지식 조회
- *
- * R5: 상한 없음 (1페이지 시점에도 안전한 고정 콘텐츠)
- * FR-BGK-002 🚦
+ * R10 · FR-CHR-001: semantics가 있으면 방향대로 주어·목적어를 쓰고 확정 여부·종료를 함께 싣는다.
+ * 저장 순서(character_a/b)는 방향이 아니다. semantics가 없는 기존 행은 형식을 바꾸지 않는다.
  */
-async function getBackgroundKnowledge(bookId: string): Promise<string> {
-  return repo.getBackgroundKnowledge(bookId);
+function formatRelationship(rel: Relationship, nameA: string, nameB: string): string {
+  const page = `(확립: p.${rel.established_page})`;
+  const s = rel.semantics;
+  if (!s) return `- ${nameA} - ${nameB}: ${rel.label} ${page}`;
+
+  const pair =
+    s.direction === 'a_to_b'
+      ? `${nameA} → ${nameB}`
+      : s.direction === 'b_to_a'
+        ? `${nameB} → ${nameA}`
+        : s.direction === 'mutual'
+          ? `${nameA} ↔ ${nameB}`
+          : s.direction === 'unknown'
+            ? `${nameA} - ${nameB} (방향 미확인)`
+            : `${nameA} - ${nameB}`;
+  const status = [
+    ASSERTION_LABEL[s.assertion_status] + (s.attribution ? `(${s.attribution})` : ''),
+    ...(s.temporal_scope === 'event' ? ['일회성 사건'] : []),
+    ...(s.state === 'ended' ? ['종료됨'] : []),
+  ].join(', ');
+  return `- ${pair}: [${status}] ${rel.label} — ${s.summary} ${page}`;
 }
 
-/**
- * 프롬프트 구성
- *
- * 근거 블록을 LLM 프롬프트로 변환
- *
- * @param context - 근거 컨텍스트
- * @param systemRules - 시스템 규칙 (근거 외 생성 금지, 근거 부재 토큰 규약)
- * @returns 구조화된 프롬프트
- */
-export function buildPrompt(context: ChatbotContext, systemRules: string): string {
-  // NFR-AI-005: 근거 외 생성 금지
-  // A10: 모델의 사전 지식 누설 방지 (유일한 수단, 100% 보장 아님)
+type ChatbotEntities = ChatbotContext['entities'];
 
-  const sections: string[] = [systemRules, '', '# 근거 데이터', ''];
-  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
-
-  // 책 정보 (상한 없음)
-  //
-  // ⚠️ 실사용 중 발견(2026-08-25) — 시스템 규칙이 "답변 시 페이지 번호를 명시하라"고
-  // 강제하다 보니, 페이지에 묶이지 않는 이 섹션(제목·저자)으로 답할 때도 모델이 "(p.1)"
-  // 같은 페이지 번호를 스스로 지어내는 걸 실제 Bedrock 호출로 재현 확인했다(드래그
-  // 인용문 페이지 지어내기 버그, 커밋 bc71b41과 같은 유형). "지어내지 마라"만 지시했더니
-  // 이번엔 "채만식이에요. (p.없음)"처럼 페이지가 없다는 말을 답변에 그대로 노출시키는
-  // 새 부작용이 실제 호출에서 나왔다 — "지어내지 말고 조용히 생략하라"까지 명시해서 막는다.
+function pushBookInfo(sections: string[], context: ChatbotContext): void {
   if (context.book.title || context.book.author) {
     sections.push('## 책 정보');
     if (context.book.title) sections.push(`- 제목: ${context.book.title}`);
@@ -198,149 +125,195 @@ export function buildPrompt(context: ChatbotContext, systemRules: string): strin
     );
     sections.push('');
   }
+}
 
-  // 장 요약
-  //
-  // ⚠️ 버그 수정(2026-08-26, 사용자 제보) — 예전에는 `### {title} (종료: p.{end_page})`로만
-  // 렌더링해 **장 번호를 프롬프트에 넣지 않았다.** 그래서 현재 페이지가 60이어도(=1장은
-  // 진작 읽은 범위) "1장까지 요약해줘"가 근거 부재로 거절됐다 — 모델 눈에는 "인간기념물"
-  // 이라는 제목만 보이지 그게 1장인지 알 방법이 없었기 때문이다. 같은 질문을 제목으로
-  // 물으면 곧바로 답하는 것으로 원인을 확정했다(인물 노트·관계 이름 미렌더링에 이은 같은
-  // 유형의 세 번째 버그).
-  //
-  // 시작 페이지까지 범위로 병기하는 건 "15페이지까지 요약해줘" 같은 범위 한정 요청을
-  // 모델이 판단할 근거를 주기 위해서다(시스템 규칙 7번). 여기 실리는 장은 이미 K로 걸러진
-  // 것뿐이므로 상한은 그대로 데이터 선택 단계가 강제한다 — 범위 한정은 그 안에서 어느
-  // 부분을 쓸지 고르는 것일 뿐, 프롬프트로 상한을 거는 게 아니다(절대 규칙 3번 무관).
-  if (context.chapter_summaries.length > 0) {
+function pushSummaries(sections: string[], summaries: ChatbotChapterSummary[]): void {
+  if (summaries.length > 0) {
     sections.push('## 장 요약');
-    context.chapter_summaries.forEach((ch) => {
+    summaries.forEach((ch) => {
       sections.push(`### ${ch.chapter_no}장 ${ch.title} (p.${ch.start_page}~${ch.end_page})`);
       sections.push(ch.content);
       sections.push('');
     });
-    // ⚠️ 실사용 중 발견(2026-08-28, 데모 당일) — 장 번호·페이지 범위가 위에 정확히
-    // 렌더링돼 있는데도(테스트로 고정됨) 실제 배포본에서 "1장까지 요약해줘"·"30페이지까지
-    // 요약해줘"가 반복적으로 [NO_EVIDENCE]로 거절되는 걸 재현했다. 시스템 규칙 7번(범위
-    // 한정 요약)이 프롬프트 맨 앞부분에 있고, 이 사이에 인물·관계·용어·사건 등 수십~수백
-    // 건이 끼어들다 보니 이 파일의 다른 ⚠️ 사례들(currentPageText, quote, 인물·관계)과
-    // 같은 이유로 규칙을 놓치는 것으로 보인다. "지시는 근거 바로 옆에 있어야 모델이
-    // 놓치지 않는다"는 이 파일의 기존 관례를 장 요약에도 그대로 적용한다.
     sections.push(
-      '(위 "장 요약"에 병기된 장 번호·페이지 범위를 보고 답하세요 — "1장까지", "30페이지까지' +
-        '"처럼 범위를 한정한 요청이면 시스템 규칙 7번대로 그 범위에 드는 장 요약만 골라' +
-        ' 답하고, 장 중간에서 끊기는 요청이면 그 페이지가 속한 장까지 포함해 자연스럽게' +
-        ' 정리하세요. 위에 있는 장 요약은 전부 이미 열람 가능한 확정 근거이니 이 요청' +
-        ' 유형에서는 "[NO_EVIDENCE]"로 먼저 넘어가지 마세요.)'
+      '(범위를 좁힌 요약에서는 요청 끝 페이지를 넘는 장 전체 요약은 사용하지 마세요. ' +
+        '해당 범위의 원문이 있으면 그 부분만 요약하고, 해당 범위의 원문이 없으면 확인할 수 있는 범위와 한계를 설명하세요.)'
     );
     sections.push('');
   }
+}
 
-  // 현재 장 원문
-  if (context.current_chapter_text) {
-    sections.push('## 현재 장 원문 (절단)');
-    sections.push(context.current_chapter_text);
-    sections.push('');
-  }
+const CURRENT_CHAPTER_HEADING = '## 현재 장 원문 (절단)';
 
-  // 인물
-  if (context.entities.characters.length > 0) {
+function pushEntities(
+  sections: string[],
+  entities: ChatbotEntities,
+  nameById: Map<string, string>
+): void {
+  if (entities.characters.length > 0) {
     sections.push('## 인물');
-    context.entities.characters.forEach((char) => {
+    entities.characters.forEach((char) => {
       sections.push(`- ${char.name} (첫 등장: p.${char.first_appearance_page})`);
     });
     sections.push('');
   }
 
-  // 인물 노트
-  //
-  // ⚠️ 버그 수정(2026-08-25, 위 관계 버그와 같은 세션에서 발견) — assembleContext는
-  // findCharacterNotes로 인물 노트를 조회해 context.entities.character_notes에
-  // 담고 service.ts의 로그(input_records.character_notes)까지 "근거로 썼다"고
-  // 기록하는데, buildPrompt는 그동안 이 배열을 프롬프트 어디에도 렌더링하지 않았다
-  // — 장 요약·인물·관계·용어·사건은 전부 섹션이 있는데 인물 노트만 통째로 빠져
-  // 있었다. 인물 노트에만 있는 정보를 묻는 질문은 벡터 검색이 우연히 관련 본문을
-  // 찾아주지 않는 한 항상 [NO_EVIDENCE]였다. character_id도 관계와 같은 이유로
-  // uuidv4()라 이름 해석이 필요하다.
-  if (context.entities.character_notes.length > 0) {
+  if (entities.character_notes.length > 0) {
     sections.push('## 인물 노트');
-    context.entities.character_notes.forEach((note) => {
+    entities.character_notes.forEach((note) => {
       const name = nameById.get(note.character_id) ?? note.character_id;
       sections.push(`- ${name}: ${note.note} (p.${note.source_page})`);
     });
     sections.push('');
   }
 
-  // 관계 (이력 전체, 페이지 병기 - A6)
-  //
-  // ⚠️ 버그 수정(2026-08-25, 사용자 제보 — "정주사 아들 누구야?"는 [NO_EVIDENCE]인데
-  // "병주 아버지 누구야?"는 맞히는 비대칭 발견) — character_a_id/character_b_id는
-  // uuidv4()로 생성되는 무의미한 문자열이다(accumulate.ts). 그런데 이 목록은 그동안
-  // rel.label과 established_page만 넣고 두 당사자가 누구인지는 프롬프트에 아예 넣지
-  // 않았다 — 즉 "부자 (확립: p.3)"처럼 "누구의" 관계인지 모델이 알 방법이 없는 상태로
-  // 근거를 만들고 있었다. 이전 수정(방향 반전 지시)은 이 근본 원인을 못 찾고 증상만
-  // 보고 잘못된 원인(라벨이 "A → B: 관계" 화살표 형식이라 방향을 뒤집어야 한다)을
-  // 추정해 지어낸 것이었다 — 실제 라벨은 "부자"·"부녀 관계(딸)"처럼 방향 없는
-  // 명사라 뒤집을 화살표 자체가 없었다. "병주 아버지 누구야?"가 맞았던 건 이 목록
-  // 덕이 아니라 벡터 검색이 우연히 본문 서술(병주가 "아버지"라 부르며 안기는 장면)을
-  // 찾아준 것뿐이었다. 근본 수정은 character_a_id/b_id를 (같은 K로 이미 조회한)
-  // characters 목록에서 이름으로 해석해 관계 줄에 실제로 넣는 것이다.
-  if (context.entities.relationships.length > 0) {
+  if (entities.relationships.length > 0) {
     sections.push('## 인물 관계 (이력)');
-    context.entities.relationships.forEach((rel) => {
+    entities.relationships.forEach((rel) => {
       const nameA = nameById.get(rel.character_a_id) ?? rel.character_a_id;
       const nameB = nameById.get(rel.character_b_id) ?? rel.character_b_id;
-      sections.push(`- ${nameA} - ${nameB}: ${rel.label} (확립: p.${rel.established_page})`);
+      sections.push(formatRelationship(rel, nameA, nameB));
     });
     sections.push('');
   }
 
-  // 용어
-  if (context.entities.terms.length > 0) {
+  if (entities.terms.length > 0) {
     sections.push('## 용어');
-    context.entities.terms.forEach((term) => {
+    entities.terms.forEach((term) => {
       sections.push(`- **${term.term}**: ${term.definition} (p.${term.first_appearance_page})`);
     });
     sections.push('');
   }
 
-  // 사건
-  if (context.entities.events.length > 0) {
+  if (entities.events.length > 0) {
     sections.push('## 사건');
-    context.entities.events.forEach((event) => {
+    entities.events.forEach((event) => {
       sections.push(`- ${event.event} (p.${event.occurrence_page}): ${event.description}`);
     });
     sections.push('');
   }
+}
 
-  // ⚠️ 실사용 중 발견(2026-08-25) — SYSTEM_RULES의 "질문 전제가 틀렸을 때 정정하라"는
-  // 지시만으로는 부족했다(2026-08-24의 currentPageText 케이스와 같은 이유: 위 인물·관계
-  // 목록이 프롬프트 앞부분 시스템 규칙보다 한참 뒤에 있다 보니, Haiku가 존재하지 않는
-  // 관계를 물으면 목록에 실제로 정정 근거가 있어도 무시하고 [NO_EVIDENCE]를 반환하는 걸
-  // 실제 배포본에서 재현했다 — 예: "정주사 아들 누구야?"에 목록엔 "정주사의 딸 초봉"이
-  // 있는데도 거절함). 지시를 근거 바로 옆에 다시 박아 넣는다.
+function pushEntityNote(sections: string[], entities: ChatbotEntities): void {
   if (
-    context.entities.characters.length > 0 ||
-    context.entities.character_notes.length > 0 ||
-    context.entities.relationships.length > 0 ||
-    context.entities.terms.length > 0 ||
-    context.entities.events.length > 0
+    entities.characters.length > 0 ||
+    entities.character_notes.length > 0 ||
+    entities.relationships.length > 0 ||
+    entities.terms.length > 0 ||
+    entities.events.length > 0
   ) {
     sections.push(
-      '(위 인물·인물 노트·인물 관계·용어·사건은 전부 지금까지 확인된 확정 근거입니다. 질문의 전제가 ' +
-        '위 내용과 다르면(예: 실제로는 딸인데 "아들"이라고 물음) "[NO_EVIDENCE]" 대신 위 ' +
-        '내용으로 정정해서 답하세요 — 단, "OO는 아들이 없어요"처럼 책 전체에 대한 단정적 ' +
-        '부정은 쓰지 말고 "지금까지 읽은 부분에서는 ~"으로 범위를 한정하세요.)'
+      '(위 인물·인물 노트·인물 관계·용어·사건에 명시된 사실은 답변의 근거입니다. ' +
+        '이 목록은 읽은 범위의 모든 사실을 담은 전수 자료가 아닙니다. 질문의 전제가 자료와 다르면 ' +
+        '질문이 확인하려는 명제부터 판단하고 확인된 사실로 바로잡으세요. 관련된 다른 사실을 설명하는 것으로 ' +
+        '질문의 전제를 긍정하지 마세요. 목록에서 찾지 못한 속성은 현재 제공된 자료로 확인하지 ' +
+        '못했다고만 말하세요. 그 속성이 읽은 부분이나 작품에 없다는 뜻으로 바꾸지 마세요.)'
     );
     sections.push('');
   }
+}
 
-  // 배경지식 (상한 없음 - R5)
-  if (context.background) {
-    sections.push('## 배경지식');
-    sections.push(context.background);
-    sections.push('');
+/**
+ * A8-2 — 공급자 접두 캐시가 맞도록 **같은 근거를 배치만 바꿔** 렌더링한다.
+ *
+ * FR-SPL-002 🚦, R4: 데이터 선택은 assembleContext(bookId, K)가 이미 끝냈다. 여기서는 그 결과를
+ * 걸러 내거나 넓히지 않고, 페이지로 나눠 배치만 한다. 기준점·cutoff 계산은 없다.
+ *
+ * 배치(같은 장 안에서 K가 늘면 뒤에만 덧붙는다):
+ *   a. 책 정보 + 현재 장 이전 장 요약 + 현재 장 시작 전 페이지의 엔티티
+ *   b. 현재 장 원문(장 시작..K)
+ *   c. 현재 장 요약(K가 장 끝이면 저장소가 함께 준다) + 현재 장 안 페이지의 엔티티 + 설명문(고정)
+ * 현재 장 시작은 현재 장 원문의 첫 쪽이다. 원문이 없으면 선택된 장 요약의 마지막 종료 페이지 다음 쪽이다.
+ * 관계는 (인물 쌍, 확립 페이지, id), 나머지 목록은 (페이지, id) 순으로 정렬해 결정적이다 — A6 이력이
+ * 블록 안에서 쌍끼리 모인다.
+ */
+export function buildStableContext(context: ChatbotContext): string {
+  return buildStableContextParts(context).join('');
+}
+
+/**
+ * A8-2: 위 배치를 [a, b의 쪽 하나씩…, c] 조각으로 나눈다. 각 조각 끝이 공급자 캐시 지점이 된다.
+ * 공급자는 새 요청에 표시된 지점에서만 이전 캐시를 찾는다. 쪽마다 지점을 두면 K가 늘어도
+ * 이전 K 쪽 끝 지점이 새 요청에 그대로 남아 거기까지 캐시를 읽는다.
+ * 조각 사이 구분 문자는 조각 안에 들어 있다 — 구분자 없이 이어 붙이면 그대로 원래 문자열이다.
+ */
+export function buildStableContextParts(context: ChatbotContext): string[] {
+  const nameById = new Map(context.entities.characters.map((c) => [c.id, c.name] as const));
+  const firstPage = context.current_chapter_text?.match(/^\[p\.(\d+)\]\n/)?.[1];
+  const chapterStart = firstPage
+    ? Number(firstPage)
+    : context.chapter_summaries.reduce((start, ch) => Math.max(start, ch.end_page + 1), 1);
+
+  const byId = (x: { id: string }, y: { id: string }) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0);
+  function split<T extends { id: string }>(
+    items: T[],
+    page: (item: T) => number,
+    order: (x: T, y: T) => number = (x, y) => page(x) - page(y) || byId(x, y)
+  ): [T[], T[]] {
+    const sorted = [...items].sort(order);
+    return [
+      sorted.filter((item) => page(item) < chapterStart),
+      sorted.filter((item) => page(item) >= chapterStart),
+    ];
   }
 
-  return sections.join('\n');
+  const { characters, character_notes, relationships, terms, events } = context.entities;
+  const [charsBefore, charsCurrent] = split(characters, (c) => c.first_appearance_page);
+  const [notesBefore, notesCurrent] = split(character_notes, (n) => n.source_page);
+  const [relsBefore, relsCurrent] = split(
+    relationships,
+    (r) => r.established_page,
+    (x, y) =>
+      x.character_a_id.localeCompare(y.character_a_id) ||
+      x.character_b_id.localeCompare(y.character_b_id) ||
+      x.established_page - y.established_page ||
+      byId(x, y)
+  );
+  const [termsBefore, termsCurrent] = split(terms, (t) => t.first_appearance_page);
+  const [eventsBefore, eventsCurrent] = split(events, (e) => e.occurrence_page);
+  const [summariesBefore, summariesCurrent] = split(
+    context.chapter_summaries.map((ch) => ({ ...ch, id: String(ch.chapter_no) })),
+    (ch) => ch.start_page
+  );
+
+  const head: string[] = ['# 근거 데이터', ''];
+  pushBookInfo(head, context);
+  pushSummaries(head, summariesBefore);
+  pushEntities(
+    head,
+    {
+      characters: charsBefore,
+      character_notes: notesBefore,
+      relationships: relsBefore,
+      terms: termsBefore,
+      events: eventsBefore,
+    },
+    nameById
+  );
+
+  const tail: string[] = [];
+  pushSummaries(tail, summariesCurrent);
+  pushEntities(
+    tail,
+    {
+      characters: charsCurrent,
+      character_notes: notesCurrent,
+      relationships: relsCurrent,
+      terms: termsCurrent,
+      events: eventsCurrent,
+    },
+    nameById
+  );
+  pushEntityNote(tail, context.entities);
+
+  if (!context.current_chapter_text) return [head.join('\n'), `\n${tail.join('\n')}`];
+
+  // 저장소가 쪽을 `[p.N]\n본문`으로 만들어 '\n\n'로 잇는다. 그 경계에서만 자른다 — 형식이 달라
+  // 경계를 못 찾으면 원문 전체가 한 조각이 될 뿐 근거는 그대로다.
+  const pages = context.current_chapter_text.split(/\n\n(?=\[p\.\d+\]\n)/);
+  return [
+    head.join('\n'),
+    ...pages.map((page, i) => (i === 0 ? `\n${CURRENT_CHAPTER_HEADING}\n${page}` : `\n\n${page}`)),
+    `\n${['', ...tail].join('\n')}`,
+  ];
 }

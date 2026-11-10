@@ -44,11 +44,82 @@ function requireDeviceId(req: Request, res: Response): string | null {
   return deviceId;
 }
 
+/** UI position is a precondition, never an alternative source for the server cutoff. */
+function matchesExpectedReadingPage(req: Request, res: Response, serverPage: number): boolean {
+  const expected = req.query.expected_page;
+  if (expected === undefined) return true; // Existing clients retain server-only scope.
+  if (
+    typeof expected !== 'string' ||
+    !/^\d+$/.test(expected) ||
+    !Number.isSafeInteger(Number(expected)) ||
+    Number(expected) < 1
+  ) {
+    res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid expected_page' });
+    return false;
+  }
+  if (Number(expected) !== serverPage) {
+    res
+      .status(409)
+      .json({ error: 'READING_POSITION_CHANGED', message: 'Reading position is not synchronized' });
+    return false;
+  }
+  return true;
+}
+
 /**
  * Health Check
  */
 router.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * GET /diag/sse — SSE 버퍼링 진단 (2026-08-30, 이전 검증용)
+ *
+ * 이번 이전의 최대 미지수가 "스트리밍이 중간 계층에서 버퍼링되는가"다. 예전 구성은
+ * nginx `proxy_buffering off`와 CloudFront TTL 0 **두 계층**에 의존해 SSE를 흘렸는데,
+ * Fly 프록시에서 같은 동작이 나는지는 배포해야만 알 수 있다. 버퍼링이 걸리면 첫 토큰이
+ * 안 나오고 응답이 끝날 때 한꺼번에 도착하는데, **로컬에서는 재현되지 않아** 실배포
+ * 후에야 드러난다.
+ *
+ * 리캡·챗봇 SSE로 이걸 확인하려면 LLM 키가 필요하고 응답 시간도 들쭉날쭉하다. 이
+ * 엔드포인트는 **고정 간격으로 더미 청크만** 흘려서 버퍼링 여부 하나만 분리해 본다.
+ * DB·LLM·사용자 데이터를 일절 건드리지 않으므로 배포 후에도 남겨 둘 수 있다.
+ *
+ * 판정 — 각 청크의 도착 간격이 CHUNK_INTERVAL_MS에 가까우면 정상(스트리밍),
+ *        전부 마지막에 몰려 도착하면 어딘가에서 버퍼링되고 있다.
+ *
+ * 사용:
+ *   curl -N https://<host>/diag/sse
+ */
+router.get('/diag/sse', (_req: Request, res: Response) => {
+  const CHUNK_COUNT = 10;
+  const CHUNK_INTERVAL_MS = 300;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // nginx 계열 프록시용 (Fly는 이 헤더를 안 읽는다)
+  res.flushHeaders(); // 헤더를 먼저 내보낸다 — 첫 청크를 기다리지 않게
+
+  const startedAt = Date.now();
+  let sent = 0;
+
+  const timer = setInterval(() => {
+    sent += 1;
+    // 서버가 보낸 시각을 실어 보낸다 — 클라이언트 수신 시각과 대조하면
+    // "서버가 늦게 보낸 것"과 "중간에서 붙들고 있던 것"을 가를 수 있다
+    res.write(`data: ${JSON.stringify({ seq: sent, sentAtMs: Date.now() - startedAt })}\n\n`);
+
+    if (sent >= CHUNK_COUNT) {
+      clearInterval(timer);
+      res.write(`data: ${JSON.stringify({ done: true, totalMs: Date.now() - startedAt })}\n\n`);
+      res.end();
+    }
+  }, CHUNK_INTERVAL_MS);
+
+  // 클라이언트가 끊으면 타이머를 정리한다 — 안 하면 끊긴 응답에 계속 write 한다
+  res.on('close', () => clearInterval(timer));
 });
 
 // ============================================================================
@@ -102,8 +173,8 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
     // 기준점 스냅샷 가져오기
     let K: number;
     // 완독 여부 — 기준점 결정기가 파생한 값을 그대로 받는다(재계산 금지, 절대 규칙 2번).
-    // 완독이면 챗봇이 근거에 없는 대상을 "이 책에 안 나온다"고 단정할 수 있다
-    // (D14, 절대 규칙 7번·R10의 완독 예외 — FR-QNA-004 🚦).
+    // 완독은 허용 범위만 뜻하며, 검색 결과에 없다는 이유로 작품 전체 부재를
+    // 단정할 근거가 되지 않는다(2026-10-21 정책, FR-QNA-004 🚦).
     let isComplete = false;
     // 대화 이력 기록 대상 — MOCK_MODE는 DB 없이 도는 화면 개발 경로라 이력 기록을 생략한다
     let conversationId: number | undefined;
@@ -177,7 +248,7 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
         isComplete
       )) {
         // SSE 프레임 통일 (R4 요청 - delta/done/error)
-        // 근거 부재 거절도 일반 delta로 흘려보냄
+        // 부분 근거에 맞춘 답변도 생성되는 대로 일반 delta로 전달한다.
         res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
       }
 
@@ -221,6 +292,7 @@ router.get('/books/:bookId/chat/conversations', async (req: Request, res: Respon
 
   try {
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+    if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
     const conversations = await listChatConversations(deviceId, bookId, snapshot.cutoff);
     return res.json(conversations);
   } catch (error) {
@@ -249,6 +321,7 @@ router.get(
 
     try {
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
+      if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
       const detail = await getChatConversationDetail(deviceId, bookId, numericId, snapshot.cutoff);
       if (!detail) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'conversation not found' });
@@ -609,7 +682,9 @@ router.get('/books/:bookId/ssabi/graph', async (req: Request, res: Response) => 
     // 관계도 조회 (FR-SPL-002 🚦: cutoff 적용)
     const graph = await ssabiServices.graph.getGraph(bookId, K);
 
-    res.json(graph);
+    // FR-SPL-002: reading-position responses must not survive in shared/browser caches.
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ ...graph, applied_cutoff: K });
   } catch (error) {
     console.error('[API] ssabi/graph error', { bookId, error });
     res.status(500).json({
@@ -643,7 +718,6 @@ router.get('/books/:bookId/ssabi/characters/:characterId', async (req: Request, 
       await readingState.progressService.acceptProgressEvent(deviceId, bookId, { page, seq });
     }
     await readingState.sessionService.touchActivity(deviceId, bookId); // A2 — 조회도 조작 이벤트
-
 
     // 기준점 스냅샷 1회 (00-shared §2.1) — 요청 내 모든 조회가 같은 K 를 쓴다
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);

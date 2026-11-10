@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "id": "cbea4d97-5900-509c-a4bc-d08dcb45c7e8",
+      "name": "김씨",
+      "first_appearance_page": 91,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "52a3433d-2f0c-5219-91b9-fb50ab7578f0",
+      "name": "초봉이",
+      "first_appearance_page": 91,
+      "aliases": [],
+      "alias_details": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "0424c4b4-089f-567f-a60f-02876ea86640",
+      "source": "52a3433d-2f0c-5219-91b9-fb50ab7578f0",
+      "target": "cbea4d97-5900-509c-a4bc-d08dcb45c7e8",
+      "label": "태수를 두고 질투",
+      "established_page": 91,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "김씨는 태수를 두고 초봉이를 질투한다.",
+        "version": 2,
+        "evidence": {
+          "quote": "초봉이란 말에 김씨는 도무지 전에 없던 일로 별안간 강짜가 나고, 나되 사뭇 앞이 캄캄하고 몸 이 떨려 어쩔 줄을 몰랐다. 김씨는 자청해서 태수더러 결혼을 하라고 했고, 종차 나서서 규수를 골라 내 손으로다가 뒤받이 를 들어 혼사를 치러 줄 염량까지 했고, 그러면서도 조금도 질투 같은 것은 몰랐고 한 것은 무릇 그 여자 즉 태수의 배필인 동시에 질투의 대상 인물이 실지의 인물로서 아직 드러나지 않았기 때 문이었었다. 그러다가 마침내 초봉이라고 하는 잘 아는 계집애, 그때의 최근으로는 작년에 본 것이 마지막이 지만 썩 아담스럽게 생긴 그 계집애 초봉이가, 이건 시방 당장 내 애물인 태수를 차지를 해가다 니! 아 그 계집애가! 이러해서 계제와 대상을 만나 질투는 피어올랐던 것이다.",
+          "end_char": 1089,
+          "start_char": 706,
+          "source_page": 91
+        },
+        "direction": "b_to_a",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "history": [
+    {
+      "id": "0424c4b4-089f-567f-a60f-02876ea86640",
+      "source": "52a3433d-2f0c-5219-91b9-fb50ab7578f0",
+      "target": "cbea4d97-5900-509c-a4bc-d08dcb45c7e8",
+      "label": "태수를 두고 질투",
+      "established_page": 91,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "김씨는 태수를 두고 초봉이를 질투한다.",
+        "version": 2,
+        "evidence": {
+          "quote": "초봉이란 말에 김씨는 도무지 전에 없던 일로 별안간 강짜가 나고, 나되 사뭇 앞이 캄캄하고 몸 이 떨려 어쩔 줄을 몰랐다. 김씨는 자청해서 태수더러 결혼을 하라고 했고, 종차 나서서 규수를 골라 내 손으로다가 뒤받이 를 들어 혼사를 치러 줄 염량까지 했고, 그러면서도 조금도 질투 같은 것은 몰랐고 한 것은 무릇 그 여자 즉 태수의 배필인 동시에 질투의 대상 인물이 실지의 인물로서 아직 드러나지 않았기 때 문이었었다. 그러다가 마침내 초봉이라고 하는 잘 아는 계집애, 그때의 최근으로는 작년에 본 것이 마지막이 지만 썩 아담스럽게 생긴 그 계집애 초봉이가, 이건 시방 당장 내 애물인 태수를 차지를 해가다 니! 아 그 계집애가! 이러해서 계제와 대상을 만나 질투는 피어올랐던 것이다.",
+          "end_char": 1089,
+          "start_char": 706,
+          "source_page": 91
+        },
+        "direction": "b_to_a",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "applied_cutoff": 91
+}

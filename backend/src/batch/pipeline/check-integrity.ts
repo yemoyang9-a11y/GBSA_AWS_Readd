@@ -9,9 +9,13 @@
  * 조용히 굳는다(CLAUDE.md 6장). 발견만 하고 사람에게 넘긴다.
  */
 import { AccumulatedCharacter, AccumulatedRelationship, AccumulatedTerm } from './accumulate';
+import { relationshipGroup, relationshipSlots } from '../../modules/ssabi/relationship-versions';
 
 export interface ResolvedBookData {
   book_id: string;
+  provenance?: {
+    relationship_coverage?: { complete: boolean; source_page_count: number; chapter_nos: number[] };
+  };
   chapter_summaries: { chapter_no: number; title: string; summary: string }[];
   characters: AccumulatedCharacter[];
   relationships: AccumulatedRelationship[];
@@ -80,18 +84,28 @@ function checkTermUniqueness(data: ResolvedBookData, issues: IntegrityIssue[]): 
   }
 }
 
-/** H3 — 인물 대표명 중복 없음(파이프라인 불변식 — accumulate가 보장해야 하는 값을 재확인) */
+/** H3 — IDs must be unique; grounded homonyms stay distinct and require review. */
 function checkCharacterNameUniqueness(data: ResolvedBookData, issues: IntegrityIssue[]): void {
-  const seen = new Set<string>();
+  const seen = new Map<string, AccumulatedCharacter>();
+  const ids = new Set<string>();
   for (const c of data.characters) {
-    if (seen.has(c.name)) {
+    if (ids.has(c.id))
       issues.push({
         severity: 'hard',
-        rule: 'H3-character-name-unique',
+        rule: 'H3-character-id-unique',
+        message: `Duplicate character id: ${c.id}`,
+      });
+    ids.add(c.id);
+    if (seen.has(c.name)) {
+      const groundedDistinct =
+        c.identity_status === 'distinct' && c.evidence && seen.get(c.name)?.evidence;
+      issues.push({
+        severity: groundedDistinct ? 'review' : 'hard',
+        rule: groundedDistinct ? 'R3-character-name-ambiguous' : 'H3-character-name-unique',
         message: `인물 대표명 "${c.name}" 중복 생성됨`,
       });
     }
-    seen.add(c.name);
+    seen.set(c.name, c);
   }
 }
 
@@ -109,20 +123,33 @@ function checkRelationshipCharacterRefs(data: ResolvedBookData, issues: Integrit
   }
 }
 
-/** REVIEW — 같은 인물 쌍·같은 확립 페이지에 라벨이 다른 행이 여럿이면 사람이 판단(같은 사실의 다른 서술인지, 진짜 다른 사실인지) */
+/**
+ * REVIEW — 서로 대체하는 관계 묶음·같은 확립 페이지에서 같은 관점 칸을 차지하는 행의 라벨이 다르면 사람이
+ * 판단(같은 사실의 다른 서술인지, 진짜 다른 사실인지). FR-CHR-001: 묶음·칸은 런타임 대체 규칙과 같다 —
+ * 한쪽→쌍방은 칸이 겹쳐 비교하고, A→B와 B→A는 칸이 달라 함께 남는 관계라 비교하지 않는다.
+ */
 function checkRelationshipLabelConflicts(data: ResolvedBookData, issues: IntegrityIssue[]): void {
-  const byPairPage = new Map<string, AccumulatedRelationship[]>();
+  const byGroupPage = new Map<string, AccumulatedRelationship[]>();
   for (const r of data.relationships) {
-    const key = `${[r.character_a_id, r.character_b_id].sort().join('|')}@${r.established_page}`;
-    const list = byPairPage.get(key) ?? [];
+    const key = `${relationshipGroup(r)}@${r.established_page}`;
+    const list = byGroupPage.get(key) ?? [];
     list.push(r);
-    byPairPage.set(key, list);
+    byGroupPage.set(key, list);
   }
 
   const nameById = new Map(data.characters.map((c) => [c.id, c.name] as const));
-  for (const rows of byPairPage.values()) {
+  for (const rows of byGroupPage.values()) {
     const labels = new Set(rows.map((r) => r.label));
-    if (labels.size > 1) {
+    const clash = rows.some((x, i) =>
+      rows
+        .slice(i + 1)
+        .some(
+          (y) =>
+            x.label !== y.label &&
+            relationshipSlots(x).some((slot) => relationshipSlots(y).includes(slot))
+        )
+    );
+    if (clash) {
       const a = nameById.get(rows[0].character_a_id) ?? rows[0].character_a_id;
       const b = nameById.get(rows[0].character_b_id) ?? rows[0].character_b_id;
       issues.push({

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SseFrame } from '../types';
 
 /**
@@ -17,7 +17,7 @@ import type { SseFrame } from '../types';
  * 으로 "지금 화면에 반영해도 되는 호출"을 하나로 못박고, 낡은 호출은 상태 반영 없이
  * 끝까지 소비만 시켜 백엔드 쪽 생성·캐싱은 그대로 완료되게 둔다.
  */
-export function useSSE() {
+export function useSSE(position?: string | number | null) {
   const latestToken = useRef(0);
   const [text, setText] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -34,6 +34,26 @@ export function useSSE() {
    */
   const [conversationId, setConversationId] = useState<number | null>(null);
 
+  const reset = useCallback(() => {
+    latestToken.current++;
+    setText('');
+    setError(null);
+    setConversationId(null);
+    setAppliedCutoff(null);
+    setStreaming(false);
+  }, []);
+  const [previousPosition, setPreviousPosition] = useState(position);
+  if (previousPosition !== position) {
+    setPreviousPosition(position);
+    reset();
+  }
+  useEffect(
+    () => () => {
+      latestToken.current++;
+    },
+    []
+  );
+
   const consume = useCallback(async (frames: AsyncGenerator<SseFrame>) => {
     const token = ++latestToken.current;
     setText('');
@@ -47,7 +67,7 @@ export function useSSE() {
         if (token !== latestToken.current) continue;
 
         if (frame.type === 'delta') {
-          setText((previous) => previous + frame.text);
+          setText((previous) => (token === latestToken.current ? previous + frame.text : previous));
           continue;
         }
         if (frame.type === 'error') {
@@ -65,15 +85,13 @@ export function useSSE() {
         }
         return;
       }
+    } catch {
+      if (token !== latestToken.current) return;
+      setText('');
+      setError('내용을 불러오지 못했습니다');
     } finally {
       if (token === latestToken.current) setStreaming(false);
     }
-  }, []);
-
-  const reset = useCallback(() => {
-    setText('');
-    setError(null);
-    setConversationId(null);
   }, []);
 
   /**
@@ -87,5 +105,14 @@ export function useSSE() {
     setAppliedCutoff(null);
   }, []);
 
-  return { text, streaming, error, appliedCutoff, conversationId, consume, reset, resetAppliedCutoff };
+  return {
+    text,
+    streaming,
+    error,
+    appliedCutoff,
+    conversationId,
+    consume,
+    reset,
+    resetAppliedCutoff,
+  };
 }

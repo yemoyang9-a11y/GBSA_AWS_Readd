@@ -1,9 +1,18 @@
 /**
- * LLM 호출 재시도 로직
+ * 재시도 로직 — 임베딩 등 SDK 내장 재시도가 없는 경로 전용
  *
- * NFR-AI-003: 재시도 / 타임아웃 / 폴백 전환
+ * NFR-AI-003: 재시도 / 타임아웃 (D-2로 재정의 — 폴백 모델 없이 재시도만)
  *
  * @see dev-spec-R3-ai.md 2장
+ * @see docs/migration.md — Phase 1 (Bedrock → Anthropic API 이관, 2026-08-29)
+ *
+ * ⚠️ **LLM 게이트웨이는 이제 이 파일을 쓰지 않는다.** Anthropic SDK가 재시도·타임아웃을
+ *    내장하고 있어 gateway.ts는 클라이언트 옵션(maxRetries/timeout)으로 처리한다.
+ *    남은 사용처는 임베딩 배치(batch/pipeline/embed.ts) 하나다.
+ *
+ * ⚠️ `withFallback`은 제거했다 (D-2, 2026-08-29) — Nova Lite 폴백이 Bedrock 전용이었고,
+ *    폴백 모델을 두면 R10/FR-QNA-004 🚦(근거 부재 시 고정 문구 수렴)을 모델별로 다시
+ *    검증해야 한다. 단일 모델 + 재시도만 남긴다.
  */
 
 /**
@@ -34,17 +43,20 @@ function calculateDelay(attempt: number): number {
  * @returns 재시도 가능 여부
  */
 function isRetryableError(error: any): boolean {
-  // 네트워크 오류, 타임아웃, 429 (Too Many Requests), 5xx 서버 오류
-  const retryableErrors = [
-    'NetworkingError',
-    'TimeoutError',
-    'ThrottlingException',
-    'ServiceUnavailable',
-    'InternalServerError',
-  ];
+  // HTTP 상태로 먼저 판별한다 (2026-08-29) — 예전엔 'ThrottlingException' 같은 **AWS
+  // 에러 이름**만 문자열 매칭했는데, AWS를 떠나면 그 이름이 절대 안 나온다. 그대로 뒀다면
+  // 모든 오류가 "재시도 불가"로 분류돼 재시도가 조용히 죽는다 — 에러는 나지만 한 번도
+  // 다시 시도하지 않는, 로그만 봐서는 안 보이는 실패 모드다.
+  const status = error?.status ?? error?.statusCode;
+  if (typeof status === 'number') {
+    return status === 408 || status === 409 || status === 429 || status >= 500;
+  }
 
-  const errorName = error.name || error.code || '';
-  return retryableErrors.some((name) => errorName.includes(name));
+  // 상태 코드가 없는 연결 단계 오류 — 이름/코드로 판별한다
+  const errorName = String(error?.name || error?.code || '');
+  return ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'TimeoutError', 'APIConnectionError'].some(
+    (name) => errorName.includes(name)
+  );
 }
 
 /**
@@ -56,8 +68,8 @@ function isRetryableError(error: any): boolean {
  *
  * @example
  * const result = await withRetry(
- *   () => bedrockClient.send(command),
- *   { task: 'chatbot', modelId: 'claude-v1' }
+ *   () => fetch(COHERE_EMBED_URL, { ... }),
+ *   { task: 'embed', model: 'embed-v4.0' }
  * );
  */
 export async function withRetry<T>(
@@ -115,49 +127,4 @@ export async function withRetry<T>(
   throw new Error(`Failed after ${RETRY_CONFIG.maxRetries + 1} attempts: ${lastError?.message}`);
 }
 
-/**
- * 폴백 모델 전환
- *
- * Sonnet 실패 시 Haiku로 폴백
- *
- * @param primaryModelId - 1차 모델 ID
- * @param fallbackModelId - 폴백 모델 ID
- * @param fn - 실행할 함수 (모델 ID를 인자로 받음)
- * @returns 함수 실행 결과
- *
- * @example
- * const result = await withFallback(
- *   'claude-sonnet-v1',
- *   'claude-haiku-v1',
- *   (modelId) => callBedrock(modelId, prompt)
- * );
- */
-export async function withFallback<T>(
-  primaryModelId: string,
-  fallbackModelId: string,
-  fn: (modelId: string) => Promise<T>
-): Promise<T> {
-  try {
-    // 1차 시도: 지정된 모델
-    return await fn(primaryModelId);
-  } catch (error) {
-    console.warn('Primary model failed, trying fallback', {
-      primary: primaryModelId,
-      fallback: fallbackModelId,
-      error,
-    });
-
-    // 2차 시도: 폴백 모델
-    try {
-      const result = await fn(fallbackModelId);
-      console.log('Fallback model succeeded', { fallback: fallbackModelId });
-      return result;
-    } catch (fallbackError) {
-      console.error('Fallback model also failed', {
-        fallback: fallbackModelId,
-        error: fallbackError,
-      });
-      throw fallbackError;
-    }
-  }
-}
+// withFallback은 제거했다 (D-2, 2026-08-29) — 위 파일 주석 참조.

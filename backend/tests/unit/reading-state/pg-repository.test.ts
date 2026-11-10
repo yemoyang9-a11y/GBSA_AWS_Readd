@@ -256,6 +256,34 @@ describe('저장 리캡 · 세션 캐시', () => {
     expect(calls[0].sql).toMatch(/ON CONFLICT \(device_id, book_id, cutoff_page\)/);
     expect(calls[0].params).toEqual(['dev-1', 'book-1', 15, '캐시', expiresAt]);
   });
+
+  test('FR-DAT-010: saveCached는 적재 후 같은 (device_id, book_id)의 만료 행(expires_at <= now())을 삭제한다', async () => {
+    const { client, calls } = mockClient();
+    const repo = createPgSessionRecapCacheRepository(client);
+
+    await repo.saveCached('dev-1', 'book-1', 15, '캐시', new Date('2026-08-21T00:00:00Z'));
+
+    const purge = calls.find((c) => /DELETE FROM session_recap_cache/.test(c.sql));
+    expect(purge).toBeDefined();
+    expect(purge!.sql).toMatch(/WHERE device_id = \$1 AND book_id = \$2 AND expires_at <= now\(\)/);
+    expect(purge!.params).toEqual(['dev-1', 'book-1']);
+  });
+
+  test('FR-DAT-010: 만료 행 정리는 방금 적재한 행 이후에 실행되고 기준점과 무관하게 만료 여부로만 고른다', async () => {
+    // 적재보다 먼저 지우면 같은 키의 upsert와 순서가 얽힌다 — 새 행은 expires_at이 미래라
+    // 적재 뒤에 지워도 남는다. 다른 K의 만료 행도 정리 대상이어야 하므로 cutoff_page로
+    // 범위를 좁히지 않는다(좁히면 만료 행이 계속 쌓인다).
+    const { client, calls } = mockClient();
+    const repo = createPgSessionRecapCacheRepository(client);
+
+    await repo.saveCached('dev-1', 'book-1', 15, '캐시', new Date('2026-08-21T00:00:00Z'));
+
+    const insertIdx = calls.findIndex((c) => /INSERT INTO session_recap_cache/.test(c.sql));
+    const purgeIdx = calls.findIndex((c) => /DELETE FROM session_recap_cache/.test(c.sql));
+    expect(insertIdx).toBe(0);
+    expect(purgeIdx).toBeGreaterThan(insertIdx);
+    expect(calls[purgeIdx].sql).not.toMatch(/cutoff_page/);
+  });
 });
 
 describe('대화 이력 파기 — A7', () => {

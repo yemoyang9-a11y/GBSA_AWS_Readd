@@ -1,0 +1,90 @@
+{
+  "mode": "independently-authored-source-candidates, not live model output",
+  "flow": "validator -> accumulation -> production registration -> local PostgreSQL -> production graph query",
+  "checks": [
+    {
+      "id": "takryu-p91",
+      "source": {
+        "kind": "actual_novel",
+        "description": "채만식 탁류 실제 원문 분할 91쪽; 이 파일은 해당 페이지 단일 발췌로서 작품 전체가 아니다.",
+        "sha256": "3248eb87f94f993db4d3262f1fc5894628137ccdbde9022b234e9d6ed7c4d186"
+      },
+      "input_candidates": 1,
+      "accepted": 1,
+      "held": [],
+      "stored": 1,
+      "graph_edges": 1,
+      "negative_cutoff_edges": 0,
+      "passed": true
+    },
+    {
+      "id": "takryu-p129",
+      "source": {
+        "kind": "actual_novel",
+        "description": "채만식 탁류 실제 원문 분할 129쪽; 이 파일은 해당 페이지 단일 발췌로서 작품 전체가 아니다.",
+        "sha256": "3248eb87f94f993db4d3262f1fc5894628137ccdbde9022b234e9d6ed7c4d186"
+      },
+      "input_candidates": 1,
+      "accepted": 1,
+      "held": [],
+      "stored": 1,
+      "graph_edges": 1,
+      "negative_cutoff_edges": 0,
+      "passed": true
+    },
+    {
+      "id": "austen-jealousy",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 1819-1829. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "input_candidates": 1,
+      "accepted": 1,
+      "held": [],
+      "stored": 1,
+      "graph_edges": 1,
+      "negative_cutoff_edges": 0,
+      "passed": true
+    },
+    {
+      "id": "austen-negated-envy",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 4419-4424. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "input_candidates": 2,
+      "accepted": 2,
+      "held": [],
+      "stored": 2,
+      "graph_edges": 2,
+      "negative_cutoff_edges": 0,
+      "passed": true
+    },
+    {
+      "id": "austen-belief-attribution",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 8810-8814. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "input_candidates": 1,
+      "accepted": 1,
+      "held": [],
+      "stored": 1,
+      "graph_edges": 1,
+      "negative_cutoff_edges": 0,
+      "passed": true
+    }
+  ],
+  "complete": true,
+  "limitations": [
+    "Known endpoint identities supplied; full character/alias extraction not exercised",
+    "Model generation unavailable (401 invalid_api_key)",
+    "No remote deployment or physical device validation"
+  ]
+}

@@ -28,10 +28,10 @@ async function main(): Promise<void> {
   const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
 
   const existing = (await pool.query(
-    `SELECT target_type, target_id, ${ALL_CRITERIA.join(', ')} FROM review_records WHERE book_id = $1`,
+    `SELECT target_type, target_id, ${ALL_CRITERIA.join(', ')}, relationship_snapshot FROM review_records WHERE book_id = $1`,
     [BOOK_ID]
   )) as { rows: ReviewRecordRow[] };
-  const alreadyReviewed = passedReviewKeys(existing.rows);
+  const alreadyReviewed = passedReviewKeys(existing.rows, data);
 
   const rows = buildReviewSheetRows(data, alreadyReviewed);
   const csv = toReviewSheetCsv(rows);

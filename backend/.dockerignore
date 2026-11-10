@@ -1,0 +1,33 @@
+# 빌드 컨텍스트에서 제외 — 이미지 크기와 빌드 시간을 줄이고, 비밀값이 새지 않게 한다
+
+# 의존성 — 이미지 안에서 npm ci 로 다시 깐다 (플랫폼별 바이너리 문제 회피)
+node_modules
+
+# 빌드 산출물 — 이미지 안에서 다시 빌드한다
+dist
+
+# ⚠️ 비밀값. 실수로 이미지에 굽지 않는다 — 값은 fly secrets 로만 주입한다
+.env
+.env.*
+!.env.example
+
+# 테스트·개발 전용
+tests
+**/*.test.ts
+**/__tests__
+jest.config.js
+jest.setup.js
+.eslintrc.json
+.prettierrc
+
+# 배치 파이프라인 입력 데이터 (「탁류」 원문 970KB)
+# API 서버 런타임에는 필요 없다 — 배치는 로컬에서 돌린다
+data
+
+# 문서
+*.md
+
+# 로컬 산출물
+coverage
+*.log
+*.dump

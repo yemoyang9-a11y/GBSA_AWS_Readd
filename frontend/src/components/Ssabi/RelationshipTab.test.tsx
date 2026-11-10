@@ -10,45 +10,64 @@ const graph: GraphResponse = {
   edges: [{ source: 'c1', target: 'c2', label: '부녀', established_page: 5 }],
 };
 
+it('renders graph after loading and after a position invalidates the previous graph', () => {
+  const { rerender } = render(<RelationshipTab graph={null} failed={false} />);
+  rerender(<RelationshipTab graph={graph} failed={false} />);
+  expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
+  rerender(<RelationshipTab graph={null} failed={false} />);
+  rerender(<RelationshipTab graph={graph} failed={false} />);
+  expect(screen.getByRole('region', { name: '인물' })).toBeInTheDocument();
+});
+
 /**
  * 인물 관계도 탭 — FR-SVB-002, FR-SPL-005 🚦, NFR-USE-006
- *
- * ⚠️ 정책 변경(2026-08-24, 지도형 리디자인) — 관계 라벨은 더 이상 항상 펼쳐져 있지
- *    않다. 인물 카드를 선택(그래프 클릭과 동등)해야 그 인물의 관계가 글자로 나온다.
- *    NFR-USE-006("라벨을 글자로 병기, 색상만으로 구분하지 않는다")의 검증 지점이
- *    "항상 보임"에서 "선택하면 보임"으로 옮겨졌다 — 라벨이 사라진 게 아니라 위치가
- *    바뀐 것이다.
  *
  * ⚠️ 인물 이름은 그래프 노드와 인물 카드 **양쪽**에 나온다. 전역 쿼리는 다중 매치로
  *    실패하므로 aria-label 로 구획한 영역 안에서 찾는다.
  */
 describe('RelationshipTab', () => {
-  it('NFR-USE-006: 인물을 선택하면 관계 라벨이 글자로 나온다 — 색상만으로 구분하지 않는다', () => {
+  it('NFR-USE-006: 인물을 선택하면 그래프에 관계 라벨이 글자로 나온다 — 색상만으로 구분하지 않는다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
     const people = screen.getByRole('region', { name: '인물' });
     fireEvent.click(within(people).getByText('정주사'));
 
-    expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('부녀', { exact: false })).toBeInTheDocument();
   });
 
-  it('선택하지 않으면 관계 라벨이 카드에 없다', () => {
+  it('FR-CHR-001: 인물 카드는 인물만 보여 준다 — 선택해도 관계 카드를 펼치지 않는다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
     const people = screen.getByRole('region', { name: '인물' });
+    fireEvent.click(within(people).getByText('정주사'));
+
     expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
+    expect(within(people).queryByRole('list', { name: '관계' })).not.toBeInTheDocument();
   });
 
-  it('같은 인물을 다시 선택하면 접힌다', () => {
+  it('같은 인물을 다시 선택하면 선택이 풀린다', () => {
     render(<RelationshipTab graph={graph} failed={false} />);
 
     const people = screen.getByRole('region', { name: '인물' });
-    const card = within(people).getByText('정주사');
+    const card = within(people).getByText('정주사').closest('button')!;
     fireEvent.click(card);
-    expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+    expect(card).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(card);
-    expect(within(people).queryByText('부녀', { exact: false })).not.toBeInTheDocument();
+    expect(card).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('다른 인물 카드를 연달아 눌러도 누른 카드가 선택된다', () => {
+    render(<RelationshipTab graph={graph} failed={false} />);
+
+    const people = screen.getByRole('region', { name: '인물' });
+    const first = within(people).getByText('정주사').closest('button')!;
+    const second = within(people).getByText('초봉').closest('button')!;
+    fireEvent.click(first);
+    fireEvent.click(second);
+
+    expect(first).toHaveAttribute('aria-pressed', 'false');
+    expect(second).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('인물 이름과 별칭을 카드로 렌더한다', () => {
@@ -154,7 +173,7 @@ describe('RelationshipTab', () => {
       expect(within(results).getByText('정주사')).toBeInTheDocument();
     });
 
-    it('검색 결과를 선택하면 그 인물이 포커스(선택)된다 — 관계 라벨이 카드에 나온다', () => {
+    it('검색 결과를 선택하면 그 인물 카드가 선택된다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '정주사' } });
 
@@ -162,14 +181,19 @@ describe('RelationshipTab', () => {
       fireEvent.click(within(results).getByText('정주사'));
 
       const people = screen.getByRole('region', { name: '인물' });
-      expect(within(people).getByText('부녀', { exact: false })).toBeInTheDocument();
+      expect(within(people).getByText('정주사').closest('button')).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
 
     it('선택 후에는 검색창이 비워지고 결과 목록이 닫힌다', () => {
       render(<RelationshipTab graph={graph} failed={false} />);
       const input = screen.getByLabelText('인물 검색');
       fireEvent.change(input, { target: { value: '정주사' } });
-      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('정주사'));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('정주사')
+      );
 
       expect(input).toHaveValue('');
       expect(screen.queryByRole('listbox', { name: '인물 검색 결과' })).not.toBeInTheDocument();
@@ -262,8 +286,18 @@ describe('RelationshipTab', () => {
       const rawEdges: GraphResponse['edges'] = [];
       for (let i = 0; i < RIM; i++) {
         rawEdges.push({ source: 'center', target: `rim${i}`, label: '지인', established_page: 1 });
-        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 1) % RIM}`, label: '지인', established_page: 1 });
-        rawEdges.push({ source: `rim${i}`, target: `rim${(i + 2) % RIM}`, label: '지인', established_page: 1 });
+        rawEdges.push({
+          source: `rim${i}`,
+          target: `rim${(i + 1) % RIM}`,
+          label: '지인',
+          established_page: 1,
+        });
+        rawEdges.push({
+          source: `rim${i}`,
+          target: `rim${(i + 2) % RIM}`,
+          label: '지인',
+          established_page: 1,
+        });
       }
       const seen = new Set<string>();
       const edges = rawEdges.filter((e) => {
@@ -311,14 +345,16 @@ describe('RelationshipTab', () => {
       expect(within(people).queryByText('최차부')).not.toBeInTheDocument(); // 기본값이 이미 주요인물
 
       fireEvent.change(screen.getByLabelText('인물 검색'), { target: { value: '최차부' } });
-      fireEvent.click(within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('최차부'));
+      fireEvent.click(
+        within(screen.getByRole('listbox', { name: '인물 검색 결과' })).getByText('최차부')
+      );
 
       expect(within(people).getByRole('button', { name: '전체' })).toHaveAttribute(
         'aria-pressed',
         'true'
       );
       expect(within(people).getByText('최차부')).toBeInTheDocument();
-      expect(within(people).getByText('지인', { exact: false })).toBeInTheDocument();
+      expect(screen.getAllByText('지인', { exact: false }).length).toBeGreaterThan(0);
     });
 
     it('전체 인물 수가 상한 이하면 "주요인물"이어도 아무도 안 걸러진다', () => {

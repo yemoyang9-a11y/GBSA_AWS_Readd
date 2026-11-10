@@ -1,0 +1,69 @@
+{
+  "nodes": [
+    {
+      "id": "354fcaaf-3049-5640-a29f-e60598f2cbd2",
+      "name": "Miss Bingley",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "509c00b8-7f63-5055-a502-ac3dbc0cae47",
+      "name": "Elizabeth",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "346efa40-95b9-5150-930e-c973d09c8af6",
+      "source": "354fcaaf-3049-5640-a29f-e60598f2cbd2",
+      "target": "509c00b8-7f63-5055-a502-ac3dbc0cae47",
+      "label": "질투",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Miss Bingley는 Elizabeth를 질투한다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Miss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth.",
+          "end_char": 557,
+          "start_char": 372,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "history": [
+    {
+      "id": "346efa40-95b9-5150-930e-c973d09c8af6",
+      "source": "354fcaaf-3049-5640-a29f-e60598f2cbd2",
+      "target": "509c00b8-7f63-5055-a502-ac3dbc0cae47",
+      "label": "질투",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Miss Bingley는 Elizabeth를 질투한다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Miss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth.",
+          "end_char": 557,
+          "start_char": 372,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "jealousy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "fact"
+      }
+    }
+  ],
+  "applied_cutoff": 1
+}

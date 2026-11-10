@@ -17,6 +17,63 @@ import type {
   CharacterDetail,
 } from '../../shared/types';
 import type { SsabiRepository } from './repository';
+import { latestRelationshipVersions, relationshipToEdge } from './relationship-versions';
+
+const GENERIC_ALIASES = [
+  '그',
+  '그녀',
+  '딸',
+  '맏딸',
+  '큰딸',
+  '작은딸',
+  '아들',
+  '큰아들',
+  '작은아들',
+  '막내',
+  '동생',
+  '어린 동생',
+  '누이',
+  '누이동생',
+  '언니',
+  '형',
+  '오빠',
+  '누나',
+  '아내',
+  '남편',
+  '마누라',
+  '여편네',
+  '어머니',
+  '엄마',
+  '아버지',
+  '아빠',
+  '부친',
+  '모친',
+  '할머니',
+  '할아버지',
+  '아재',
+  '아주머니',
+  '아저씨',
+  '아낙',
+  '아낙네',
+  '안주인',
+  '바깥주인',
+  '주인',
+  '주인여자',
+  '영감',
+  '영감님',
+  '새끼',
+  '아이',
+  '어린애',
+  '어린것',
+  '계집아이',
+  '계집애',
+  '사내',
+  '총각',
+  '처녀',
+  '과부',
+  '선생',
+  '선생님',
+];
 
 export interface QueryClient {
   query(sql: string, params?: unknown[]): Promise<{ rows: any[] }>;
@@ -38,23 +95,7 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
     },
 
     async findLatestRelationships(bookId: string, cutoff: number): Promise<Relationship[]> {
-      // FR-SPL-002 🚦: 확립 페이지 <= cutoff
-      // A6: 같은 (character_a_id, character_b_id) 쌍의 최신 라벨만
-      const { rows } = await db.query(
-        `SELECT DISTINCT ON (character_a_id, character_b_id)
-                id,
-                book_id,
-                character_a_id,
-                character_b_id,
-                label,
-                established_page
-           FROM relationships
-          WHERE book_id = $1
-            AND established_page <= $2
-          ORDER BY character_a_id, character_b_id, established_page DESC`,
-        [bookId, cutoff]
-      );
-      return rows;
+      return latestRelationshipVersions(await boundedRelationships(db, bookId, cutoff));
     },
 
     async findAliases(bookId: string, cutoff: number): Promise<Alias[]> {
@@ -67,11 +108,48 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
         `SELECT a.character_id, a.alias, a.alias_type AS type, a.first_appearance_page
            FROM aliases a
            JOIN characters c ON a.character_id = c.id
-          WHERE c.book_id = $1
+          WHERE a.book_id = $1
+            AND c.book_id = $1
             AND c.first_appearance_page <= $2
             AND a.first_appearance_page <= $2
+            AND a.alias <> ALL($3::text[])
+            AND a.alias NOT LIKE '%네'
+            AND a.alias NOT IN (c.name, c.name || '야', c.name || '아')
+            AND ((SELECT count(*)
+                    FROM (SELECT 1
+                            FROM pages p
+                           WHERE p.book_id = $1
+                             AND p.page_no BETWEEN a.first_appearance_page AND $2
+                             AND strpos(p.content, a.alias) > 0
+                           LIMIT 2) mentioned) >= 2
+                 OR EXISTS (
+                      SELECT 1
+                        FROM characters r
+                        LEFT JOIN aliases ra
+                          ON ra.character_id = r.id
+                         AND ra.book_id = $1
+                         AND ra.first_appearance_page <= $2
+                         AND ra.alias <> ALL($3::text[])
+                       WHERE r.book_id = $1
+                         AND r.id <> a.character_id
+                         AND r.first_appearance_page <= $2
+                         AND ((r.name <> ALL($3::text[])
+                               AND (strpos(' ' || a.alias, ' ' || r.name || '의 ') > 0
+                                    OR strpos(' ' || a.alias, ' ' || r.name || '네 ') > 0))
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '의 ') > 0
+                              OR strpos(' ' || a.alias, ' ' || ra.alias || '네 ') > 0)))
+            AND NOT EXISTS (
+                  SELECT 1
+                    FROM aliases o
+                    JOIN characters oc ON o.character_id = oc.id
+                   WHERE o.book_id = $1
+                     AND oc.book_id = $1
+                     AND o.alias = a.alias
+                     AND o.character_id <> a.character_id
+                     AND o.first_appearance_page <= $2
+                     AND oc.first_appearance_page <= $2)
           ORDER BY a.first_appearance_page ASC`,
-        [bookId, cutoff]
+        [bookId, cutoff, GENERIC_ALIASES]
       );
       return rows;
     },
@@ -83,6 +161,7 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
            FROM character_notes cn
            JOIN characters c ON cn.character_id = c.id
           WHERE c.book_id = $1
+            AND cn.book_id = $1
             AND c.first_appearance_page <= $2
             AND cn.source_page <= $2
           ORDER BY c.first_appearance_page, cn.source_page ASC`,
@@ -132,7 +211,8 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       const characters = await this.findCharacters(bookId, cutoff);
 
       // 관계 조회 (최신 라벨만)
-      const relationships = await this.findLatestRelationships(bookId, cutoff);
+      const history = await boundedRelationships(db, bookId, cutoff);
+      const relationships = latestRelationshipVersions(history);
 
       // 별칭 조회
       const aliases = await this.findAliases(bookId, cutoff);
@@ -151,17 +231,14 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
         name: c.name,
         first_appearance_page: c.first_appearance_page,
         aliases: aliasMap.get(c.id) || [],
+        alias_details: aliases
+          .filter((a) => a.character_id === c.id)
+          .map((a) => ({ alias: a.alias, first_appearance_page: a.first_appearance_page })),
       }));
 
       // GraphEdge 생성
-      const edges = relationships.map((r) => ({
-        source: r.character_a_id,
-        target: r.character_b_id,
-        label: r.label,
-        established_page: r.established_page,
-      }));
-
-      return { nodes, edges };
+      const edges = relationships.map(relationshipToEdge);
+      return { nodes, edges, history: history.map(relationshipToEdge), applied_cutoff: cutoff };
     },
 
     async getCharacterDetail(
@@ -197,4 +274,45 @@ export function createPgSsabiRepository(db: QueryClient): SsabiRepository {
       };
     },
   };
+}
+
+/** FR-SPL-002/R4: bound relations, both endpoints AND the source before assembly.
+ * Legacy rows retain their label but have no verified semantics; the UI says so.
+ * Exact evidence checks are provenance checks, not a substitute for R12 semantic review.
+ */
+export async function boundedRelationships(
+  db: QueryClient,
+  bookId: string,
+  cutoff: number
+): Promise<Relationship[]> {
+  const { rows } = await db.query(
+    `SELECT r.id, r.book_id, r.character_a_id, r.character_b_id,
+            r.label, r.established_page, r.semantics
+       FROM relationships r
+       JOIN characters ca ON ca.id = r.character_a_id
+       JOIN characters cb ON cb.id = r.character_b_id
+       LEFT JOIN pages proof ON proof.book_id = r.book_id
+         AND proof.page_no = (r.semantics #>> '{evidence,source_page}')::numeric
+         AND proof.page_no <= $2
+       LEFT JOIN pages change_proof ON change_proof.book_id = r.book_id
+         AND change_proof.page_no = (r.semantics #>> '{change_evidence,source_page}')::numeric
+         AND change_proof.page_no <= $2
+      WHERE r.book_id = $1 AND ca.book_id = $1 AND cb.book_id = $1
+        AND ca.first_appearance_page <= $2 AND cb.first_appearance_page <= $2
+        AND r.established_page <= $2
+        AND (r.semantics IS NULL OR (
+          r.semantics->>'version' = '2'
+          AND proof.page_no <= r.established_page
+          AND length(r.semantics #>> '{evidence,quote}') > 0
+          AND strpos(proof.content, r.semantics #>> '{evidence,quote}') > 0
+          AND (NOT r.semantics ? 'change_evidence' OR (
+            change_proof.page_no <= r.established_page
+            AND length(r.semantics #>> '{change_evidence,quote}') > 0
+            AND strpos(change_proof.content, r.semantics #>> '{change_evidence,quote}') > 0
+          ))
+        ))
+      ORDER BY r.established_page, r.id`,
+    [bookId, cutoff]
+  );
+  return rows;
 }

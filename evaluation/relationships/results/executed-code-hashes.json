@@ -1,0 +1,13 @@
+{
+  "backend/src/batch/pipeline/grounding.ts": "8222ff3c70c6313ef071a468a5a0ac04c613e8f43b35602f759125e38d45f9f6",
+  "backend/src/batch/pipeline/generate.ts": "d6114887f9e02cdfc28b8e1415be0b4ba662be7016ec957db8c5793854684a86",
+  "backend/src/batch/pipeline/accumulate.ts": "c7ec3590cecd18c748c2c99415cae1051d8776aa248ab197edcc917b19ea2722",
+  "backend/src/batch/pipeline/register.ts": "a186394388806dfea4d0acc9275cf592dbf64dfc53706f6ac3289c7dd6e589d7",
+  "backend/src/batch/pipeline/review.ts": "06e3eb42e39ea7b04ab6e9d9e9abe8f88f3e9446230bb26b032098eb7955e1cc",
+  "backend/src/modules/ssabi/pg-repository.ts": "2e81a2b921bcb1d3d0da151780e1ba410673ea46813259ec4dbd8a5568873d84",
+  "backend/src/modules/ssabi/relationship-versions.ts": "21aeb1296949a3308d8b2d6cafe0bc0d85f24f451d219ba46fdd8d1a51ab9a62",
+  "frontend/src/components/Ssabi/RelationshipTab.tsx": "7004447845e381ee10314064347d1c367e0f61f4e107fabc820203fc386cde3d",
+  "frontend/src/components/Ssabi/RelationshipGraph.tsx": "65bda5bfb3e0a782ee702b867b0a15cea717ce2cd8c6b10c975b97b50cb53b45",
+  "frontend/src/components/Ssabi/RelationshipDetails.tsx": "279efe85bb36069b1b07bd6ecea646963c8103ce084e1366891bf48f0d026641",
+  "frontend/src/components/Ssabi/graphFilter.ts": "20c10ba2af6e8836f98143cf934aebd08393d74c48a77ce07a14b35a32ba05e4"
+}

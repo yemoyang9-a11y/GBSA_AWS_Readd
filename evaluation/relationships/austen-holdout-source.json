@@ -1,0 +1,127 @@
+{
+  "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+  "download_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+  "description": "Public-domain source downloaded for independent evaluation; excerpts retain original line breaks.",
+  "cases": [
+    {
+      "id": "austen-jealousy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        1819,
+        1829
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "\nElizabeth, having rather expected to affront him, was amazed at his\ngallantry; but there was a mixture of sweetness and archness in her\nmanner which made it difficult for her to affront anybody; and Darcy\nhad never been so bewitched by any woman as he was by her. He really\nbelieved, that were it not for the inferiority of her connections, he\nshould be in some danger.\n\nMiss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth."
+        }
+      ],
+      "endpoints": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "candidate_semantics": {
+        "subject": "Miss Bingley",
+        "object": "Elizabeth",
+        "kind": "jealousy"
+      },
+      "expected_decision": "accept",
+      "oracle": "Narration identifies Miss Bingley as jealous of Elizabeth in response to Darcy’s attraction. This does not establish mutual jealousy or romance between Bingley and Elizabeth.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-reversed-jealousy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        1819,
+        1829
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "\nElizabeth, having rather expected to affront him, was amazed at his\ngallantry; but there was a mixture of sweetness and archness in her\nmanner which made it difficult for her to affront anybody; and Darcy\nhad never been so bewitched by any woman as he was by her. He really\nbelieved, that were it not for the inferiority of her connections, he\nshould be in some danger.\n\nMiss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth."
+        }
+      ],
+      "endpoints": [
+        "Elizabeth",
+        "Miss Bingley"
+      ],
+      "candidate_semantics": {
+        "subject": "Elizabeth",
+        "object": "Miss Bingley",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "The same excerpt does not establish Elizabeth’s jealousy of Miss Bingley. Reversing the stored endpoints must not reverse the meaning.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-negated-envy-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        4419,
+        4424
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "Jane confessed herself a little surprised at the match; but she said\nless of her astonishment than of her earnest desire for their happiness;\nnor could Elizabeth persuade her to consider it as improbable. Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton."
+        }
+      ],
+      "endpoints": [
+        "Kitty",
+        "Miss Lucas"
+      ],
+      "candidate_semantics": {
+        "subject": "Kitty",
+        "object": "Miss Lucas",
+        "kind": "jealousy"
+      },
+      "expected_decision": "hold",
+      "oracle": "Kitty and Lydia are explicitly far from envying Miss Lucas; negated emotion must not become factual envy.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    },
+    {
+      "id": "austen-belief-attribution-holdout",
+      "corpus": "Jane Austen, Pride and Prejudice — actual public-domain holdout",
+      "provenance": "actual-public-domain-excerpt",
+      "source_url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+      "source_sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163",
+      "source_lines": [
+        8810,
+        8814
+      ],
+      "pages": [
+        {
+          "page_no": 1,
+          "content": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.\n"
+        }
+      ],
+      "endpoints": [
+        "Miss Bingley",
+        "Elizabeth"
+      ],
+      "candidate_semantics": {
+        "subject": "Miss Bingley",
+        "object": "Elizabeth",
+        "kind": "jealousy"
+      },
+      "expected_decision": "qualified",
+      "oracle": "This excerpt alone reports Elizabeth’s conviction about Miss Bingley’s jealousy. Preserve attribution to Elizabeth; do not substitute later or earlier novel knowledge as evidence.",
+      "holdout": true,
+      "page_note": "Excerpt-only fixture page 1. Not the printed book page or product full-book split page."
+    }
+  ]
+}

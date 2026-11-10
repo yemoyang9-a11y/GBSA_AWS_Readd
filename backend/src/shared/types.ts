@@ -30,9 +30,8 @@ export interface CutoffSnapshot {
    * 완독 여부 — 진도 레코드가 있고 마지막 페이지 이상에 도달했는가.
    *
    * cutoff·percent와 같은 파생값이므로 기준점 결정기(cutoff.service.ts)에서만 계산한다
-   * (CLAUDE.md 절대 규칙 2번). 완독 상태에서는 K가 책 전체를 덮으므로 챗봇이 "그건 이
-   * 책에 나오지 않아요"처럼 단정적으로 답할 수 있다 — D14(2026-08-27 팀 결정)로
-   * 절대 규칙 7번·R10에 완독 예외를 뒀다. FR-QNA-004 🚦
+   * (CLAUDE.md 절대 규칙 2번). 완독은 허용 범위에 관한 상태이며, 검색 완전성이나
+   * 작품 전체의 정보 부재를 증명하지 않는다(2026-10-21 정책).
    */
   is_complete: boolean;
 
@@ -147,7 +146,7 @@ export interface ChatbotChapterSummary extends ChapterSummary {
 }
 
 export interface ChatbotContext {
-  /** 책 제목·저자 (상한 없음 — 배경지식과 같은 고정 메타데이터) */
+  /** 책 제목·저자 (고정 서지 메타데이터) */
   book: {
     title: string;
     author: string;
@@ -168,7 +167,7 @@ export interface ChatbotContext {
     events: Event[];
   };
 
-  /** 배경지식 전문 (상한 없음 - R5) */
+  /** 호환용 필드. 위치 근거 없는 생성 배경지식은 챗봇 사실 근거에서 제외한다. */
   background: string;
 }
 
@@ -247,6 +246,9 @@ export interface RelationshipGraph {
 
   /** 간선 = 관계 (확립 페이지 <= K, 최신 라벨 1개) */
   edges: GraphEdge[];
+  /** FR-SPL-002: only versions already selected within the server cutoff. */
+  history?: GraphEdge[];
+  applied_cutoff?: number;
 }
 
 export interface GraphNode {
@@ -256,13 +258,39 @@ export interface GraphNode {
 
   /** 별칭 목록 (최초 등장 페이지 <= K) */
   aliases: string[];
+  /** Allows past display selection without showing a later revealed identity. */
+  alias_details?: { alias: string; first_appearance_page: number }[];
 }
 
 export interface GraphEdge {
+  id?: string;
   source: string;
   target: string;
   label: string;
   established_page: number;
+  semantics?: RelationshipSemantics | null;
+}
+
+export interface RelationshipEvidence {
+  source_page: number;
+  quote: string;
+  start_char: number;
+  end_char: number;
+}
+
+/** Endpoints remain canonical storage slots; direction must never be inferred from UUID order. */
+export interface RelationshipSemantics {
+  version: 2;
+  direction: 'a_to_b' | 'b_to_a' | 'mutual' | 'undirected' | 'unknown';
+  kind: 'family' | 'social' | 'emotion' | 'action';
+  relation_key: string;
+  summary: string;
+  assertion_status: 'fact' | 'belief' | 'claim' | 'rumor' | 'uncertain' | 'negated';
+  attribution?: string;
+  temporal_scope: 'ongoing' | 'event';
+  state: 'active' | 'ended';
+  evidence: RelationshipEvidence;
+  change_evidence?: RelationshipEvidence;
 }
 
 /**
@@ -320,6 +348,8 @@ export interface Relationship {
   character_b_id: string;
   label: string;
   established_page: number;
+  /** null/absent means legacy, not independently verified direction. */
+  semantics?: RelationshipSemantics | null;
 }
 
 export interface CharacterNote {
@@ -433,12 +463,14 @@ export interface ChatbotQueryLog {
   /** 근거 부재 여부 */
   no_evidence: boolean;
 
-  /** 완독 상태에서 처리된 질의인지 — D14. 완독 예외로 단정 부정이 허용된 답변을
-   *  CP5에서 되짚을 수 있게 남긴다. FR-QNA-004 🚦 */
+  /** 완독 상태에서 처리된 질의인지. 정보 부재를 단정할 권한을 뜻하지 않는다. */
   is_complete?: boolean;
 
   /** 선택된 모델 */
   model: string;
+
+  /** Number of logical model requests used to produce this answer. */
+  logical_model_calls?: number;
 
   /** 출력 참조 */
   output_ref: string;
@@ -469,14 +501,25 @@ export interface ApiSuccess<T = unknown> {
 // 환경 변수 타입
 // ============================================================================
 
+/**
+ * OpenAI is the default generation provider; Anthropic remains an explicit legacy option.
+ * Cohere embeddings are independent from generation-provider selection.
+ *
+ * ⚠️ 이 타입은 **어디서도 참조되지 않는다**(실제 검증은 model-config.ts의
+ *    validateModelVersions와 database.ts가 각자 한다). 삭제하지 않고 갱신만 한 이유는
+ *    `src/shared/types.ts`가 팀 공유 계약 파일이라서다 — 없애는 건 합의가 필요하지만,
+ *    존재하지 않는 환경변수 이름을 남겨 두면 그게 정본인 줄 알고 따라 쓰게 된다.
+ */
 export interface EnvConfig {
   DATABASE_URL: string;
-  AWS_REGION: string;
-  AWS_ACCESS_KEY_ID: string;
-  AWS_SECRET_ACCESS_KEY: string;
-  BEDROCK_EMBED_MODEL: string;
-  BEDROCK_CLAUDE_SONNET: string;
-  BEDROCK_CLAUDE_HAIKU: string;
+  LLM_PROVIDER?: 'openai' | 'anthropic';
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  OPENAI_REASONING_EFFORT?: 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  ANTHROPIC_API_KEY?: string;
+  ANTHROPIC_MODEL?: string;
+  ANTHROPIC_EFFORT?: string;
+  COHERE_API_KEY: string;
   PORT: number;
   NODE_ENV: 'development' | 'production' | 'test';
 }

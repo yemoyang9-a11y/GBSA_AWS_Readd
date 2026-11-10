@@ -95,14 +95,8 @@ export async function getCurrentChapterText(bookId: string, K: number): Promise<
 
   const pagesResult = await pool.query(pagesQuery, [bookId, chapter.start_page, K]);
 
-  // 3. 페이지 내용 연결 — 페이지마다 [페이지 N] 표시를 단다. 배치 파이프라인의
-  // buildPageTaggedText(generate.ts)와 같은 표기다 — "N페이지까지 요약해줘"처럼
-  // 질문이 구체적 페이지 경계를 지정할 때(현재 진행 중인 장 범위 안이라면) 그 경계가
-  // 원문 어디인지 알 수 있어야 모델이 근거 없이 [NO_EVIDENCE]로 넘어가지 않는다
-  // (2026-08-27, 사용자 제보). 단, 이미 완결돼 요약만 저장된 장(장 요약)에는 이
-  // 태그가 없다 — 그건 배치 생성 프롬프트 자체를 바꿔야 하는 별도 작업이라 이번
-  // 범위에서 제외했다(현재 진행 중인 장만 우선 처리하기로 사용자와 합의).
-  return pagesResult.rows.map((row) => `[페이지 ${row.page_no}]\n${row.content}`).join('\n\n');
+  // 3. 페이지 내용 연결
+  return pagesResult.rows.map((row) => `[p.${row.page_no}]\n${row.content}`).join('\n\n');
 }
 
 /**
@@ -132,20 +126,44 @@ export async function findCharacters(bookId: string, K: number): Promise<Charact
  *
  * A6: 이력 전체를 확립 페이지와 병기
  * FR-QNA-006 🚦: 확립 페이지 <= K
+ * FR-CHR-001: semantics(방향·확정 여부)를 함께 읽고, 그 근거 인용이 K 안 페이지에 실제로
+ * 있는 행만 쓴다 — 관계도의 boundedRelationships(ssabi/pg-repository.ts)와 같은 조건이다.
  */
 export async function findRelationships(bookId: string, K: number): Promise<Relationship[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      character_a_id,
-      character_b_id,
-      label,
-      established_page
-    FROM relationships
-    WHERE book_id = $1
-      AND established_page <= $2
-    ORDER BY character_a_id, character_b_id, established_page
+      r.id,
+      r.book_id,
+      r.character_a_id,
+      r.character_b_id,
+      r.label,
+      r.established_page,
+      r.semantics
+    FROM relationships r
+    JOIN characters a ON r.character_a_id = a.id
+    JOIN characters b ON r.character_b_id = b.id
+    LEFT JOIN pages proof ON proof.book_id = r.book_id
+      AND proof.page_no = (r.semantics #>> '{evidence,source_page}')::numeric
+      AND proof.page_no <= $2
+    LEFT JOIN pages change_proof ON change_proof.book_id = r.book_id
+      AND change_proof.page_no = (r.semantics #>> '{change_evidence,source_page}')::numeric
+      AND change_proof.page_no <= $2
+    WHERE r.book_id = $1
+      AND a.book_id = $1 AND b.book_id = $1
+      AND a.first_appearance_page <= $2 AND b.first_appearance_page <= $2
+      AND r.established_page <= $2
+      AND (r.semantics IS NULL OR (
+        r.semantics->>'version' = '2'
+        AND proof.page_no <= r.established_page
+        AND length(r.semantics #>> '{evidence,quote}') > 0
+        AND strpos(proof.content, r.semantics #>> '{evidence,quote}') > 0
+        AND (NOT r.semantics ? 'change_evidence' OR (
+          change_proof.page_no <= r.established_page
+          AND length(r.semantics #>> '{change_evidence,quote}') > 0
+          AND strpos(change_proof.content, r.semantics #>> '{change_evidence,quote}') > 0
+        ))
+      ))
+    ORDER BY r.character_a_id, r.character_b_id, r.established_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -167,6 +185,7 @@ export async function findCharacterNotes(bookId: string, K: number): Promise<Cha
     FROM character_notes cn
     JOIN characters c ON cn.character_id = c.id
     WHERE c.book_id = $1
+      AND cn.book_id = $1
       AND c.first_appearance_page <= $2
       AND cn.source_page <= $2
     ORDER BY c.first_appearance_page, cn.source_page
@@ -184,15 +203,19 @@ export async function findCharacterNotes(bookId: string, K: number): Promise<Cha
 export async function findTerms(bookId: string, K: number): Promise<Term[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      term,
-      definition,
-      first_appearance_page
-    FROM terms
-    WHERE book_id = $1
-      AND first_appearance_page <= $2
-    ORDER BY first_appearance_page
+      t.id,
+      t.book_id,
+      t.term,
+      t.definition,
+      t.first_appearance_page
+    FROM terms t
+    JOIN chapters c ON c.book_id = t.book_id
+      AND c.start_page <= t.first_appearance_page
+      AND c.end_page >= t.first_appearance_page
+    WHERE t.book_id = $1
+      AND t.first_appearance_page <= $2
+      AND c.end_page <= $2
+    ORDER BY t.first_appearance_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -207,15 +230,19 @@ export async function findTerms(bookId: string, K: number): Promise<Term[]> {
 export async function findEvents(bookId: string, K: number): Promise<Event[]> {
   const query = `
     SELECT
-      id,
-      book_id,
-      event,
-      description,
-      occurrence_page
-    FROM events
-    WHERE book_id = $1
-      AND occurrence_page <= $2
-    ORDER BY occurrence_page
+      e.id,
+      e.book_id,
+      e.event,
+      e.description,
+      e.occurrence_page
+    FROM events e
+    JOIN chapters c ON c.book_id = e.book_id
+      AND c.start_page <= e.occurrence_page
+      AND c.end_page >= e.occurrence_page
+    WHERE e.book_id = $1
+      AND e.occurrence_page <= $2
+      AND c.end_page <= $2
+    ORDER BY e.occurrence_page
   `;
 
   const result = await pool.query(query, [bookId, K]);
@@ -295,6 +322,8 @@ export async function findAliases(
     FROM aliases a
     JOIN characters c ON a.character_id = c.id
     WHERE c.book_id = $1
+      AND a.book_id = $1
+      AND c.first_appearance_page <= $2
       AND a.first_appearance_page <= $2
     ORDER BY a.first_appearance_page
   `;
@@ -304,4 +333,49 @@ export async function findAliases(
     alias: row.alias,
     characterName: row.character_name,
   }));
+}
+
+/** Literal source-text recovery, independent of embedding availability. */
+export async function lexicalSearch(
+  bookId: string,
+  query: string,
+  K: number,
+  topN: number = 6
+): Promise<SearchChunk[]> {
+  // Bound parameter size and returned evidence. strpos treats regex/LIKE syntax
+  // as plain text, and all values remain SQL parameters.
+  const words = query.slice(0, 1000).match(/[\p{L}\p{N}]+/gu) ?? [];
+  const terms = [
+    ...new Set(
+      words
+        .flatMap((word) => {
+          const literal = word.slice(0, 64);
+          const stem =
+            literal.length >= 3
+              ? literal.replace(/(?:에게|에서|으로|이란|은|는|을|를|의|에|와|과|도|란|가)$/u, '')
+              : literal;
+          return [literal, stem];
+        })
+        .filter((term) => term.length >= 2)
+    ),
+  ].slice(0, 16);
+  if (terms.length === 0 || K < 1) return [];
+  const result = await pool.query(
+    `
+    SELECT page_no, content, 1.0::float8 AS distance
+    FROM pages
+    WHERE book_id = $1 AND page_no <= $2
+      AND EXISTS (
+        SELECT 1 FROM unnest($3::text[]) AS term
+        WHERE strpos(content, term) > 0
+      )
+    ORDER BY (
+      SELECT COUNT(*) FROM unnest($3::text[]) AS term
+      WHERE strpos(content, term) > 0
+    ) DESC, page_no ASC
+    LIMIT $4
+  `,
+    [bookId, K, terms, Math.max(1, Math.min(topN, 6))]
+  );
+  return result.rows;
 }

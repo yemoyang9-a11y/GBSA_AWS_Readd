@@ -1,0 +1,256 @@
+{
+  "authored_by": "Independent relationship evaluator",
+  "basis": "Original text independently read before implementation. Exact source anchors computed, no product writes or model calls.",
+  "cases": [
+    {
+      "id": "takryu-p91",
+      "input_path": "model-inputs/takryu-p91.json",
+      "source": {
+        "kind": "actual_novel",
+        "description": "채만식 탁류 실제 원문 분할 91쪽; 이 파일은 해당 페이지 단일 발췌로서 작품 전체가 아니다.",
+        "sha256": "3248eb87f94f993db4d3262f1fc5894628137ccdbde9022b234e9d6ed7c4d186"
+      },
+      "scope": "Evaluator-authored candidate for a targeted source assertion, NOT live model output and NOT full excerpt extraction. No production approval or DB mutation is implied.",
+      "relationships": [
+        {
+          "character_a": "김씨",
+          "character_b": "초봉이",
+          "label": "태수를 두고 질투",
+          "established_page": 91,
+          "rationale": "독립 평가자가 제공 원문 서술에서 주체와 대상을 확인했다.",
+          "evidence": {
+            "source_page": 91,
+            "quote": "초봉이란 말에 김씨는 도무지 전에 없던 일로 별안간 강짜가 나고, 나되 사뭇 앞이 캄캄하고 몸 이 떨려 어쩔 줄을 몰랐다. 김씨는 자청해서 태수더러 결혼을 하라고 했고, 종차 나서서 규수를 골라 내 손으로다가 뒤받이 를 들어 혼사를 치러 줄 염량까지 했고, 그러면서도 조금도 질투 같은 것은 몰랐고 한 것은 무릇 그 여자 즉 태수의 배필인 동시에 질투의 대상 인물이 실지의 인물로서 아직 드러나지 않았기 때 문이었었다. 그러다가 마침내 초봉이라고 하는 잘 아는 계집애, 그때의 최근으로는 작년에 본 것이 마지막이 지만 썩 아담스럽게 생긴 그 계집애 초봉이가, 이건 시방 당장 내 애물인 태수를 차지를 해가다 니! 아 그 계집애가! 이러해서 계제와 대상을 만나 질투는 피어올랐던 것이다.",
+            "start_char": 706,
+            "end_char": 1089
+          },
+          "assertion_status": "fact",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "jealousy",
+            "summary": "김씨는 태수를 두고 초봉이를 질투한다.",
+            "assertion_status": "fact",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 91,
+              "quote": "초봉이란 말에 김씨는 도무지 전에 없던 일로 별안간 강짜가 나고, 나되 사뭇 앞이 캄캄하고 몸 이 떨려 어쩔 줄을 몰랐다. 김씨는 자청해서 태수더러 결혼을 하라고 했고, 종차 나서서 규수를 골라 내 손으로다가 뒤받이 를 들어 혼사를 치러 줄 염량까지 했고, 그러면서도 조금도 질투 같은 것은 몰랐고 한 것은 무릇 그 여자 즉 태수의 배필인 동시에 질투의 대상 인물이 실지의 인물로서 아직 드러나지 않았기 때 문이었었다. 그러다가 마침내 초봉이라고 하는 잘 아는 계집애, 그때의 최근으로는 작년에 본 것이 마지막이 지만 썩 아담스럽게 생긴 그 계집애 초봉이가, 이건 시방 당장 내 애물인 태수를 차지를 해가다 니! 아 그 계집애가! 이러해서 계제와 대상을 만나 질투는 피어올랐던 것이다.",
+              "start_char": 706,
+              "end_char": 1089
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "takryu-p129",
+      "input_path": "model-inputs/takryu-p129.json",
+      "source": {
+        "kind": "actual_novel",
+        "description": "채만식 탁류 실제 원문 분할 129쪽; 이 파일은 해당 페이지 단일 발췌로서 작품 전체가 아니다.",
+        "sha256": "3248eb87f94f993db4d3262f1fc5894628137ccdbde9022b234e9d6ed7c4d186"
+      },
+      "scope": "Evaluator-authored candidate for a targeted source assertion, NOT live model output and NOT full excerpt extraction. No production approval or DB mutation is implied.",
+      "relationships": [
+        {
+          "character_a": "형보",
+          "character_b": "초봉이",
+          "label": "일방적으로 탐냄",
+          "established_page": 129,
+          "rationale": "독립 평가자가 제공 원문 서술에서 주체와 대상을 확인했다.",
+          "evidence": {
+            "source_page": 129,
+            "quote": "시방 형보가 초봉이를 탐내는 품은 태수가 초봉이한테 반한 것보다 훨씬 더했다.",
+            "start_char": 891,
+            "end_char": 934
+          },
+          "assertion_status": "fact",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "possessive_desire",
+            "summary": "형보는 초봉이를 일방적으로 탐낸다.",
+            "assertion_status": "fact",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 129,
+              "quote": "시방 형보가 초봉이를 탐내는 품은 태수가 초봉이한테 반한 것보다 훨씬 더했다.",
+              "start_char": 891,
+              "end_char": 934
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "austen-jealousy",
+      "input_path": "model-inputs/austen-jealousy.json",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 1819-1829. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "scope": "Evaluator-authored candidate for a targeted source assertion, NOT live model output and NOT full excerpt extraction. No production approval or DB mutation is implied.",
+      "relationships": [
+        {
+          "character_a": "Miss Bingley",
+          "character_b": "Elizabeth",
+          "label": "질투",
+          "established_page": 1,
+          "rationale": "독립 평가자가 제공 원문 서술에서 주체와 대상을 확인했다.",
+          "evidence": {
+            "source_page": 1,
+            "quote": "Miss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth.",
+            "start_char": 372,
+            "end_char": 557
+          },
+          "assertion_status": "fact",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "jealousy",
+            "summary": "Miss Bingley는 Elizabeth를 질투한다.",
+            "assertion_status": "fact",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 1,
+              "quote": "Miss Bingley saw, or suspected enough to be jealous; and her great\nanxiety for the recovery of her dear friend Jane received some\nassistance from her desire of getting rid of Elizabeth.",
+              "start_char": 372,
+              "end_char": 557
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "austen-negated-envy",
+      "input_path": "model-inputs/austen-negated-envy.json",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 4419-4424. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "scope": "Evaluator-authored candidate for a targeted source assertion, NOT live model output and NOT full excerpt extraction. No production approval or DB mutation is implied.",
+      "relationships": [
+        {
+          "character_a": "Kitty",
+          "character_b": "Miss Lucas",
+          "label": "부러워하지 않음",
+          "established_page": 1,
+          "rationale": "원문이 감정을 명시적으로 부정하므로 긍정 관계로 승격하지 않는다.",
+          "evidence": {
+            "source_page": 1,
+            "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+            "start_char": 205,
+            "end_char": 375
+          },
+          "assertion_status": "negated",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "envy",
+            "summary": "Kitty는 Miss Lucas를 부러워하지 않는다.",
+            "assertion_status": "negated",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 1,
+              "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+              "start_char": 205,
+              "end_char": 375
+            }
+          }
+        },
+        {
+          "character_a": "Lydia",
+          "character_b": "Miss Lucas",
+          "label": "부러워하지 않음",
+          "established_page": 1,
+          "rationale": "원문이 감정을 명시적으로 부정하므로 긍정 관계로 승격하지 않는다.",
+          "evidence": {
+            "source_page": 1,
+            "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+            "start_char": 205,
+            "end_char": 375
+          },
+          "assertion_status": "negated",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "envy",
+            "summary": "Lydia는 Miss Lucas를 부러워하지 않는다.",
+            "assertion_status": "negated",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 1,
+              "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+              "start_char": 205,
+              "end_char": 375
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "austen-belief-attribution",
+      "input_path": "model-inputs/austen-belief-attribution.json",
+      "source": {
+        "kind": "actual_novel",
+        "description": "Jane Austen, Pride and Prejudice, source lines 8810-8814. Page 1 is excerpt-fixture numbering, not book pagination.",
+        "url": "https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt",
+        "sha256": "48e0522844402a86a3ea98f0947ba85ea54838db3c59022299298ed968a5a163"
+      },
+      "scope": "Evaluator-authored candidate for a targeted source assertion, NOT live model output and NOT full excerpt extraction. No production approval or DB mutation is implied.",
+      "relationships": [
+        {
+          "character_a": "Miss Bingley",
+          "character_b": "Elizabeth",
+          "label": "질투한다는 생각",
+          "established_page": 1,
+          "rationale": "이 문장은 Elizabeth의 믿음을 서술한다. 인용 밖 소설 지식으로 사실 판정을 보강하지 않는다.",
+          "evidence": {
+            "source_page": 1,
+            "quote": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.",
+            "start_char": 0,
+            "end_char": 284
+          },
+          "assertion_status": "belief",
+          "change_type": "establishment",
+          "semantics": {
+            "version": 2,
+            "direction": "a_to_b",
+            "kind": "emotion",
+            "relation_key": "jealousy",
+            "summary": "Elizabeth는 Miss Bingley의 자신에 대한 반감이 질투에서 비롯되었다고 여긴다.",
+            "assertion_status": "belief",
+            "attribution": "Elizabeth",
+            "temporal_scope": "ongoing",
+            "state": "active",
+            "evidence": {
+              "source_page": 1,
+              "quote": "Convinced as Elizabeth now was that Miss Bingley's dislike of her had\noriginated in jealousy, she could not help feeling how unwelcome her\nappearance at Pemberley must be to her, and was curious to know with how\nmuch civility on that lady's side the acquaintance would now be renewed.",
+              "start_char": 0,
+              "end_char": 284
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

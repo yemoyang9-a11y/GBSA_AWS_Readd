@@ -53,12 +53,7 @@ describe('resolveConversation — 대화 이어가기/롤오버/새 채팅', () 
 
     expect(result).toEqual({ conversationId: 99, isNew: true });
     expect(repo.getConversationById).not.toHaveBeenCalled();
-    expect(repo.createConversation).toHaveBeenCalledWith(
-      DEVICE_ID,
-      BOOK_ID,
-      40,
-      kstDateString()
-    );
+    expect(repo.createConversation).toHaveBeenCalledWith(DEVICE_ID, BOOK_ID, 40, kstDateString());
   });
 
   test('같은 KST 날짜의 conversationId 요청 → 이어가고 봉인 기준점을 래칫', async () => {
@@ -135,7 +130,7 @@ describe('parseConversationId — 요청 바디 conversationId 정규화', () =>
 
 describe('listConversations / getConversationDetail — 봉인 규칙 (positive/negative 쌍)', () => {
   test('negative: 봉인 기준점(90)이 현재 K(40)보다 크면 상세 조회가 숨겨짐(null)', async () => {
-    (repo.getConversationById as jest.Mock).mockResolvedValue(row({ id: 1, cutoff_page: 90 }));
+    (repo.getConversationSnapshot as jest.Mock).mockResolvedValue(null);
 
     const detail = await getConversationDetail(DEVICE_ID, BOOK_ID, 1, 40);
 
@@ -144,11 +139,27 @@ describe('listConversations / getConversationDetail — 봉인 규칙 (positive/
   });
 
   test('positive: 현재 K(130)가 봉인 기준점(90) 이상이면 같은 대화가 정상 노출됨', async () => {
-    (repo.getConversationById as jest.Mock).mockResolvedValue(row({ id: 1, cutoff_page: 90 }));
-    (repo.listTurns as jest.Mock).mockResolvedValue([
-      { id: 1, conversation_id: 1, turn_no: 1, role: 'user', text: '정주사가 누구인가요?', created_at: new Date() },
-      { id: 2, conversation_id: 1, turn_no: 2, role: 'assistant', text: '고무신 장사입니다.', created_at: new Date() },
-    ]);
+    (repo.getConversationSnapshot as jest.Mock).mockResolvedValue({
+      conversation: row({ id: 1, cutoff_page: 90 }),
+      turns: [
+        {
+          id: 1,
+          conversation_id: 1,
+          turn_no: 1,
+          role: 'user',
+          text: '정주사가 누구인가요?',
+          created_at: new Date(),
+        },
+        {
+          id: 2,
+          conversation_id: 1,
+          turn_no: 2,
+          role: 'assistant',
+          text: '고무신 장사입니다.',
+          created_at: new Date(),
+        },
+      ],
+    });
 
     const detail = await getConversationDetail(DEVICE_ID, BOOK_ID, 1, 130);
 
@@ -157,6 +168,21 @@ describe('listConversations / getConversationDetail — 봉인 규칙 (positive/
       { role: 'user', text: '정주사가 누구인가요?' },
       { role: 'assistant', text: '고무신 장사입니다.' },
     ]);
+  });
+
+  test('a concurrent larger-cutoff turn cannot race between parent check and unbounded turn read', async () => {
+    (repo.getConversationSnapshot as jest.Mock).mockResolvedValue({
+      conversation: row({ cutoff_page: 40 }),
+      turns: [{ role: 'assistant', text: '현재 근거', cutoff_page: 40 }],
+    });
+    (repo.getConversationById as jest.Mock).mockResolvedValue(row({ cutoff_page: 40 }));
+    (repo.listTurns as jest.Mock).mockResolvedValue([
+      { role: 'assistant', text: '미래 근거', cutoff_page: 90 },
+    ]);
+    const detail = await getConversationDetail(DEVICE_ID, BOOK_ID, 1, 40);
+    expect(detail?.turns).toEqual([{ role: 'assistant', text: '현재 근거' }]);
+    expect(repo.getConversationById).not.toHaveBeenCalled();
+    expect(repo.listTurns).not.toHaveBeenCalled();
   });
 
   test('listConversations는 봉인 기준점 <= K인 대화만 반환하도록 repository에 K를 그대로 전달', async () => {
@@ -209,6 +235,33 @@ describe('recordTurns / getConversationContext — 맥락 재사용 시 cutoff_p
 
     expect(repo.insertTurn).toHaveBeenNthCalledWith(1, 1, 1, 'user', '정주사가 누구인가요?', 90);
     expect(repo.insertTurn).toHaveBeenNthCalledWith(2, 1, 2, 'assistant', '고무신 장사입니다.', 90);
+  });
+
+  test('FR-QNA-006: selected text is retained in the user turn at the same cutoff while title stays the original question', async () => {
+    (repo.getMaxTurnNo as jest.Mock).mockResolvedValue(2);
+    const query = '본명은 뭐야?';
+    const quote = '전봇대가 걸어왔다.\n"이보게."';
+
+    await recordTurns(1, query, '확인된 본명은 없습니다.', 303, quote);
+
+    expect(repo.insertTurn).toHaveBeenNthCalledWith(
+      1,
+      1,
+      3,
+      'user',
+      `${query}\n\n선택한 문장: ${JSON.stringify(quote)}`,
+      303
+    );
+    expect(repo.insertTurn).toHaveBeenNthCalledWith(
+      2,
+      1,
+      4,
+      'assistant',
+      '확인된 본명은 없습니다.',
+      303
+    );
+    expect(repo.setTitleIfMissing).toHaveBeenCalledWith(1, query);
+    expect(repo.touchConversation).toHaveBeenCalledWith(1);
   });
 
   test('negative: cutoff_page(90)가 현재 K(40)보다 큰 turn은 맥락에서 빠진다', async () => {

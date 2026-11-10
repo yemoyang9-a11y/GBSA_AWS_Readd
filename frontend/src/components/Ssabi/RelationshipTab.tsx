@@ -134,10 +134,23 @@ export default function RelationshipTab({
 
   // 되감아서 선택했던 인물이 아직 안 나왔으면 선택을 무시한다(지우지는 않는다 —
   // 다시 앞으로 감으면 그대로 복원된다)
-  const activeSelected =
-    selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
+  const activeSelected = selected && shown?.nodes.some((n) => n.id === selected) ? selected : null;
 
-  if (failed) return <p role="alert" className="text-brief-muted">관계도를 불러오지 못했습니다</p>;
+  // Hooks must run during loading/error renders as well as loaded graph renders.
+  const cardRefs = useRef(new Map<string, HTMLLIElement>());
+  const scrollTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
+    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    scrollTargetRef.current = null;
+  }, [activeSelected]);
+
+  if (failed)
+    return (
+      <p role="alert" className="text-brief-muted">
+        관계도를 불러오지 못했습니다
+      </p>
+    );
   if (!graph || !shown) return <Loading fullScreen={false} message="인물 관계를 정리하는 중" />;
 
   // 그래프·카드 리스트·개수 표시가 전부 이 값 하나를 공유한다 — 위 클래스 주석 참고.
@@ -161,14 +174,6 @@ export default function RelationshipTab({
   // "설명이 그대로다"로 보였다. 그래프에서 직접 인물을 눌렀을 때는 이미 그 화면을 보고
   // 누른 것이라 스크롤이 필요 없다(오히려 화면이 갑자기 움직여 방해된다, 사용자 재제보) —
   // 그래서 focusOn(검색 전용 경로)에서만 스크롤 대상을 표시해 둔다.
-  const cardRefs = useRef(new Map<string, HTMLLIElement>());
-  const scrollTargetRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!activeSelected || scrollTargetRef.current !== activeSelected) return;
-    cardRefs.current.get(activeSelected)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    scrollTargetRef.current = null;
-  }, [activeSelected]);
-
   function focusOn(id: string) {
     // 걸러진 인물을 검색으로 골랐으면 "전체"로 돌려 실제로 보이게 한다 — 완전히 숨기지
     // 않는다는 약속(위 클래스 주석)을 여기서 지킨다.
@@ -181,32 +186,42 @@ export default function RelationshipTab({
     setResultsOpen(false);
   }
 
-  const relationsOf = (id: string) =>
-    shown.edges
-      .filter((edge) => edge.source === id || edge.target === id)
-      .map((edge) => {
-        const otherId = edge.source === id ? edge.target : edge.source;
-        const other = shown.nodes.find((n) => n.id === otherId);
-        return { key: `${edge.source}-${edge.target}`, name: other?.name ?? otherId, label: edge.label };
-      });
-
   return (
     <div className="space-y-5">
       <RelationshipGraph graph={displayed} selectedId={activeSelected} onSelect={setSelected} />
+      <p className="text-[11px] leading-relaxed text-brief-muted">
+        화살표는 감정·행동의 방향이고, 점선은 주장·소문이거나 끝난 관계입니다. 인물을 선택하면 그
+        인물의 관계가 그래프에 글자로 나옵니다.
+      </p>
+      {!graph?.history ? (
+        <p className="text-[11px] leading-relaxed text-brief-muted">
+          이전 관계 이력이 없는 응답은 되감아도 당시 관계를 모두 복원할 수 없습니다.
+        </p>
+      ) : null}
+      {at < latest &&
+      graph?.nodes.some((node) => node.aliases.length > 0 && !node.alias_details) ? (
+        <p className="text-[11px] leading-relaxed text-brief-muted">
+          되감기에서는 공개 시점을 확인할 수 없는 별칭을 생략합니다.
+        </p>
+      ) : null}
 
       {/* 시안(reader-map-graph.html)의 .hintbar 그대로 — 조작 안내 + 명시적 선택 해제.
           예전엔 같은 카드를 다시 눌러야만 접혔는데, 그래프 위 다른 곳을 눌러도 되지만
           그 동작이 눈에 안 보인다 — 이 버튼으로 "선택을 지우는 방법이 있다"를 드러낸다. */}
-      <div className="flex items-center justify-between text-[11px] text-brief-muted">
+      <div className="flex flex-wrap items-center justify-between text-[11px] text-brief-muted">
         <span>두 손가락으로 확대 · 끌어서 이동</span>
-        <button type="button" onClick={() => setSelected(null)} className="font-bold text-brief-accent underline">
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="font-bold text-brief-accent underline mobile:min-h-11 mobile:min-w-11"
+        >
           선택 해제
         </button>
       </div>
 
       {milestones.length > 1 ? (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-[11px]">
+          <div className="flex flex-wrap items-center justify-between text-[11px]">
             <label htmlFor="graph-scrub" className="text-brief-muted">
               시점 되감기
             </label>
@@ -224,7 +239,7 @@ export default function RelationshipTab({
                 step={1}
                 value={Math.max(0, milestones.indexOf(at))}
                 onChange={(event) => setPicked(milestones[Number(event.target.value)])}
-                className={`block h-3.5 w-full cursor-pointer appearance-none bg-transparent
+                className={`block h-3.5 w-full cursor-pointer mobile:h-11 appearance-none bg-transparent
                   [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-brief-accent
                   [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:border-none [&::-moz-range-track]:bg-brief-accent
                   ${
@@ -276,7 +291,7 @@ export default function RelationshipTab({
                 type="button"
                 aria-pressed={characterMode === 'major'}
                 onClick={() => setCharacterMode('major')}
-                className={`rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                className={`min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
                   characterMode === 'major' ? 'bg-brief-accent text-white' : 'text-brief-muted'
                 }`}
               >
@@ -286,7 +301,7 @@ export default function RelationshipTab({
                 type="button"
                 aria-pressed={characterMode === 'all'}
                 onClick={() => setCharacterMode('all')}
-                className={`rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                className={`min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 rounded-pill px-2 py-0.5 text-[10px] font-bold transition-colors ${
                   characterMode === 'all' ? 'bg-brief-accent text-white' : 'text-brief-muted'
                 }`}
               >
@@ -335,7 +350,7 @@ export default function RelationshipTab({
                   if (event.key === 'Escape') setQuery('');
                 }}
                 placeholder="검색"
-                className="w-20 bg-transparent text-[11px] text-brief-ink outline-none placeholder:text-brief-muted"
+                className="w-20 bg-transparent text-[11px] text-brief-ink outline-none placeholder:text-brief-muted mobile:min-h-11 mobile:text-[16px]"
               />
             </div>
 
@@ -358,7 +373,9 @@ export default function RelationshipTab({
                       >
                         {node.name}
                         {node.aliases.length > 0 ? (
-                          <span className="ml-1.5 text-[10px] text-brief-muted">{node.aliases.join(' · ')}</span>
+                          <span className="ml-1.5 text-[10px] text-brief-muted">
+                            {node.aliases.join(' · ')}
+                          </span>
                         ) : null}
                       </button>
                     </li>
@@ -377,7 +394,6 @@ export default function RelationshipTab({
         <ul className="space-y-3">
           {displayed.nodes.map((node) => {
             const isOpen = node.id === activeSelected;
-            const relations = isOpen ? relationsOf(node.id) : [];
             return (
               <li
                 key={node.id}
@@ -388,10 +404,12 @@ export default function RelationshipTab({
               >
                 <button
                   type="button"
-                  aria-expanded={isOpen}
+                  aria-pressed={isOpen}
                   onClick={() => setSelected(isOpen ? null : node.id)}
                   className={`w-full rounded-xl border p-3.5 text-left transition-colors ${
-                    isOpen ? 'border-brief-accent bg-brief-accent-soft' : 'border-brief-rule bg-white'
+                    isOpen
+                      ? 'border-brief-accent bg-brief-accent-soft'
+                      : 'border-brief-rule bg-white'
                   }`}
                 >
                   {/* 이름과 별칭을 **두 개의 열**로 둔다 — 별칭이 아무리 길어도 이름의 가로
@@ -418,18 +436,6 @@ export default function RelationshipTab({
                       </span>
                     ) : null}
                   </div>
-                  {isOpen && relations.length > 0 ? (
-                    <ul aria-label="관계" className="mt-2.5 flex flex-wrap gap-1.5 border-t border-dashed border-brief-rule pt-2.5">
-                      {relations.map((rel) => (
-                        <li
-                          key={rel.key}
-                          className="rounded-full bg-brief-accent-soft px-2 py-1 text-[11px] text-brief-accent"
-                        >
-                          {rel.name} · {rel.label}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
                 </button>
               </li>
             );

@@ -27,9 +27,9 @@ import TypographicCover from '../components/common/TypographicCover';
  *   `BriefingResponse` 에 마지막 방문 시각 필드가 생기면 그 값으로 계산해 교체한다.
  *   사용자 결정(2026-08-20): 시안의 자리를 만들어 두고 지금은 mock 으로 채운다.
  */
-const MOCK_DAYS_SINCE_LABEL = '3일 만이에요';
+export const MOCK_DAYS_SINCE_LABEL = '3일 만이에요';
 
-const GREETING_LINES = ['다시 오셨네요.', '여기서부터 기억을 맞춰볼게요.'];
+export const GREETING_LINES = ['다시 오셨네요.', '여기서부터 기억을 맞춰볼게요.'];
 
 export default function BriefingView({
   briefing,

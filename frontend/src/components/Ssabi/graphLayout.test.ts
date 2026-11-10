@@ -18,6 +18,13 @@ const node = (id: string, page: number) => ({ id, first_appearance_page: page })
 const edge = (source: string, target: string) => ({ source, target });
 
 describe('computeDegrees — 연결 수', () => {
+  it('동일 인물쌍의 여러 관계가 연결 인원 수나 배치를 부풀리지 않는다', () => {
+    const nodes = [node('a', 1), node('b', 2), node('c', 3)];
+    const single = [edge('a', 'b'), edge('b', 'c')];
+    const parallel = [...single, edge('a', 'b'), edge('b', 'a')];
+    expect(computeDegrees(nodes, parallel)).toEqual(computeDegrees(nodes, single));
+    expect(forceLayout(nodes, parallel)).toEqual(forceLayout(nodes, single));
+  });
   it('간선 수만큼 양쪽 인물의 연결 수를 올린다', () => {
     const nodes = [node('a', 1), node('b', 2), node('c', 3)];
     const edges = [edge('a', 'b'), edge('b', 'c')];
@@ -121,7 +128,13 @@ describe('forceLayout — 힘-분산 배치', () => {
 
 describe('boundingBox — 배치를 감싸는 사각형', () => {
   it('패딩만큼 여유를 둔다 (하한선보다 큰 배치)', () => {
-    const box = boundingBox([{ x: 0, y: 0 }, { x: 400, y: 400 }], 5);
+    const box = boundingBox(
+      [
+        { x: 0, y: 0 },
+        { x: 400, y: 400 },
+      ],
+      5
+    );
     expect(box).toEqual({ x: -5, y: -5, width: 410, height: 410 });
   });
 
@@ -131,7 +144,13 @@ describe('boundingBox — 배치를 감싸는 사각형', () => {
    * 보였다 — 하한선 밑으로는 안 줄어들게 한다.
    */
   it('점들이 아주 가까이 있어도 최소 크기보다 작아지지 않는다', () => {
-    const box = boundingBox([{ x: 0, y: 0 }, { x: 10, y: 10 }], 5);
+    const box = boundingBox(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ],
+      5
+    );
     expect(box.width).toBeGreaterThanOrEqual(300);
     expect(box.height).toBeGreaterThanOrEqual(300);
     // 그래도 중심은 점들 쪽에 그대로 맞춰져 있다

@@ -1,0 +1,122 @@
+{
+  "nodes": [
+    {
+      "id": "3ee01991-17c9-576e-a338-905c37529b0f",
+      "name": "Kitty",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "95a9f46b-bc77-52ca-82ce-365b80293e83",
+      "name": "Miss Lucas",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    },
+    {
+      "id": "8b589c9b-d7ed-51f9-89c8-d6e91eb35b96",
+      "name": "Lydia",
+      "first_appearance_page": 1,
+      "aliases": [],
+      "alias_details": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "a5bec3e9-a2f6-50b4-9d56-2f00f0f96ba5",
+      "source": "8b589c9b-d7ed-51f9-89c8-d6e91eb35b96",
+      "target": "95a9f46b-bc77-52ca-82ce-365b80293e83",
+      "label": "부러워하지 않음",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Lydia는 Miss Lucas를 부러워하지 않는다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+          "end_char": 375,
+          "start_char": 205,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "envy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "negated"
+      }
+    },
+    {
+      "id": "af80126a-700e-56b4-a8bf-b3500e47f9f1",
+      "source": "3ee01991-17c9-576e-a338-905c37529b0f",
+      "target": "95a9f46b-bc77-52ca-82ce-365b80293e83",
+      "label": "부러워하지 않음",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Kitty는 Miss Lucas를 부러워하지 않는다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+          "end_char": 375,
+          "start_char": 205,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "envy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "negated"
+      }
+    }
+  ],
+  "history": [
+    {
+      "id": "a5bec3e9-a2f6-50b4-9d56-2f00f0f96ba5",
+      "source": "8b589c9b-d7ed-51f9-89c8-d6e91eb35b96",
+      "target": "95a9f46b-bc77-52ca-82ce-365b80293e83",
+      "label": "부러워하지 않음",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Lydia는 Miss Lucas를 부러워하지 않는다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+          "end_char": 375,
+          "start_char": 205,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "envy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "negated"
+      }
+    },
+    {
+      "id": "af80126a-700e-56b4-a8bf-b3500e47f9f1",
+      "source": "3ee01991-17c9-576e-a338-905c37529b0f",
+      "target": "95a9f46b-bc77-52ca-82ce-365b80293e83",
+      "label": "부러워하지 않음",
+      "established_page": 1,
+      "semantics": {
+        "kind": "emotion",
+        "state": "active",
+        "summary": "Kitty는 Miss Lucas를 부러워하지 않는다.",
+        "version": 2,
+        "evidence": {
+          "quote": "Kitty\nand Lydia were far from envying Miss Lucas, for Mr. Collins was only a\nclergyman; and it affected them in no other way than as a piece of news\nto spread at Meryton.",
+          "end_char": 375,
+          "start_char": 205,
+          "source_page": 1
+        },
+        "direction": "a_to_b",
+        "relation_key": "envy",
+        "temporal_scope": "ongoing",
+        "assertion_status": "negated"
+      }
+    }
+  ],
+  "applied_cutoff": 1
+}

@@ -1,0 +1,66 @@
+# 프론트엔드 CI — 빌드·테스트만 한다. 배포는 하지 않는다.
+#
+# @see docs/migration.md — Phase 2 (S3 + CloudFront → Cloudflare Pages, 2026-08-29)
+#
+# ⚠️ 배포는 Cloudflare Pages 의 Git 연동이 담당한다. 여기서 배포하지 않는 이유:
+#
+#    예전 deploy-frontend.yml 은 빌드 시 VITE_API_URL 을 워크플로 파일에 **하드코딩**해
+#    번들에 구웠다(CloudFront 도메인 + /api 접두사). Vite 는 이 값을 빌드
+#    시점에 굽기 때문에, 주소가 바뀌면 워크플로 파일을 고쳐 다시 빌드해야 했다.
+#    Pages 대시보드의 빌드 환경변수로 옮기면 그 값이 배포 설정과 한 곳에 모인다.
+#
+#    Pages Git 연동은 프리뷰 배포(PR·브랜치)도 알아서 만들어 준다.
+#
+# Pages 대시보드 설정값:
+#    Build command      : npm run build
+#    Build output       : dist
+#    Root directory     : frontend
+#    환경변수 VITE_API_URL   = https://<fly-app-이름>.fly.dev
+#    환경변수 VITE_USE_MOCK  = false
+
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 빌드·테스트
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Node 22 가 기본 번들하는 npm 10.x 에는 `npm ci` + optionalDependencies(플랫폼별
+      # esbuild 바이너리 등) 조합에서 EBADPLATFORM 오탐이 나는 회귀가 있다 — 자기
+      # 플랫폼에 안 맞아 건너뛰어야 할 패키지를 설치하려다 실패한다. npm 11 에서는
+      # 재현되지 않는다(로컬에서 npm 10.9.2/11.12.1 로 동일 lockfile 재현·비교 확인,
+      # 2026-08-23). lockfile 문제가 아니라 npm 버전 문제라 lockfile 은 건드리지 않는다.
+      - name: Update npm (npm 10.x npm-ci EBADPLATFORM 회귀 회피)
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      # 빌드가 깨지는지만 본다. 여기서 나온 산출물은 배포에 쓰지 않는다 —
+      # 실제 배포 번들은 Pages 가 자기 환경변수로 다시 빌드한다.
+      - name: Build
+        working-directory: frontend
+        run: npm run build
