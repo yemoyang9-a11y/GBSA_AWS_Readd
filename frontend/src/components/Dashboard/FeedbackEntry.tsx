@@ -111,6 +111,7 @@ function FeedbackDialog({ variant, onClose }: { variant: Variant; onClose: () =>
             <textarea
               id={inputId}
               value={message}
+              disabled={sending}
               onChange={(event) => setMessage(event.target.value)}
               maxLength={MAX_MESSAGE_LENGTH}
               className={`mt-4 block h-36 w-full resize-none rounded-dash-panel border border-brief-rule bg-white p-3 leading-relaxed text-brief-ink outline-none focus:border-brief-accent ${layout.input}`}

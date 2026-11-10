@@ -77,6 +77,11 @@ describe.each(['modal', 'sheet'] as const)('FeedbackEntry (%s)', (variant) => {
     await user.type(input(), '의견');
     await user.click(screen.getByRole('button', { name: '제출' }));
 
+    const submittedMessage = (input() as HTMLTextAreaElement).value;
+    expect(input()).toBeDisabled();
+    await user.type(input(), ' extra');
+    expect(input()).toHaveValue(submittedMessage);
+
     const sending = screen.getByRole('button', { name: '보내는 중' });
     expect(sending).toBeDisabled();
     fireEvent.submit(sending.closest('form')!);
@@ -99,6 +104,7 @@ describe.each(['modal', 'sheet'] as const)('FeedbackEntry (%s)', (variant) => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('의견을 보내지 못했습니다');
     expect(input()).toHaveValue('꼭 전하고 싶은 말');
+    expect(input()).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: '제출' }));
 
