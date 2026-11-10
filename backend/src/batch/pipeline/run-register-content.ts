@@ -1,6 +1,6 @@
 /**
  * S4/S5 산출물(all-resolved.json) 등록 실행 스크립트 — DATABASE_URL이 실제 RDS를 가리켜야 동작한다.
- * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-register-content.ts
+ * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-register-content.ts [--book <bookId> --file <원문 경로>]
  *
  * 선행: run-register.ts로 도서·장·페이지가 이미 등록돼 있어야 한다(chapter_summaries FK).
  */
@@ -18,14 +18,14 @@ import {
   assertResolvedGrounding,
   assertStoredGrounding,
 } from './grounding';
-
-const BOOK_ID = 'takryu';
+import { bookArgsFromCli } from './run-args';
 
 async function main(): Promise<void> {
-  const filePath = path.join(__dirname, '../../../data/generated/full/all-resolved.json');
+  const args = bookArgsFromCli('run-register-content');
+  const BOOK_ID = args.bookId;
+  const filePath = path.join(args.fullDir, 'all-resolved.json');
   const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
-  const sourcePath = path.join(__dirname, '../../../data/raw/takryu.txt');
-  const { pages } = splitBook(fs.readFileSync(sourcePath, 'utf-8'), BOOK_ID);
+  const { pages } = splitBook(fs.readFileSync(args.filePath, 'utf-8'), BOOK_ID);
   assertResolvedGrounding(data, pages);
   if (data.book_id !== BOOK_ID) throw new Error('Artifact book_id mismatch');
 
@@ -66,10 +66,7 @@ async function main(): Promise<void> {
 
     if (replace) {
       const audit = await replaceRelationshipSnapshot(client, data);
-      const auditPath = path.join(
-        __dirname,
-        `../../../data/generated/full/relationship-replacement-${Date.now()}.json`
-      );
+      const auditPath = path.join(args.fullDir, `relationship-replacement-${Date.now()}.json`);
       // Durable local before/after audit is created before the database transaction commits.
       fs.writeFileSync(
         auditPath,

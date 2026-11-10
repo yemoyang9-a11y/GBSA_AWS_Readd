@@ -1,6 +1,6 @@
 /**
  * S7 4단계 — 공개 전환 (FR-ADM-006, R12). DATABASE_URL이 실제 RDS를 가리켜야 동작한다.
- * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-publish.ts
+ * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-publish.ts [--book <bookId>]
  *
  * 검수 미완료 상태에서 실행하면 books.publish_status를 바꾸지 않고 거절한다 —
  * 미완료 목록을 출력하니, 데이터를 손으로 고치지 말고 남은 대상을 검수 시트에서 마친 뒤
@@ -11,10 +11,10 @@ dotenv.config();
 
 import { pool } from '../../config/database';
 import { publishBook } from './review';
-
-const BOOK_ID = 'takryu';
+import { bookArgsFromCli } from './run-args';
 
 async function main(): Promise<void> {
+  const BOOK_ID = bookArgsFromCli('run-publish').bookId;
   const report = await publishBook(pool, BOOK_ID);
 
   if (!report.complete) {

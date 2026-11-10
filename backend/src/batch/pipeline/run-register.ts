@@ -1,6 +1,8 @@
 /**
  * 원문 등록 실행 스크립트 — DATABASE_URL이 실제 RDS를 가리켜야 동작한다.
  * 사용법: npx ts-node src/batch/pipeline/run-register.ts
+ *        [--book <bookId> --file <원문 경로> --title <제목> --author <저자> --year <연도>]
+ *        인자가 없으면 takryu(「탁류」) — run-args.ts 참조
  *
  * 선행: migrations/001_content_store.sql 적용 필요.
  */
@@ -8,16 +10,16 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import * as fs from 'fs';
-import * as path from 'path';
 import { pool } from '../../config/database';
 import { splitBook, validateSplit } from './split';
 import { registerBook } from './register';
-
-const BOOK_ID = 'takryu';
+import { bookArgsFromCli, requireBookMeta } from './run-args';
 
 async function main(): Promise<void> {
-  const filePath = path.join(__dirname, '../../../data/raw/takryu.txt');
-  const rawText = fs.readFileSync(filePath, 'utf-8');
+  const args = bookArgsFromCli('run-register');
+  const BOOK_ID = args.bookId;
+  const { title, author } = requireBookMeta(args);
+  const rawText = fs.readFileSync(args.filePath, 'utf-8');
 
   const { pages, chapters } = splitBook(rawText, BOOK_ID);
   const report = validateSplit(pages, chapters, rawText);
@@ -34,9 +36,9 @@ async function main(): Promise<void> {
     pool,
     {
       book_id: BOOK_ID,
-      title: '탁류',
-      author: '채만식',
-      publish_year: 1937, // 조선일보 연재 시작년(1937.10.12~1938.5.17) — R4 회신 반영
+      title,
+      author,
+      publish_year: args.publishYear, // takryu 기본값은 run-args.ts 참조
       extent: `${pages.length}페이지`,
     },
     chapters,

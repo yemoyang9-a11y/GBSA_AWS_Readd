@@ -7,7 +7,7 @@
  */
 
 import { pool } from '../../../config/database';
-import { buildPrompt } from '../context-assembly';
+import { buildStableContext } from '../context-assembly';
 import * as repo from '../repository';
 import type { ChatbotContext, Relationship, RelationshipSemantics } from '../../../shared/types';
 
@@ -42,7 +42,7 @@ function promptWith(relationships: Relationship[]): string {
     entities: { characters, relationships, character_notes: [], terms: [], events: [] },
     background: '',
   };
-  return buildPrompt(context, '(규칙)');
+  return buildStableContext(context);
 }
 
 function rel(overrides: Partial<Relationship>): Relationship {
