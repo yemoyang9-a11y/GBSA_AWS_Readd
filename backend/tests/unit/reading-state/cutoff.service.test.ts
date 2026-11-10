@@ -152,3 +152,103 @@ describe('기준점 결정기 — getCutoffSnapshot', () => {
     });
   });
 });
+
+const POSITION_BOOK_ID = 'position-book';
+const POSITION_TOTAL_PAGES = 200;
+const POSITION_CHAPTERS = [
+  { chapter_no: 1, title: '1장', start_page: 1, end_page: 20 },
+  { chapter_no: 2, title: '2장', start_page: 21, end_page: 40 },
+  { chapter_no: 3, title: '3장', start_page: 41, end_page: 80 },
+  { chapter_no: 4, title: '4장', start_page: 81, end_page: 130 },
+  { chapter_no: 5, title: '5장', start_page: 131, end_page: 200 },
+];
+
+function positionFixture(currentPage: number | null) {
+  const { positions, books } = makeSeededFakes();
+  books.set(POSITION_BOOK_ID, {
+    total_pages: POSITION_TOTAL_PAGES,
+    chapters: POSITION_CHAPTERS,
+  });
+  if (currentPage !== null) {
+    positions.set(SEED_DEVICE_ID, POSITION_BOOK_ID, { current_page: currentPage, event_seq: 1 });
+  }
+  return { positions, books, service: createCutoffService({ positions, books }) };
+}
+
+function readChaptersAt(currentPage: number | null) {
+  return positionFixture(currentPage).service.getReadChapters(SEED_DEVICE_ID, POSITION_BOOK_ID);
+}
+
+describe('읽은 장 조회 — getReadChapters', () => {
+  test('FR-SPL-002: K=40이면 end_page가 40을 넘는 장은 read_chapter_nos에 0건', async () => {
+    const result = await readChaptersAt(40);
+    const beyondCutoff = POSITION_CHAPTERS.filter((c) => c.end_page > 40).map((c) => c.chapter_no);
+
+    expect(result.applied_cutoff).toBe(40);
+    expect(result.read_chapter_nos.filter((no) => beyondCutoff.includes(no))).toHaveLength(0);
+  });
+
+  test('FR-SPL-002: K=130이면 end_page<=130인 장이 모두 들어 있다', async () => {
+    const result = await readChaptersAt(130);
+
+    expect(result.applied_cutoff).toBe(130);
+    expect(result.read_chapter_nos).toEqual([1, 2, 3, 4]);
+  });
+
+  test('FR-SPL-002: K가 장 중간이면 그 장은 read_chapter_nos에 없고 current_chapter_no가 그 장이다', async () => {
+    const result = await readChaptersAt(60);
+
+    expect(result.read_chapter_nos).toEqual([1, 2]);
+    expect(result.current_chapter_no).toBe(3);
+  });
+
+  test('FR-SPL-002: 장 목록 조회에 스냅샷의 cutoff를 상한으로 넘긴다', async () => {
+    const { service, books } = positionFixture(40);
+    const query = jest.spyOn(books, 'findCompletedChapterNos');
+
+    await service.getReadChapters(SEED_DEVICE_ID, POSITION_BOOK_ID);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledWith(POSITION_BOOK_ID, 40);
+  });
+
+  test('FR-BRF-005: 요청당 스냅샷을 1회만 받는다', async () => {
+    const { service, positions } = positionFixture(40);
+    const findPosition = jest.spyOn(positions, 'findPosition');
+
+    await service.getReadChapters(SEED_DEVICE_ID, POSITION_BOOK_ID);
+
+    expect(findPosition).toHaveBeenCalledTimes(1);
+  });
+
+  test('진도 레코드가 없으면 applied_cutoff=0, current_chapter_no=null, read_chapter_nos=[]', async () => {
+    await expect(readChaptersAt(null)).resolves.toEqual({
+      applied_cutoff: 0,
+      current_chapter_no: null,
+      read_chapter_nos: [],
+      is_complete: false,
+    });
+  });
+
+  test('1페이지를 펼친 진도 레코드는 current_chapter_no=1이다 (레코드 없음과 구별된다)', async () => {
+    const result = await readChaptersAt(1);
+
+    expect(result.applied_cutoff).toBe(1);
+    expect(result.current_chapter_no).toBe(1);
+    expect(result.read_chapter_nos).toEqual([]);
+  });
+
+  test('완독이면 모든 장이 read_chapter_nos에 있다', async () => {
+    const result = await readChaptersAt(POSITION_TOTAL_PAGES);
+
+    expect(result.is_complete).toBe(true);
+    expect(result.read_chapter_nos).toEqual(POSITION_CHAPTERS.map((c) => c.chapter_no));
+  });
+
+  test('마지막 페이지 직전이면 완독이 아니고 마지막 장은 read_chapter_nos에 없다', async () => {
+    const result = await readChaptersAt(POSITION_TOTAL_PAGES - 1);
+
+    expect(result.is_complete).toBe(false);
+    expect(result.read_chapter_nos).toEqual([1, 2, 3, 4]);
+  });
+});

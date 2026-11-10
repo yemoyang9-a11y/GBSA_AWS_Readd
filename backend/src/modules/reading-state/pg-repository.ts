@@ -119,6 +119,17 @@ export function createPgBookContentReader(db: QueryClient): BookMetaReader & Rec
       };
     },
 
+    async findCompletedChapterNos(bookId: string, cutoff: number): Promise<number[]> {
+      // FR-SPL-002 🚦
+      const { rows } = await db.query(
+        `SELECT chapter_no FROM chapters
+         WHERE book_id = $1 AND end_page <= $2
+         ORDER BY chapter_no ASC`,
+        [bookId, cutoff]
+      );
+      return rows.map((row) => row.chapter_no);
+    },
+
     async findCompletedChapterSummaries(
       bookId: string,
       cutoff: number

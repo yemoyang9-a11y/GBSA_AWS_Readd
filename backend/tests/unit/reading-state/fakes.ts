@@ -117,6 +117,12 @@ export class FakeBookMetaReader implements BookMetaReader, RecapContentReader {
     };
   }
 
+  async findCompletedChapterNos(bookId: string, cutoff: number): Promise<number[]> {
+    return (this.books.get(bookId)?.chapters ?? [])
+      .filter((c) => c.end_page <= cutoff)
+      .map((c) => c.chapter_no);
+  }
+
   async findCompletedChapterSummaries(
     bookId: string,
     cutoff: number

@@ -130,6 +130,18 @@ describe('공개 콘텐츠 스토어 읽기 — createPgBookContentReader', () =
     expect(calls[0].params).toEqual(['takryu', 15]);
   });
 
+  test('FR-SPL-002 🚦: findCompletedChapterNos는 end_page <= cutoff를 WHERE에 걸고 cutoff를 파라미터로 받는다', async () => {
+    const { client, calls } = mockClient([{ chapter_no: 1 }, { chapter_no: 2 }]);
+    const reader = createPgBookContentReader(client);
+
+    const chapterNos = await reader.findCompletedChapterNos('takryu', 40);
+
+    expect(chapterNos).toEqual([1, 2]);
+    expect(calls[0].sql).toMatch(/WHERE book_id = \$1 AND end_page <= \$2/);
+    expect(calls[0].sql).toMatch(/ORDER BY chapter_no ASC/);
+    expect(calls[0].params).toEqual(['takryu', 40]);
+  });
+
   test('FR-SPL-003 🚦: findCompletedChapterSummaries는 end_page <= cutoff를 WHERE에 걸고 cutoff를 파라미터로 받는다', async () => {
     const { client, calls } = mockClient([
       { chapter_no: 1, title: '1장', summary: '요약', end_page: 10 },

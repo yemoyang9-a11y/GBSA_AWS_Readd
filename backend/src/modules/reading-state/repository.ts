@@ -100,6 +100,9 @@ export interface BookMetaReader {
    */
   findChapterContaining(bookId: string, pageNo: number): Promise<ChapterBoundary | null>;
 
+  // FR-SPL-002 🚦
+  findCompletedChapterNos(bookId: string, cutoff: number): Promise<number[]>;
+
   /**
    * 도서의 완비 여부(ssabi_ready) — 미완비 도서 진입 거절의 근거 (FR-BRW-002, S3).
    * 도서가 없으면 null — 호출부가 진입 거절 사유(존재하지만 미완비 vs 부재)를 갈라 쓸지는
