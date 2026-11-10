@@ -21,3 +21,10 @@ CREATE TABLE IF NOT EXISTS auth_login_codes (
 );
 
 CREATE INDEX IF NOT EXISTS ix_auth_login_codes_expiry ON auth_login_codes (expires_at);
+
+ALTER TABLE reading_position
+    ADD COLUMN IF NOT EXISTS last_writer_device_id UUID;
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_identities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_login_codes ENABLE ROW LEVEL SECURITY;

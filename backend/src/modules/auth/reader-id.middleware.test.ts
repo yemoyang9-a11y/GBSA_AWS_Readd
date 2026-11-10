@@ -1,7 +1,11 @@
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 import express from 'express';
-import { attachReaderIdentity, resolveReaderId } from './reader-id.middleware';
+import {
+  attachReaderIdentity,
+  resolveReaderId,
+  resolveWriterDeviceId,
+} from './reader-id.middleware';
 import { signSessionToken } from './session-token';
 
 const TOKEN_READER_ID = '33333333-3333-4333-8333-333333333333';
@@ -17,6 +21,9 @@ describe('reader-id.middleware', () => {
     const app = express();
     app.get('/who', attachReaderIdentity(), (req, res) => {
       res.json({ reader_id: resolveReaderId(req) ?? null });
+    });
+    app.get('/writer', attachReaderIdentity(), (req, res) => {
+      res.json({ writer: resolveWriterDeviceId(req) });
     });
     server = app.listen(0, '127.0.0.1', () => {
       baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -76,5 +83,40 @@ describe('reader-id.middleware', () => {
     const response = await who({});
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ reader_id: null });
+  });
+
+  describe('resolveWriterDeviceId', () => {
+    async function writer(headers: Record<string, string>) {
+      const response = await fetch(`${baseUrl}/writer`, { headers });
+      expect(response.status).toBe(200);
+      return ((await response.json()) as { writer: string | null }).writer;
+    }
+
+    test('FR-PRG-003: 로그인 요청은 UUID 형식의 X-Device-Id를 쓴 기기로 쓴다', async () => {
+      const token = await signSessionToken(CLAIMS);
+      await expect(
+        writer({ Authorization: `Bearer ${token}`, 'X-Device-Id': HEADER_DEVICE_ID })
+      ).resolves.toBe(HEADER_DEVICE_ID);
+    });
+
+    test('FR-PRG-003: 로그인 요청에 X-Device-Id가 없으면 reader_id를 쓴 기기로 쓴다', async () => {
+      const token = await signSessionToken(CLAIMS);
+      await expect(writer({ Authorization: `Bearer ${token}` })).resolves.toBe(TOKEN_READER_ID);
+    });
+
+    test('FR-PRG-003: 로그인 요청의 X-Device-Id가 UUID가 아니면 reader_id를 쓴 기기로 쓴다', async () => {
+      const token = await signSessionToken(CLAIMS);
+      await expect(
+        writer({ Authorization: `Bearer ${token}`, 'X-Device-Id': 'not-a-uuid' })
+      ).resolves.toBe(TOKEN_READER_ID);
+    });
+
+    test('FR-PRG-003: 비로그인 요청은 UUID 형식의 X-Device-Id를 쓴 기기로 쓴다', async () => {
+      await expect(writer({ 'X-Device-Id': HEADER_DEVICE_ID })).resolves.toBe(HEADER_DEVICE_ID);
+    });
+
+    test('FR-PRG-003: 비로그인 요청의 X-Device-Id가 UUID가 아니면 쓴 기기를 비운다', async () => {
+      await expect(writer({ 'X-Device-Id': 'not-a-uuid' })).resolves.toBeNull();
+    });
   });
 });

@@ -10,7 +10,7 @@
  * `(page, seq)`는 **같은 함수**를 거친다 (3.3절) — "페이지 넘긴 직후 싸비를 열었는데
  * 저장이 아직 안 됨" 경합을 별도 분기 없이 이 함수 하나로 닫는다.
  *
- * ⚠️ 여기서는 seq 비교만 한다. cutoff·percent 파생은 다루지 않는다 — 그건 저장 이후
+ * ⚠️ 순서 판단은 저장소의 조건부 저장에 맡긴다. cutoff·percent 파생은 다루지 않는다 — 그건 저장 이후
  *    cutoff.service.ts가 담당한다 (FR-BRF-005 🚦, 계산 지점 단일화).
  */
 
@@ -30,7 +30,12 @@ export interface ProgressService {
    * 비블로킹·동기 커밋 여부는 호출부(라우트 핸들러)의 책임이다 — 이 함수 자체는
    * 저장소 쓰기 1회로 끝나는 순수 판단 로직이다.
    */
-  acceptProgressEvent(deviceId: string, bookId: string, event: ProgressEvent): Promise<void>;
+  acceptProgressEvent(
+    deviceId: string,
+    bookId: string,
+    event: ProgressEvent,
+    writerDeviceId?: string | null
+  ): Promise<void>;
 }
 
 export function createProgressService(deps: ProgressServiceDeps): ProgressService {
@@ -40,19 +45,16 @@ export function createProgressService(deps: ProgressServiceDeps): ProgressServic
     async acceptProgressEvent(
       deviceId: string,
       bookId: string,
-      event: ProgressEvent
+      event: ProgressEvent,
+      writerDeviceId: string | null = null
     ): Promise<void> {
-      const stored = await positions.findPosition(deviceId, bookId);
-
-      // FR-PRG-002 — 저장 위치가 없으면(첫 진입) 무조건 수용, 있으면 더 새로운 seq만 수용
-      if (stored !== null && event.seq <= stored.event_seq) {
-        return;
-      }
-
-      await positions.savePosition(deviceId, bookId, {
-        current_page: event.page,
-        event_seq: event.seq,
-      });
+      // FR-PRG-002, FR-PRG-003
+      await positions.savePosition(
+        deviceId,
+        bookId,
+        { current_page: event.page, event_seq: event.seq },
+        writerDeviceId
+      );
     },
   };
 }

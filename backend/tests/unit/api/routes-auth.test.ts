@@ -89,6 +89,119 @@ function postChat(headers: Record<string, string>) {
   });
 }
 
+describe('routes — 진도를 쓴 기기 전달', () => {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function postProgress(headers: Record<string, string>) {
+    return fetch(`${baseUrl}/books/book/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ page: 12, seq: 1 }),
+    });
+  }
+
+  function failLikePostgresOnNonUuidWriter() {
+    services.progressService.acceptProgressEvent.mockImplementation(
+      async (_reader: string, _book: string, _event: unknown, writer: string | null) => {
+        if (writer !== null && !UUID.test(writer)) {
+          throw new Error('invalid input syntax for type uuid');
+        }
+      }
+    );
+  }
+
+  beforeEach(() => {
+    services.progressService.acceptProgressEvent.mockReset();
+  });
+
+  test('FR-PRG-003: 로그인 요청은 reader_id로 저장하고 X-Device-Id를 쓴 기기로 넘긴다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await postProgress({
+      Authorization: `Bearer ${await token()}`,
+      'X-Device-Id': OTHER_DEVICE,
+    });
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      TOKEN_READER,
+      'book',
+      { page: 12, seq: 1 },
+      OTHER_DEVICE
+    );
+  });
+
+  test('FR-PRG-003: 로그인 요청의 X-Device-Id가 UUID가 아니어도 캐스팅 오류로 500을 내지 않고 reader_id를 쓴 기기로 넘긴다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await postProgress({
+      Authorization: `Bearer ${await token()}`,
+      'X-Device-Id': 'not-a-uuid',
+    });
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      TOKEN_READER,
+      'book',
+      { page: 12, seq: 1 },
+      TOKEN_READER
+    );
+  });
+
+  test('FR-PRG-003: 로그인 요청에 X-Device-Id가 없으면 reader_id를 쓴 기기로 넘긴다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await postProgress({ Authorization: `Bearer ${await token()}` });
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      TOKEN_READER,
+      'book',
+      { page: 12, seq: 1 },
+      TOKEN_READER
+    );
+  });
+
+  test('FR-PRG-003: 비로그인 요청은 지금처럼 X-Device-Id로 저장한다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await postProgress({ 'X-Device-Id': OTHER_DEVICE });
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      OTHER_DEVICE,
+      'book',
+      { page: 12, seq: 1 },
+      OTHER_DEVICE
+    );
+  });
+
+  test('FR-PRG-003: 비로그인 요청의 X-Device-Id가 UUID가 아니면 쓴 기기를 비워 캐스팅 오류를 내지 않는다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await postProgress({ 'X-Device-Id': 'not-a-uuid' });
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      'not-a-uuid',
+      'book',
+      { page: 12, seq: 1 },
+      null
+    );
+  });
+
+  test('FR-PRG-003: 챗봇에 동봉한 진도도 쓴 기기를 함께 넘긴다', async () => {
+    failLikePostgresOnNonUuidWriter();
+    const response = await fetch(`${baseUrl}/books/book/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${await token()}`,
+        'X-Device-Id': OTHER_DEVICE,
+      },
+      body: JSON.stringify({ query: '누구야', page: 12, seq: 1 }),
+    });
+    await response.text();
+    expect(response.status).toBe(200);
+    expect(services.progressService.acceptProgressEvent).toHaveBeenCalledWith(
+      TOKEN_READER,
+      'book',
+      { page: 12, seq: 1 },
+      OTHER_DEVICE
+    );
+  });
+});
+
 describe('routes — 독자 ID 치환', () => {
   test('로그인한 사용자가 다른 사람의 X-Device-Id를 보내도 토큰의 reader_id로 브리핑을 조회한다', async () => {
     const response = await getBriefing({

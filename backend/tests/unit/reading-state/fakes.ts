@@ -31,6 +31,7 @@ import type { RecapCallLog } from '../../../src/shared/types';
 /** 진도(reading_position) 페이크 — R2 소유 테이블 */
 export class FakeReadingPositionRepository implements ReadingPositionRepository {
   private readonly rows = new Map<string, StoredPosition>();
+  private readonly lastWriters = new Map<string, string | null>();
 
   /** 테스트에서 저장 위치를 세팅한다 (진도 이벤트 수용은 S2 범위) */
   set(deviceId: string, bookId: string, position: StoredPosition): void {
@@ -41,8 +42,21 @@ export class FakeReadingPositionRepository implements ReadingPositionRepository 
     return this.rows.get(this.key(deviceId, bookId)) ?? null;
   }
 
-  async savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void> {
-    this.rows.set(this.key(deviceId, bookId), position);
+  async savePosition(
+    deviceId: string,
+    bookId: string,
+    position: StoredPosition,
+    writerDeviceId: string | null = null
+  ): Promise<void> {
+    const key = this.key(deviceId, bookId);
+    const stored = this.rows.get(key);
+    const storedWriter = this.lastWriters.get(key) ?? null;
+    const fromOtherDevice =
+      storedWriter !== null && writerDeviceId !== null && storedWriter !== writerDeviceId;
+    if (stored && !fromOtherDevice && position.event_seq <= stored.event_seq) return;
+
+    this.rows.set(key, position);
+    this.lastWriters.set(key, writerDeviceId);
   }
 
   async resetEventSeq(deviceId: string, bookId: string): Promise<void> {

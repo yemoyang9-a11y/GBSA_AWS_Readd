@@ -46,6 +46,34 @@ describe('진도 이벤트 — acceptProgressEvent', () => {
     expect(stored?.event_seq).toBe(5);
   });
 
+  test('FR-PRG-002: 저장된 기기가 NULL인 기존 행은 다른 기기로 취급하지 않고 seq를 비교한다', async () => {
+    const { positions, service } = serviceWith(20, 5);
+
+    await service.acceptProgressEvent(
+      SEED_DEVICE_ID,
+      SEED_BOOK_ID,
+      { page: 3, seq: 1 },
+      '55555555-5555-4555-8555-555555555555'
+    );
+
+    const stored = await positions.findPosition(SEED_DEVICE_ID, SEED_BOOK_ID);
+    expect(stored?.current_page).toBe(20);
+    expect(stored?.event_seq).toBe(5);
+  });
+
+  test('FR-PRG-002: 기존 행도 더 새로운 seq면 수용되고 그 뒤로 쓴 기기가 기록된다', async () => {
+    const { positions, service } = serviceWith(20, 5);
+    const deviceA = '55555555-5555-4555-8555-555555555555';
+    const deviceB = '66666666-6666-4666-8666-666666666666';
+
+    await service.acceptProgressEvent(SEED_DEVICE_ID, SEED_BOOK_ID, { page: 21, seq: 6 }, deviceA);
+    await service.acceptProgressEvent(SEED_DEVICE_ID, SEED_BOOK_ID, { page: 9, seq: 1 }, deviceB);
+
+    const stored = await positions.findPosition(SEED_DEVICE_ID, SEED_BOOK_ID);
+    expect(stored?.current_page).toBe(9);
+    expect(stored?.event_seq).toBe(1);
+  });
+
   test('첫 진입(저장 위치 없음)은 seq 무관하게 수용된다', async () => {
     const { positions } = makeSeededFakes();
     const service = createProgressService({ positions });

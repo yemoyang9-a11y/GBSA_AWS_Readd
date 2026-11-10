@@ -3,6 +3,8 @@ import { verifySessionToken, type SessionClaims } from './session-token';
 
 const sessions = new WeakMap<Request, SessionClaims>();
 
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function getSession(req: Request): SessionClaims | null {
   return sessions.get(req) ?? null;
 }
@@ -30,4 +32,11 @@ export function attachReaderIdentity(): RequestHandler {
 
 export function resolveReaderId(req: Request): string | undefined {
   return sessions.get(req)?.readerId ?? (req.headers['x-device-id'] as string | undefined);
+}
+
+// FR-PRG-003
+export function resolveWriterDeviceId(req: Request): string | null {
+  const header = req.headers['x-device-id'];
+  if (typeof header === 'string' && UUID_PATTERN.test(header)) return header;
+  return sessions.get(req)?.readerId ?? null;
 }

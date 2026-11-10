@@ -50,14 +50,18 @@ export interface ReadingPositionRepository {
   findPosition(deviceId: string, bookId: string): Promise<StoredPosition | null>;
 
   /**
-   * 진도 이벤트를 그대로 저장한다. "더 새로운 seq일 때만 수용"의 판단은 이 함수의
-   * 책임이 아니다 — progress.service.ts가 판단을 마친 뒤에만 이 함수를 호출한다
-   * (FR-PRG-002, S2). 리포지토리 계층에 판단 로직을 두면 조회 요청 동봉 경로(3.3절)에서
-   * 같은 판단이 중복·분산될 위험이 있다.
+   * 진도 이벤트를 조건부로 저장한다. 저장된 기기가 없거나 같은 기기면 더 새로운 seq만
+   * 수용하고, 다른 기기면 수용한다. 이 판단은 저장 단계에서 원자적으로 끝난다
+   * (FR-PRG-002, FR-PRG-003).
    *
    * cutoff 인자 없음의 근거 — findPosition과 동일하게 cutoff의 원천이다.
    */
-  savePosition(deviceId: string, bookId: string, position: StoredPosition): Promise<void>;
+  savePosition(
+    deviceId: string,
+    bookId: string,
+    position: StoredPosition,
+    writerDeviceId?: string | null
+  ): Promise<void>;
 
   /**
    * 저장된 `event_seq`를 0으로 되돌린다. 저장 위치가 없으면 아무 것도 하지 않는다 —

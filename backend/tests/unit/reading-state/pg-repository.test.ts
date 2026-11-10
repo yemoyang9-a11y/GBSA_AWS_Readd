@@ -60,7 +60,35 @@ describe('진도 — createPgReadingPositionRepository', () => {
 
     expect(calls[0].sql).toMatch(/INSERT INTO reading_position/);
     expect(calls[0].sql).toMatch(/ON CONFLICT \(device_id, book_id\)/);
-    expect(calls[0].params).toEqual(['dev-1', 'book-1', 20, 7]);
+    expect(calls[0].params).toEqual(['dev-1', 'book-1', 20, 7, null]);
+  });
+
+  test('FR-PRG-003: savePosition은 요청 기기를 last_writer_device_id에 함께 쓴다', async () => {
+    const { client, calls } = mockClient();
+    const repo = createPgReadingPositionRepository(client);
+    const deviceId = '55555555-5555-4555-8555-555555555555';
+
+    await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 }, deviceId);
+
+    expect(calls[0].sql).toMatch(
+      /\(device_id, book_id, current_page, event_seq, last_writer_device_id, updated_at\)/
+    );
+    expect(calls[0].sql).toMatch(/VALUES \(\$1, \$2, \$3, \$4, \$5, now\(\)\)/);
+    expect(calls[0].sql).toMatch(/last_writer_device_id = EXCLUDED\.last_writer_device_id/);
+    expect(calls[0].params).toEqual(['dev-1', 'book-1', 20, 7, deviceId]);
+  });
+
+  test('FR-PRG-003: 다른 기기의 쓰기는 seq와 무관하게 수용하고 NULL은 다른 기기로 취급하지 않는다', async () => {
+    const { client, calls } = mockClient();
+    const repo = createPgReadingPositionRepository(client);
+
+    await repo.savePosition('dev-1', 'book-1', { current_page: 20, event_seq: 7 });
+
+    expect(calls[0].sql).toMatch(
+      /WHERE\s+reading_position\.event_seq\s*<\s*EXCLUDED\.event_seq\s+OR\s+reading_position\.last_writer_device_id\s*<>\s*EXCLUDED\.last_writer_device_id\s*$/
+    );
+    expect(calls[0].sql).not.toMatch(/IS\s+(NOT\s+)?DISTINCT\s+FROM/i);
+    expect(calls[0].sql).not.toMatch(/last_writer_device_id\s+IS\s+NULL/i);
   });
 
   test('FR-PRG-002: savePosition의 UPDATE는 event_seq가 더 클 때만 적용되는 WHERE 가드를 건다 (동시 요청 lost-update 방지)', async () => {

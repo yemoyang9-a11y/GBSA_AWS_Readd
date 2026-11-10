@@ -2,13 +2,12 @@ import { randomBytes } from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import type { AuthService, Provider } from './auth.service';
 import type { OAuthProviders } from './oauth-providers';
-import { attachReaderIdentity, getSession } from './reader-id.middleware';
+import { attachReaderIdentity, getSession, UUID_PATTERN } from './reader-id.middleware';
 import { signLoginState, verifyLoginState } from './session-token';
 
 const NONCE_COOKIE = 'ssabi_login_nonce';
 const NONCE_COOKIE_PATH = '/auth';
 const NONCE_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface AuthConfig {
   frontendOrigin: string;
