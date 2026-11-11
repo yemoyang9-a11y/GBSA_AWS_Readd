@@ -29,14 +29,14 @@ describe.each([
 
 test('모바일 작품 페이지에는 주 메뉴가 없다', () => {
   const { container } = renderAt('/books/takryu', true);
-  expect(screen.getByRole('heading', { level: 1, name: '작품' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
   expect(container.firstElementChild).toHaveAttribute('data-mobile', 'true');
 });
 
 test('PC 작품 페이지에는 위 줄 메뉴가 있다', () => {
   renderAt('/books/takryu', false);
-  expect(screen.getByRole('heading', { level: 1, name: '작품' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
   const nav = screen.getByRole('navigation', { name: '주 메뉴' });
   expect(within(nav).getByRole('link', { name: '서재' })).toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: '작품, 작가 검색' })).toBeInTheDocument();
