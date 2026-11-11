@@ -20,7 +20,6 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
       timeout: 20000,
     },
     async () => {
-      // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
       window.history.pushState({}, '', '/books/takryu/briefing');
       render(<App />);
 
@@ -38,7 +37,6 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
     },
     async () => {
       // 먼저 읽기 화면에서 페이지를 넘겨 진도를 움직인다 (저장분 K = 21 과 어긋나게)
-      // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
       window.history.pushState({}, '', '/books/takryu/briefing');
       render(<App />);
       await screen.findByRole('button', { name: '이어서 읽기' }, { timeout: 5000 });

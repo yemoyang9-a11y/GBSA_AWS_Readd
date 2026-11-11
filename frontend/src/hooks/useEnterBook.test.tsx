@@ -1,6 +1,15 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  createMemoryRouter,
+  Link,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+  useParams,
+} from 'react-router-dom';
 import { useEnterBook } from './useEnterBook';
 import type { EntryResponse } from '../types';
 
@@ -108,4 +117,107 @@ test('FR-SPL-005: 실패 뒤 다시 시도하면 failed가 풀린다', async () 
   await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
   expect(screen.getByTestId('failed')).toHaveTextContent('false');
   expect(screen.getByTestId('busy')).toHaveTextContent('takryu');
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+function DetailProbe() {
+  const { bookId = '' } = useParams();
+  const { enter, busyId, failed } = useEnterBook();
+  const location = useLocation();
+  return (
+    <div>
+      <button type="button" onClick={() => void enter(bookId)}>
+        들어가기
+      </button>
+      <Link to="/books/other">다른 책</Link>
+      <Link to="/search">검색</Link>
+      <p data-testid="location">{location.pathname}</p>
+      <p data-testid="busy">{busyId ?? '-'}</p>
+      <p data-testid="failed">{String(failed)}</p>
+    </div>
+  );
+}
+
+function renderDetailRouter() {
+  const router = createMemoryRouter(
+    [
+      { path: '/books/:bookId', element: <DetailProbe /> },
+      { path: '/books/:bookId/briefing', element: <p>브리핑</p> },
+      { path: '/books/:bookId/read', element: <p>읽기</p> },
+      { path: '/search', element: <p>검색 화면</p> },
+    ],
+    { initialEntries: ['/books/takryu'] }
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+test('FR-BRF-001: 응답 전에 화면을 떠났으면 늦게 온 성공 응답으로 이동하지 않는다', async () => {
+  const pending = deferred<EntryResponse>();
+  enterBookMock.mockReturnValue(pending.promise);
+  const router = renderDetailRouter();
+
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  await userEvent.click(screen.getByRole('link', { name: '검색' }));
+  expect(screen.getByText('검색 화면')).toBeInTheDocument();
+
+  await act(async () => pending.resolve(entry('briefing')));
+
+  expect(router.state.location.pathname).toBe('/search');
+});
+
+test('FR-SPL-005: 응답 전에 화면을 떠났으면 늦게 온 실패 응답으로 상태를 바꾸지 않는다', async () => {
+  const consoleError = vi.spyOn(console, 'error');
+  const pending = deferred<EntryResponse>();
+  enterBookMock.mockReturnValue(pending.promise);
+  const router = renderDetailRouter();
+
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  await userEvent.click(screen.getByRole('link', { name: '검색' }));
+  await act(async () => pending.reject(new Error('network')));
+
+  expect(router.state.location.pathname).toBe('/search');
+  expect(consoleError).not.toHaveBeenCalled();
+  consoleError.mockRestore();
+});
+
+test('FR-BRF-001: 같은 화면에서 다른 책으로 옮긴 뒤 앞 책의 늦은 응답은 무시하고 상태도 풀린다', async () => {
+  const pending = deferred<EntryResponse>();
+  enterBookMock.mockReturnValue(pending.promise);
+  const router = renderDetailRouter();
+
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  expect(screen.getByTestId('busy')).toHaveTextContent('takryu');
+  await userEvent.click(screen.getByRole('link', { name: '다른 책' }));
+
+  expect(screen.getByTestId('busy')).toHaveTextContent('-');
+  await act(async () => pending.resolve(entry('briefing')));
+  expect(router.state.location.pathname).toBe('/books/other');
+});
+
+test('FR-BRF-001: 더 새로운 진입 요청이 시작되면 앞 요청의 늦은 응답은 무시하고 최신 요청 응답으로 이동한다', async () => {
+  const first = deferred<EntryResponse>();
+  const second = deferred<EntryResponse>();
+  enterBookMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  const router = renderDetailRouter();
+
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  await userEvent.click(screen.getByRole('link', { name: '다른 책' }));
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  expect(enterBookMock).toHaveBeenNthCalledWith(2, 'other');
+
+  await act(async () => first.resolve(entry('briefing')));
+  expect(router.state.location.pathname).toBe('/books/other');
+
+  await act(async () => second.resolve(entry('reader')));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/read'));
 });

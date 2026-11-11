@@ -16,7 +16,6 @@ describe("'이어서 읽기'로 읽기 화면에 들어갈 때", () => {
   });
 
   it('읽던 페이지에서 이어 읽는다 — 1페이지로 되감지 않는다', { timeout: 20000 }, async () => {
-    // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
     window.history.pushState({}, '', '/books/takryu/briefing');
     render(<App />);
 

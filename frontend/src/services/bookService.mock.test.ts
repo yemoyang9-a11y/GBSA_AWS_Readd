@@ -33,3 +33,17 @@ test('USE_MOCK=true면 네트워크 요청 없이 그 책의 fixture 정보를 �
   await expect(fetchBookInfo('takryu')).resolves.toEqual(mockBookInfo);
   expect(api.get).not.toHaveBeenCalled();
 });
+
+test('FR-ADM-005: USE_MOCK=true에서 준비되지 않은 책은 403으로 실패한다', async () => {
+  flags.useMock = true;
+
+  await expect(fetchBookInfo('not-ready-book')).rejects.toMatchObject({ response: { status: 403 } });
+  expect(api.get).not.toHaveBeenCalled();
+});
+
+test('USE_MOCK=true에서 없는 책은 404로 실패한다', async () => {
+  flags.useMock = true;
+
+  await expect(fetchBookInfo('no-such-book')).rejects.toMatchObject({ response: { status: 404 } });
+  expect(api.get).not.toHaveBeenCalled();
+});

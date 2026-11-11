@@ -12,7 +12,6 @@
 import {
   MOCK_BOOK_ID,
   mockAliases,
-  mockBookInfo,
   mockBookInfos,
   mockCatalog,
   mockChapters,
@@ -112,22 +111,42 @@ export function mockCatalogResponse(): CatalogResponse {
   };
 }
 
-export function mockInfoResponse(bookId: string = MOCK_BOOK_ID): BookInfoResponse {
-  return mockBookInfos[bookId] ?? mockBookInfo;
-}
-
 export type MockResult<T> = { status: 200; body: T } | { status: 401 | 403 | 404 };
 
-/** GET /books/:bookId/position 대역 — 준비되지 않은 책은 403, 없는 책은 404 (FR-SPL-002 🚦) */
-export function mockPositionResponse(bookId: string): MockResult<PositionResponse> {
+function readyBookStatus(bookId: string): 200 | 403 | 404 {
   const book = mockCatalog.find((b) => b.book_id === bookId);
-  if (!book) return { status: 404 };
-  if (!book.ssabi_ready) return { status: 403 };
+  if (!book) return 404;
+  return book.ssabi_ready ? 200 : 403;
+}
+
+// FR-ADM-005
+export function mockInfoResponse(bookId: string): MockResult<BookInfoResponse> {
+  const status = readyBookStatus(bookId);
+  if (status !== 200) return { status };
+  const info = mockBookInfos[bookId];
+  return info ? { status: 200, body: info } : { status: 404 };
+}
+
+// FR-SPL-002 🚦
+function positionOfMockBook(): PositionResponse {
+  const { cutoff, chapter, is_complete } = snapshot();
+  return {
+    applied_cutoff: cutoff,
+    current_chapter_no: chapter?.chapter_no ?? null,
+    read_chapter_nos: mockChapters.filter((c) => c.end_page <= cutoff).map((c) => c.chapter_no),
+    is_complete,
+  };
+}
+
+// FR-SPL-002 🚦
+export function mockPositionResponse(bookId: string): MockResult<PositionResponse> {
+  const status = readyBookStatus(bookId);
+  if (status !== 200) return { status };
+  if (bookId === MOCK_BOOK_ID) return { status: 200, body: positionOfMockBook() };
   const position = mockPositions[bookId];
   return position ? { status: 200, body: position } : { status: 404 };
 }
 
-/** GET /auth/me 대역 — 기본은 로그인 전(401). 테스트가 setMockMember(true)로 켠다 */
 let mockMember = false;
 
 export function setMockMember(on: boolean): void {

@@ -1,7 +1,7 @@
 import type { Page, Route } from '@playwright/test';
-import type { BookInfoResponse, BookSummary } from '../../src/types';
+import type { BookInfoResponse, BookSummary, ChapterSummary } from '../../src/types';
 import type { PositionResponse } from '../../src/services/positionService';
-import { BOOK_ID, bookInfo, catalog, graph, pageResponse } from './fixtures';
+import { BOOK_ID, bookInfo, catalog, chapters, graph, pageResponse } from './fixtures';
 
 export interface ApiLog {
   progress: number[];
@@ -38,6 +38,17 @@ export const UNREAD_BOOK: BookSummary = {
   registered_at: '2026-11-01T00:00:00.000Z',
 };
 
+export const NOT_READY_BOOK: BookSummary = {
+  book_id: 'not-ready-book',
+  title: '검수 전 도서',
+  author: '미상',
+  cover_url: '',
+  intro_summary: null,
+  ssabi_ready: false,
+  genre: null,
+  registered_at: '2026-10-15T00:00:00.000Z',
+};
+
 export const DONE_BOOK: BookSummary = {
   book_id: 'done-book',
   title: '다 읽은 책',
@@ -48,6 +59,12 @@ export const DONE_BOOK: BookSummary = {
   genre: '애정소설',
   registered_at: '2026-11-03T00:00:00.000Z',
   progress: { current_page: 20, percent: 100, is_complete: true, last_read_at: '2026-11-05T00:00:00.000Z' },
+};
+
+const LAST_READ_AT: Record<string, string> = {
+  [BOOK_ID]: '2026-11-09T00:00:00.000Z',
+  [UNREAD_BOOK.book_id]: '2026-11-10T00:00:00.000Z',
+  [DONE_BOOK.book_id]: DONE_BOOK.progress!.last_read_at,
 };
 
 function twoChapterInfo(title: string): BookInfoResponse {
@@ -67,22 +84,30 @@ const EXTRA_INFO: Record<string, BookInfoResponse> = {
   [DONE_BOOK.book_id]: twoChapterInfo(DONE_BOOK.title),
 };
 
-const DEFAULT_POSITIONS: Record<string, PositionResponse> = {
-  [BOOK_ID]: { applied_cutoff: 15, current_chapter_no: 2, read_chapter_nos: [1], is_complete: false },
-  [UNREAD_BOOK.book_id]: { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false },
-  [DONE_BOOK.book_id]: { applied_cutoff: 20, current_chapter_no: 2, read_chapter_nos: [1, 2], is_complete: true },
-};
+// FR-SPL-002 🚦
+function positionAt(page: number | undefined, chapterList: ChapterSummary[]): PositionResponse {
+  if (page === undefined) {
+    return { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false };
+  }
+  const last = chapterList[chapterList.length - 1];
+  return {
+    applied_cutoff: page,
+    current_chapter_no:
+      chapterList.find((c) => page >= c.start_page && page <= c.end_page)?.chapter_no ?? null,
+    read_chapter_nos: chapterList.filter((c) => c.end_page <= page).map((c) => c.chapter_no),
+    is_complete: page >= last.end_page,
+  };
+}
 
-function catalogBooks(): BookSummary[] {
-  return [
-    ...catalog().books.map((book) => ({
-      ...book,
-      genre: book.genre ?? null,
-      registered_at: book.registered_at ?? '2026-10-01T00:00:00.000Z',
-    })),
-    UNREAD_BOOK,
-    DONE_BOOK,
-  ];
+// FR-BRF-005
+function progressAt(bookId: string, page: number | undefined, totalPages: number): BookSummary['progress'] {
+  if (page === undefined) return undefined;
+  return {
+    current_page: page,
+    percent: Math.round((page / totalPages) * 100),
+    is_complete: page >= totalPages,
+    last_read_at: LAST_READ_AT[bookId],
+  };
 }
 
 const API = 'http://api.e2e.test';
@@ -112,6 +137,31 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
+  const extraPages: Record<string, number | undefined> = { [DONE_BOOK.book_id]: 20 };
+
+  const chaptersOf = (bookId: string) =>
+    bookId === BOOK_ID ? chapters(totalPages) : EXTRA_INFO[bookId].chapters;
+  const pageOf = (bookId: string) => (bookId === BOOK_ID ? cutoff : extraPages[bookId]);
+  const totalOf = (bookId: string) => {
+    const list = chaptersOf(bookId);
+    return list[list.length - 1].end_page;
+  };
+  const catalogBooks = (): BookSummary[] => [
+    ...catalog().books.map((book) => ({
+      ...book,
+      genre: book.genre ?? null,
+      registered_at: book.registered_at ?? '2026-10-01T00:00:00.000Z',
+      progress: progressAt(book.book_id, pageOf(book.book_id), totalOf(book.book_id)),
+    })),
+    NOT_READY_BOOK,
+    { ...UNREAD_BOOK, progress: progressAt(UNREAD_BOOK.book_id, pageOf(UNREAD_BOOK.book_id), totalOf(UNREAD_BOOK.book_id)) },
+    { ...DONE_BOOK, progress: progressAt(DONE_BOOK.book_id, pageOf(DONE_BOOK.book_id), totalOf(DONE_BOOK.book_id)) },
+  ];
+  const bookStatus = (bookId: string): 200 | 403 | 404 => {
+    const book = catalogBooks().find((b) => b.book_id === bookId);
+    if (!book) return 404;
+    return book.ssabi_ready ? 200 : 403;
+  };
 
   await page.route(`${API}/**`, async (route) => {
     const request = route.request();
@@ -144,12 +194,10 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     const rest = match?.[2] ?? '';
 
     if (method === 'GET' && rest === '/position') {
-      const book = catalogBooks().find((b) => b.book_id === bookId);
-      if (!book) return json(route, { error: 'BOOK_NOT_FOUND' }, 404);
-      if (!book.ssabi_ready) return json(route, { error: 'BOOK_NOT_READY' }, 403);
-      const position = { ...DEFAULT_POSITIONS, ...opts.positions }[bookId];
-      if (!position) return json(route, { error: 'BOOK_NOT_FOUND' }, 404);
-      return json(route, position);
+      const status = bookStatus(bookId);
+      if (status === 404) return json(route, { error: 'BOOK_NOT_FOUND' }, 404);
+      if (status === 403) return json(route, { error: 'BOOK_NOT_READY' }, 403);
+      return json(route, opts.positions?.[bookId] ?? positionAt(pageOf(bookId), chaptersOf(bookId)));
     }
 
     if (method === 'POST' && rest === '/entry') {
@@ -160,6 +208,9 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     }
     if (method === 'GET' && rest === '/info') {
       if (opts.failInfo) return json(route, { error: 'E2E_FAIL' }, 500);
+      const status = bookStatus(bookId);
+      if (status === 404) return json(route, { error: 'BOOK_NOT_FOUND' }, 404);
+      if (status === 403) return json(route, { error: 'BOOK_NOT_READY' }, 403);
       return json(route, EXTRA_INFO[bookId] ?? bookInfo(totalPages));
     }
     if (method === 'GET' && rest === '/briefing') {
@@ -201,7 +252,8 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       log.events.push(`progress:${body.page}`);
       if (opts.progressDelayMs) await new Promise((resolve) => setTimeout(resolve, opts.progressDelayMs));
       log.events.push(`progress-done:${body.page}`);
-      cutoff = body.page;
+      if (bookId in EXTRA_INFO) extraPages[bookId] = body.page;
+      else cutoff = body.page;
       return json(route, { success: true, applied_cutoff: body.page });
     }
     if (method === 'POST' && rest === '/heartbeat') return json(route, {});

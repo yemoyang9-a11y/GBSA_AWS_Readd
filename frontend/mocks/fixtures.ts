@@ -184,12 +184,8 @@ export const mockBookInfos: Record<string, BookInfoResponse> = {
   },
 };
 
-/**
- * GET /books/:bookId/position 대역 — 장 경계와 위 진도에서 미리 계산해 적어 둔 상수다.
- * 서버가 계산할 값을 대신 적어 둔 것이며, 화면 코드는 이 값을 계산하지 않는다 (FR-SPL-002 🚦).
- */
+// FR-SPL-002 🚦
 export const mockPositions: Record<string, PositionResponse> = {
-  [MOCK_BOOK_ID]: { applied_cutoff: 21, current_chapter_no: 3, read_chapter_nos: [1, 2], is_complete: false },
   'unread-book': { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false },
   'done-book': { applied_cutoff: 20, current_chapter_no: 2, read_chapter_nos: [1, 2], is_complete: true },
 };

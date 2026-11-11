@@ -12,7 +12,6 @@ import App from './App';
 
 /** 브리핑 → 읽기 화면까지 이동한다. 싸비 패널은 닫힌 상태로 시작한다 */
 async function goToReader() {
-  // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
   window.history.pushState({}, '', '/books/takryu/briefing');
   render(<App />);
   await screen.findByRole('button', { name: '이어서 읽기' }, { timeout: 5000 });

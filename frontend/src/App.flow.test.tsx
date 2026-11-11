@@ -51,17 +51,15 @@ function renderFlow() {
 
 describe('관통 흐름 (mock 기준)', () => {
   it('작품 목록에서 책에 들어가면 브리핑을 거쳐 읽기 화면까지 이어진다', async () => {
-    // 화면 구조 개편(2026-11-10) — 옛 서재 화면 대신 공용 계약(useCatalog·resumeLabel·
-    // useEnterBook)으로 진입한다. 홈·작품 페이지가 같은 계약을 쓴다.
     renderFlow();
 
     const takryu = (await screen.findByRole('heading', { level: 2, name: '탁류' })).closest('li')!;
     const notReady = screen.getByRole('heading', { level: 2, name: '검수 전 도서' }).closest('li')!;
 
-    // 미완비 도서는 진입 버튼이 막혀 있다 (FR-BRW-002 🚦)
+    // FR-BRW-002 🚦
     expect(within(notReady).getByRole('button', { name: '아직 준비 중입니다' })).toBeDisabled();
 
-    // 탁류에 진입한다 → 서버(mock)가 briefing 으로 라우팅한다
+    // FR-BRF-001
     await userEvent.click(within(takryu).getByRole('button', { name: '이어서 읽기' }));
 
     await waitFor(() => {
