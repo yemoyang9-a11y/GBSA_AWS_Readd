@@ -7,6 +7,7 @@
  * 백엔드 미구현 구간에는 src/mocks 대역을 쓴다 (VITE_USE_MOCK).
  */
 
+import { AxiosError, type AxiosResponse } from 'axios';
 import { api } from './api';
 import { USE_MOCK } from '../utils/constants';
 import type { BookInfoResponse, CatalogResponse, PageResponse } from '../types';
@@ -23,7 +24,11 @@ export async function fetchCatalog(): Promise<CatalogResponse> {
 export async function fetchBookInfo(bookId: string): Promise<BookInfoResponse> {
   if (USE_MOCK) {
     const { mockInfoResponse } = await import('../../mocks/server');
-    return mockInfoResponse();
+    const result = mockInfoResponse(bookId);
+    if (result.status === 200) return result.body;
+    throw new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, {
+      status: result.status,
+    } as AxiosResponse);
   }
   const { data } = await api.get<BookInfoResponse>(`/books/${bookId}/info`);
   return data;
@@ -33,7 +38,7 @@ export async function fetchBookInfo(bookId: string): Promise<BookInfoResponse> {
 export async function fetchPage(bookId: string, pageNo: number): Promise<PageResponse> {
   if (USE_MOCK) {
     const { mockPageResponse } = await import('../../mocks/server');
-    return mockPageResponse(pageNo);
+    return mockPageResponse(bookId, pageNo);
   }
   const { data } = await api.get<PageResponse>(`/books/${bookId}/pages/${pageNo}`);
   return data;

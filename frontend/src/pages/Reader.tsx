@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import TocPanel from '../components/Reader/TocPanel';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -10,6 +10,10 @@ import TocToggleButton from '../components/common/TocToggleButton';
 import { usePanelResize } from '../hooks/usePanelResize';
 import { usePanelOpenTransition } from '../hooks/usePanelOpenTransition';
 import { useReadingSession } from '../hooks/useReadingSession';
+import { useReaderPrefs } from '../hooks/useReaderPrefs';
+import ReaderPrefsSheet from '../components/Reader/ReaderPrefsSheet';
+import JumpReturnBar from '../components/Reader/JumpReturnBar';
+import { useBackToBook } from '../hooks/useBackToBook';
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -32,7 +36,6 @@ export default function Reader() {
 
 function ReadingSession() {
   const { bookId = '' } = useParams();
-  const navigate = useNavigate();
   const {
     entryError,
     retryEntry,
@@ -42,6 +45,11 @@ function ReadingSession() {
     currentPage,
     totalPages,
     chapters,
+    bookTitle,
+    currentChapter,
+    jumpOrigin,
+    returnToOrigin,
+    dismissJumpOrigin,
     moveTo,
     panelOpen,
     togglePanel,
@@ -49,6 +57,10 @@ function ReadingSession() {
     quote,
     ssabiPanelProps,
   } = useReadingSession(bookId);
+  const backToBook = useBackToBook(bookId);
+  const prefsApi = useReaderPrefs();
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const prefsButtonRef = useRef<HTMLButtonElement>(null);
 
   /**
    * 닫는 즉시 언마운트하던 걸(위 주석) 480ms 슬라이드 애니메이션 동안만 유예한다
@@ -176,12 +188,8 @@ function ReadingSession() {
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
         <button
           type="button"
-          // navigate(-1)(브라우저 히스토리 뒤로가기) 대신 홈으로 고정 이동한다(2026-08-25,
-          // 사용자 제보 — "그냥 브라우저 뒤로가기랑 똑같다"). 히스토리 기반이면 외부
-          // 사이트에서 바로 들어왔거나 새 탭으로 열었을 때 뒤로 갈 곳이 없거나 엉뚱한
-          // 곳으로 간다. Briefing.tsx의 "뒤로" 버튼(`onBack={() => navigate('/')}`)과
-          // 같은 패턴으로 맞춘다 — 이 앱에서 "뒤로"는 항상 홈(대시보드)을 뜻한다.
-          onClick={() => navigate('/', { viewTransition: true })}
+          // FR-BRW-003
+          onClick={backToBook}
           aria-label="뒤로 가기"
           className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
@@ -198,7 +206,35 @@ function ReadingSession() {
             <path d="M9.5 4.8 6.5 8 9.5 11.2" />
           </svg>
         </button>
+        {bookTitle ? (
+          <p className="min-w-0 flex-1 truncate px-4 text-center font-dashSans text-[14px] text-brief-muted">
+            {currentChapter ? `${bookTitle} · ${currentChapter.chapter_no}장 ${currentChapter.title}` : bookTitle}
+          </p>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <button
+          ref={prefsButtonRef}
+          type="button"
+          onClick={() => setPrefsOpen((open) => !open)}
+          aria-label="보기 설정"
+          aria-haspopup="dialog"
+          aria-expanded={prefsOpen}
+          className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white font-dashSerif text-[14px] font-bold text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+        >
+          <span aria-hidden="true">가</span>
+        </button>
       </div>
+
+      <JumpReturnBar origin={jumpOrigin} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
+      {prefsOpen ? (
+        <ReaderPrefsSheet
+          variant="popover"
+          onClose={() => setPrefsOpen(false)}
+          returnFocusRef={prefsButtonRef}
+          prefsApi={prefsApi}
+        />
+      ) : null}
 
       <div className="flex flex-1 overflow-hidden">
         {tocRendered ? (
@@ -235,6 +271,7 @@ function ReadingSession() {
               onQuote={quote}
               highlightedQuote={highlightedQuote}
               chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
+              prefs={prefsApi.prefs}
             />
           ) : pageError ? (
             <div className="flex h-full flex-col items-center justify-center gap-4">

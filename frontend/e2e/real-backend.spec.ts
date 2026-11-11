@@ -10,17 +10,25 @@ test.beforeEach(({}, testInfo) => {
   test.skip(testInfo.project.name !== 'iphone-pro-max', 'iPhone 한 기기로 한 번');
 });
 
-test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이프 → 관계도', async ({ page }) => {
+test('5.3: 로컬 백엔드·로컬 DB로 홈 → 작품 페이지 → 진입 → 읽기 스와이프 → 관계도', async ({ page }) => {
   const progress: number[] = [];
+  const appliedCutoffs: number[] = [];
   page.on('request', (req) => {
     if (req.url().includes('/progress') && req.method() === 'POST') progress.push((req.postDataJSON() as { page: number }).page);
   });
+  page.on('response', async (res) => {
+    if (!res.url().includes('/progress') || res.request().method() !== 'POST') return;
+    const body = (await res.json().catch(() => null)) as { applied_cutoff?: number } | null;
+    if (typeof body?.applied_cutoff === 'number') appliedCutoffs.push(body.applied_cutoff);
+  });
   await page.goto('/');
-  await expect(page.getByTestId('mobile-dashboard')).toBeVisible();
-  await expect(page.getByTestId('mobile-dashboard')).toContainText('탁류');
-  await page.screenshot({ path: 'test-results/real/1-dashboard.png' });
+  const cover = page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' });
+  await expect(cover).toBeVisible();
+  await page.screenshot({ path: 'test-results/real/1-home.png' });
 
-  await page.getByRole('button', { name: /이어서 읽기|읽기 시작/ }).first().tap();
+  await cover.tap();
+  await page.waitForURL(/\/books\/takryu$/);
+  await page.getByRole('button', { name: /이어서 읽기|읽기 시작/ }).tap();
   await page.waitForURL(/\/books\/takryu\/(read|briefing)/);
   if (page.url().includes('/briefing')) {
     await expect(page.getByTestId('mobile-briefing')).toBeVisible();
@@ -50,5 +58,5 @@ test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이
   await page.getByRole('tab', { name: '인물 관계도' }).tap();
   await page.waitForTimeout(2000);
   await page.screenshot({ path: 'test-results/real/4-relationship.png' });
-  await expect(page.getByTestId('mobile-ssabi')).toContainText(`${before + 1}p까지 읽음`);
+  await expect.poll(() => appliedCutoffs.at(-1)).toBe(before + 1);
 });

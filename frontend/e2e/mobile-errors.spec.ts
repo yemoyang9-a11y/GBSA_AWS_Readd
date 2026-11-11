@@ -22,7 +22,7 @@ test.describe('모바일 404·오류 화면', () => {
 
   const STATES: { name: string; url: string; opts: MockApiOptions; message: string }[] = [
     { name: 'not-found', url: '/no-such-page', opts: {}, message: '페이지를 찾을 수 없습니다' },
-    { name: 'catalog-error', url: '/', opts: { failCatalog: true }, message: '서재를 불러오지 못했습니다' },
+    { name: 'catalog-error', url: '/', opts: { failCatalog: true }, message: '작품을 불러오지 못했습니다' },
     { name: 'entry-error', url: `/books/${BOOK_ID}/read`, opts: { failEntry: true }, message: '읽기를 시작하지 못했습니다' },
     { name: 'page-error', url: `/books/${BOOK_ID}/read`, opts: { failPages: [15] }, message: '페이지를 불러오지 못했습니다' },
   ];
@@ -45,27 +45,29 @@ test.describe('모바일 404·오류 화면', () => {
     });
   }
 
-  test('404의 "서재로" 버튼을 누르면 모바일 서재로 간다', async ({ page }) => {
+  test('404의 "서재로" 버튼을 누르면 홈으로 간다', async ({ page }) => {
     await open(page, STATES[0]);
     await page.getByRole('button', { name: '서재로' }).tap();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByTestId('mobile-dashboard')).toBeVisible();
+    await expect(page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: '주 메뉴' })).toBeVisible();
   });
 
-  test('서재 불러오기 실패 후 다시 시도하면 서재가 보인다', async ({ page }) => {
+  test('작품 목록 불러오기 실패 후 다시 시도하면 홈의 작품 줄이 보인다', async ({ page }) => {
     let fail = true;
     await installMockApi(page);
     await page.route('http://api.e2e.test/books', (route) =>
       fail ? route.fulfill({ status: 500, headers: { 'access-control-allow-origin': '*' }, body: '{}' }) : route.fallback()
     );
     await page.goto('/');
-    await expect(page.getByText('서재를 불러오지 못했습니다')).toBeVisible();
+    await expect(page.getByText('작품을 불러오지 못했습니다')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: '주 메뉴' })).toBeVisible();
     fail = false;
     await page.getByRole('button', { name: '다시 시도' }).tap();
-    await expect(page.getByRole('button', { name: '데미안 선택' })).toBeVisible();
+    await expect(page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' })).toBeVisible();
   });
 
-  test('C6: 홈 화면 모드의 노치·홈 막대 영역에 서재·브리핑 조작 요소가 들어가지 않는다', async ({ page }) => {
+  test('C6: 홈 화면 모드의 노치·홈 막대 영역에 홈·브리핑 조작 요소가 들어가지 않는다', async ({ page }) => {
     await installMockApi(page);
     await page.addInitScript(
       ([top, bottom]) => {
@@ -78,9 +80,9 @@ test.describe('모바일 404·오류 화면', () => {
       [SAFE_TOP, SAFE_BOTTOM]
     );
     await page.goto('/');
-    const logo = page.getByTestId('mobile-dashboard').locator('header');
-    await expect(logo).toBeVisible();
-    expect((await logo.boundingBox())!.y).toBeGreaterThanOrEqual(SAFE_TOP - 1);
+    const first = page.getByRole('region', { name: '이어 읽기' }).getByRole('link', { name: '탁류' });
+    await expect(first).toBeVisible();
+    expect((await first.boundingBox())!.y).toBeGreaterThanOrEqual(SAFE_TOP - 1);
 
     await page.goto(`/books/${BOOK_ID}/briefing`);
     const back = page.getByRole('button', { name: '돌아가기' });

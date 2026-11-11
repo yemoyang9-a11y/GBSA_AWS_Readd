@@ -9,6 +9,7 @@ import { useHeartbeat } from './useHeartbeat';
 import { useSSE } from './useSSE';
 import { useChatConversation } from './useChatConversation';
 import { nextSeq } from '../utils/seq';
+import { takePendingJump } from '../utils/pendingJump';
 import { DEFAULT_SSABI_TAB } from '../utils/constants';
 import type { ChapterSummary, EntryResponse, PageResponse, SsabiTab } from '../types';
 
@@ -21,6 +22,11 @@ export interface ReadingSessionState {
   currentPage: number | null;
   totalPages: number;
   chapters: ChapterSummary[];
+  bookTitle: string | null;
+  currentChapter: ChapterSummary | null;
+  jumpOrigin: number | null;
+  returnToOrigin: () => void;
+  dismissJumpOrigin: () => void;
   moveTo: (page: number) => void;
   panelOpen: boolean;
   togglePanel: () => void;
@@ -51,6 +57,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   /** 목차 (2026-08-25, 사용자 요청) — GET /info가 cutoff 인자 없이 전량 내려준다
    *  (FR-NAV-001, R3 4장). TocPanel이 그대로 그린다. */
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
+  const [bookTitle, setBookTitle] = useState<string | null>(null);
+  const [infoSettled, setInfoSettled] = useState(false);
   const [tab, setTab] = useState<SsabiTab>(DEFAULT_SSABI_TAB);
   /**
    * 빠르게 여러 번 페이지를 넘기면(직접 입력 포함) fetchPage 요청이 겹쳐 나가고, 응답이
@@ -165,14 +173,28 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   const [entryError, setEntryError] = useState(false);
   const [pageError, setPageError] = useState(false);
 
+  // FR-PRG-003 🚦
+  const pendingJumpRef = useRef<{ taken: boolean; page: number | null }>({ taken: false, page: null });
+  useEffect(() => {
+    if (!pendingJumpRef.current.taken) pendingJumpRef.current = { taken: true, page: takePendingJump(bookId) };
+  }, [bookId]);
+  const [entryPage, setEntryPage] = useState<number | null>(null);
+  const [jumpOrigin, setJumpOrigin] = useState<number | null>(null);
+  const entryRequestRef = useRef(0);
+
   const loadEntry = useCallback(() => {
     setEntryError(false);
+    const request = ++entryRequestRef.current;
     void enterBook(bookId)
       .then((judged) => {
+        if (request !== entryRequestRef.current) return;
         setSession(judged);
-        setCurrentPage(judged.page);
+        if (pendingJumpRef.current.page === null) setCurrentPage(judged.page);
+        else setEntryPage(judged.page);
       })
-      .catch(() => setEntryError(true));
+      .catch(() => {
+        if (request === entryRequestRef.current) setEntryError(true);
+      });
   }, [bookId]);
 
   // 진입할 때마다 서버에 위치를 묻는다 — 새로고침으로 되살아난 낡은 state를 믿지 않기
@@ -187,11 +209,8 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     error: recapError,
     consume: consumeRecap,
   } = useSSE(`${bookId}:${currentPage}`);
-  /**
-   * 패널 배지는 로컬 currentPage가 아니라 POST /progress가 확인한 applied_cutoff만 보여준다.
-   * 그래야 배지는 최신인데 실제 챗봇·관계도는 전 페이지를 보는 거짓 상태가 되지 않는다.
-   */
-  const [panelAppliedCutoff, setPanelAppliedCutoff] = useState<number | null>(null);
+  // FR-BRF-005
+  const [, setPanelAppliedCutoff] = useState<number | null>(null);
   const progressRequestIdRef = useRef(0);
   const progressSyncRef = useRef<{
     page: number;
@@ -206,7 +225,6 @@ export function useReadingSession(bookId: string): ReadingSessionState {
         if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
       });
       progressSyncRef.current = request;
-      // 느린 이전 요청이 나중에 돌아와 최신 배지를 되감지 못하게 한다.
       return request.promise;
     },
     [bookId]
@@ -236,6 +254,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     deleteConversation: deleteChatConversation,
   } = useChatConversation(bookId, currentPage, ensureHistoryPosition, invalidateHistoryPosition);
   const { graph, failed: graphFailed } = useSsabiData({
+    panelOpen,
     bookId,
     tab,
     currentPage,
@@ -248,12 +267,33 @@ export function useReadingSession(bookId: string): ReadingSessionState {
   useHeartbeat({ bookId });
 
   useEffect(() => {
-    void fetchBookInfo(bookId).then((info) => {
-      const last = info.chapters[info.chapters.length - 1];
-      setTotalPages(last ? last.end_page : 0);
-      setChapters(info.chapters);
-    });
+    void fetchBookInfo(bookId)
+      .then((info) => {
+        const last = info.chapters[info.chapters.length - 1];
+        setTotalPages(last ? last.end_page : 0);
+        setChapters(info.chapters);
+        setBookTitle(info.basic_info.title);
+      })
+      // FR-SPL-005
+      .catch(() => undefined)
+      .finally(() => setInfoSettled(true));
   }, [bookId]);
+
+  // FR-PRG-003 🚦
+  useEffect(() => {
+    const jump = pendingJumpRef.current.page;
+    if (entryPage === null || jump === null || !infoSettled) return;
+    pendingJumpRef.current = { taken: true, page: null };
+    const inRange = jump >= 1 && jump <= totalPages;
+    if (inRange && jump !== entryPage) setJumpOrigin(entryPage);
+    setCurrentPage(inRange ? jump : entryPage);
+  }, [entryPage, infoSettled, totalPages]);
+
+  const returnToOrigin = useCallback(() => {
+    if (jumpOrigin !== null) setCurrentPage(jumpOrigin);
+    setJumpOrigin(null);
+  }, [jumpOrigin]);
+  const dismissJumpOrigin = useCallback(() => setJumpOrigin(null), []);
 
   const loadPage = useCallback(
     (targetPage: number) => {
@@ -278,7 +318,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     setPanelAppliedCutoff(null);
     void syncPageProgress(currentPage).catch(() => {
-      // 자동 진도 실패는 페이지 이동을 막지 않으며, 확인 전 배지는 비워 둔다.
+      // FR-SPL-005
     });
   }, [currentPage, loadPage, syncPageProgress]);
 
@@ -331,6 +371,11 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     if (currentPage !== null) loadPage(currentPage);
   }, [currentPage, loadPage]);
 
+  const currentChapter =
+    currentPage === null
+      ? null
+      : (chapters.find((chapter) => currentPage >= chapter.start_page && currentPage <= chapter.end_page) ?? null);
+
   return {
     entryError,
     retryEntry: loadEntry,
@@ -340,6 +385,11 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     currentPage,
     totalPages,
     chapters,
+    bookTitle,
+    currentChapter,
+    jumpOrigin,
+    returnToOrigin,
+    dismissJumpOrigin,
     moveTo: setCurrentPage,
     panelOpen,
     togglePanel,
@@ -347,7 +397,6 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     quote: handleQuote,
     ssabiPanelProps: {
       sessionEpoch: session?.session_epoch ?? 0,
-      appliedCutoff: panelAppliedCutoff,
       initialTab: tabMemory?.tab ?? null,
       initialTabEpoch: tabMemory?.epoch ?? null,
       onTabChange: handleTabChange,

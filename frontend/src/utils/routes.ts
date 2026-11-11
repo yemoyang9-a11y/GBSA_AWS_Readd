@@ -6,6 +6,18 @@ export const BOOK_ROUTES = {
   reader: '/books/:bookId/read',
 } as const;
 
+export const APP_ROUTES = {
+  home: '/',
+  search: '/search',
+  shelf: '/shelf',
+  my: '/my',
+  book: '/books/:bookId',
+} as const;
+
+export function bookPath(bookId: string): string {
+  return APP_ROUTES.book.replace(':bookId', bookId);
+}
+
 /**
  * 진입 후 어느 화면으로 갈지 (FR-BRF-001)
  *

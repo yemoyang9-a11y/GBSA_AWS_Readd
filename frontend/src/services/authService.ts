@@ -1,5 +1,6 @@
+import { AxiosError, type AxiosResponse } from 'axios';
 import { api, ensureDeviceId } from './api';
-import { API_BASE_URL } from '../utils/constants';
+import { API_BASE_URL, USE_MOCK } from '../utils/constants';
 
 export type AuthProvider = 'google' | 'kakao';
 
@@ -27,6 +28,14 @@ export async function exchangeLoginCode(code: string): Promise<AuthSession> {
 }
 
 export async function fetchMe(): Promise<AuthMe> {
+  if (USE_MOCK) {
+    const { mockMeResponse } = await import('../../mocks/server');
+    const result = mockMeResponse();
+    if (result.status === 200) return result.body;
+    throw new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, {
+      status: result.status,
+    } as AxiosResponse);
+  }
   const { data } = await api.get<AuthMe>('/auth/me');
   return data;
 }

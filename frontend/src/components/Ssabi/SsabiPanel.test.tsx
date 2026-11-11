@@ -119,18 +119,14 @@ describe('싸비 사이드창', () => {
     expect(screen.getByText('20p')).toBeInTheDocument();
   });
 
-  it('critique P1: 확인된 기준점이 있으면 헤더에 "Np까지 읽음" 배지를 보여준다', () => {
-    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
-    expect(screen.getByText('79p까지 읽음')).toBeInTheDocument();
-  });
-
-  it('critique P1: 아직 현재 페이지가 없으면(null) 배지를 그리지 않는다', () => {
-    render(<SsabiPanel {...baseProps} />);
+  it('2026-11-11 사용자 결정: 기준점이 있어도 헤더에 "까지 읽음" 글자가 0건이다', () => {
+    render(<SsabiPanel {...baseProps} {...({ appliedCutoff: 79 } as object)} />);
+    expect(screen.getByText('아모의 가이드북')).toBeInTheDocument();
     expect(screen.queryByText(/까지 읽음/)).not.toBeInTheDocument();
   });
 
   it('polish: 헤더가 여닫기 버튼(Reader가 그리는 고정 위치, size-9)과 겹치지 않을 오른쪽 여백을 확보한다', () => {
-    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
+    render(<SsabiPanel {...baseProps} />);
     // 실측(브라우저): 배지 오른쪽 끝이 버튼 왼쪽 끝과 정확히 같은 x좌표에서 겹쳤다 — pr-20으로 고쳤다.
     // 2026-08-26: 제목이 아모 얼굴과 함께 그룹 div로 한 겹 더 감싸여 parentElement로는
     // 더 이상 안 닿는다 — closest로 pr-20 조상을 직접 찾는다.
@@ -143,11 +139,6 @@ describe('싸비 사이드창', () => {
     expect(activeTab.className).toContain('border-brief-accent');
     expect(activeTab.className).toContain('bg-brief-paper');
     expect(screen.getByRole('tabpanel').className).toContain('bg-brief-paper');
-  });
-
-  it('기준점 배지는 brief-accent 톤을 쓴다', () => {
-    render(<SsabiPanel {...baseProps} appliedCutoff={79} />);
-    expect(screen.getByText('79p까지 읽음').className).toContain('text-brief-accent');
   });
 
   it('본문에서 인용 요청이 오면(pendingQuote) 다른 탭을 보고 있어도 챗봇 탭으로 전환한다', () => {

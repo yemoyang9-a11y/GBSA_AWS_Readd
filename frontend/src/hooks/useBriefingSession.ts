@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBriefing, streamRecap } from '../services/recapService';
 import { fetchGraph } from '../services/ssabiService';
-import { sendProgress } from '../services/progressService';
 import { useSSE } from './useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
+import { setPendingJump } from '../utils/pendingJump';
 import { BOOK_ROUTES } from '../utils/routes';
+import { cameFromBook, useBackToBook } from './useBackToBook';
 import type { BriefingResponse, ChapterSummary } from '../types';
 
 export interface BriefingSessionState {
@@ -24,7 +25,7 @@ export interface BriefingSessionState {
   recapFailed: boolean;
   requestFallback: () => void;
   continueReading: () => void;
-  selectChapter: (startPage: number) => Promise<void>;
+  selectChapter: (startPage: number) => void;
   goBack: () => void;
 }
 
@@ -38,6 +39,8 @@ export interface BriefingSessionState {
 // FR-BRF-001 FR-SPL-005 🚦
 export function useBriefingSession(bookId: string): BriefingSessionState {
   const navigate = useNavigate();
+  const fromBook = cameFromBook(useLocation().state);
+  const goBack = useBackToBook(bookId);
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -103,29 +106,24 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
     // 되살아나고, 읽기 화면이 낡은 페이지로 되돌아간다(Reader.tsx 상단 주석).
     // "넘기지 않으면 1페이지로 진도를 보낸다"던 옛 우려는 해당하지 않는다 — 서버가
     // 저장된 위치를 돌려주므로 시작 페이지를 모르는 상태 자체가 없다.
-    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
-  }, [navigate, bookId]);
+    // FR-BRW-003
+    navigate(
+      BOOK_ROUTES.reader.replace(':bookId', bookId),
+      fromBook ? { replace: true, state: { fromBook: true } } : { replace: true }
+    );
+  }, [navigate, bookId, fromBook]);
 
-  /**
-   * 목차에서 장을 고르면 그 장의 start_page로 읽기 화면을 연다 (2026-08-26).
-   *
-   * 읽기 화면은 서버가 저장한 위치로만 시작하므로(Reader.tsx 상단 주석 — 새로고침으로
-   * 되살아난 값을 믿지 않기 위해서다), 갈 페이지를 **진도로 먼저 확정한 뒤** 넘어간다.
-   * 응답을 기다리는 이유는 순서 때문이다 — 저장이 끝나기 전에 읽기 화면이 진입 판정을
-   * 물으면 예전 위치가 돌아온다. 실패해도(sendProgress는 던지지 않고 null을 준다) 이동은
-   * 막지 않는다. 그때는 저장된 위치에서 열리고, 목차로 다시 고르면 된다.
-   *
-   * start_page는 서버가 내려준 값 그대로다 — 프론트에서 페이지 산술을 하지 않는다(절대 규칙 2번).
-   */
+  // FR-PRG-003 🚦
   const handleSelectChapter = useCallback(
-    async (startPage: number) => {
-      await sendProgress(bookId, startPage);
-      navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
+    (startPage: number) => {
+      setPendingJump(bookId, startPage);
+      navigate(
+        BOOK_ROUTES.reader.replace(':bookId', bookId),
+        fromBook ? { replace: true, state: { fromBook: true } } : { replace: true }
+      );
     },
-    [navigate, bookId]
+    [navigate, bookId, fromBook]
   );
-
-  const goBack = useCallback(() => navigate('/', { viewTransition: true }), [navigate]);
 
   return {
     briefing,
