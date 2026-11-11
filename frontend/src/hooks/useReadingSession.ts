@@ -318,7 +318,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     setPanelAppliedCutoff(null);
     void syncPageProgress(currentPage).catch(() => {
-      // 자동 진도 실패는 페이지 이동을 막지 않는다.
+      // FR-SPL-005
     });
   }, [currentPage, loadPage, syncPageProgress]);
 

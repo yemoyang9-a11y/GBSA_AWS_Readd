@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { isMobileDevice } from '../mobile/device';
 import { bookPath } from '../utils/routes';
 
 export function cameFromBook(state: unknown): boolean {
@@ -18,9 +17,6 @@ export function useBackToBook(bookId: string): () => void {
       navigate(-1);
       return;
     }
-    navigate(
-      bookPath(bookId),
-      isMobileDevice(window.screen) ? { replace: true } : { replace: true, viewTransition: true }
-    );
+    navigate(bookPath(bookId), { replace: true });
   }, [navigate, bookId, fromBook]);
 }

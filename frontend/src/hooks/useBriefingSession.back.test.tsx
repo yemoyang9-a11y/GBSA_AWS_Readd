@@ -93,14 +93,14 @@ test('돌아가기는 홈(/)으로 가지 않는다', async () => {
   expect(navigateCalls.map((c) => c.to)).not.toContain('/');
 });
 
-test('PC 화면의 돌아가기는 화면 전환 효과를 쓴다', async () => {
+test('PC 화면의 돌아가기도 화면 전환 효과 없이 작품 페이지 기록으로 바꾼다', async () => {
   setScreen(1440, 1000);
   renderProbe();
 
   await userEvent.click(screen.getByRole('button', { name: '돌아가기' }));
 
   expect(navigateCalls).toEqual([
-    { to: '/books/takryu', options: { replace: true, viewTransition: true } },
+    { to: '/books/takryu', options: { replace: true } },
   ]);
 });
 

@@ -16,7 +16,6 @@ import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AppShell from './components/Layout/AppShell';
 import { APP_ROUTES, BOOK_ROUTES } from './utils/routes';
-import './App.css';
 
 /**
  * 라우팅.
