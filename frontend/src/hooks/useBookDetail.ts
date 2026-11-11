@@ -14,9 +14,16 @@ export interface BookDetail {
   retry: () => void;
 }
 
+interface InfoRequest {
+  bookId: string;
+  fetchable: boolean;
+  attempt: number;
+  generation: number;
+}
+
 type InfoResult =
-  | { bookId: string; attempt: number; status: 'ready'; info: BookInfoResponse }
-  | { bookId: string; attempt: number; status: 'not-ready' | 'not-found' | 'error' };
+  | { generation: number; status: 'ready'; info: BookInfoResponse }
+  | { generation: number; status: 'not-ready' | 'not-found' | 'error' };
 
 function failureStatus(error: unknown): 'not-ready' | 'not-found' | 'error' {
   const status = isAxiosError(error) ? error.response?.status : undefined;
@@ -41,20 +48,33 @@ export function useBookDetail(bookId: string): BookDetail {
   const book = catalog.status === 'ready' ? (catalog.books.find((b) => b.book_id === bookId) ?? null) : null;
   const shouldFetchInfo = book !== null && book.ssabi_ready;
 
+  const [request, setRequest] = useState<InfoRequest>({
+    bookId,
+    fetchable: shouldFetchInfo,
+    attempt,
+    generation: 0,
+  });
+  let currentRequest = request;
+  if (request.bookId !== bookId || request.fetchable !== shouldFetchInfo || request.attempt !== attempt) {
+    currentRequest = { bookId, fetchable: shouldFetchInfo, attempt, generation: request.generation + 1 };
+    setRequest(currentRequest);
+  }
+  const { generation } = currentRequest;
+
   useEffect(() => {
     if (!shouldFetchInfo) return;
     let active = true;
     fetchBookInfo(bookId)
       .then((info) => {
-        if (active) setResult({ bookId, attempt, status: 'ready', info });
+        if (active) setResult({ generation, status: 'ready', info });
       })
       .catch((error: unknown) => {
-        if (active) setResult({ bookId, attempt, status: failureStatus(error) });
+        if (active) setResult({ generation, status: failureStatus(error) });
       });
     return () => {
       active = false;
     };
-  }, [bookId, shouldFetchInfo, attempt]);
+  }, [bookId, shouldFetchInfo, generation]);
 
   const { reload } = catalog;
   const catalogFailed = catalog.status === 'error';
@@ -63,7 +83,7 @@ export function useBookDetail(bookId: string): BookDetail {
     else setAttempt((n) => n + 1);
   }, [catalogFailed, reload]);
 
-  const current = result?.bookId === bookId && result.attempt === attempt ? result : null;
+  const current = result?.generation === generation ? result : null;
   const info = current?.status === 'ready' ? current.info : null;
   const fallback = BOOK_INFO_CONTENT[bookId];
 

@@ -120,6 +120,18 @@ function renderAt(bookId: string, initialEntries: string[] = [`/books/${bookId}`
   return render(<RouterProvider router={router} />);
 }
 
+function renderWithRouter(bookId: string) {
+  const router = createMemoryRouter(ROUTES, { initialEntries: [`/books/${bookId}`] });
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+async function goTo(router: ReturnType<typeof createMemoryRouter>, path: string) {
+  await act(async () => {
+    await router.navigate(path);
+  });
+}
+
 function chapterRow(title: string) {
   return screen.getByRole('button', { name: new RegExp(title) });
 }
@@ -516,6 +528,115 @@ test('FR-ADM-005: 책 정보 확인이 끝나 준비된 책이면 읽기 버튼�
   await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
   await waitFor(() => expect(enterBookMock).toHaveBeenCalledTimes(1));
+});
+
+function delaySecondTakryuInfo(response: () => Promise<BookInfoResponse>) {
+  let open!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  let calls = 0;
+  fetchBookInfoMock.mockImplementation((bookId) => {
+    if (bookId !== 'takryu') return new Promise(() => {});
+    calls += 1;
+    return calls === 1 ? Promise.resolve(TAKRYU_INFO) : gate.then(response);
+  });
+  return {
+    calls: () => calls,
+    release: () =>
+      act(async () => {
+        open();
+      }),
+  };
+}
+
+async function returnToTakryuViaOtherBook(router: ReturnType<typeof createMemoryRouter>) {
+  await waitForChapters('인간기념물');
+  await screen.findByText('아모가 21쪽까지 줄거리를 정리해 뒀어요');
+  await goTo(router, '/books/done-book');
+  await screen.findByRole('heading', { level: 1, name: '다 읽은 책' });
+  await goTo(router, '/books/takryu');
+  await screen.findByRole('heading', { level: 1, name: '탁류' });
+}
+
+function expectLockedWhileChecking() {
+  expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeDisabled();
+  expect(screen.queryByRole('list', { name: '목차' })).not.toBeInTheDocument();
+  expect(screen.queryByText(/아모가 .*쪽까지/)).not.toBeInTheDocument();
+}
+
+test('FR-ADM-005: A→B→A로 돌아오면 새 책 정보 전까지 읽기 버튼·목차가 잠기고, 그 응답이 403이면 준비 중이다', async () => {
+  const info = delaySecondTakryuInfo(() => Promise.reject(httpError(403)));
+  const router = renderWithRouter('takryu');
+  await returnToTakryuViaOtherBook(router);
+
+  expectLockedWhileChecking();
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+  await waitFor(() => expect(info.calls()).toBe(2));
+  expectLockedWhileChecking();
+
+  await info.release();
+
+  expect(await screen.findByText('아직 준비 중인 작품입니다')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeDisabled();
+  expect(screen.queryByRole('list', { name: '목차' })).not.toBeInTheDocument();
+  expect(enterBookMock).not.toHaveBeenCalled();
+});
+
+test('FR-ADM-005: A→B→A로 돌아온 뒤 새 책 정보가 404면 찾을 수 없음이고 진입 요청은 0건이다', async () => {
+  const info = delaySecondTakryuInfo(() => Promise.reject(httpError(404)));
+  const router = renderWithRouter('takryu');
+  await returnToTakryuViaOtherBook(router);
+
+  expectLockedWhileChecking();
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+  await info.release();
+
+  expect(await screen.findByText('찾을 수 없는 작품입니다')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '이어서 읽기' })).not.toBeInTheDocument();
+  expect(enterBookMock).not.toHaveBeenCalled();
+});
+
+test('FR-ADM-005: A→B→A로 돌아온 뒤 새 책 정보가 정상이면 목차가 다시 뜨고 읽기 버튼으로 진입 요청을 1건 보낸다', async () => {
+  const info = delaySecondTakryuInfo(() => Promise.resolve(TAKRYU_INFO));
+  const router = renderWithRouter('takryu');
+  await returnToTakryuViaOtherBook(router);
+
+  expectLockedWhileChecking();
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+  expect(enterBookMock).not.toHaveBeenCalled();
+
+  await info.release();
+  await waitForChapters('인간기념물');
+  await screen.findByText('아모가 21쪽까지 줄거리를 정리해 뒀어요');
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+
+  await waitFor(() => expect(enterBookMock).toHaveBeenCalledTimes(1));
+  expect(enterBookMock).toHaveBeenCalledWith('takryu');
+});
+
+test('FR-PRG-003: 같은 화면에서 다른 책으로 바뀌면 남아 있던 이동 예약을 지운다', async () => {
+  const router = renderWithRouter('takryu');
+  await waitForChapters('인간기념물');
+  setPendingJump('takryu', 31);
+
+  await goTo(router, '/books/done-book');
+  await screen.findByRole('heading', { level: 1, name: '다 읽은 책' });
+
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
+test('같은 화면에서 다른 책으로 바뀌면 탭이 처음 탭(목차)으로 돌아간다', async () => {
+  const router = renderWithRouter('takryu');
+  await waitForChapters('인간기념물');
+  await userEvent.click(screen.getByRole('tab', { name: '배경 지식' }));
+  expect(screen.getByRole('tab', { name: '배경 지식' })).toHaveAttribute('aria-selected', 'true');
+
+  await goTo(router, '/books/done-book');
+  await waitForChapters('첫째 장');
+
+  expect(screen.getByRole('tab', { name: '목차' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tab', { name: '배경 지식' })).toHaveAttribute('aria-selected', 'false');
 });
 
 test('FR-ADM-005: /info가 403이면 준비 중 안내를 보여 주고 읽기 버튼이 비활성이다', async () => {

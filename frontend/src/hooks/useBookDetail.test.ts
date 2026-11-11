@@ -142,6 +142,72 @@ test('작품 목록을 못 불러오면 error이고 retry로 목록을 다시 �
   expect(fetchCatalogMock).toHaveBeenCalledTimes(2);
 });
 
+test.each([
+  ['403이면 not-ready', () => Promise.reject(httpError(403)), 'not-ready'],
+  ['404면 not-found', () => Promise.reject(httpError(404)), 'not-found'],
+  ['정상이면 ready', () => Promise.resolve({ ...INFO, introduction: '새로 받은 소개.' }), 'ready'],
+] as const)(
+  'FR-ADM-005: A→B→A로 돌아오면 두 번째 A 응답 전까지 loading이고, 그 응답이 %s다',
+  async (_label, secondResponse, expected) => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let takryuCalls = 0;
+    fetchBookInfoMock.mockImplementation((bookId) => {
+      if (bookId !== 'takryu') return new Promise(() => {});
+      takryuCalls += 1;
+      return takryuCalls === 1 ? Promise.resolve(INFO) : gate.then(secondResponse);
+    });
+    const { result, rerender } = renderHook(({ bookId }) => useBookDetail(bookId), {
+      initialProps: { bookId: 'takryu' },
+    });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    rerender({ bookId: 'other-book' });
+    expect(result.current.status).toBe('loading');
+    rerender({ bookId: 'takryu' });
+
+    expect(result.current.status).toBe('loading');
+    expect(result.current.chapters).toEqual([]);
+    await waitFor(() => expect(takryuCalls).toBe(2));
+    expect(result.current.status).toBe('loading');
+    expect(result.current.chapters).toEqual([]);
+
+    await act(async () => {
+      release();
+    });
+
+    await waitFor(() => expect(result.current.status).toBe(expected));
+    if (expected === 'ready') {
+      expect(result.current.introduction).toBe('새로 받은 소개.');
+      expect(result.current.chapters).toEqual(INFO.chapters);
+    } else {
+      expect(result.current.chapters).toEqual([]);
+    }
+  }
+);
+
+test('retry를 부르면 새 응답이 오기 전까지 loading이다', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  fetchBookInfoMock
+    .mockRejectedValueOnce(httpError(500))
+    .mockImplementationOnce(() => gate.then(() => INFO));
+  const { result } = renderHook(() => useBookDetail('takryu'));
+  await waitFor(() => expect(result.current.status).toBe('error'));
+
+  act(() => result.current.retry());
+
+  expect(result.current.status).toBe('loading');
+  await act(async () => {
+    release();
+  });
+  await waitFor(() => expect(result.current.status).toBe('ready'));
+});
+
 test('책이 바뀌면 앞 책의 늦은 정보를 쓰지 않는다', async () => {
   let resolveFirst!: (info: BookInfoResponse) => void;
   fetchBookInfoMock.mockImplementation((bookId) =>

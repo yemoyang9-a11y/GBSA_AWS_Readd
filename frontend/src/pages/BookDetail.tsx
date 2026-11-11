@@ -142,7 +142,7 @@ export default function BookDetail() {
   // FR-PRG-003
   useEffect(() => {
     clearPendingJump();
-  }, []);
+  }, [bookId]);
 
   // FR-PRG-003 FR-SPL-005
   useEffect(() => {
