@@ -4,6 +4,7 @@ import type { ChapterSummary } from '../../types';
 import { useSwipePager } from '../gestures/useSwipePager';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuoteAskButton from './QuoteAskButton';
+import { DEFAULT_READER_PREFS, READER_THEMES, type ReaderPrefs } from '../../hooks/useReaderPrefs';
 
 const TAP_MAX_MS = 300;
 const TAP_MAX_MOVE = 10;
@@ -20,6 +21,7 @@ export default function MobileReaderView({
   chapterStart,
   swipeDisabled,
   onQuote,
+  prefs = DEFAULT_READER_PREFS,
 }: {
   content: string;
   currentPage: number;
@@ -31,7 +33,10 @@ export default function MobileReaderView({
   chapterStart: ChapterSummary | null;
   swipeDisabled: boolean;
   onQuote: (text: string) => void;
+  prefs?: ReaderPrefs;
 }) {
+  const theme = READER_THEMES[prefs.theme];
+  const darkInk = prefs.theme === 'dark' ? { color: theme.color } : undefined;
   const [inputValue, setInputValue] = useState(String(currentPage));
 
   if (String(currentPage) !== inputValue && document.activeElement?.tagName !== 'INPUT') {
@@ -110,7 +115,7 @@ export default function MobileReaderView({
   }
 
   return (
-    <main className="flex h-full min-h-0 flex-col bg-brief-page">
+    <main className="flex h-full min-h-0 flex-col bg-brief-page" style={{ background: theme.background }}>
       {popover ? (
         <QuoteAskButton
           popover={popover}
@@ -132,14 +137,15 @@ export default function MobileReaderView({
         <article
           ref={setArticleRef}
           role="article"
-          className="mx-auto w-full whitespace-pre-wrap px-6 pb-10 pt-8 font-dashSerif text-[18px] leading-[2] text-brief-ink"
+          className="mx-auto w-full whitespace-pre-wrap px-6 pb-10 pt-8 font-dashSerif text-brief-ink"
+          style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, background: theme.background, color: theme.color }}
         >
           {chapterStart ? (
             <header className="mb-8 whitespace-normal">
-              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]">
+              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]" style={darkInk}>
                 제 {chapterStart.chapter_no}장
               </p>
-              <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink">{chapterStart.title}</h2>
+              <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink" style={darkInk}>{chapterStart.title}</h2>
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote)}
@@ -149,7 +155,7 @@ export default function MobileReaderView({
       <nav
         ref={navRef}
         className="flex shrink-0 items-center justify-between border-t border-brief-rule px-3 pt-1 font-dashSans text-[14px] text-brief-muted"
-        style={{ paddingBottom: 'max(4px, var(--safe-bottom))' }}
+        style={{ paddingBottom: 'max(4px, var(--safe-bottom))', ...darkInk }}
       >
         <button
           type="button"
@@ -160,7 +166,7 @@ export default function MobileReaderView({
           이전 페이지
         </button>
 
-        <div className="flex items-baseline gap-1.5 font-dashMono font-medium text-brief-ink">
+        <div className="flex items-baseline gap-1.5 font-dashMono font-medium text-brief-ink" style={darkInk}>
           <input
             type="text"
             inputMode="numeric"
@@ -174,7 +180,7 @@ export default function MobileReaderView({
             onBlur={commit}
             className="min-h-11 min-w-11 w-[4ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center text-[16px] text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
           />
-          <span className="text-[14px] text-brief-muted">/ {totalPages}</span>
+          <span className="text-[14px] text-brief-muted" style={darkInk}>/ {totalPages}</span>
         </div>
 
         <button

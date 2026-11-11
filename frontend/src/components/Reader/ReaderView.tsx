@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useQuoteSelection } from '../../hooks/useQuoteSelection';
 import QuotePopover from '../common/QuotePopover';
+import { DEFAULT_READER_PREFS, READER_THEMES, type ReaderPrefs } from '../../hooks/useReaderPrefs';
 
 /**
  * 인용된 문장을 본문 안에서 하이라이트한다(2026-08-25, 사용자 요청 — "선택한 문장이
@@ -76,6 +77,7 @@ export default function ReaderView({
   onQuote,
   highlightedQuote,
   chapterStart,
+  prefs = DEFAULT_READER_PREFS,
 }: {
   content: string;
   currentPage: number;
@@ -89,6 +91,7 @@ export default function ReaderView({
   highlightedQuote?: string | null;
   /** 이 페이지에서 새로 시작하는 장(있으면). Reader.tsx가 chapters에서 미리 찾아 넘긴다. */
   chapterStart?: { chapter_no: number; title: string } | null;
+  prefs?: ReaderPrefs;
 }) {
   const [inputValue, setInputValue] = useState(String(currentPage));
 
@@ -108,9 +111,12 @@ export default function ReaderView({
   }
 
   const { containerRef: articleRef, popover: selectionPopover, clearPopover } = useQuoteSelection<HTMLElement>();
+  // FR-PRG-001
+  const theme = READER_THEMES[prefs.theme];
+  const darkInk = prefs.theme === 'dark' ? { color: theme.color } : undefined;
 
   return (
-    <main className="flex h-full flex-col bg-brief-page">
+    <main className="flex h-full flex-col bg-brief-page" style={{ background: theme.background }}>
       <QuotePopover popover={selectionPopover} onQuote={onQuote} onDone={clearPopover} />
 
       {/*
@@ -124,21 +130,22 @@ export default function ReaderView({
         <article
           ref={articleRef}
           role="article"
-          className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-[18px] leading-[2] text-brief-ink"
+          className="mx-auto w-full max-w-[560px] whitespace-pre-wrap px-8 pb-10 pt-[60px] font-dashSerif text-brief-ink"
+          style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, background: theme.background, color: theme.color }}
         >
           {chapterStart ? (
             <header className="mb-10 whitespace-normal">
-              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]">
+              <p className="mb-1.5 font-dashSans text-[12px] font-semibold uppercase tracking-[0.12em] text-[#5c6b47]" style={darkInk}>
                 제 {chapterStart.chapter_no}장
               </p>
-              <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink">{chapterStart.title}</h2>
+              <h2 className="font-dashSerif text-[19px] font-bold text-brief-ink" style={darkInk}>{chapterStart.title}</h2>
             </header>
           ) : null}
           {highlightContent(content, highlightedQuote ?? null)}
         </article>
       </div>
 
-      <nav className="flex items-center justify-between border-t border-brief-rule px-8 py-3.5 font-dashSans text-[13px] text-brief-muted">
+      <nav className="flex items-center justify-between border-t border-brief-rule px-8 py-3.5 font-dashSans text-[13px] text-brief-muted" style={darkInk}>
         <button
           type="button"
           disabled={prevPage === null}
@@ -148,7 +155,7 @@ export default function ReaderView({
           이전 페이지
         </button>
 
-        <div className="flex items-baseline gap-1.5 font-dashMono text-[13px] font-medium text-brief-ink">
+        <div className="flex items-baseline gap-1.5 font-dashMono text-[13px] font-medium text-brief-ink" style={darkInk}>
           <input
             type="text"
             inputMode="numeric"
@@ -162,7 +169,7 @@ export default function ReaderView({
             onBlur={commit}
             className="w-[3ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center font-inherit text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
           />
-          <span className="text-brief-muted">/ {totalPages}</span>
+          <span className="text-brief-muted" style={darkInk}>/ {totalPages}</span>
         </div>
 
         <button
