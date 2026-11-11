@@ -167,7 +167,7 @@ export default function ReaderView({
               if (e.key === 'Enter') e.currentTarget.blur();
             }}
             onBlur={commit}
-            className="w-[3ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center font-inherit text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
+            className="w-[3ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center font-inherit text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft focus:text-brief-ink"
           />
           <span className="text-brief-muted" style={darkInk}>/ {totalPages}</span>
         </div>

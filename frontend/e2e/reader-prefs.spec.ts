@@ -66,6 +66,28 @@ test('NFR-USE: 세 배경 모두에서 본문 글자와 배경의 대비가 4.5:
   }
 });
 
+test('NFR-USE: 세 배경 모두에서 쪽 번호 입력란에 초점을 주어도 글자와 배경의 대비가 4.5:1 이상이다', async ({ page }) => {
+  await openReader(page);
+  for (const name of ['기본', '세피아', '어두운']) {
+    await openPrefs(page);
+    await page.getByRole('radio', { name }).click();
+    await expect(page.getByRole('radio', { name })).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: '보기 설정' })).toHaveCount(0);
+
+    const pageNo = page.getByRole('textbox', { name: '페이지로 이동' });
+    await pageNo.focus();
+    await expect(pageNo).toBeFocused();
+    const { color, background } = await pageNo.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { color: style.color, background: style.backgroundColor };
+    });
+    expect(background, `${name} 초점 배경은 불투명한 색이다`).not.toBe('rgba(0, 0, 0, 0)');
+    expect(contrast(color, background), `${name} 초점 쪽 번호`).toBeGreaterThanOrEqual(4.5);
+    await pageNo.blur();
+  }
+});
+
 test('배경색은 본문 영역에만 들고 윗줄에는 번지지 않는다', async ({ page }) => {
   await openReader(page);
   const topbar = page.getByRole('button', { name: '뒤로 가기' }).locator('..');

@@ -178,7 +178,7 @@ export default function MobileReaderView({
               if (e.key === 'Enter') e.currentTarget.blur();
             }}
             onBlur={commit}
-            className="min-h-11 min-w-11 w-[4ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center text-[16px] text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft"
+            className="min-h-11 min-w-11 w-[4ch] border-0 border-b border-dashed border-brief-rule bg-transparent text-center text-[16px] text-inherit outline-none focus:border-b-[1.5px] focus:border-solid focus:border-brief-accent focus:bg-brief-accent-soft focus:text-brief-ink"
           />
           <span className="text-[14px] text-brief-muted" style={darkInk}>/ {totalPages}</span>
         </div>
