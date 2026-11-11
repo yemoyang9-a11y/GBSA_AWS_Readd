@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { useReadingSession } from './useReadingSession';
 import { clearPendingJump, setPendingJump } from '../utils/pendingJump';
 import type { BookInfoResponse } from '../types';
+import { fakePage } from '../../mocks/pages';
 
 const { fetchBookInfoMock, fetchPageMock, enterBookMock, sendProgressMock } = vi.hoisted(() => ({
   fetchBookInfoMock: vi.fn(),
@@ -53,14 +54,11 @@ describe('useReadingSession — 목차에서 고른 장으로 옮기기', () => 
     localStorage.clear();
     sessionStorage.clear();
     fetchBookInfoMock.mockReset().mockResolvedValue(INFO);
-    fetchPageMock.mockReset().mockImplementation((_bookId: string, pageNo: number) =>
-      Promise.resolve({
-        page_no: pageNo,
-        content: `${pageNo}쪽 본문`,
-        prev_page: pageNo > 1 ? pageNo - 1 : null,
-        next_page: pageNo < 100 ? pageNo + 1 : null,
-      })
-    );
+    fetchPageMock
+      .mockReset()
+      .mockImplementation((_bookId: string, pageNo: number) =>
+        Promise.resolve(fakePage(pageNo, 100, `${pageNo}쪽 본문`))
+      );
     enterBookMock
       .mockReset()
       .mockResolvedValue({ route: 'reader', page: SERVER_PAGE, is_new_session: false, session_epoch: 1 });
