@@ -2,6 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, type NavigateOptions, type To } from 'react-router-dom';
 import { useBriefingSession } from './useBriefingSession';
+import { clearPendingJump, takePendingJump } from '../utils/pendingJump';
+
+const sendProgressMock = vi.hoisted(() => vi.fn());
 
 const navigateCalls: { to: To | number; options?: NavigateOptions }[] = [];
 
@@ -24,7 +27,7 @@ vi.mock('../services/recapService', () => ({
   streamRecap: async function* () {},
 }));
 vi.mock('../services/ssabiService', () => ({ fetchGraph: () => new Promise(() => {}) }));
-vi.mock('../services/progressService', () => ({ sendProgress: vi.fn() }));
+vi.mock('../services/progressService', () => ({ sendProgress: sendProgressMock }));
 vi.mock('../services/bookService', () => ({ fetchBookInfo: () => new Promise(() => {}) }));
 
 function Probe() {
@@ -34,6 +37,12 @@ function Probe() {
     <div>
       <button type="button" onClick={session.goBack}>
         돌아가기
+      </button>
+      <button type="button" onClick={() => session.selectChapter(21)}>
+        장 고르기
+      </button>
+      <button type="button" onClick={session.continueReading}>
+        이어서 읽기
       </button>
       <p data-testid="location">{location.pathname}</p>
     </div>
@@ -58,6 +67,8 @@ function setScreen(width: number, height: number) {
 
 beforeEach(() => {
   navigateCalls.length = 0;
+  sendProgressMock.mockReset();
+  clearPendingJump();
 });
 
 afterEach(() => {
@@ -100,4 +111,26 @@ test('모바일 화면의 돌아가기는 화면 전환 효과 없이 간다', a
   expect(navigateCalls).toHaveLength(1);
   expect(navigateCalls[0].to).toBe('/books/takryu');
   expect(navigateCalls[0].options?.viewTransition).toBeFalsy();
+});
+
+// FR-PRG-003
+test('FR-PRG-003: 목차에서 장을 고르면 진도 요청 0건이고 그 장의 start_page가 이동 예약에 담긴다', async () => {
+  renderProbe();
+
+  await userEvent.click(screen.getByRole('button', { name: '장 고르기' }));
+
+  expect(sendProgressMock).toHaveBeenCalledTimes(0);
+  expect(takePendingJump('takryu')).toBe(21);
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+});
+
+// FR-PRG-003
+test('FR-PRG-003: 이어서 읽기는 진도 요청도 이동 예약도 만들지 않는다', async () => {
+  renderProbe();
+
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+
+  expect(sendProgressMock).toHaveBeenCalledTimes(0);
+  expect(takePendingJump('takryu')).toBeNull();
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
 });

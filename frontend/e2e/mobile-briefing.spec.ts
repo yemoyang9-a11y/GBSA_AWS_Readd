@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { BOOK_ID } from './support/fixtures';
 import { installMockApi, type MockApiOptions } from './support/mockApi';
+import { swipe } from './support/gestures';
 import { noHorizontalScroll, overflowingTexts, smallTapTargets } from './support/layoutChecks';
 
 const BRIEFING_URL = `/books/${BOOK_ID}/briefing`;
@@ -94,16 +95,32 @@ test.describe('모바일 브리핑', () => {
     expect(height).toBeLessThan(lineHeight * 1.5);
   });
 
-  test('FR-SPL-005: 이어서 읽기는 진도 요청 없이 읽기 화면으로 간다', async ({ page }) => {
+  test('FR-SPL-005: 이어서 읽기는 브리핑에서 진도 요청을 보내지 않고 읽기 화면으로 간다', async ({ page }) => {
     const log = await open(page);
     const button = page.getByRole('button', { name: '이어서 읽기' });
     const box = (await button.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(48);
     expect(box.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 2 * 20 - 1);
+    expect(log.progress).toEqual([]);
     await button.tap();
     await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}/read$`));
     await expect(page.getByRole('article')).toContainText('15쪽.');
+    await expect.poll(() => log.progress.length).toBe(1);
+    await page.waitForTimeout(500);
+    expect(log.progress).toEqual([15]);
     expect(log.events[0]).toBe('entry');
+  });
+
+  test('FR-PRG-003: 이어서 읽기 뒤 읽기 화면에서 쪽을 넘기면 그때 진도 요청이 생긴다', async ({ page }) => {
+    const log = await open(page);
+    await page.getByRole('button', { name: '이어서 읽기' }).tap();
+    await expect(page.getByRole('article')).toContainText('15쪽.');
+    await expect.poll(() => log.progress.length).toBe(1);
+    const width = page.viewportSize()!.width;
+    const y = page.viewportSize()!.height / 2;
+    await swipe(page, { fromX: width * 0.8, toX: width * 0.3, y, durationMs: 400 });
+    await expect(page.getByRole('article')).toContainText('16쪽.');
+    expect(log.progress).toEqual([15, 16]);
   });
 
   const SAFE_BOTTOM = 34;
@@ -168,16 +185,16 @@ test.describe('모바일 브리핑', () => {
     expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(barBox.y + 0.5);
   });
 
-  test('FR-BRF-001: 목차에서 장을 고르면 진도 응답 뒤에 읽기 화면으로 간다', async ({ page }) => {
+  test('FR-PRG-003: 목차에서 장을 고르면 브리핑은 진도 요청 없이 곧바로 읽기 화면으로 간다', async ({ page }) => {
     const log = await open(page, { progressDelayMs: 1200 });
     await page.getByRole('button', { name: /목차/ }).tap();
     await page.getByRole('button', { name: /신판 흥보전/ }).tap();
-    await expect.poll(() => log.progress[0]).toBe(21);
-    await page.waitForTimeout(500);
-    expect(page.url()).toContain('/briefing');
-    await expect(page.getByRole('article')).toContainText('21쪽.');
-    expect(log.events.indexOf('progress-done:21')).toBeGreaterThanOrEqual(0);
-    expect(log.events.indexOf('progress-done:21')).toBeLessThan(log.events.indexOf('entry'));
+    await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}/read$`), { timeout: 800 });
+    await expect(page.getByRole('article')).toBeVisible();
+    await expect.poll(() => log.events.includes('entry')).toBe(true);
+    await expect.poll(() => log.progress.length).toBeGreaterThan(0);
+    const firstProgress = log.events.findIndex((event) => event.startsWith('progress:'));
+    expect(firstProgress).toBeGreaterThan(log.events.indexOf('entry'));
   });
 
   test('NFR-AI-017: 저장 리캡이 없으면 리캡 스트리밍을 정확히 1회 요청한다', async ({ page }) => {
