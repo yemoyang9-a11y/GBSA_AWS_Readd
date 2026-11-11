@@ -10,7 +10,6 @@ import App from './App';
  * 내가 만든 대역을 상대로 검증하면 mock 이 내 기대와 같은지만 확인하게 된다.
  */
 
-/** 브리핑 → 읽기 화면까지 이동한다. 싸비 패널은 닫힌 상태로 시작한다 */
 async function goToReader() {
   window.history.pushState({}, '', '/books/takryu/briefing');
   render(<App />);

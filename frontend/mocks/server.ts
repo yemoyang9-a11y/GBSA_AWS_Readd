@@ -18,9 +18,9 @@ import {
   mockCharacterNotes,
   mockCharacters,
   mockPageContent,
-  mockPositions,
   mockRelationships,
 } from './fixtures';
+import { AxiosError, type AxiosResponse } from 'axios';
 import type { AuthMe } from '../src/services/authService';
 import type { PositionResponse } from '../src/services/positionService';
 import type {
@@ -77,38 +77,19 @@ function snapshot(page = currentPage) {
   };
 }
 
-export function mockEntry(): EntryResponse {
-  sessionEpoch += 1;
-  return {
-    route: 'briefing',
-    page: currentPage,
-    is_new_session: true,
-    session_epoch: sessionEpoch,
-  };
+// FR-PRG-003
+const otherPages: Record<string, number | undefined> = Object.fromEntries(
+  mockCatalog
+    .filter((book) => book.book_id !== MOCK_BOOK_ID && book.progress)
+    .map((book) => [book.book_id, book.progress!.current_page])
+);
+
+function pageOf(bookId: string): number | undefined {
+  return bookId === MOCK_BOOK_ID ? currentPage : otherPages[bookId];
 }
 
-export function mockRecordProgress(page: number): number {
-  currentPage = page;
-  return snapshot().cutoff;
-}
-
-export function mockCatalogResponse(): CatalogResponse {
-  const snap = snapshot();
-  return {
-    books: mockCatalog.map((book) =>
-      book.book_id === MOCK_BOOK_ID
-        ? {
-            ...book,
-            progress: {
-              current_page: snap.current_page,
-              percent: snap.percent,
-              is_complete: snap.is_complete,
-              last_read_at: book.progress?.last_read_at ?? '2026-11-09T00:00:00.000Z',
-            },
-          }
-        : book
-    ),
-  };
+function chaptersOf(bookId: string) {
+  return bookId === MOCK_BOOK_ID ? mockChapters : (mockBookInfos[bookId]?.chapters ?? []);
 }
 
 export type MockResult<T> = { status: 200; body: T } | { status: 401 | 403 | 404 };
@@ -117,6 +98,48 @@ function readyBookStatus(bookId: string): 200 | 403 | 404 {
   const book = mockCatalog.find((b) => b.book_id === bookId);
   if (!book) return 404;
   return book.ssabi_ready ? 200 : 403;
+}
+
+// FR-BRF-001 FR-BRW-002
+export function mockEntry(bookId: string = MOCK_BOOK_ID): EntryResponse {
+  if (readyBookStatus(bookId) !== 200) {
+    throw new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, null, { status: 403 } as AxiosResponse);
+  }
+  sessionEpoch += 1;
+  return {
+    route: 'briefing',
+    page: pageOf(bookId) ?? 1,
+    is_new_session: true,
+    session_epoch: sessionEpoch,
+  };
+}
+
+// FR-PRG-003
+export function mockRecordProgress(bookId: string, page: number): number {
+  if (bookId === MOCK_BOOK_ID) currentPage = page;
+  else otherPages[bookId] = page;
+  return deriveCutoff(page);
+}
+
+// FR-BRF-005
+export function mockCatalogResponse(): CatalogResponse {
+  return {
+    books: mockCatalog.map((book) => {
+      const page = pageOf(book.book_id);
+      if (page === undefined) return book;
+      const chapters = chaptersOf(book.book_id);
+      const totalPages = chapters[chapters.length - 1].end_page;
+      return {
+        ...book,
+        progress: {
+          current_page: page,
+          percent: derivePercent(page, totalPages),
+          is_complete: page >= totalPages,
+          last_read_at: book.progress?.last_read_at ?? '2026-11-10T00:00:00.000Z',
+        },
+      };
+    }),
+  };
 }
 
 // FR-ADM-005
@@ -128,23 +151,27 @@ export function mockInfoResponse(bookId: string): MockResult<BookInfoResponse> {
 }
 
 // FR-SPL-002 🚦
-function positionOfMockBook(): PositionResponse {
-  const { cutoff, chapter, is_complete } = snapshot();
-  return {
-    applied_cutoff: cutoff,
-    current_chapter_no: chapter?.chapter_no ?? null,
-    read_chapter_nos: mockChapters.filter((c) => c.end_page <= cutoff).map((c) => c.chapter_no),
-    is_complete,
-  };
-}
-
-// FR-SPL-002 🚦
 export function mockPositionResponse(bookId: string): MockResult<PositionResponse> {
   const status = readyBookStatus(bookId);
   if (status !== 200) return { status };
-  if (bookId === MOCK_BOOK_ID) return { status: 200, body: positionOfMockBook() };
-  const position = mockPositions[bookId];
-  return position ? { status: 200, body: position } : { status: 404 };
+  const page = pageOf(bookId);
+  if (page === undefined) {
+    return {
+      status: 200,
+      body: { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false },
+    };
+  }
+  const chapters = chaptersOf(bookId);
+  const cutoff = deriveCutoff(page);
+  return {
+    status: 200,
+    body: {
+      applied_cutoff: cutoff,
+      current_chapter_no: chapters.find((c) => page >= c.start_page && page <= c.end_page)?.chapter_no ?? null,
+      read_chapter_nos: chapters.filter((c) => c.end_page <= cutoff).map((c) => c.chapter_no),
+      is_complete: page >= chapters[chapters.length - 1].end_page,
+    },
+  };
 }
 
 let mockMember = false;

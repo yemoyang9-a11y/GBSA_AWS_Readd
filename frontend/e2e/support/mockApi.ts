@@ -204,7 +204,13 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       log.entries += 1;
       log.events.push('entry');
       if (opts.failEntry) return json(route, { error: 'E2E_FAIL' }, 500);
-      return json(route, { route: opts.entryRoute ?? 'reader', page: cutoff, is_new_session: false, session_epoch: 1 });
+      if (bookStatus(bookId) !== 200) return json(route, { error: 'BOOK_NOT_READY' }, 403);
+      return json(route, {
+        route: opts.entryRoute ?? 'reader',
+        page: pageOf(bookId) ?? 1,
+        is_new_session: false,
+        session_epoch: 1,
+      });
     }
     if (method === 'GET' && rest === '/info') {
       if (opts.failInfo) return json(route, { error: 'E2E_FAIL' }, 500);

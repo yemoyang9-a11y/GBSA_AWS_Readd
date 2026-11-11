@@ -13,7 +13,6 @@
  */
 
 import type { BookInfoResponse, BookSummary, ChapterSummary } from '../src/types';
-import type { PositionResponse } from '../src/services/positionService';
 
 export const MOCK_BOOK_ID = 'takryu';
 
@@ -182,10 +181,4 @@ export const mockBookInfos: Record<string, BookInfoResponse> = {
     background: '다 읽은 책의 배경 지식입니다. (mock)',
     chapters: mockTwoChapters,
   },
-};
-
-// FR-SPL-002 🚦
-export const mockPositions: Record<string, PositionResponse> = {
-  'unread-book': { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false },
-  'done-book': { applied_cutoff: 20, current_chapter_no: 2, read_chapter_nos: [1, 2], is_complete: true },
 };

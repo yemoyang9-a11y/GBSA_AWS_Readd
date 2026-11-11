@@ -90,3 +90,31 @@ test('FR-SPL-002: 다른 책의 진도를 옮기면 그 책의 위치 응답만 
     is_complete: false,
   });
 });
+
+test('FR-BRF-001: /entry는 그 책의 현재 쪽을 주고 위치 응답과 같은 쪽이다', async ({ page }) => {
+  await call(page, 'POST', '/books/done-book/progress', { page: 12 });
+
+  const done = await call(page, 'POST', '/books/done-book/entry', {});
+  expect(done.json.page).toBe(12);
+  expect((await call(page, 'GET', '/books/done-book/position')).json.applied_cutoff).toBe(12);
+
+  const takryu = await call(page, 'POST', `/books/${BOOK_ID}/entry`, {});
+  expect(takryu.json.page).toBe(15);
+  expect((await call(page, 'GET', `/books/${BOOK_ID}/position`)).json.applied_cutoff).toBe(15);
+});
+
+test('FR-BRF-001: 진도가 없는 책의 첫 진입은 1쪽이고, 진입만으로는 위치가 생기지 않는다', async ({ page }) => {
+  const entry = await call(page, 'POST', '/books/unread-book/entry', {});
+  expect(entry.status).toBe(200);
+  expect(entry.json.page).toBe(1);
+
+  expect((await call(page, 'GET', '/books/unread-book/position')).json.applied_cutoff).toBe(0);
+  const catalog = await call(page, 'GET', '/books');
+  const unread = catalog.json.books.find((b: { book_id: string }) => b.book_id === 'unread-book');
+  expect(unread.progress).toBeUndefined();
+});
+
+test('FR-BRW-002: 준비되지 않은 책과 없는 책의 /entry는 403이다', async ({ page }) => {
+  expect((await call(page, 'POST', '/books/not-ready-book/entry', {})).status).toBe(403);
+  expect((await call(page, 'POST', '/books/no-such-book/entry', {})).status).toBe(403);
+});

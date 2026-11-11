@@ -20,7 +20,7 @@ export async function enterBook(bookId: string): Promise<EntryResponse> {
   const response = await (async () => {
     if (USE_MOCK) {
       const { mockEntry } = await import('../../mocks/server');
-      return mockEntry();
+      return mockEntry(bookId);
     }
     const { data } = await api.post<EntryResponse>(`/books/${bookId}/entry`, {});
     return data;
@@ -44,7 +44,7 @@ export function sendProgress(bookId: string, page: number): Promise<number | nul
 
   if (USE_MOCK) {
     return import('../../mocks/server').then(({ mockRecordProgress }) => {
-      return mockRecordProgress(page);
+      return mockRecordProgress(bookId, page);
     });
   }
   return api
