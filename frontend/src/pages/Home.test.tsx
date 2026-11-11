@@ -136,6 +136,27 @@ test('FR-BRF-001: 이어 읽기 버튼은 진입 요청을 한 번 보내고 서
   expect(enterBookMock).toHaveBeenCalledWith('takryu');
 });
 
+test('FR-BRW-001: 이어 읽기 줄의 표지와 제목을 누르면 작품 페이지로 가고 진입 요청은 보내지 않는다', async () => {
+  renderHome();
+
+  const strip = await screen.findByRole('region', { name: '이어 읽기' });
+  const link = within(strip).getByRole('link', { name: '탁류' });
+  expect(link).toHaveAttribute('href', '/books/takryu');
+  expect(within(link).getAllByText('탁류').length).toBeGreaterThan(0);
+  await userEvent.click(link);
+
+  expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu');
+  expect(enterBookMock).not.toHaveBeenCalled();
+});
+
+test('이어 읽기 버튼은 임의 색 값 없이 색 토큰만 쓴다', async () => {
+  renderHome();
+
+  const strip = await screen.findByRole('region', { name: '이어 읽기' });
+  const button = within(strip).getByRole('button', { name: '이어서 읽기' });
+  expect(button.className).not.toMatch(/rgba?\(|\[#/);
+});
+
 test('FR-BRF-001: 서버가 reader라 하면 읽기 주소로 간다', async () => {
   enterBookMock.mockResolvedValue({ route: 'reader', page: 21, is_new_session: false, session_epoch: 3 });
   renderHome();
