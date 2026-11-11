@@ -388,6 +388,28 @@ test('FR-PRG-003: 진입이 실패하면 이동 예약이 지워진다', async (
   expect(takePendingJump('takryu')).toBeNull();
 });
 
+test('FR-PRG-003: 장을 누른 뒤 진입 응답 전에 뒤로 가면 이동 예약이 지워지고 늦은 응답으로도 이동하지 않는다', async () => {
+  let resolveEntry!: (value: EntryResponse) => void;
+  enterBookMock.mockReturnValue(
+    new Promise((resolve) => {
+      resolveEntry = resolve;
+    })
+  );
+  renderAt('takryu', ['/', '/books/takryu']);
+  await waitForChapters('인간기념물');
+
+  await userEvent.click(chapterRow('생애는 방안지라'));
+  await userEvent.click(screen.getByRole('button', { name: '뒤로 가기' }));
+  expect(screen.getByTestId('probe')).toHaveTextContent('홈 /');
+
+  await act(async () => {
+    resolveEntry(entry('briefing'));
+  });
+
+  expect(screen.getByTestId('probe')).toHaveTextContent('홈 /');
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
 test('FR-PRG-003: 이 화면은 어느 경우에도 진도 요청을 보내지 않는다', async () => {
   enterBookMock.mockRejectedValue(new Error('network'));
   renderAt('takryu');
