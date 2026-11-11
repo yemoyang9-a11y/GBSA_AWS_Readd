@@ -220,7 +220,7 @@ export default function BookDetail() {
             <button
               type="button"
               onClick={startReading}
-              disabled={!book.ssabi_ready || busy || status === 'not-ready'}
+              disabled={!book.ssabi_ready || busy || status === 'loading' || status === 'not-ready'}
               className="flex min-h-11 w-full items-center justify-center rounded-full border border-dash-ink bg-white px-4 text-sm font-bold text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40 disabled:hover:bg-white mobile:min-h-12 mobile:text-[15px]"
             >
               {resumeLabel(book, busy)}

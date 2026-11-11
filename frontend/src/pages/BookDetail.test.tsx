@@ -402,7 +402,7 @@ test('FR-PRG-003: 화면이 뜰 때 남아 있던 이동 예약을 지운다', a
 
 test('읽기 버튼으로 들어가면 남아 있던 이동 예약이 지워진다', async () => {
   renderAt('takryu');
-  await screen.findByRole('heading', { level: 1, name: '탁류' });
+  await waitForChapters('인간기념물');
   setPendingJump('takryu', 31);
 
   await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
@@ -455,7 +455,7 @@ test('탭은 좌우 화살표 키로 옮겨진다', async () => {
 test('FR-BRF-001: 읽기 버튼은 진입 요청을 한 번 보내고 서버가 정한 주소로 간다', async () => {
   enterBookMock.mockResolvedValue(entry('reader'));
   renderAt('takryu');
-  await screen.findByRole('heading', { level: 1, name: '탁류' });
+  await waitForChapters('인간기념물');
 
   await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
@@ -473,6 +473,49 @@ test('FR-ADM-005: 준비되지 않은 책은 준비 중 안내를 보여 주고 
   expect(screen.queryAllByRole('button').filter((b) => /\d+p/.test(b.textContent ?? '') && !b.hasAttribute('disabled'))).toEqual([]);
   await userEvent.click(screen.getByRole('button', { name: '아직 준비 중입니다' }));
   expect(enterBookMock).not.toHaveBeenCalled();
+});
+
+test('FR-ADM-005: 책 정보를 확인하는 동안에는 읽기 버튼을 눌러도 진입 요청이 0건이다', async () => {
+  let rejectInfo!: (error: unknown) => void;
+  fetchBookInfoMock.mockReturnValue(
+    new Promise((_, reject) => {
+      rejectInfo = reject;
+    })
+  );
+  renderAt('takryu');
+  await screen.findByRole('heading', { level: 1, name: '탁류' });
+
+  const button = screen.getByRole('button', { name: '이어서 읽기' });
+  expect(button).toBeDisabled();
+  await userEvent.click(button);
+  expect(enterBookMock).not.toHaveBeenCalled();
+
+  await act(async () => {
+    rejectInfo(httpError(403));
+  });
+  expect(await screen.findByText('아직 준비 중인 작품입니다')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+  expect(enterBookMock).not.toHaveBeenCalled();
+});
+
+test('FR-ADM-005: 책 정보 확인이 끝나 준비된 책이면 읽기 버튼으로 진입 요청을 1건 보낸다', async () => {
+  let resolveInfo!: (info: BookInfoResponse) => void;
+  fetchBookInfoMock.mockReturnValue(
+    new Promise((resolve) => {
+      resolveInfo = resolve;
+    })
+  );
+  renderAt('takryu');
+  await screen.findByRole('heading', { level: 1, name: '탁류' });
+  expect(screen.getByRole('button', { name: '이어서 읽기' })).toBeDisabled();
+
+  await act(async () => {
+    resolveInfo(TAKRYU_INFO);
+  });
+  await waitForChapters('인간기념물');
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+
+  await waitFor(() => expect(enterBookMock).toHaveBeenCalledTimes(1));
 });
 
 test('FR-ADM-005: /info가 403이면 준비 중 안내를 보여 주고 읽기 버튼이 비활성이다', async () => {

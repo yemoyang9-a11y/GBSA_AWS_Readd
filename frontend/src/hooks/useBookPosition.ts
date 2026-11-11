@@ -1,16 +1,30 @@
 import { useEffect, useState } from 'react';
 import { fetchPosition, type PositionResponse } from '../services/positionService';
 
+interface PositionRequest {
+  bookId: string;
+  enabled: boolean;
+  generation: number;
+}
+
 // FR-SPL-002 FR-SPL-005
 export function useBookPosition(bookId: string, enabled: boolean): PositionResponse | null {
-  const [loaded, setLoaded] = useState<{ bookId: string; position: PositionResponse } | null>(null);
+  const [request, setRequest] = useState<PositionRequest>({ bookId, enabled, generation: 0 });
+  const [loaded, setLoaded] = useState<{ generation: number; position: PositionResponse } | null>(null);
+
+  let current = request;
+  if (request.bookId !== bookId || request.enabled !== enabled) {
+    current = { bookId, enabled, generation: request.generation + 1 };
+    setRequest(current);
+  }
+  const { generation } = current;
 
   useEffect(() => {
     if (!enabled) return;
     let active = true;
     fetchPosition(bookId)
       .then((position) => {
-        if (active) setLoaded({ bookId, position });
+        if (active) setLoaded({ generation, position });
       })
       .catch(() => {
         if (active) setLoaded(null);
@@ -18,7 +32,7 @@ export function useBookPosition(bookId: string, enabled: boolean): PositionRespo
     return () => {
       active = false;
     };
-  }, [bookId, enabled]);
+  }, [bookId, enabled, generation]);
 
-  return enabled && loaded?.bookId === bookId ? loaded.position : null;
+  return enabled && loaded?.generation === generation ? loaded.position : null;
 }
