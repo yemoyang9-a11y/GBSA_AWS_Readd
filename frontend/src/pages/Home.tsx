@@ -3,11 +3,14 @@ import ContinueStrip from '../components/Home/ContinueStrip';
 import { useCatalog } from '../hooks/useCatalog';
 import { useEnterBook } from '../hooks/useEnterBook';
 import { genreRows, newestFirst, pickContinueBook } from '../utils/homeRows';
+import { listableBooks } from '../utils/listableBooks';
 
 // FR-BRW-001 FR-BRF-001 FR-SPL-005
 export default function Home() {
-  const { books, status, reload } = useCatalog();
+  const { books: catalogBooks, status, reload } = useCatalog();
   const { enter, busyId, failed } = useEnterBook();
+  // FR-BRW-002 🚦 R12
+  const books = listableBooks(catalogBooks);
 
   const continueBook = pickContinueBook(books);
   const genres = genreRows(books);

@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import BookCover from '../components/common/BookCover';
 import { useCatalog } from '../hooks/useCatalog';
+import { listableBooks } from '../utils/listableBooks';
 import { searchBooks } from '../utils/searchBooks';
 import { bookPath } from '../utils/routes';
 
@@ -22,7 +23,8 @@ export default function Search() {
     setParams(next ? { q: next } : {}, { replace: true });
   }
 
-  const results = searchBooks(books, query);
+  // FR-BRW-002 🚦 R12
+  const results = searchBooks(listableBooks(books), query);
 
   return (
     <div className="mx-auto w-full max-w-page px-7 py-8 mobile:px-4 mobile:py-4">
