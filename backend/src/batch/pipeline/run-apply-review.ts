@@ -24,7 +24,7 @@ export async function applyReviewSheet(
   const sheetPath = reviewSheetPath(args);
   const csv = fs.readFileSync(sheetPath, 'utf-8');
 
-  const rows = parseFilledReviewSheet(csv);
+  const rows = parseFilledReviewSheet(csv, args.bookId);
   const corrections = rows.filter((r) => r.corrected_content !== null).length;
 
   const client = await db.connect();

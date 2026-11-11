@@ -30,6 +30,12 @@ export async function exportReviewSheet(
 ): Promise<{ outPath: string; rows: number; passed: number }> {
   const filePath = path.join(args.fullDir, 'all-resolved.json');
   const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
+  // FR-ADM-005 🚦
+  if (data.book_id !== args.bookId) {
+    throw new Error(
+      `all-resolved.json의 book_id("${data.book_id}")가 --book("${args.bookId}")과 다름 — ${filePath}`
+    );
+  }
 
   const existing = (await db.query(
     `SELECT target_type, target_id, ${ALL_CRITERIA.join(', ')}, relationship_snapshot FROM review_records WHERE book_id = $1`,
@@ -38,7 +44,7 @@ export async function exportReviewSheet(
   const alreadyReviewed = passedReviewKeys(existing.rows, data);
 
   const rows = buildReviewSheetRows(data, alreadyReviewed);
-  const csv = toReviewSheetCsv(rows);
+  const csv = toReviewSheetCsv(rows, args.bookId);
 
   const outPath = reviewSheetPath(args);
   fs.writeFileSync(outPath, csv, 'utf-8');

@@ -5,7 +5,7 @@ import { parseBookArgs, reviewSheetPath, BookArgs } from './run-args';
 import { exportReviewSheet } from './run-export-review';
 import { applyReviewSheet } from './run-apply-review';
 import { ResolvedBookData } from './check-integrity';
-import { REVIEW_SHEET_COLUMNS, APPLICABLE_CRITERIA } from './review';
+import { REVIEW_SHEET_COLUMNS, APPLICABLE_CRITERIA, parseCsv } from './review';
 
 const DATA_DIR = path.join(__dirname, '../../../data');
 
@@ -21,15 +21,25 @@ function resolvedData(bookId: string, termId: string, term: string): ResolvedBoo
   };
 }
 
-function filledSheet(termId: string): string {
+const LEGACY_COLUMNS = (REVIEW_SHEET_COLUMNS as readonly string[]).filter((c) => c !== 'book_id');
+
+function filledSheet(
+  rows: { bookId: string; termId: string }[],
+  columns: readonly string[] = ['book_id', ...LEGACY_COLUMNS]
+): string {
   const applicable = new Set<string>(APPLICABLE_CRITERIA.term);
-  const cells = REVIEW_SHEET_COLUMNS.map((col) => {
-    if (col === 'target_type') return 'term';
-    if (col === 'target_id') return termId;
-    if (col === 'reviewer') return 'tester';
-    return applicable.has(col) ? 'TRUE' : '';
-  });
-  return `${REVIEW_SHEET_COLUMNS.join(',')}\n${cells.join(',')}\n`;
+  const lines = rows.map(({ bookId, termId }) =>
+    columns
+      .map((col) => {
+        if (col === 'book_id') return bookId;
+        if (col === 'target_type') return 'term';
+        if (col === 'target_id') return termId;
+        if (col === 'reviewer') return 'tester';
+        return applicable.has(col) ? 'TRUE' : '';
+      })
+      .join(',')
+  );
+  return [columns.join(','), ...lines].join('\n') + '\n';
 }
 
 function tempBookArgs(root: string, bookId: string): BookArgs {
@@ -121,8 +131,14 @@ describe('FR-ADM-005 🚦: 검수 판정 적용은 지정한 책만 다룬다', 
   test('FR-ADM-005: 적용은 그 책의 시트를 읽고 review_records에 그 책 book_id로만 기록한다', async () => {
     const hwabun = tempBookArgs(root, 'hwabun');
     const takryu = tempBookArgs(root, 'takryu');
-    fs.writeFileSync(reviewSheetPath(hwabun), filledSheet('term-hw'));
-    fs.writeFileSync(reviewSheetPath(takryu), filledSheet('term-tk'));
+    fs.writeFileSync(
+      reviewSheetPath(hwabun),
+      filledSheet([{ bookId: 'hwabun', termId: 'term-hw' }])
+    );
+    fs.writeFileSync(
+      reviewSheetPath(takryu),
+      filledSheet([{ bookId: 'takryu', termId: 'term-tk' }])
+    );
 
     const hw = recordingClient();
     const hwResult = await applyReviewSheet(hw.pool, hwabun);
@@ -142,7 +158,10 @@ describe('FR-ADM-005 🚦: 검수 판정 적용은 지정한 책만 다룬다', 
   test('FR-ADM-005: 그 책의 시트가 없으면 다른 책 시트로 대신하지 않고 DB 연결 전에 실패한다', async () => {
     const hwabun = tempBookArgs(root, 'hwabun');
     const takryu = tempBookArgs(root, 'takryu');
-    fs.writeFileSync(reviewSheetPath(takryu), filledSheet('term-tk'));
+    fs.writeFileSync(
+      reviewSheetPath(takryu),
+      filledSheet([{ bookId: 'takryu', termId: 'term-tk' }])
+    );
 
     const hw = recordingClient();
     await expect(applyReviewSheet(hw.pool, hwabun)).rejects.toThrow(/ENOENT/);
@@ -152,5 +171,82 @@ describe('FR-ADM-005 🚦: 검수 판정 적용은 지정한 책만 다룬다', 
     const tk = recordingClient();
     await expect(applyReviewSheet(tk.pool, takryu)).resolves.toMatchObject({ rows: 1 });
     expect(tk.connectCount()).toBe(1);
+  });
+});
+
+describe('FR-ADM-005 🚦: 다른 책 산출물·시트는 거부한다', () => {
+  test('FR-ADM-005: 내보내기는 all-resolved.json의 book_id가 --book과 다르면 DB 조회·시트 쓰기 전에 실패한다', async () => {
+    const hwabun = tempBookArgs(root, 'hwabun');
+    const resolvedPath = path.join(hwabun.fullDir, 'all-resolved.json');
+
+    fs.writeFileSync(resolvedPath, JSON.stringify(resolvedData('takryu', 'term-tk', '미두장')));
+    const wrong = recordingClient();
+    await expect(exportReviewSheet(wrong.client, hwabun)).rejects.toThrow(/book_id/);
+    expect(wrong.calls).toEqual([]);
+    expect(fs.existsSync(reviewSheetPath(hwabun))).toBe(false);
+
+    fs.writeFileSync(resolvedPath, JSON.stringify(resolvedData('hwabun', 'term-hw', '화분용어')));
+    const right = recordingClient();
+    await expect(exportReviewSheet(right.client, hwabun)).resolves.toMatchObject({ rows: 3 });
+    expect(right.calls.map((c) => c.params)).toEqual([['hwabun']]);
+    expect(fs.existsSync(reviewSheetPath(hwabun))).toBe(true);
+  });
+
+  test('FR-ADM-005: 내보낸 시트의 모든 행 book_id 열에 그 책 식별자가 들어간다', async () => {
+    const hwabun = tempBookArgs(root, 'hwabun');
+    fs.writeFileSync(
+      path.join(hwabun.fullDir, 'all-resolved.json'),
+      JSON.stringify(resolvedData('hwabun', 'term-hw', '화분용어'))
+    );
+    const { outPath } = await exportReviewSheet(recordingClient().client, hwabun);
+    const [header, ...rows] = parseCsv(fs.readFileSync(outPath, 'utf-8')).filter(
+      (r) => r.length > 1
+    );
+    const idx = header.indexOf('book_id');
+    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(rows.length).toBe(3);
+    expect(rows.map((r) => r[idx])).toEqual(['hwabun', 'hwabun', 'hwabun']);
+  });
+
+  test('FR-ADM-005: 적용은 시트 행의 book_id가 하나라도 --book과 다르면 DB 연결 전에 전체를 거부한다', async () => {
+    const hwabun = tempBookArgs(root, 'hwabun');
+    const sheetPath = reviewSheetPath(hwabun);
+
+    for (const rows of [
+      [{ bookId: 'takryu', termId: 'term-tk' }],
+      [
+        { bookId: 'hwabun', termId: 'term-hw' },
+        { bookId: 'takryu', termId: 'term-tk' },
+      ],
+      [{ bookId: '', termId: 'term-hw' }],
+    ]) {
+      fs.writeFileSync(sheetPath, filledSheet(rows));
+      const wrong = recordingClient();
+      await expect(applyReviewSheet(wrong.pool, hwabun)).rejects.toThrow(/book_id/);
+      expect(wrong.connectCount()).toBe(0);
+      expect(wrong.calls).toEqual([]);
+    }
+
+    fs.writeFileSync(sheetPath, filledSheet([{ bookId: 'hwabun', termId: 'term-hw' }]));
+    const right = recordingClient();
+    await expect(applyReviewSheet(right.pool, hwabun)).resolves.toMatchObject({ rows: 1 });
+    expect(right.connectCount()).toBe(1);
+  });
+
+  test('FR-ADM-005: book_id 열이 없는 옛 형식 시트는 DB 연결 전에 거부한다', async () => {
+    const hwabun = tempBookArgs(root, 'hwabun');
+    const sheetPath = reviewSheetPath(hwabun);
+
+    fs.writeFileSync(
+      sheetPath,
+      filledSheet([{ bookId: 'hwabun', termId: 'term-hw' }], LEGACY_COLUMNS)
+    );
+    const legacy = recordingClient();
+    await expect(applyReviewSheet(legacy.pool, hwabun)).rejects.toThrow(/헤더/);
+    expect(legacy.connectCount()).toBe(0);
+
+    fs.writeFileSync(sheetPath, filledSheet([{ bookId: 'hwabun', termId: 'term-hw' }]));
+    const current = recordingClient();
+    await expect(applyReviewSheet(current.pool, hwabun)).resolves.toMatchObject({ rows: 1 });
   });
 });
