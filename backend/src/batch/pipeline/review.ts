@@ -195,7 +195,14 @@ export function buildReviewSheetRows(
   return rows;
 }
 
-const FIXED_COLUMNS = ['target_type', 'target_id', 'page_ref', 'content_preview'] as const;
+// FR-ADM-005 🚦
+const FIXED_COLUMNS = [
+  'book_id',
+  'target_type',
+  'target_id',
+  'page_ref',
+  'content_preview',
+] as const;
 const TAIL_COLUMNS = [
   'corrected_content',
   'correction_note',
@@ -212,11 +219,12 @@ function csvEscape(value: string): string {
 }
 
 /** 검수 시트를 CSV로 직렬화한다 — 대상에 적용되지 않는 판정 컬럼은 "N/A"로 미리 채워 오기입을 막는다 */
-export function toReviewSheetCsv(rows: ReviewSheetRow[]): string {
+export function toReviewSheetCsv(rows: ReviewSheetRow[], bookId: string): string {
   const lines = [REVIEW_SHEET_COLUMNS.join(',')];
   for (const row of rows) {
     const applicable = new Set(APPLICABLE_CRITERIA[row.target_type]);
     const fields = [
+      bookId,
       row.target_type,
       row.target_id,
       row.page_ref === null ? '' : String(row.page_ref),
@@ -306,7 +314,7 @@ function parseBooleanCell(value: string, context: string): boolean {
  * 채워진 검수 시트를 읽는다. 대상에 적용되는 판정 항목이 하나라도 비어 있으면 즉시 실패한다
  * (FR-ADM-005 🚦 "6항목 전부에 대해 판정 기록 존재" — 부분 판정으로 반영을 진행하지 않는다).
  */
-export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
+export function parseFilledReviewSheet(csvText: string, bookId: string): FilledReviewRow[] {
   const table = parseCsv(csvText);
   const [header, ...dataRows] = table;
   const expectedColumns =
@@ -318,6 +326,16 @@ export function parseFilledReviewSheet(csvText: string): FilledReviewRow[] {
       '검수 시트 헤더가 예상 컬럼과 다름 — toReviewSheetCsv로 생성된 파일인지 확인할 것'
     );
   }
+
+  // FR-ADM-005 🚦
+  const bookIdIdx = header.indexOf('book_id');
+  dataRows.forEach((cells, i) => {
+    if (cells[bookIdIdx] !== bookId) {
+      throw new Error(
+        `검수 시트 ${i + 2}행의 book_id("${cells[bookIdIdx] ?? ''}")가 대상 도서("${bookId}")와 다름 — 시트 전체를 반영하지 않는다`
+      );
+    }
+  });
 
   return dataRows.map((cells) => {
     const record: Record<string, string> = {};

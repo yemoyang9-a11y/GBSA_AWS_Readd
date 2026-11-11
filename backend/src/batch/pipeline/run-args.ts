@@ -103,3 +103,8 @@ export function bookArgsFromCli(script: string): BookArgs {
   }
   return args;
 }
+
+// FR-ADM-005 🚦
+export function reviewSheetPath(args: BookArgs): string {
+  return path.join(args.fullDir, `review-sheet-${args.bookId}.csv`);
+}

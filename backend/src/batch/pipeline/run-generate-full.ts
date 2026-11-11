@@ -60,13 +60,19 @@ const GENERATE_MAX_TOKENS = 16000;
 // 출력 형식 불이행(JSON 파싱 실패)이면 그 호출만 최대 2회 다시 부른다 — 재시도도 게이트웨이 경유라 [LLM Metrics]로 집계된다
 const JSON_PARSE_RETRIES = 2;
 
+// NFR-AI-012
+const JSON_RETRY_REMINDER =
+  '\n\n직전 응답은 JSON이 아니었다. 설명 문장 없이, 위에서 지정한 형식의 JSON 객체 하나만 출력하라. 첫 글자는 { 여야 한다.';
+
 async function callJson<T>(
   task: string,
   prompt: string,
   chapterLabel: number | string
 ): Promise<T> {
   for (let attempt = 1; ; attempt++) {
-    const raw = await call(task, prompt, { maxTokens: GENERATE_MAX_TOKENS });
+    const raw = await call(task, attempt === 1 ? prompt : prompt + JSON_RETRY_REMINDER, {
+      maxTokens: GENERATE_MAX_TOKENS,
+    });
     try {
       return parseJsonResponse<T>(raw);
     } catch (err) {
