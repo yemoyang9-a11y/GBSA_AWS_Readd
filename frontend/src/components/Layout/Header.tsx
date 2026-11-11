@@ -1,3 +1,7 @@
+import { useState, type FormEvent } from 'react';
+import { createSearchParams, NavLink, useNavigate } from 'react-router-dom';
+import { APP_ROUTES } from '../../utils/routes';
+
 /**
  * nav-bar — 대시보드 재설계 시안 (2026-08-23, `.dash-scr header`)
  *
@@ -32,37 +36,79 @@ export function ReaddMark() {
   );
 }
 
-export default function Header() {
+export default function Header({ nav = true }: { nav?: boolean }) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate({ pathname: APP_ROUTES.search, search: `?${createSearchParams({ q: query })}` });
+  }
+
   return (
     <header className="h-14 border-b border-dash-line">
-      <div className="mx-auto flex h-full w-full max-w-page items-center justify-between px-7">
+      <div className="mx-auto flex h-full w-full max-w-page items-center gap-8 px-7">
         <span className="font-dashMono text-[22px] font-medium tracking-[-1px] text-dash-ink">
           RE<ReaddMark />
           <b className="font-medium">ADD</b>
         </span>
 
-        <button
-          type="button"
-          disabled
-          className="flex items-center gap-2 border-b border-transparent pb-0.5 font-dashSans text-[15px] text-dash-muted transition-colors hover:border-dash-ink hover:text-dash-ink disabled:opacity-40 disabled:hover:border-transparent disabled:hover:text-dash-muted"
-        >
-          <svg
-            aria-hidden="true"
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          도서 검색
-        </button>
+        {nav && (
+          <>
+            <nav aria-label="주 메뉴">
+              <ul className="flex items-center gap-6">
+                <li>
+                  <NavLink to={APP_ROUTES.home} end className={headerLinkClass}>
+                    홈
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={APP_ROUTES.shelf} className={headerLinkClass}>
+                    서재
+                  </NavLink>
+                </li>
+              </ul>
+            </nav>
+
+            <form role="search" onSubmit={submitSearch} className="ml-auto">
+              <label className="flex h-9 w-56 items-center gap-2 rounded-pill border border-dash-line bg-dash-paper px-3 text-dash-muted focus-within:border-dash-ink">
+                <svg
+                  aria-hidden="true"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label="작품, 작가 검색"
+                  placeholder="작품, 작가 검색"
+                  className="w-full bg-transparent font-dashSans text-[14px] text-dash-ink outline-none placeholder:text-dash-muted"
+                />
+              </label>
+            </form>
+
+            <NavLink to={APP_ROUTES.my} className={headerLinkClass}>
+              MY
+            </NavLink>
+          </>
+        )}
       </div>
     </header>
   );
+}
+
+function headerLinkClass({ isActive }: { isActive: boolean }) {
+  return `border-b pb-0.5 font-dashSans text-[15px] transition-colors hover:text-dash-ink ${
+    isActive ? 'border-dash-ink font-bold text-dash-ink' : 'border-transparent text-dash-muted'
+  }`;
 }

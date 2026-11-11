@@ -5,11 +5,13 @@ import type { BookSummary } from '../../types';
 
 const takryu: BookSummary = {
   book_id: 'takryu', title: '탁류', author: '채만식', cover_url: '',
-  intro_summary: null, ssabi_ready: true, progress: { current_page: 72, percent: 25.3 },
+  intro_summary: null, ssabi_ready: true, genre: null, registered_at: '2026-10-01T00:00:00.000Z',
+  progress: { current_page: 72, percent: 25.3, is_complete: false, last_read_at: '2026-11-09T00:00:00.000Z' },
 };
 const demian: BookSummary = {
   book_id: 'demian', title: '데미안', author: '헤르만 헤세', cover_url: '',
-  intro_summary: null, ssabi_ready: true, progress: { current_page: 184, percent: 61.8 },
+  intro_summary: null, ssabi_ready: true, genre: null, registered_at: '2026-10-01T00:00:00.000Z',
+  progress: { current_page: 184, percent: 61.8, is_complete: false, last_read_at: '2026-11-09T00:00:00.000Z' },
 };
 
 describe('ShelfList', () => {

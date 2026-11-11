@@ -1,4 +1,4 @@
-import { routePathFor, BOOK_ROUTES } from './routes';
+import { routePathFor, BOOK_ROUTES, APP_ROUTES, bookPath } from './routes';
 import type { EntryResponse } from '../types';
 
 function entry(overrides: Partial<EntryResponse> = {}): EntryResponse {
@@ -27,5 +27,27 @@ describe('진입 라우팅', () => {
   it('라우트 패턴은 한 곳에서만 정의한다', () => {
     expect(BOOK_ROUTES.briefing).toBe('/books/:bookId/briefing');
     expect(BOOK_ROUTES.reader).toBe('/books/:bookId/read');
+  });
+});
+
+describe('최상위 경로', () => {
+  test('bookPath: 책 id로 작품 페이지 주소를 만든다', () => {
+    expect(bookPath('takryu')).toBe('/books/takryu');
+  });
+
+  test('FR-BRF-001: routePathFor는 서버가 준 route만 따른다', () => {
+    expect(
+      routePathFor('takryu', { route: 'briefing', page: 1, is_new_session: false, session_epoch: 1 })
+    ).toBe('/books/takryu/briefing');
+  });
+
+  test('APP_ROUTES는 홈·검색·서재·MY·작품 주소를 정의한다', () => {
+    expect(APP_ROUTES).toEqual({
+      home: '/',
+      search: '/search',
+      shelf: '/shelf',
+      my: '/my',
+      book: '/books/:bookId',
+    });
   });
 });

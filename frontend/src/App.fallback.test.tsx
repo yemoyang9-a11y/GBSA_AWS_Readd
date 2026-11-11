@@ -20,11 +20,9 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
       timeout: 20000,
     },
     async () => {
+      // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
+      window.history.pushState({}, '', '/books/takryu/briefing');
       render(<App />);
-
-      // 대시보드 재설계(2026-08-23) — 탁류는 기본 히어로라 미리보기 없이 바로 진입한다
-      await screen.findByRole('heading', { level: 2, name: '탁류' }, { timeout: 5000 });
-      await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
 
       // 21페이지 진입 → K = 21, 저장분도 K = 21 이라 일치 → 저장 리캡 표시
       expect(
@@ -39,12 +37,10 @@ describe('브리핑 스트리밍 폴백 (mock 기준)', () => {
       timeout: 30000,
     },
     async () => {
-      render(<App />);
-
       // 먼저 읽기 화면에서 페이지를 넘겨 진도를 움직인다 (저장분 K = 21 과 어긋나게)
-      // 대시보드 재설계(2026-08-23) — 탁류는 기본 히어로라 미리보기 없이 바로 진입한다
-      await screen.findByRole('heading', { level: 2, name: '탁류' }, { timeout: 5000 });
-      await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+      // 화면 구조 개편(2026-11-10) — 옛 서재 화면이 없어져 브리핑 주소에서 시작한다
+      window.history.pushState({}, '', '/books/takryu/briefing');
+      render(<App />);
       await screen.findByRole('button', { name: '이어서 읽기' }, { timeout: 5000 });
       await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
       await screen.findByRole('article', undefined, { timeout: 5000 });

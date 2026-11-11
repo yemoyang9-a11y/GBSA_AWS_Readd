@@ -1,6 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import App from './App';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import Briefing from './pages/Briefing';
+import Reader from './pages/Reader';
+import { useCatalog } from './hooks/useCatalog';
+import { useEnterBook } from './hooks/useEnterBook';
+import { resumeLabel } from './utils/resumeLabel';
+import { BOOK_ROUTES } from './utils/routes';
 
 /**
  * 관통 흐름 — CP3 정지선의 R4 책임 (대시보드 → 브리핑 → 읽기 → 싸비).
@@ -9,25 +15,54 @@ import App from './App';
  * 증명하는 것은 **화면 연결과 라우팅**이지 서버 동작이 아니다 — 상한 게이트(자가 검증 1~14)는
  * 실제 API가 붙은 뒤 그쪽을 대상으로 따로 검증해야 한다.
  */
+function EntryStart() {
+  const { books, status } = useCatalog();
+  const { enter, busyId } = useEnterBook();
+  if (status !== 'ready') return <p>불러오는 중</p>;
+  return (
+    <ul aria-label="작품 목록">
+      {books.map((book) => (
+        <li key={book.book_id}>
+          <h2>{book.title}</h2>
+          <button
+            type="button"
+            disabled={!book.ssabi_ready || busyId !== null}
+            onClick={() => void enter(book.book_id)}
+          >
+            {resumeLabel(book, busyId === book.book_id)}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function renderFlow() {
+  const router = createMemoryRouter(
+    [
+      { path: '/start', element: <EntryStart /> },
+      { path: BOOK_ROUTES.briefing, element: <Briefing /> },
+      { path: BOOK_ROUTES.reader, element: <Reader /> },
+    ],
+    { initialEntries: ['/start'] }
+  );
+  render(<RouterProvider router={router} />);
+}
+
 describe('관통 흐름 (mock 기준)', () => {
-  // jsdom 은 파일 안에서 주소를 유지한다 — 앞 테스트가 남긴 경로에서 시작하지 않도록 되돌린다
-  beforeEach(() => {
-    window.history.pushState({}, '', '/');
-  });
+  it('작품 목록에서 책에 들어가면 브리핑을 거쳐 읽기 화면까지 이어진다', async () => {
+    // 화면 구조 개편(2026-11-10) — 옛 서재 화면 대신 공용 계약(useCatalog·resumeLabel·
+    // useEnterBook)으로 진입한다. 홈·작품 페이지가 같은 계약을 쓴다.
+    renderFlow();
 
-  it('대시보드에서 도서를 고르면 브리핑을 거쳐 읽기 화면까지 이어진다', async () => {
-    render(<App />);
+    const takryu = (await screen.findByRole('heading', { level: 2, name: '탁류' })).closest('li')!;
+    const notReady = screen.getByRole('heading', { level: 2, name: '검수 전 도서' }).closest('li')!;
 
-    // 대시보드 — 카탈로그가 뜨고 탁류가 기본 히어로다(2026-08-23 재설계)
-    expect(await screen.findByRole('heading', { level: 2, name: '탁류' })).toBeInTheDocument();
+    // 미완비 도서는 진입 버튼이 막혀 있다 (FR-BRW-002 🚦)
+    expect(within(notReady).getByRole('button', { name: '아직 준비 중입니다' })).toBeDisabled();
 
-    // 미완비 도서를 미리보면 히어로가 바뀌고, 진입 버튼이 막혀 있다 (FR-BRW-002 🚦)
-    await userEvent.click(screen.getByRole('button', { name: /검수 전 도서 선택/ }));
-    expect(screen.getByRole('button', { name: '아직 준비 중입니다' })).toBeDisabled();
-
-    // 다시 탁류를 미리보고 진입한다 → 서버(mock)가 briefing 으로 라우팅한다
-    await userEvent.click(screen.getByRole('button', { name: /탁류 선택/ }));
-    await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+    // 탁류에 진입한다 → 서버(mock)가 briefing 으로 라우팅한다
+    await userEvent.click(within(takryu).getByRole('button', { name: '이어서 읽기' }));
 
     await waitFor(() => {
       expect(screen.getByRole('list', { name: '목차' })).toBeInTheDocument();

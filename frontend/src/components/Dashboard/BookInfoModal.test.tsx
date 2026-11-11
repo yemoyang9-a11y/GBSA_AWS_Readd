@@ -10,7 +10,14 @@ const book: BookSummary = {
   cover_url: '/covers/takryu.jpg',
   intro_summary: null,
   ssabi_ready: true,
-  progress: { current_page: 104, percent: 25.3 },
+  genre: null,
+  registered_at: '2026-10-01T00:00:00.000Z',
+  progress: {
+    current_page: 104,
+    percent: 25.3,
+    is_complete: false,
+    last_read_at: '2026-11-09T00:00:00.000Z',
+  },
 };
 
 const content = {

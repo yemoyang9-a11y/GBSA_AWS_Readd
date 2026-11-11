@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
+import Search from './pages/Search';
+import Shelf from './pages/Shelf';
+import My from './pages/My';
+import BookDetail from './pages/BookDetail';
 import Briefing from './pages/Briefing';
 import Reader from './pages/Reader';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
 import MobileReader from './mobile/pages/MobileReader';
 import MobileBriefing from './mobile/pages/MobileBriefing';
-import MobileDashboard from './mobile/pages/MobileDashboard';
 import MobileNotFound from './mobile/pages/MobileNotFound';
 import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import { BOOK_ROUTES } from './utils/routes';
+import AppShell from './components/Layout/AppShell';
+import { APP_ROUTES, BOOK_ROUTES } from './utils/routes';
 import './App.css';
 
 /**
@@ -28,7 +32,20 @@ import './App.css';
  */
 export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
   return createBrowserRouter([
-    { path: '/', element: isMobile ? <MobileDashboard /> : <Dashboard /> },
+    // NFR-USE
+    {
+      element: <AppShell isMobile={isMobile} />,
+      children: [
+        { path: APP_ROUTES.home, element: <Home /> },
+        { path: APP_ROUTES.search, element: <Search /> },
+        { path: APP_ROUTES.shelf, element: <Shelf /> },
+        { path: APP_ROUTES.my, element: <My /> },
+      ],
+    },
+    {
+      element: <AppShell isMobile={isMobile} nav={!isMobile} />,
+      children: [{ path: APP_ROUTES.book, element: <BookDetail /> }],
+    },
     { path: BOOK_ROUTES.briefing, element: isMobile ? <MobileBriefing /> : <Briefing /> },
     { path: BOOK_ROUTES.reader, element: isMobile ? <MobileReader /> : <Reader /> },
     { path: '/auth/callback', element: <AuthCallback /> },

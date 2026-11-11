@@ -1,5 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import Header from './Header';
+
+function render(ui: ReactElement) {
+  return rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe('Header', () => {
   it('RE:ADD 로고를 표시한다', () => {
@@ -12,9 +18,10 @@ describe('Header', () => {
     expect(container.querySelector('path[fill="#6e6b42"]')).not.toBeNull();
   });
 
-  it('도서 검색은 대응 엔드포인트가 없어 비활성이다 (스펙 §7 #3)', () => {
+  it('비활성 도서 검색 버튼 대신 검색 입력을 둔다 (2026-11-10 화면 구조 개편)', () => {
     render(<Header />);
-    expect(screen.getByRole('button', { name: '도서 검색' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '도서 검색' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: '작품, 작가 검색' })).toBeInTheDocument();
   });
 
   it('사람 이름이 들어간 서재 제목을 렌더하지 않는다 — 계정 개념이 없다 (team-sync §4.8)', () => {

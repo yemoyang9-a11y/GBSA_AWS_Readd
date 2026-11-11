@@ -13,19 +13,24 @@ import {
   MOCK_BOOK_ID,
   mockAliases,
   mockBookInfo,
+  mockBookInfos,
   mockCatalog,
   mockChapters,
   mockCharacterNotes,
   mockCharacters,
   mockPageContent,
+  mockPositions,
   mockRelationships,
 } from './fixtures';
+import type { AuthMe } from '../src/services/authService';
+import type { PositionResponse } from '../src/services/positionService';
 import type {
   SseFrame,
   BriefingResponse,
   CatalogResponse,
   CharacterResponse,
   EntryResponse,
+  BookInfoResponse,
   GraphResponse,
   PageResponse,
 } from '../src/types';
@@ -67,6 +72,7 @@ function snapshot(page = currentPage) {
     current_page: page,
     cutoff,
     percent: derivePercent(page, totalPages),
+    is_complete: page >= totalPages,
     chapter,
     total_pages: totalPages,
   };
@@ -92,14 +98,46 @@ export function mockCatalogResponse(): CatalogResponse {
   return {
     books: mockCatalog.map((book) =>
       book.book_id === MOCK_BOOK_ID
-        ? { ...book, progress: { current_page: snap.current_page, percent: snap.percent } }
+        ? {
+            ...book,
+            progress: {
+              current_page: snap.current_page,
+              percent: snap.percent,
+              is_complete: snap.is_complete,
+              last_read_at: book.progress?.last_read_at ?? '2026-11-09T00:00:00.000Z',
+            },
+          }
         : book
     ),
   };
 }
 
-export function mockInfoResponse() {
-  return mockBookInfo;
+export function mockInfoResponse(bookId: string = MOCK_BOOK_ID): BookInfoResponse {
+  return mockBookInfos[bookId] ?? mockBookInfo;
+}
+
+export type MockResult<T> = { status: 200; body: T } | { status: 401 | 403 | 404 };
+
+/** GET /books/:bookId/position 대역 — 준비되지 않은 책은 403, 없는 책은 404 (FR-SPL-002 🚦) */
+export function mockPositionResponse(bookId: string): MockResult<PositionResponse> {
+  const book = mockCatalog.find((b) => b.book_id === bookId);
+  if (!book) return { status: 404 };
+  if (!book.ssabi_ready) return { status: 403 };
+  const position = mockPositions[bookId];
+  return position ? { status: 200, body: position } : { status: 404 };
+}
+
+/** GET /auth/me 대역 — 기본은 로그인 전(401). 테스트가 setMockMember(true)로 켠다 */
+let mockMember = false;
+
+export function setMockMember(on: boolean): void {
+  mockMember = on;
+}
+
+export function mockMeResponse(): MockResult<AuthMe> {
+  return mockMember
+    ? { status: 200, body: { display_name: '시험 독자', providers: ['google'] } }
+    : { status: 401 };
 }
 
 export function mockPageResponse(pageNo: number): PageResponse {

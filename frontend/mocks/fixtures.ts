@@ -12,7 +12,8 @@
  *   - 확립 페이지가 뒤쪽인 관계 1건, 후반부 첫 등장 가족관계 별칭 1건 (FR-SPL-002 🚦, D6)
  */
 
-import type { BookSummary, ChapterSummary } from '../src/types';
+import type { BookInfoResponse, BookSummary, ChapterSummary } from '../src/types';
+import type { PositionResponse } from '../src/services/positionService';
 
 export const MOCK_BOOK_ID = 'takryu';
 
@@ -25,7 +26,14 @@ export const mockCatalog: BookSummary[] = [
     intro_summary:
       '금강 하구 군산을 배경으로, 미두장에서 재산을 잃은 정주사 일가의 몰락을 그린다. (mock 소개)',
     ssabi_ready: true,
-    progress: { current_page: 21, percent: 70 },
+    genre: null,
+    registered_at: '2026-10-01T00:00:00.000Z',
+    progress: {
+      current_page: 21,
+      percent: 70,
+      is_complete: false,
+      last_read_at: '2026-11-09T00:00:00.000Z',
+    },
   },
   {
     book_id: 'not-ready-book',
@@ -34,6 +42,34 @@ export const mockCatalog: BookSummary[] = [
     cover_url: '',
     intro_summary: null,
     ssabi_ready: false,
+    genre: null,
+    registered_at: '2026-10-15T00:00:00.000Z',
+  },
+  {
+    book_id: 'unread-book',
+    title: '읽지 않은 책',
+    author: '시험 작가',
+    cover_url: '',
+    intro_summary: null,
+    ssabi_ready: true,
+    genre: null,
+    registered_at: '2026-11-01T00:00:00.000Z',
+  },
+  {
+    book_id: 'done-book',
+    title: '다 읽은 책',
+    author: '시험 작가',
+    cover_url: '',
+    intro_summary: null,
+    ssabi_ready: true,
+    genre: '애정소설',
+    registered_at: '2026-11-03T00:00:00.000Z',
+    progress: {
+      current_page: 20,
+      percent: 100,
+      is_complete: true,
+      last_read_at: '2026-11-05T00:00:00.000Z',
+    },
   },
 ];
 
@@ -125,4 +161,35 @@ export const mockBookInfo = {
   introduction: '1930년대 군산을 배경으로 한 세태소설이다. (mock)',
   background: '일제강점기 후반, 미곡 거래소를 중심으로 한 투기 경제가... (mock)',
   chapters: mockChapters,
+};
+
+const mockTwoChapters: ChapterSummary[] = [
+  { chapter_no: 1, title: '첫째 장', start_page: 1, end_page: 10 },
+  { chapter_no: 2, title: '둘째 장', start_page: 11, end_page: 20 },
+];
+
+export const mockBookInfos: Record<string, BookInfoResponse> = {
+  [MOCK_BOOK_ID]: mockBookInfo,
+  'unread-book': {
+    basic_info: { title: '읽지 않은 책', author: '시험 작가', published_year: 2026, length_note: '20페이지' },
+    introduction: '읽지 않은 책의 소개입니다. (mock)',
+    background: '읽지 않은 책의 배경 지식입니다. (mock)',
+    chapters: mockTwoChapters,
+  },
+  'done-book': {
+    basic_info: { title: '다 읽은 책', author: '시험 작가', published_year: 2026, length_note: '20페이지' },
+    introduction: '다 읽은 책의 소개입니다. (mock)',
+    background: '다 읽은 책의 배경 지식입니다. (mock)',
+    chapters: mockTwoChapters,
+  },
+};
+
+/**
+ * GET /books/:bookId/position 대역 — 장 경계와 위 진도에서 미리 계산해 적어 둔 상수다.
+ * 서버가 계산할 값을 대신 적어 둔 것이며, 화면 코드는 이 값을 계산하지 않는다 (FR-SPL-002 🚦).
+ */
+export const mockPositions: Record<string, PositionResponse> = {
+  [MOCK_BOOK_ID]: { applied_cutoff: 21, current_chapter_no: 3, read_chapter_nos: [1, 2], is_complete: false },
+  'unread-book': { applied_cutoff: 0, current_chapter_no: null, read_chapter_nos: [], is_complete: false },
+  'done-book': { applied_cutoff: 20, current_chapter_no: 2, read_chapter_nos: [1, 2], is_complete: true },
 };
