@@ -1,6 +1,6 @@
 /**
  * S7 1단계 — 검수 시트 내보내기 (FR-ADM-005 🚦). DATABASE_URL이 실제 RDS를 가리켜야 동작한다.
- * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-export-review.ts
+ * 사용법: npx ts-node --transpile-only src/batch/pipeline/run-export-review.ts [--book <bookId>]
  *
  * 선행: run-register-content.ts로 생성물이 이미 등록돼 있어야 한다.
  * 이미 검수를 통과(적용 항목 전부 TRUE)한 대상은 다시 내보내지 않는다(재실행해도 통과분은 보존).
@@ -13,6 +13,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { pool } from '../../config/database';
 import { ResolvedBookData } from './check-integrity';
+import { QueryClient } from './register';
+import { BookArgs, bookArgsFromCli, reviewSheetPath } from './run-args';
 import {
   buildReviewSheetRows,
   toReviewSheetCsv,
@@ -21,31 +23,44 @@ import {
   ReviewRecordRow,
 } from './review';
 
-const BOOK_ID = 'takryu';
-
-async function main(): Promise<void> {
-  const filePath = path.join(__dirname, '../../../data/generated/full/all-resolved.json');
+// FR-ADM-005 🚦
+export async function exportReviewSheet(
+  db: QueryClient,
+  args: BookArgs
+): Promise<{ outPath: string; rows: number; passed: number }> {
+  const filePath = path.join(args.fullDir, 'all-resolved.json');
   const data = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResolvedBookData;
+  // FR-ADM-005 🚦
+  if (data.book_id !== args.bookId) {
+    throw new Error(
+      `all-resolved.json의 book_id("${data.book_id}")가 --book("${args.bookId}")과 다름 — ${filePath}`
+    );
+  }
 
-  const existing = (await pool.query(
+  const existing = (await db.query(
     `SELECT target_type, target_id, ${ALL_CRITERIA.join(', ')}, relationship_snapshot FROM review_records WHERE book_id = $1`,
-    [BOOK_ID]
+    [args.bookId]
   )) as { rows: ReviewRecordRow[] };
   const alreadyReviewed = passedReviewKeys(existing.rows, data);
 
   const rows = buildReviewSheetRows(data, alreadyReviewed);
-  const csv = toReviewSheetCsv(rows);
+  const csv = toReviewSheetCsv(rows, args.bookId);
 
-  const outPath = path.join(__dirname, `../../../data/generated/full/review-sheet-${BOOK_ID}.csv`);
+  const outPath = reviewSheetPath(args);
   fs.writeFileSync(outPath, csv, 'utf-8');
+  return { outPath, rows: rows.length, passed: alreadyReviewed.size };
+}
 
+async function main(): Promise<void> {
+  const result = await exportReviewSheet(pool, bookArgsFromCli('run-export-review'));
   console.log(
-    `[OK] 검수 시트 ${rows.length}건 내보냄 (검수 통과 ${alreadyReviewed.size}건은 제외) → ${outPath}`
+    `[OK] 검수 시트 ${result.rows}건 내보냄 (검수 통과 ${result.passed}건은 제외) → ${result.outPath}`
   );
   await pool.end();
 }
 
-main().catch((err) => {
-  console.error('[FAIL] 검수 시트 내보내기 실패', err);
-  process.exit(1);
-});
+if (require.main === module)
+  main().catch((err) => {
+    console.error('[FAIL] 검수 시트 내보내기 실패', err);
+    process.exit(1);
+  });

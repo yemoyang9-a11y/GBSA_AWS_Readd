@@ -118,8 +118,8 @@ describe('passedReviewKeys — FR-ADM-005 🚦 FALSE 판정 대상은 재수출 
 describe('검수 시트 CSV 직렬화/파싱 — 대상별 적용 항목만 판정 요구', () => {
   test('대상에 적용되지 않는 판정 컬럼은 N/A로 미리 채워진다', () => {
     const rows = buildReviewSheetRows(DATA);
-    const csv = toReviewSheetCsv(rows);
-    const aliasLine = csv.split('\n').find((l) => l.startsWith('alias,'));
+    const csv = toReviewSheetCsv(rows, DATA.book_id);
+    const aliasLine = csv.split('\n').find((l) => l.startsWith('takryu,alias,'));
     expect(aliasLine).toBeDefined();
     // alias는 alias_merge_ok·recap_continuity_ok·info_separation_ok·intro_tone_ok·spoiler_free_ok가 N/A
     expect(aliasLine).toMatch(/N\/A/);
@@ -127,23 +127,28 @@ describe('검수 시트 CSV 직렬화/파싱 — 대상별 적용 항목만 판�
 
   test('쉼표·줄바꿈이 포함된 본문도 CSV 인용 처리 후 파싱하면 원문과 같다', () => {
     const rows = buildReviewSheetRows(DATA);
-    const csv = toReviewSheetCsv(rows);
+    const csv = toReviewSheetCsv(rows, DATA.book_id);
     const table = parseCsv(csv);
     const header = table[0];
     const bgIdx = header.indexOf('content_preview');
+    const typeIdx = header.indexOf('target_type');
 
-    const bgLine = table.find((r) => r[0] === 'background')!;
+    const bgLine = table.find((r) => r[typeIdx] === 'background')!;
     expect(bgLine[bgIdx]).toBe('배경 설명, 쉼표 포함');
-    const introLine = table.find((r) => r[0] === 'intro')!;
+    const introLine = table.find((r) => r[typeIdx] === 'intro')!;
     expect(introLine[bgIdx]).toBe('소개 문구\n줄바꿈 포함');
   });
 });
 
 describe('parseFilledReviewSheet — FR-ADM-005 🚦 부분 판정으로 반영 진행 금지', () => {
+  const LEGACY_HEADER =
+    'target_type,target_id,page_ref,content_preview,hallucination_ok,alias_merge_ok,page_boundary_ok,recap_continuity_ok,info_separation_ok,intro_tone_ok,spoiler_free_ok,corrected_content,correction_note,reviewer';
+
   function sheetWithChapterSummaryRow(cells: Record<string, string>): string {
     const header =
-      'target_type,target_id,page_ref,content_preview,hallucination_ok,alias_merge_ok,page_boundary_ok,recap_continuity_ok,info_separation_ok,intro_tone_ok,spoiler_free_ok,corrected_content,correction_note,reviewer';
+      'book_id,target_type,target_id,page_ref,content_preview,hallucination_ok,alias_merge_ok,page_boundary_ok,recap_continuity_ok,info_separation_ok,intro_tone_ok,spoiler_free_ok,corrected_content,correction_note,reviewer';
     const row = [
+      cells.book_id ?? 'takryu',
       'chapter_summary',
       '1',
       '',
@@ -163,7 +168,7 @@ describe('parseFilledReviewSheet — FR-ADM-005 🚦 부분 판정으로 반영 
   }
 
   test('적용 항목이 전부 TRUE/FALSE면 파싱에 성공한다(positive)', () => {
-    const parsed = parseFilledReviewSheet(sheetWithChapterSummaryRow({}));
+    const parsed = parseFilledReviewSheet(sheetWithChapterSummaryRow({}), 'takryu');
     expect(parsed).toHaveLength(1);
     expect(parsed[0].criteria).toEqual({
       hallucination_ok: true,
@@ -175,12 +180,30 @@ describe('parseFilledReviewSheet — FR-ADM-005 🚦 부분 판정으로 반영 
 
   test('적용 항목 하나라도 비어 있으면 실패한다(negative — 0건도 통과 아님)', () => {
     expect(() =>
-      parseFilledReviewSheet(sheetWithChapterSummaryRow({ recap_continuity_ok: '' }))
+      parseFilledReviewSheet(sheetWithChapterSummaryRow({ recap_continuity_ok: '' }), 'takryu')
     ).toThrow();
   });
 
+  test('FR-ADM-005: 시트 행의 book_id가 기대한 책과 다르면 전체를 거부한다(같은 책은 통과)', () => {
+    const hwabunSheet = sheetWithChapterSummaryRow({ book_id: 'hwabun' });
+    expect(() => parseFilledReviewSheet(hwabunSheet, 'takryu')).toThrow(/book_id/);
+    expect(() =>
+      parseFilledReviewSheet(sheetWithChapterSummaryRow({ book_id: '' }), 'takryu')
+    ).toThrow(/book_id/);
+    expect(parseFilledReviewSheet(hwabunSheet, 'hwabun')).toHaveLength(1);
+  });
+
+  test('FR-ADM-005: book_id 열이 없는 옛 형식 시트는 거부한다', () => {
+    const current = sheetWithChapterSummaryRow({});
+    const legacy = `${LEGACY_HEADER}\n${current.split('\n')[1].replace(/^takryu,/, '')}\n`;
+    expect(() => parseFilledReviewSheet(legacy, 'takryu')).toThrow(/헤더/);
+    expect(parseFilledReviewSheet(current, 'takryu')).toHaveLength(1);
+  });
+
   test('reviewer가 비어 있으면 실패한다', () => {
-    expect(() => parseFilledReviewSheet(sheetWithChapterSummaryRow({ reviewer: '' }))).toThrow();
+    expect(() =>
+      parseFilledReviewSheet(sheetWithChapterSummaryRow({ reviewer: '' }), 'takryu')
+    ).toThrow();
   });
 });
 
