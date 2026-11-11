@@ -28,7 +28,7 @@ export default function Search() {
     <div className="mx-auto w-full max-w-page px-7 py-8 mobile:px-4 mobile:py-4">
       <h1 className="m-0 font-dashSerif text-xl font-bold text-dash-ink">검색</h1>
 
-      <label htmlFor="book-search" className="sr-only">
+      <label htmlFor="book-search" className="mt-4 block text-xs text-dash-muted">
         작품, 작가 검색
       </label>
       <input
@@ -38,7 +38,7 @@ export default function Search() {
         onChange={handleChange}
         placeholder="작품, 작가 이름"
         autoComplete="off"
-        className="mt-4 box-border min-h-11 w-full rounded-full border border-dash-line bg-white px-4 text-base text-dash-ink placeholder:text-dash-muted"
+        className="mt-1.5 box-border min-h-11 w-full rounded-full border border-dash-line bg-white px-4 text-base text-dash-ink placeholder:text-dash-muted"
       />
 
       {status === 'loading' && (
@@ -70,7 +70,7 @@ export default function Search() {
             <li key={book.book_id}>
               <Link
                 to={bookPath(book.book_id)}
-                aria-label={book.title}
+                aria-label={`${book.title}, ${book.author}`}
                 className="flex min-h-11 items-center gap-3 border-b border-dash-line py-3"
               >
                 <BookCover book={book} size="row" />

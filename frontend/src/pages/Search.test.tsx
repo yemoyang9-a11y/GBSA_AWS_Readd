@@ -35,7 +35,10 @@ function renderSearch(entry = '/search') {
   );
 }
 
-const resultNames = () => within(screen.getByRole('list')).getAllByRole('link').map((link) => link.getAttribute('aria-label'));
+const resultNames = () =>
+  within(screen.getByRole('list'))
+    .getAllByRole('link')
+    .map((link) => link.getAttribute('aria-label'));
 
 beforeEach(() => {
   fetchCatalogMock.mockReset();
@@ -46,7 +49,7 @@ test('FR-BRW-001: 검색어가 비면 전체 작품을 서버가 준 순서로 �
   renderSearch();
 
   await screen.findByRole('list');
-  expect(resultNames()).toEqual(['탁류', '검수 전 도서', '읽지 않은 책', '다 읽은 책']);
+  expect(resultNames()).toEqual(['탁류, 채만식', '검수 전 도서, 미상', '읽지 않은 책, 시험 작가', '다 읽은 책, 시험 작가']);
 });
 
 test('FR-BRW-001: 주소의 q로 입력창이 채워지고 결과가 걸러진다', async () => {
@@ -54,7 +57,7 @@ test('FR-BRW-001: 주소의 q로 입력창이 채워지고 결과가 걸러진�
 
   expect(screen.getByLabelText('작품, 작가 검색')).toHaveValue('탁');
   await screen.findByRole('list');
-  expect(resultNames()).toEqual(['탁류']);
+  expect(resultNames()).toEqual(['탁류, 채만식']);
 });
 
 test('FR-BRW-001: 입력하면 주소의 q가 바뀌고 결과가 걸러진다', async () => {
@@ -65,7 +68,7 @@ test('FR-BRW-001: 입력하면 주소의 q가 바뀌고 결과가 걸러진다',
   await user.type(screen.getByLabelText('작품, 작가 검색'), '시험');
 
   expect(screen.getByTestId('location')).toHaveTextContent('/search?q=%EC%8B%9C%ED%97%98');
-  expect(resultNames()).toEqual(['읽지 않은 책', '다 읽은 책']);
+  expect(resultNames()).toEqual(['읽지 않은 책, 시험 작가', '다 읽은 책, 시험 작가']);
 });
 
 test('FR-BRW-001: 결과가 없으면 안내 문구를 보여 준다', async () => {
@@ -85,7 +88,7 @@ test('FR-BRW-001: 결과를 누르면 작품 페이지로 간다', async () => {
   const user = userEvent.setup();
   renderSearch('/search?q=탁류');
 
-  await user.click(await screen.findByRole('link', { name: '탁류' }));
+  await user.click(await screen.findByRole('link', { name: '탁류, 채만식' }));
 
   expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu');
 });
@@ -93,15 +96,26 @@ test('FR-BRW-001: 결과를 누르면 작품 페이지로 간다', async () => {
 test('FR-BRW-001: 결과에 제목과 저자가 보인다', async () => {
   renderSearch('/search?q=탁류');
 
-  const link = await screen.findByRole('link', { name: '탁류' });
+  const link = await screen.findByRole('link', { name: '탁류, 채만식' });
   expect(within(link).getByText('채만식')).toBeInTheDocument();
 });
 
-test('NFR-USE: 입력창은 type=search이고 보이는 라벨이 연결돼 있다', () => {
+test('NFR-USE: 입력창은 type=search이고 화면에 보이는 라벨이 연결돼 있다', () => {
   renderSearch();
 
   const input = screen.getByLabelText('작품, 작가 검색');
   expect(input).toHaveAttribute('type', 'search');
+  const label = screen.getByText('작품, 작가 검색', { selector: 'label' });
+  expect(label).toBeVisible();
+  expect(label).not.toHaveClass('sr-only');
+  expect(label).toHaveAttribute('for', input.id);
+});
+
+test('NFR-USE: 검색어를 입력해도 라벨은 그대로 보인다', async () => {
+  renderSearch('/search?q=탁');
+
+  expect(screen.getByLabelText('작품, 작가 검색')).toHaveValue('탁');
+  expect(screen.getByText('작품, 작가 검색', { selector: 'label' })).toBeVisible();
 });
 
 test('FR-SPL-005: 목록을 못 불러오면 안내와 다시 시도 버튼을 보여 주고 누르면 다시 부른다', async () => {

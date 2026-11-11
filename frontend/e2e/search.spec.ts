@@ -6,7 +6,7 @@ import { BOOK_ID } from './support/fixtures';
 test.beforeEach(async ({ page }) => {
   await installMockApi(page);
   await page.goto('/search');
-  await expect(page.getByRole('list', { name: '검색 결과' }).getByRole('link', { name: '탁류', exact: true })).toBeVisible();
+  await expect(page.getByRole('list', { name: '검색 결과' }).getByRole('link', { name: '탁류, 채만식', exact: true })).toBeVisible();
 });
 
 test('NFR-USE: 검색 화면은 화면 폭을 넘치지 않는다', async ({ page }) => {
@@ -36,7 +36,7 @@ test('FR-BRW-001: 입력하면 결과가 걸러지고 주소의 q가 바뀐다',
 });
 
 test('FR-BRW-001: 결과를 누르면 작품 페이지 주소로 이동한다', async ({ page }, testInfo) => {
-  const link = page.getByRole('list', { name: '검색 결과' }).getByRole('link', { name: '탁류', exact: true });
+  const link = page.getByRole('list', { name: '검색 결과' }).getByRole('link', { name: '탁류, 채만식', exact: true });
   if (testInfo.project.name === 'desktop') await link.click();
   else await link.tap();
   await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}$`));
