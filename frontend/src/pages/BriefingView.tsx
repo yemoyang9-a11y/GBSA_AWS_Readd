@@ -146,7 +146,7 @@ export default function BriefingView({
         </div>
         {/* 2026-08-26, 사용자 요청 — 진도 바 위에서 아모가 뛰어가는 느낌 */}
         <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" runner />
-        {/* 퍼센트 — 좌하단, 바로 아래(2026-08-25, 사용자 요청. 예전엔 우상단에 있었다). */}
+        {/* FR-BRF-001 */}
         {/* 2026-08-26, 사용자 제보 — 러너 아모가 아래로 겹치며 이 줄도 가렸다. 여백을
             mt-2 → mt-6으로 늘렸다. */}
         <div className="mt-6 font-dashSans text-sm font-semibold text-[#555]">
