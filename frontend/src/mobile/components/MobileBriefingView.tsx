@@ -56,7 +56,10 @@ export default function MobileBriefingView({
       data-testid="mobile-briefing"
       data-mobile="true"
       className="min-h-[100dvh] bg-brief-paper font-dashSans text-brief-ink"
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={{
+        paddingTop: 'var(--safe-top)',
+        paddingBottom: 'calc(60px + max(12px, var(--safe-bottom)))',
+      }}
     >
       <main className="px-5 pb-10 pt-2">
         <button
@@ -107,13 +110,6 @@ export default function MobileBriefingView({
           </div>
           <ProgressBar percent={briefing.progress.percent} tone="brief" size="md" runner />
           <div className="mt-6 text-sm font-semibold text-[#555]">{briefing.progress.percent}%</div>
-          <button
-            type="button"
-            onClick={onContinue}
-            className="mt-4 h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
-          >
-            이어서 읽기
-          </button>
         </section>
 
         <div data-testid="brief-rule" className="my-7 h-[2px] w-full rounded-[1px] bg-brief-rule" />
@@ -239,6 +235,20 @@ export default function MobileBriefingView({
           </div>
         </div>
       </main>
+
+      <div
+        data-testid="briefing-continue-bar"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-brief-line bg-brief-paper px-5 pt-3"
+        style={{ paddingBottom: 'max(12px, var(--safe-bottom))' }}
+      >
+        <button
+          type="button"
+          onClick={onContinue}
+          className="h-12 w-full rounded-full border border-brief-ink bg-transparent text-[15px] font-bold text-brief-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]"
+        >
+          이어서 읽기
+        </button>
+      </div>
     </div>
   );
 }

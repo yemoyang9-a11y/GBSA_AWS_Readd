@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import { useBriefingSession } from '../../hooks/useBriefingSession';
 import MobileBriefingView from '../components/MobileBriefingView';
@@ -7,7 +7,6 @@ import MobileErrorState from '../components/MobileErrorState';
 // FR-BRF-001 FR-SPL-005 🚦
 export default function MobileBriefing() {
   const { bookId = '' } = useParams();
-  const navigate = useNavigate();
   const session = useBriefingSession(bookId);
 
   if (!session.briefing) {
@@ -31,7 +30,7 @@ export default function MobileBriefing() {
       onContinue={session.continueReading}
       onRequestFallback={session.requestFallback}
       onSelectChapter={session.selectChapter}
-      onBack={() => navigate('/')}
+      onBack={session.goBack}
       streamedRecap={session.streamedRecap}
       recapFailed={session.recapFailed}
       recapStreaming={session.recapStreaming}
