@@ -5,7 +5,9 @@
  *   플래그 설정 → R1 (검수 후 ssabi_ready)
  *   진입 거절   → R2 (POST /books/{b}/entry)
  *   조회 거절   → R4 (이 파일) — /info · /pages · /ssabi/* · /position · /chat · /progress ·
- *                 /heartbeat · /briefing · /recap/stream
+ *                 /heartbeat · /briefing · /recap/stream ·
+ *                 /chat/conversations (목록·상세). 대화 삭제(DELETE)는 일부러 열어 둔다 —
+ *                 사용자가 자기 기록을 지우는 길은 도서 상태와 무관하고 새 정보를 내보내지 않는다
  *
  * 대시보드의 클릭 불가는 UI 조치일 뿐이다. 자가 검증 25번이 "API를 직접 호출해도
  * 서버가 거절"을 요구하므로 둘 다 있어야 한다.

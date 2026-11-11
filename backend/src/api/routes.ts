@@ -320,6 +320,9 @@ router.get('/books/:bookId/chat/conversations', async (req: Request, res: Respon
   if (!deviceId) return;
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
     if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
     const conversations = await listChatConversations(deviceId, bookId, snapshot.cutoff);
@@ -349,6 +352,9 @@ router.get(
     }
 
     try {
+      // FR-BRW-002 🚦 R12
+      if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
       const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
       if (!matchesExpectedReadingPage(req, res, snapshot.current_page)) return;
       const detail = await getChatConversationDetail(deviceId, bookId, numericId, snapshot.cutoff);

@@ -9,6 +9,9 @@ const mockState = {
   getRecap: jest.fn(),
   handleQuery: jest.fn(),
   resolveConversation: jest.fn(),
+  listConversations: jest.fn(),
+  getConversationDetail: jest.fn(),
+  deleteConversation: jest.fn(),
   checkRateLimit: jest.fn(),
 };
 
@@ -36,9 +39,9 @@ jest.mock('../../../src/modules/ssabi/composition', () => ({
 }));
 jest.mock('../../../src/modules/chatbot/conversation-service', () => ({
   resolveConversation: (...args: unknown[]) => mockState.resolveConversation(...args),
-  listConversations: jest.fn(),
-  getConversationDetail: jest.fn(),
-  deleteConversation: jest.fn(),
+  listConversations: (...args: unknown[]) => mockState.listConversations(...args),
+  getConversationDetail: (...args: unknown[]) => mockState.getConversationDetail(...args),
+  deleteConversation: (...args: unknown[]) => mockState.deleteConversation(...args),
   parseConversationId: () => undefined,
 }));
 jest.mock('../../../src/modules/chatbot/service', () => ({
@@ -50,11 +53,12 @@ jest.mock('../../../src/modules/llm-gateway/rate-limiter', () => ({
 
 const SNAPSHOT = { current_page: 40, cutoff: 40, percent: 0.4, is_complete: false, chapter: 2 };
 
-type Method = 'get' | 'post';
+type Method = 'get' | 'post' | 'delete';
 interface RouteCase {
   name: string;
   method: Method;
   path: string;
+  params?: Record<string, string>;
   body?: Record<string, unknown>;
   okExpect: (res: ReturnType<typeof makeResponse>) => void;
 }
@@ -124,6 +128,25 @@ const CASES: RouteCase[] = [
       expect(res.write).toHaveBeenCalledWith(expect.stringContaining('"type":"done"'));
     },
   },
+  {
+    name: 'GET /books/:bookId/chat/conversations',
+    method: 'get',
+    path: '/books/:bookId/chat/conversations',
+    okExpect: (res) => {
+      expect(mockState.listConversations).toHaveBeenCalledWith('reader', 'book', 40);
+      expect(res.json).toHaveBeenCalledWith([{ id: 1 }]);
+    },
+  },
+  {
+    name: 'GET /books/:bookId/chat/conversations/:conversationId',
+    method: 'get',
+    path: '/books/:bookId/chat/conversations/:conversationId',
+    params: { conversationId: '1' },
+    okExpect: (res) => {
+      expect(mockState.getConversationDetail).toHaveBeenCalledWith('reader', 'book', 1, 40);
+      expect(res.json).toHaveBeenCalledWith({ id: 1 });
+    },
+  },
 ];
 
 function loadRouter(mockMode: boolean) {
@@ -142,7 +165,7 @@ async function call(router: any, c: RouteCase) {
   const response = makeResponse();
   await route.stack[0].handle(
     {
-      params: { bookId: 'book' },
+      params: { bookId: 'book', ...c.params },
       headers: { 'x-device-id': 'reader' },
       query: {},
       body: c.body ?? {},
@@ -163,6 +186,8 @@ function expectNothingTouched() {
   expect(mockState.getPage).not.toHaveBeenCalled();
   expect(mockState.resolveConversation).not.toHaveBeenCalled();
   expect(mockState.handleQuery).not.toHaveBeenCalled();
+  expect(mockState.listConversations).not.toHaveBeenCalled();
+  expect(mockState.getConversationDetail).not.toHaveBeenCalled();
 }
 
 const originalMockMode = process.env.MOCK_MODE;
@@ -176,6 +201,9 @@ beforeEach(() => {
   mockState.getPage.mockResolvedValue({ page_no: 40, content: '본문' });
   mockState.resolveConversation.mockResolvedValue({ conversationId: 1 });
   mockState.getRecap.mockResolvedValue({ kind: 'reused', text: '리캡' });
+  mockState.listConversations.mockResolvedValue([{ id: 1 }]);
+  mockState.getConversationDetail.mockResolvedValue({ id: 1 });
+  mockState.deleteConversation.mockResolvedValue(true);
   mockState.handleQuery.mockImplementation(async function* () {
     yield '답';
   });
@@ -226,5 +254,23 @@ describe('MOCK_MODE', () => {
     expect(res.status).toHaveBeenCalledWith(403);
     expect(mockState.handleQuery).not.toHaveBeenCalled();
     expect(mockState.checkRateLimit).not.toHaveBeenCalled();
+  });
+});
+
+describe('DELETE /books/:bookId/chat/conversations/:conversationId', () => {
+  test('FR-BRW-002: 미완비 도서의 대화도 소유자가 삭제할 수 있다 — 삭제는 새 정보를 내보내지 않는다', async () => {
+    mockState.findReadiness.mockResolvedValue(false);
+
+    const res = await call(loadRouter(false), {
+      name: 'DELETE',
+      method: 'delete',
+      path: '/books/:bookId/chat/conversations/:conversationId',
+      params: { conversationId: '1' },
+      okExpect: () => undefined,
+    });
+
+    expect(mockState.deleteConversation).toHaveBeenCalledWith('reader', 'book', 1);
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(mockState.findReadiness).not.toHaveBeenCalled();
   });
 });
