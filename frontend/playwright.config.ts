@@ -25,7 +25,6 @@ export default defineConfig({
     env: {
       VITE_USE_MOCK: 'false',
       VITE_API_URL: 'http://api.e2e.test',
-      VITE_DEMO_DEVICE_ID: 'e2e-device',
     },
   },
 });
