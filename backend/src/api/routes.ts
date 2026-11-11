@@ -185,6 +185,9 @@ router.post('/books/:bookId/chat', async (req: Request, res: Response) => {
   }
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     // Rate Limit 체크 - SSE 열기 전에 (R4 요청)
     // NFR-AI-017, A1: 디바이스·도서당 분당 3회
     const rateLimitCheck = checkRateLimit(deviceId, bookId);
@@ -455,6 +458,9 @@ router.post('/books/:bookId/progress', async (req: Request, res: Response) => {
   }
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     await acceptProgress(req, deviceId, bookId, { page, seq });
     await readingState.sessionService.touchActivity(deviceId, bookId);
     const snapshot = await readingState.cutoffService.getCutoffSnapshot(deviceId, bookId);
@@ -479,6 +485,9 @@ router.post('/books/:bookId/heartbeat', async (req: Request, res: Response) => {
   if (!deviceId) return;
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     await readingState.sessionService.acceptHeartbeat(deviceId, bookId);
     res.json({ success: true });
   } catch (error) {
@@ -501,6 +510,9 @@ router.get('/books/:bookId/briefing', async (req: Request, res: Response) => {
   if (!deviceId) return;
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     const briefing = await readingState.briefingService.getBriefing(deviceId, bookId);
     res.json(briefing);
   } catch (error) {
@@ -545,6 +557,9 @@ router.post('/books/:bookId/recap/stream', async (req: Request, res: Response) =
   const { page, seq } = req.body ?? {};
 
   try {
+    // FR-BRW-002 🚦 R12
+    if (!(await ensureBookReady(contentServices.content, bookId, res))) return;
+
     if (typeof page === 'number' && typeof seq === 'number') {
       // 3.3절 — 조회 요청에 동봉된 (page, seq)는 진도 이벤트와 동일하게 처리한다
       await acceptProgress(req, deviceId, bookId, { page, seq });

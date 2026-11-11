@@ -21,7 +21,10 @@ jest.mock('../../../src/modules/reading-state/composition', () => ({
   })),
 }));
 jest.mock('../../../src/modules/content/composition', () => ({
-  createContentServices: jest.fn(() => ({ pageService: { getPage: jest.fn(async () => null) } })),
+  createContentServices: jest.fn(() => ({
+    content: { findReadiness: jest.fn(async () => true) },
+    pageService: { getPage: jest.fn(async () => null) },
+  })),
 }));
 jest.mock('../../../src/modules/ssabi/composition', () => ({
   createSsabiServices: jest.fn(() => ({})),
