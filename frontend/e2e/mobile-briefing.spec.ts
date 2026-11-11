@@ -99,11 +99,73 @@ test.describe('모바일 브리핑', () => {
     const button = page.getByRole('button', { name: '이어서 읽기' });
     const box = (await button.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(48);
-    expect(box.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 2 * 20 - 2 * 20 - 1);
+    expect(box.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 2 * 20 - 1);
     await button.tap();
     await expect(page).toHaveURL(new RegExp(`/books/${BOOK_ID}/read$`));
     await expect(page.getByRole('article')).toContainText('15쪽.');
     expect(log.events[0]).toBe('entry');
+  });
+
+  const SAFE_BOTTOM = 34;
+  const LONG_RECAP = Array.from(
+    { length: 14 },
+    (_, i) =>
+      `${i + 1}번째 문단. 정 주사는 미두장을 드나들며 재산을 잃고, 딸 초봉을 시집보내 형편을 펴 보려 한다. 초봉은 제중당 약국 창가에서 지나가는 사람들을 내다본다.`
+  ).join('\n\n');
+
+  async function openWithLongRecap(page: Page) {
+    const log = await installMockApi(page);
+    await page.route('http://api.e2e.test/**/briefing', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          applied_cutoff: 15,
+          recap: LONG_RECAP,
+          current_chapter: { chapter_no: 2, title: '생활 제일과' },
+          progress: { current_page: 15, total_pages: 30, percent: 50 },
+        }),
+      })
+    );
+    await page.goto(BRIEFING_URL);
+    await expect(page.getByTestId('mobile-briefing')).toBeVisible();
+    await expect(page.getByText('14번째 문단.', { exact: false })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    return log;
+  }
+
+  test('FR-BRF-001: 줄거리가 길어도 스크롤하지 않고 이어서 읽기 버튼이 화면 안에 있다', async ({ page }) => {
+    await openWithLongRecap(page);
+    const { height } = page.viewportSize()!;
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(height * 1.5);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    const box = (await page.getByRole('button', { name: '이어서 읽기' }).boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(height);
+  });
+
+  test('FR-BRF-001: 이어서 읽기 버튼이 아래 안전 영역 밖에 있다', async ({ page }) => {
+    await openWithLongRecap(page);
+    await page.addStyleTag({ content: `:root { --safe-bottom: ${SAFE_BOTTOM}px; }` });
+    const { height } = page.viewportSize()!;
+    const box = (await page.getByRole('button', { name: '이어서 읽기' }).boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(height - SAFE_BOTTOM + 0.5);
+    const bar = (await page.getByTestId('briefing-continue-bar').boundingBox())!;
+    expect(bar.y + bar.height).toBeGreaterThanOrEqual(height - 0.5);
+  });
+
+  test('FR-BRF-001: 목차를 펼쳐 끝까지 내려도 마지막 장이 이어서 읽기 줄에 가려지지 않는다', async ({ page }) => {
+    await openWithLongRecap(page);
+    await page.addStyleTag({ content: `:root { --safe-bottom: ${SAFE_BOTTOM}px; }` });
+    await page.getByRole('button', { name: /목차/ }).tap();
+    const last = page.getByRole('button', { name: /신판 흥보전/ });
+    await expect(last).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(200);
+    const lastBox = (await last.boundingBox())!;
+    const barBox = (await page.getByTestId('briefing-continue-bar').boundingBox())!;
+    expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(barBox.y + 0.5);
   });
 
   test('FR-BRF-001: 목차에서 장을 고르면 진도 응답 뒤에 읽기 화면으로 간다', async ({ page }) => {

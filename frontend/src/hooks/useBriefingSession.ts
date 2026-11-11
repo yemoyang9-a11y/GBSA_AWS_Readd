@@ -7,7 +7,8 @@ import { useSSE } from './useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
-import { BOOK_ROUTES } from '../utils/routes';
+import { isMobileDevice } from '../mobile/device';
+import { BOOK_ROUTES, bookPath } from '../utils/routes';
 import type { BriefingResponse, ChapterSummary } from '../types';
 
 export interface BriefingSessionState {
@@ -125,7 +126,10 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
     [navigate, bookId]
   );
 
-  const goBack = useCallback(() => navigate('/', { viewTransition: true }), [navigate]);
+  const goBack = useCallback(
+    () => navigate(bookPath(bookId), isMobileDevice(window.screen) ? undefined : { viewTransition: true }),
+    [navigate, bookId]
+  );
 
   return {
     briefing,
