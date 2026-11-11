@@ -115,6 +115,38 @@ test('JSON 파싱 실패는 그 호출만 최대 2회 재시도하고, 3회째�
   expect(fs.writeFileSync).not.toHaveBeenCalled();
 });
 
+test('NFR-AI-012: JSON 재시도 때만 프롬프트 끝에 JSON 단독 출력 지시가 붙고 첫 시도 프롬프트는 그대로다', async () => {
+  (fs.existsSync as jest.Mock).mockReturnValue(false);
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  (call as jest.Mock)
+    .mockResolvedValueOnce('요약 산문만 반환')
+    .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
+    .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
+    .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+  await loadOrGenerateChapter(chapter, pages, []);
+  const [firstPrompt, retryPrompt] = (call as jest.Mock).mock.calls.map(([, prompt]) => prompt);
+  expect(retryPrompt.startsWith(firstPrompt)).toBe(true);
+  expect(retryPrompt.length).toBeGreaterThan(firstPrompt.length);
+  expect(retryPrompt.slice(firstPrompt.length)).toContain('JSON');
+  expect(retryPrompt.slice(firstPrompt.length)).toContain('{');
+});
+
+test('NFR-AI-012: 첫 시도에 JSON이 파싱되면 지시 문장 없이 호출 1번이다', async () => {
+  (fs.existsSync as jest.Mock).mockReturnValue(false);
+  (call as jest.Mock)
+    .mockResolvedValueOnce(JSON.stringify({ summary: '요약' }))
+    .mockResolvedValueOnce(JSON.stringify({ characters: [character] }))
+    .mockResolvedValueOnce(JSON.stringify({ relationships: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ terms: [] }))
+    .mockResolvedValueOnce(JSON.stringify({ events: [] }));
+  await loadOrGenerateChapter(chapter, pages, []);
+  const prompts: string[] = (call as jest.Mock).mock.calls.map(([, prompt]) => prompt);
+  expect(call).toHaveBeenCalledTimes(5);
+  expect(prompts.some((p) => p.includes('직전 응답은 JSON이 아니었다'))).toBe(false);
+});
+
 test('replay preserves an existing corrected resolved artifact and saves changed output separately', () => {
   const persist = (
     runner as unknown as {
