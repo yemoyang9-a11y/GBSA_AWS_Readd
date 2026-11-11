@@ -12,8 +12,14 @@ test.beforeEach(({}, testInfo) => {
 
 test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이프 → 관계도', async ({ page }) => {
   const progress: number[] = [];
+  const appliedCutoffs: number[] = [];
   page.on('request', (req) => {
     if (req.url().includes('/progress') && req.method() === 'POST') progress.push((req.postDataJSON() as { page: number }).page);
+  });
+  page.on('response', async (res) => {
+    if (!res.url().includes('/progress') || res.request().method() !== 'POST') return;
+    const body = (await res.json().catch(() => null)) as { applied_cutoff?: number } | null;
+    if (typeof body?.applied_cutoff === 'number') appliedCutoffs.push(body.applied_cutoff);
   });
   await page.goto('/');
   await expect(page.getByTestId('mobile-dashboard')).toBeVisible();
@@ -50,5 +56,5 @@ test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이
   await page.getByRole('tab', { name: '인물 관계도' }).tap();
   await page.waitForTimeout(2000);
   await page.screenshot({ path: 'test-results/real/4-relationship.png' });
-  await expect(page.getByTestId('mobile-ssabi')).toContainText(`${before + 1}p까지 읽음`);
+  await expect.poll(() => appliedCutoffs.at(-1)).toBe(before + 1);
 });

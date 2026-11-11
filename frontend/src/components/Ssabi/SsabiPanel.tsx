@@ -32,7 +32,6 @@ const TAB_ORDER: SsabiTab[] = ['recap', 'relationship', 'chatbot'];
  */
 export default function SsabiPanel({
   sessionEpoch,
-  appliedCutoff = null,
   initialTab = null,
   initialTabEpoch = null,
   onTabChange,
@@ -63,12 +62,6 @@ export default function SsabiPanel({
   requireTextToSend = false,
 }: {
   sessionEpoch: number;
-  /**
-   * "Np까지 읽음" 배지에 그대로 찍는 페이지 번호(2026-08-24, 사용자 결정 — 지금 보고
-   * 있는 페이지를 그대로 보여주는 쪽을 선택함). 컨테이너(Reader)가 서버가 확인해 준
-   * 현재 페이지를 그대로 내려준다 — 여기서 계산하지 않는다. 아직 페이지가 없으면 null.
-   */
-  appliedCutoff?: number | null;
   /**
    * 재마운트 시 이어서 쓸 "마지막 탭" 기억과, 그 값을 기록한 시점의 sessionEpoch
    * (2026-08-24, 사용자 요청 — 패널을 닫았다 열면 항상 기본 탭으로 리셋되던 것을 마지막
@@ -197,11 +190,6 @@ export default function SsabiPanel({
           <img src={ssabiFace} alt="" aria-hidden="true" className="h-7 w-auto object-contain" />
           <h2 className="whitespace-nowrap font-dashSerif text-base font-extrabold text-brief-ink">아모의 가이드북</h2>
         </div>
-        {appliedCutoff !== null ? (
-          <span className="shrink-0 rounded-full bg-brief-accent-soft px-2.5 py-1 font-dashMono text-[11px] font-bold text-brief-accent">
-            {appliedCutoff}p까지 읽음
-          </span>
-        ) : null}
       </div>
 
       {/*

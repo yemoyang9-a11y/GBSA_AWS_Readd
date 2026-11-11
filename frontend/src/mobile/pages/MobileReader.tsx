@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
@@ -11,6 +11,10 @@ import MobileSsabiSheet from '../components/MobileSsabiSheet';
 import TocList from '../components/TocList';
 import MobileErrorState from '../components/MobileErrorState';
 import { useVisualViewport } from '../useVisualViewport';
+import { useReaderPrefs } from '../../hooks/useReaderPrefs';
+import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
+import JumpReturnBar from '../../components/Reader/JumpReturnBar';
+import { bookPath } from '../../utils/routes';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -21,8 +25,11 @@ export default function MobileReader() {
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
   const navigate = useNavigate();
-  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
+  const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, bookTitle, currentChapter, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
+  const prefsApi = useReaderPrefs();
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const prefsButtonRef = useRef<HTMLButtonElement>(null);
   const [tocOpen, setTocOpen] = useState(false);
   const viewport = useVisualViewport();
 
@@ -46,6 +53,7 @@ function MobileReadingSession() {
         chapterStart={chapters.find((chapter) => chapter.start_page === page.page_no) ?? null}
         swipeDisabled={panelOpen}
         onQuote={quote}
+        prefs={prefsApi.prefs}
       />
     );
   } else if (pageError) {
@@ -63,7 +71,8 @@ function MobileReadingSession() {
       <header className="flex h-14 shrink-0 items-center border-b border-brief-rule bg-brief-paper px-2">
         <button
           type="button"
-          onClick={() => navigate('/')}
+          // FR-BRW-003
+          onClick={() => navigate(bookPath(bookId))}
           aria-label="뒤로 가기"
           className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
@@ -80,7 +89,26 @@ function MobileReadingSession() {
             <path d="M9.5 4.8 6.5 8 9.5 11.2" />
           </svg>
         </button>
+        {bookTitle ? (
+          <p className="min-w-0 flex-1 truncate px-2 text-center font-dashSans text-[13px] text-brief-muted">
+            {currentChapter ? `${bookTitle} · ${currentChapter.chapter_no}장 ${currentChapter.title}` : bookTitle}
+          </p>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <button
+          ref={prefsButtonRef}
+          type="button"
+          onClick={() => setPrefsOpen((open) => !open)}
+          aria-label="보기 설정"
+          aria-haspopup="dialog"
+          aria-expanded={prefsOpen}
+          className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white font-dashSerif text-[15px] font-bold text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
+        >
+          <span aria-hidden="true">가</span>
+        </button>
       </header>
+      <JumpReturnBar origin={jumpOrigin} onReturn={returnToOrigin} onDismiss={dismissJumpOrigin} />
       <div className="min-h-0 flex-1">{body}</div>
       <EdgeHandle side="left" label="목차" controls="toc-panel" open={tocOpen} onToggle={() => setTocOpen((open) => !open)} hidden={panelOpen} />
       {tocOpen && !panelOpen ? (
@@ -102,6 +130,14 @@ function MobileReadingSession() {
         )}
         <SsabiPanel key={currentPage} {...ssabiPanelProps} compactHeader={viewport.keyboardOpen} requireTextToSend />
       </MobileSsabiSheet>
+      {prefsOpen ? (
+        <ReaderPrefsSheet
+          variant="sheet"
+          onClose={() => setPrefsOpen(false)}
+          returnFocusRef={prefsButtonRef}
+          prefsApi={prefsApi}
+        />
+      ) : null}
     </div>
   );
 }
