@@ -42,6 +42,22 @@ test('PC 작품 페이지에는 위 줄 메뉴가 있다', () => {
   expect(screen.getByRole('searchbox', { name: '작품, 작가 검색' })).toBeInTheDocument();
 });
 
+test('PC 검색 화면에는 작품, 작가 검색 입력이 본문에 하나만 있다', () => {
+  renderAt('/search?q=탁', false);
+  const inputs = screen.getAllByRole('searchbox', { name: '작품, 작가 검색' });
+  expect(inputs).toHaveLength(1);
+  expect(inputs[0]).toHaveValue('탁');
+  expect(screen.queryByRole('search')).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'MY' })).toBeInTheDocument();
+});
+
+test('PC 검색 화면이 아니면 위 줄에 검색 입력이 있다', () => {
+  renderAt('/shelf', false);
+  expect(
+    within(screen.getByRole('search')).getByRole('searchbox', { name: '작품, 작가 검색' })
+  ).toBeInTheDocument();
+});
+
 test('브리핑과 읽기 주소는 틀 없이 지금 화면을 그린다', async () => {
   const mobileRead = renderAt('/books/takryu/read', true);
   expect(screen.getByTestId('mobile-reader')).toBeInTheDocument();

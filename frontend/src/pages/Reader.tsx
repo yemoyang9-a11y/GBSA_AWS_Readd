@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import ReaderView from '../components/Reader/ReaderView';
 import TocPanel from '../components/Reader/TocPanel';
 import SsabiPanel from '../components/Ssabi/SsabiPanel';
@@ -13,7 +13,7 @@ import { useReadingSession } from '../hooks/useReadingSession';
 import { useReaderPrefs } from '../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../components/Reader/JumpReturnBar';
-import { bookPath } from '../utils/routes';
+import { useBackToBook } from '../hooks/useBackToBook';
 
 /**
  * 읽기 화면 컨테이너 — S3 · S4 · S5
@@ -36,7 +36,6 @@ export default function Reader() {
 
 function ReadingSession() {
   const { bookId = '' } = useParams();
-  const navigate = useNavigate();
   const {
     entryError,
     retryEntry,
@@ -58,6 +57,7 @@ function ReadingSession() {
     quote,
     ssabiPanelProps,
   } = useReadingSession(bookId);
+  const backToBook = useBackToBook(bookId);
   const prefsApi = useReaderPrefs();
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
@@ -188,13 +188,8 @@ function ReadingSession() {
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-brief-rule bg-brief-paper px-6">
         <button
           type="button"
-          // navigate(-1)(브라우저 히스토리 뒤로가기) 대신 홈으로 고정 이동한다(2026-08-25,
-          // 사용자 제보 — "그냥 브라우저 뒤로가기랑 똑같다"). 히스토리 기반이면 외부
-          // 사이트에서 바로 들어왔거나 새 탭으로 열었을 때 뒤로 갈 곳이 없거나 엉뚱한
-          // 곳으로 간다. Briefing.tsx의 "뒤로" 버튼(`onBack={() => navigate('/')}`)과
-          // 같은 패턴으로 맞춘다 — 이 앱에서 "뒤로"는 항상 홈(대시보드)을 뜻한다.
           // FR-BRW-003
-          onClick={() => navigate(bookPath(bookId), { viewTransition: true })}
+          onClick={backToBook}
           aria-label="뒤로 가기"
           className="flex size-9 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >

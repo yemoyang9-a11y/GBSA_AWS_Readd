@@ -10,7 +10,7 @@ test.beforeEach(({}, testInfo) => {
   test.skip(testInfo.project.name !== 'iphone-pro-max', 'iPhone 한 기기로 한 번');
 });
 
-test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이프 → 관계도', async ({ page }) => {
+test('5.3: 로컬 백엔드·로컬 DB로 홈 → 작품 페이지 → 진입 → 읽기 스와이프 → 관계도', async ({ page }) => {
   const progress: number[] = [];
   const appliedCutoffs: number[] = [];
   page.on('request', (req) => {
@@ -22,11 +22,13 @@ test('5.3: 로컬 백엔드·로컬 DB로 서재 → 진입 → 읽기 스와이
     if (typeof body?.applied_cutoff === 'number') appliedCutoffs.push(body.applied_cutoff);
   });
   await page.goto('/');
-  await expect(page.getByTestId('mobile-dashboard')).toBeVisible();
-  await expect(page.getByTestId('mobile-dashboard')).toContainText('탁류');
-  await page.screenshot({ path: 'test-results/real/1-dashboard.png' });
+  const cover = page.getByRole('region', { name: '신작' }).getByRole('link', { name: '탁류' });
+  await expect(cover).toBeVisible();
+  await page.screenshot({ path: 'test-results/real/1-home.png' });
 
-  await page.getByRole('button', { name: /이어서 읽기|읽기 시작/ }).first().tap();
+  await cover.tap();
+  await page.waitForURL(/\/books\/takryu$/);
+  await page.getByRole('button', { name: /이어서 읽기|읽기 시작/ }).tap();
   await page.waitForURL(/\/books\/takryu\/(read|briefing)/);
   if (page.url().includes('/briefing')) {
     await expect(page.getByTestId('mobile-briefing')).toBeVisible();

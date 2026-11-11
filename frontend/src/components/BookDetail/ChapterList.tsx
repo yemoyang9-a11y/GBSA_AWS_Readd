@@ -25,7 +25,7 @@ export default function ChapterList({
               disabled={disabled}
               aria-current={current ? 'true' : undefined}
               onClick={() => onSelect(chapter)}
-              className={`flex min-h-[52px] w-full items-center gap-3 px-2 text-left text-sm text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.04)] disabled:opacity-40 disabled:hover:bg-transparent ${
+              className={`flex min-h-[52px] w-full items-center gap-3 px-2 text-left text-sm text-dash-ink transition-colors hover:bg-dash-ink/[0.04] disabled:opacity-40 disabled:hover:bg-transparent ${
                 current ? 'bg-brief-accent-soft font-bold hover:bg-brief-accent-soft' : ''
               }`}
             >

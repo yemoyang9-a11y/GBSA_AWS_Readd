@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { enterBook } from '../services/progressService';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
-import { routePathFor } from '../utils/routes';
+import { bookPath, routePathFor } from '../utils/routes';
 
 interface EnterState {
   locationKey: string;
@@ -23,11 +23,21 @@ export function useEnterBook(): {
   failed: boolean;
 } {
   const navigate = useNavigate();
-  const { key: locationKey } = useLocation();
+  const { key: locationKey, pathname } = useLocation();
   const [state, setState] = useState<EnterState | null>(null);
   const latestRequest = useRef(0);
   const navigatedRequest = useRef(0);
   const pendingBookId = useRef<string | null>(null);
+  const awaitingLeave = useRef(false);
+
+  useEffect(() => {
+    if (!awaitingLeave.current) return;
+    // FR-PRG-003 FR-SPL-005
+    awaitingLeave.current = false;
+    pendingBookId.current = null;
+    clearPendingJump();
+    setState(null);
+  });
 
   useEffect(
     () => () => {
@@ -53,7 +63,12 @@ export function useEnterBook(): {
         const entry = await enterBook(bookId);
         if (request !== latestRequest.current) return;
         navigatedRequest.current = request;
-        navigate(routePathFor(bookId, entry), { viewTransition: true });
+        awaitingLeave.current = true;
+        // FR-BRW-003
+        navigate(
+          routePathFor(bookId, entry),
+          pathname === bookPath(bookId) ? { state: { fromBook: true } } : undefined
+        );
       } catch {
         if (request !== latestRequest.current) return;
         pendingBookId.current = null;
@@ -61,7 +76,7 @@ export function useEnterBook(): {
         setState({ locationKey, busyId: null, failed: true });
       }
     },
-    [navigate, locationKey]
+    [navigate, locationKey, pathname]
   );
 
   const current = state?.locationKey === locationKey ? state : null;

@@ -23,7 +23,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 const NOTICE = 'py-10 text-center text-sm text-dash-ink';
 const OUTLINE_BUTTON =
-  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-white px-5 text-sm font-bold text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)]';
+  'inline-flex min-h-11 items-center justify-center rounded-full border border-dash-ink bg-white px-5 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10';
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
@@ -31,7 +31,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
       type="button"
       aria-label="뒤로 가기"
       onClick={onClick}
-      className="-ml-3 grid size-11 place-items-center rounded-full text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.05)]"
+      className="-ml-3 grid size-11 place-items-center rounded-full text-dash-ink transition-colors hover:bg-dash-ink/5"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M15 5l-7 7 7 7" />
@@ -221,7 +221,7 @@ export default function BookDetail() {
               type="button"
               onClick={startReading}
               disabled={!book.ssabi_ready || busy || status === 'loading' || status === 'not-ready'}
-              className="flex min-h-11 w-full items-center justify-center rounded-full border border-dash-ink bg-white px-4 text-sm font-bold text-dash-ink transition-colors hover:bg-[rgba(31,31,31,0.05)] active:bg-[rgba(31,31,31,0.1)] disabled:opacity-40 disabled:hover:bg-white mobile:min-h-12 mobile:text-[15px]"
+              className="flex min-h-11 w-full items-center justify-center rounded-full border border-dash-ink bg-white px-4 text-sm font-bold text-dash-ink transition-colors hover:bg-dash-ink/5 active:bg-dash-ink/10 disabled:opacity-40 disabled:hover:bg-white mobile:min-h-12 mobile:text-[15px]"
             >
               {resumeLabel(book, busy)}
             </button>

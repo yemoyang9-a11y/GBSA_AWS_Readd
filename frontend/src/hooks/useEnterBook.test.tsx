@@ -343,3 +343,50 @@ test('FR-PRG-003: 화면을 옮겨 다른 책 요청을 시작한 뒤 앞 책의
   await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/read'));
   expect(takePendingJump('other')).toBe(5);
 });
+
+async function enterThenBackInOneRender(router: ReturnType<typeof renderDetailRouter>) {
+  const pending = deferred<EntryResponse>();
+  enterBookMock.mockReturnValue(pending.promise);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  expect(screen.getByTestId('busy')).toHaveTextContent('takryu');
+
+  await act(async () => {
+    pending.resolve(entry('briefing'));
+    await pending.promise;
+    await Promise.resolve();
+    expect(router.state.location.pathname).toBe('/books/takryu/briefing');
+    void router.navigate(-1);
+    await Promise.resolve();
+  });
+  expect(router.state.location.pathname).toBe('/books/takryu');
+}
+
+test('FR-SPL-005: 브리핑이 그려지기 전에 뒤로 돌아와도 읽기 버튼이 진입 중 상태로 멈추지 않는다', async () => {
+  const router = renderDetailRouter();
+
+  await enterThenBackInOneRender(router);
+
+  await waitFor(() => expect(screen.getByTestId('busy')).toHaveTextContent('-'));
+  expect(screen.getByTestId('failed')).toHaveTextContent('false');
+});
+
+test('FR-PRG-003: 브리핑이 그려지기 전에 뒤로 돌아오면 장 이동 예약이 남지 않는다', async () => {
+  const router = renderDetailRouter();
+  setPendingJump('takryu', 21);
+
+  await enterThenBackInOneRender(router);
+
+  await waitFor(() => expect(screen.getByTestId('busy')).toHaveTextContent('-'));
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
+test('FR-PRG-003: 브리핑이 실제로 열리면 장 이동 예약은 읽기 화면을 위해 남는다', async () => {
+  enterBookMock.mockResolvedValue(entry('briefing'));
+  renderDetailRouter();
+  setPendingJump('takryu', 21);
+
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+
+  expect(await screen.findByText('브리핑')).toBeInTheDocument();
+  expect(takePendingJump('takryu')).toBe(21);
+});

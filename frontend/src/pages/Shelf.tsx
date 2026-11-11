@@ -42,7 +42,7 @@ export default function Shelf() {
     <div className="mx-auto w-full max-w-page px-7 py-8 mobile:px-4 mobile:py-4">
       <div className="flex items-baseline gap-2">
         <h1 className="m-0 font-dashSerif text-xl font-bold text-dash-ink">내 서재</h1>
-        {status === 'ready' && shelfBooks.length > 0 && (
+        {status === 'ready' && (
           <span className="text-sm text-dash-muted">{shelfBooks.length}권</span>
         )}
       </div>

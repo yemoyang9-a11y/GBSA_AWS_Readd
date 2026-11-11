@@ -13,7 +13,7 @@ const PROMPT_CLASS = 'min-w-0 break-keep font-dashSerif text-[22px] font-bold le
 const LAYOUT = {
   modal: {
     entry: 'mt-8 flex justify-center',
-    opener: 'px-[14px] py-2 text-xs transition-colors hover:bg-[rgba(31,31,31,0.05)]',
+    opener: 'px-[14px] py-2 text-xs transition-colors hover:bg-dash-ink/5',
     overlay: 'flex items-center justify-center p-6',
     panel: 'w-full max-w-[480px] rounded-dash-panel p-8',
     panelStyle: undefined,
@@ -23,7 +23,7 @@ const LAYOUT = {
   },
   sheet: {
     entry: 'mt-10',
-    opener: 'h-12 w-full text-[15px] active:bg-[rgba(31,31,31,0.1)]',
+    opener: 'h-12 w-full text-[15px] active:bg-dash-ink/10',
     overlay: '',
     panel:
       'brief-scroll absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-dash-panel px-5 pt-2',

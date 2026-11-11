@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Loading from '../../components/common/Loading';
 import { useReadingSession } from '../../hooks/useReadingSession';
 import SsabiPanel from '../../components/Ssabi/SsabiPanel';
@@ -14,7 +14,7 @@ import { useVisualViewport } from '../useVisualViewport';
 import { useReaderPrefs } from '../../hooks/useReaderPrefs';
 import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../../components/Reader/JumpReturnBar';
-import { bookPath } from '../../utils/routes';
+import { useBackToBook } from '../../hooks/useBackToBook';
 
 export default function MobileReader() {
   const { bookId = '' } = useParams();
@@ -24,9 +24,9 @@ export default function MobileReader() {
 // FR-PRG-003 🚦 FR-BRF-001
 function MobileReadingSession() {
   const { bookId = '' } = useParams();
-  const navigate = useNavigate();
   const { entryError, retryEntry, page, pageError, retryPage, currentPage, totalPages, chapters, bookTitle, currentChapter, jumpOrigin, returnToOrigin, dismissJumpOrigin, moveTo, highlightedQuote, panelOpen, togglePanel, ssabiPanelProps, quote } =
     useReadingSession(bookId);
+  const backToBook = useBackToBook(bookId);
   const prefsApi = useReaderPrefs();
   const [prefsOpen, setPrefsOpen] = useState(false);
   const prefsButtonRef = useRef<HTMLButtonElement>(null);
@@ -72,7 +72,7 @@ function MobileReadingSession() {
         <button
           type="button"
           // FR-BRW-003
-          onClick={() => navigate(bookPath(bookId))}
+          onClick={backToBook}
           aria-label="뒤로 가기"
           className="flex size-11 items-center justify-center rounded-full border border-brief-rule bg-white text-brief-ink transition-shadow hover:shadow-brief-soft-sm"
         >
