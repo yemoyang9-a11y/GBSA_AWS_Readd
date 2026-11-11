@@ -11,6 +11,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { useEnterBook } from './useEnterBook';
+import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import type { EntryResponse } from '../types';
 
 const enterBookMock = vi.fn<(bookId: string) => Promise<EntryResponse>>();
@@ -50,6 +51,7 @@ function renderProbe() {
 
 beforeEach(() => {
   enterBookMock.mockReset();
+  clearPendingJump();
 });
 
 test('FR-BRF-001: enter는 서버가 briefing이라 하면 브리핑 주소로 간다', async () => {
@@ -220,4 +222,124 @@ test('FR-BRF-001: 더 새로운 진입 요청이 시작되면 앞 요청의 늦�
 
   await act(async () => second.resolve(entry('reader')));
   await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/read'));
+});
+
+function TwoBookProbe() {
+  const { enter } = useEnterBook();
+  return (
+    <div>
+      <button type="button" onClick={() => void enter('takryu')}>
+        탁류 들어가기
+      </button>
+      <button type="button" onClick={() => void enter('other')}>
+        다른 책 들어가기
+      </button>
+    </div>
+  );
+}
+
+function renderTwoBookRouter() {
+  const router = createMemoryRouter(
+    [
+      { path: '/', element: <TwoBookProbe /> },
+      { path: '/books/:bookId/briefing', element: <p>브리핑</p> },
+      { path: '/books/:bookId/read', element: <p>읽기</p> },
+    ],
+    { initialEntries: ['/'] }
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+test('FR-PRG-003: 예약 뒤 응답 전에 화면을 떠나면 이동 예약이 지워지고 늦은 응답도 되살리지 않는다', async () => {
+  const pending = deferred<EntryResponse>();
+  enterBookMock.mockReturnValue(pending.promise);
+  const router = renderDetailRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  await userEvent.click(screen.getByRole('link', { name: '검색' }));
+  expect(screen.getByText('검색 화면')).toBeInTheDocument();
+  expect(takePendingJump('takryu')).toBeNull();
+
+  await act(async () => pending.resolve(entry('briefing')));
+
+  expect(router.state.location.pathname).toBe('/search');
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
+test('FR-PRG-003: 예약 뒤 진입에 성공해 이동하면 이동 예약은 그대로 남는다', async () => {
+  enterBookMock.mockResolvedValue(entry('briefing'));
+  const router = renderDetailRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/books/takryu/briefing'));
+  expect(screen.getByText('브리핑')).toBeInTheDocument();
+  expect(takePendingJump('takryu')).toBe(31);
+});
+
+test('FR-PRG-003: 예약 뒤 진입이 실패하면 이동 예약이 지워진다', async () => {
+  enterBookMock.mockRejectedValue(new Error('network'));
+  renderDetailRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+
+  await waitFor(() => expect(screen.getByTestId('failed')).toHaveTextContent('true'));
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
+test('FR-PRG-003: 더 새로운 다른 책 요청에 밀리면 앞 책의 이동 예약이 지워진다', async () => {
+  const first = deferred<EntryResponse>();
+  const second = deferred<EntryResponse>();
+  enterBookMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  const router = renderTwoBookRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '탁류 들어가기' }));
+  await userEvent.click(screen.getByRole('button', { name: '다른 책 들어가기' }));
+  await act(async () => first.resolve(entry('briefing')));
+  await act(async () => second.resolve(entry('briefing')));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/briefing'));
+  expect(takePendingJump('takryu')).toBeNull();
+});
+
+test('FR-PRG-003: 더 새로운 다른 책 요청이 자기 이동 예약을 넣었으면 앞 요청의 늦은 실패가 그 예약을 지우지 않는다', async () => {
+  const first = deferred<EntryResponse>();
+  const second = deferred<EntryResponse>();
+  enterBookMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  const router = renderTwoBookRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '탁류 들어가기' }));
+  setPendingJump('other', 5);
+  await userEvent.click(screen.getByRole('button', { name: '다른 책 들어가기' }));
+  await act(async () => first.reject(new Error('network')));
+  await act(async () => second.resolve(entry('briefing')));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/briefing'));
+  expect(takePendingJump('other')).toBe(5);
+});
+
+test('FR-PRG-003: 화면을 옮겨 다른 책 요청을 시작한 뒤 앞 책의 늦은 응답이 새 이동 예약을 지우지 않는다', async () => {
+  const first = deferred<EntryResponse>();
+  const second = deferred<EntryResponse>();
+  enterBookMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  const router = renderDetailRouter();
+
+  setPendingJump('takryu', 31);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  await userEvent.click(screen.getByRole('link', { name: '다른 책' }));
+  setPendingJump('other', 5);
+  await userEvent.click(screen.getByRole('button', { name: '들어가기' }));
+  expect(enterBookMock).toHaveBeenNthCalledWith(2, 'other');
+
+  await act(async () => first.resolve(entry('briefing')));
+  await act(async () => second.resolve(entry('reader')));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/books/other/read'));
+  expect(takePendingJump('other')).toBe(5);
 });
