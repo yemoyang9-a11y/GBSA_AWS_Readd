@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
+import RouteFade from './RouteFade';
 import TabBar, { TAB_BAR_HEIGHT } from './TabBar';
 
 // NFR-USE
@@ -20,7 +21,9 @@ export default function AppShell({ isMobile, nav }: { isMobile: boolean; nav?: b
               : 'var(--safe-bottom)',
           }}
         >
-          <Outlet />
+          <RouteFade>
+            <Outlet />
+          </RouteFade>
         </main>
         {showNav && <TabBar />}
       </div>
@@ -31,7 +34,9 @@ export default function AppShell({ isMobile, nav }: { isMobile: boolean; nav?: b
     <div className="min-h-screen bg-dash-paper font-dashSans text-dash-ink">
       <Header nav={showNav} />
       <main>
-        <Outlet />
+        <RouteFade>
+          <Outlet />
+        </RouteFade>
       </main>
     </div>
   );

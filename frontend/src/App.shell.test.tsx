@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from './App';
 
@@ -91,4 +92,29 @@ test('없는 주소는 지금의 찾을 수 없음 화면을 그린다', () => {
   renderAt('/nowhere/at/all', true);
   expect(screen.getByTestId('mobile-not-found')).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '주 메뉴' })).not.toBeInTheDocument();
+});
+
+describe.each([
+  ['모바일', true],
+  ['PC', false],
+])('%s 화면 전환 페이드', (_label, isMobile) => {
+  test('NFR-USE: 최상위 화면 내용은 페이드 래퍼 안에 있고 주 메뉴는 래퍼 밖에 있다', () => {
+    renderAt('/shelf', isMobile);
+    const fade = screen.getByTestId('route-fade');
+    expect(within(fade).getByRole('heading', { level: 1, name: '내 서재' })).toBeInTheDocument();
+    expect(fade).not.toContainElement(screen.getByRole('navigation', { name: '주 메뉴' }));
+  });
+
+  test('NFR-USE: 읽기 화면에서 쪽을 넘기고 아모 패널을 열어도 페이드가 다시 돌지 않는다', async () => {
+    const user = userEvent.setup();
+    renderAt('/books/takryu/read', isMobile);
+    await screen.findByRole('article');
+    const fade = screen.getByTestId('route-fade');
+    expect(fade).toContainElement(screen.getByRole('article'));
+
+    await user.click(screen.getByRole('button', { name: '다음 페이지' }));
+    await user.click(screen.getByRole('button', { name: '싸비 열기' }));
+
+    expect(screen.getByTestId('route-fade')).toBe(fade);
+  });
 });
