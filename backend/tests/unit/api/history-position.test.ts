@@ -10,7 +10,7 @@ jest.mock('../../../src/modules/reading-state/composition', () => ({
   createReadingStateServices: jest.fn(() => ({ cutoffService: { getCutoffSnapshot: jest.fn() } })),
 }));
 jest.mock('../../../src/modules/content/composition', () => ({
-  createContentServices: jest.fn(() => ({})),
+  createContentServices: jest.fn(() => ({ content: { findReadiness: jest.fn(async () => true) } })),
 }));
 jest.mock('../../../src/modules/ssabi/composition', () => ({
   createSsabiServices: jest.fn(() => ({})),
