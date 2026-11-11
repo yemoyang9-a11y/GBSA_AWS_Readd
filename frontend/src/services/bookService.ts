@@ -38,7 +38,7 @@ export async function fetchBookInfo(bookId: string): Promise<BookInfoResponse> {
 export async function fetchPage(bookId: string, pageNo: number): Promise<PageResponse> {
   if (USE_MOCK) {
     const { mockPageResponse } = await import('../../mocks/server');
-    return mockPageResponse(pageNo);
+    return mockPageResponse(bookId, pageNo);
   }
   const { data } = await api.get<PageResponse>(`/books/${bookId}/pages/${pageNo}`);
   return data;

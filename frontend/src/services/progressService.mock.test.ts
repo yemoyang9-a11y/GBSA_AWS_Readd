@@ -68,3 +68,20 @@ test('USE_MOCK=true에서 진입·진도·목록·위치는 네트워크 요청�
   expect(api.get).not.toHaveBeenCalled();
   expect(api.post).not.toHaveBeenCalled();
 });
+
+test('FR-BRF-005: 책을 읽으면 그 책의 last_read_at이 목록에서 가장 늦고, 읽지 않은 책은 바뀌지 않는다', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-12T03:00:00.000Z'));
+  const before = await fetchCatalog();
+  const takryuBefore = before.books.find((b) => b.book_id === 'takryu')!.progress!.last_read_at;
+
+  await sendProgress('done-book', 5);
+
+  const { books } = await fetchCatalog();
+  const lastRead = books.filter((b) => b.progress).map((b) => [b.book_id, b.progress!.last_read_at]);
+  const latest = [...lastRead].sort((a, b) => b[1].localeCompare(a[1]))[0];
+  expect(latest).toEqual(['done-book', '2026-11-12T03:00:00.000Z']);
+  expect(books.find((b) => b.book_id === 'takryu')!.progress!.last_read_at).toBe(takryuBefore);
+  expect(books.find((b) => b.book_id === 'unread-book')!.progress).toBeUndefined();
+  vi.useRealTimers();
+});

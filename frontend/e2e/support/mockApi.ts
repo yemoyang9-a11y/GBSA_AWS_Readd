@@ -63,7 +63,6 @@ export const DONE_BOOK: BookSummary = {
 
 const LAST_READ_AT: Record<string, string> = {
   [BOOK_ID]: '2026-11-09T00:00:00.000Z',
-  [UNREAD_BOOK.book_id]: '2026-11-10T00:00:00.000Z',
   [DONE_BOOK.book_id]: DONE_BOOK.progress!.last_read_at,
 };
 
@@ -100,13 +99,17 @@ function positionAt(page: number | undefined, chapterList: ChapterSummary[]): Po
 }
 
 // FR-BRF-005
-function progressAt(bookId: string, page: number | undefined, totalPages: number): BookSummary['progress'] {
-  if (page === undefined) return undefined;
+function progressAt(
+  page: number | undefined,
+  totalPages: number,
+  lastReadAt: string | undefined
+): BookSummary['progress'] {
+  if (page === undefined || lastReadAt === undefined) return undefined;
   return {
     current_page: page,
     percent: Math.round((page / totalPages) * 100),
     is_complete: page >= totalPages,
-    last_read_at: LAST_READ_AT[bookId],
+    last_read_at: lastReadAt,
   };
 }
 
@@ -138,6 +141,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
   const extraPages: Record<string, number | undefined> = { [DONE_BOOK.book_id]: 20 };
+  const lastReadAt: Record<string, string | undefined> = { ...LAST_READ_AT };
 
   const chaptersOf = (bookId: string) =>
     bookId === BOOK_ID ? chapters(totalPages) : EXTRA_INFO[bookId].chapters;
@@ -151,11 +155,11 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       ...book,
       genre: book.genre ?? null,
       registered_at: book.registered_at ?? '2026-10-01T00:00:00.000Z',
-      progress: progressAt(book.book_id, pageOf(book.book_id), totalOf(book.book_id)),
+      progress: progressAt(pageOf(book.book_id), totalOf(book.book_id), lastReadAt[book.book_id]),
     })),
     NOT_READY_BOOK,
-    { ...UNREAD_BOOK, progress: progressAt(UNREAD_BOOK.book_id, pageOf(UNREAD_BOOK.book_id), totalOf(UNREAD_BOOK.book_id)) },
-    { ...DONE_BOOK, progress: progressAt(DONE_BOOK.book_id, pageOf(DONE_BOOK.book_id), totalOf(DONE_BOOK.book_id)) },
+    { ...UNREAD_BOOK, progress: progressAt(pageOf(UNREAD_BOOK.book_id), totalOf(UNREAD_BOOK.book_id), lastReadAt[UNREAD_BOOK.book_id]) },
+    { ...DONE_BOOK, progress: progressAt(pageOf(DONE_BOOK.book_id), totalOf(DONE_BOOK.book_id), lastReadAt[DONE_BOOK.book_id]) },
   ];
   const bookStatus = (bookId: string): 200 | 403 | 404 => {
     const book = catalogBooks().find((b) => b.book_id === bookId);
@@ -260,6 +264,7 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
       log.events.push(`progress-done:${body.page}`);
       if (bookId in EXTRA_INFO) extraPages[bookId] = body.page;
       else cutoff = body.page;
+      lastReadAt[bookId in EXTRA_INFO ? bookId : BOOK_ID] = new Date().toISOString();
       return json(route, { success: true, applied_cutoff: body.page });
     }
     if (method === 'POST' && rest === '/heartbeat') return json(route, {});

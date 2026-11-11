@@ -118,3 +118,17 @@ test('FR-BRW-002: 준비되지 않은 책과 없는 책의 /entry는 403이다',
   expect((await call(page, 'POST', '/books/not-ready-book/entry', {})).status).toBe(403);
   expect((await call(page, 'POST', '/books/no-such-book/entry', {})).status).toBe(403);
 });
+
+test('FR-BRF-005: 책을 읽으면 그 책의 last_read_at이 목록에서 가장 늦고, 읽지 않은 책은 바뀌지 않는다', async ({ page }) => {
+  await call(page, 'POST', '/books/done-book/progress', { page: 5 });
+
+  const { json } = await call(page, 'GET', '/books');
+  const books = json.books as { book_id: string; progress?: { last_read_at: string } }[];
+  const withProgress = books.filter((b) => b.progress);
+  const latest = [...withProgress].sort((a, b) =>
+    b.progress!.last_read_at.localeCompare(a.progress!.last_read_at)
+  )[0];
+  expect(latest.book_id).toBe('done-book');
+  expect(books.find((b) => b.book_id === BOOK_ID)!.progress!.last_read_at).toBe('2026-11-09T00:00:00.000Z');
+  expect(books.find((b) => b.book_id === 'unread-book')!.progress).toBeUndefined();
+});

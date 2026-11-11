@@ -84,6 +84,11 @@ const otherPages: Record<string, number | undefined> = Object.fromEntries(
     .map((book) => [book.book_id, book.progress!.current_page])
 );
 
+// FR-BRF-005
+const lastReadAt: Record<string, string | undefined> = Object.fromEntries(
+  mockCatalog.filter((book) => book.progress).map((book) => [book.book_id, book.progress!.last_read_at])
+);
+
 function pageOf(bookId: string): number | undefined {
   return bookId === MOCK_BOOK_ID ? currentPage : otherPages[bookId];
 }
@@ -118,6 +123,7 @@ export function mockEntry(bookId: string = MOCK_BOOK_ID): EntryResponse {
 export function mockRecordProgress(bookId: string, page: number): number {
   if (bookId === MOCK_BOOK_ID) currentPage = page;
   else otherPages[bookId] = page;
+  lastReadAt[bookId] = new Date().toISOString();
   return deriveCutoff(page);
 }
 
@@ -135,7 +141,7 @@ export function mockCatalogResponse(): CatalogResponse {
           current_page: page,
           percent: derivePercent(page, totalPages),
           is_complete: page >= totalPages,
-          last_read_at: book.progress?.last_read_at ?? '2026-11-10T00:00:00.000Z',
+          last_read_at: lastReadAt[book.book_id] ?? new Date().toISOString(),
         },
       };
     }),
@@ -186,16 +192,19 @@ export function mockMeResponse(): MockResult<AuthMe> {
     : { status: 401 };
 }
 
-export function mockPageResponse(pageNo: number): PageResponse {
+// FR-PRG-001
+export function mockPageResponse(bookId: string, pageNo: number): PageResponse {
+  const chapters = chaptersOf(bookId);
+  const lastPage = chapters.length > 0 ? chapters[chapters.length - 1].end_page : 30;
   // 범위 밖 pageNo(예: 0)가 들어와도 page_no·content·prev/next_page가 서로 어긋나지
   // 않게, 한 번 접은 값에서 전부 파생한다(2026-08-24 — 접은 content만 쓰고 page_no는
   // 안 접었더니 "0페이지인데 1페이지 본문"처럼 필드끼리 모순되던 버그를 고침).
-  const page = Math.min(30, Math.max(1, pageNo));
+  const page = Math.min(lastPage, Math.max(1, pageNo));
   return {
     page_no: page,
     content: mockPageContent(page),
     prev_page: page > 1 ? page - 1 : null,
-    next_page: page < 30 ? page + 1 : null,
+    next_page: page < lastPage ? page + 1 : null,
   };
 }
 
