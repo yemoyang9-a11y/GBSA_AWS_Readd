@@ -93,13 +93,15 @@ test('돌아가기는 홈(/)으로 가지 않는다', async () => {
   expect(navigateCalls.map((c) => c.to)).not.toContain('/');
 });
 
-test('PC 화면의 돌아가기는 화면 전환 효과를 쓴다', async () => {
+test('PC 화면의 돌아가기도 화면 전환 효과 없이 작품 페이지 기록으로 바꾼다', async () => {
   setScreen(1440, 1000);
   renderProbe();
 
   await userEvent.click(screen.getByRole('button', { name: '돌아가기' }));
 
-  expect(navigateCalls).toEqual([{ to: '/books/takryu', options: { viewTransition: true } }]);
+  expect(navigateCalls).toEqual([
+    { to: '/books/takryu', options: { replace: true } },
+  ]);
 });
 
 test('모바일 화면의 돌아가기는 화면 전환 효과 없이 간다', async () => {
@@ -133,4 +135,66 @@ test('FR-PRG-003: 이어서 읽기는 진도 요청도 이동 예약도 만들�
   expect(sendProgressMock).toHaveBeenCalledTimes(0);
   expect(takePendingJump('takryu')).toBeNull();
   await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+});
+
+test.each(['이어서 읽기', '장 고르기'])('모바일 화면의 %s는 화면 전환 효과 없이 읽기 화면으로 간다', async (button) => {
+  setScreen(375, 812);
+  renderProbe();
+
+  await userEvent.click(screen.getByRole('button', { name: button }));
+
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+  expect(navigateCalls).toHaveLength(1);
+  expect(navigateCalls[0].options?.viewTransition).toBeFalsy();
+});
+
+test.each(['이어서 읽기', '장 고르기'])('PC 화면의 %s도 화면 전환 효과 없이 읽기 화면으로 간다', async (button) => {
+  setScreen(1440, 1000);
+  renderProbe();
+
+  await userEvent.click(screen.getByRole('button', { name: button }));
+
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+  expect(navigateCalls).toHaveLength(1);
+  expect(navigateCalls[0].to).toBe('/books/takryu/read');
+  expect(navigateCalls[0].options?.viewTransition).toBeFalsy();
+});
+
+function renderProbeWithState(state: unknown) {
+  render(
+    <MemoryRouter initialEntries={['/books/takryu', { pathname: '/books/takryu/briefing', state }]} initialIndex={1}>
+      <Routes>
+        <Route path="*" element={<Probe />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+test.each(['이어서 읽기', '장 고르기'])('%s는 브리핑 기록을 읽기 화면으로 바꾸고 fromBook 표시를 넘긴다', async (button) => {
+  renderProbeWithState({ fromBook: true });
+
+  await userEvent.click(screen.getByRole('button', { name: button }));
+
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+  expect(navigateCalls).toEqual([
+    { to: '/books/takryu/read', options: { replace: true, state: { fromBook: true } } },
+  ]);
+});
+
+test('표시 없이 들어온 브리핑의 이어서 읽기는 표시 없이 기록만 바꾼다', async () => {
+  renderProbe();
+
+  await userEvent.click(screen.getByRole('button', { name: '이어서 읽기' }));
+
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu/read'));
+  expect(navigateCalls).toEqual([{ to: '/books/takryu/read', options: { replace: true } }]);
+});
+
+test('작품 페이지에서 들어온 브리핑의 돌아가기는 그 작품 페이지 기록으로 돌아간다', async () => {
+  renderProbeWithState({ fromBook: true });
+
+  await userEvent.click(screen.getByRole('button', { name: '돌아가기' }));
+
+  await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/books/takryu'));
+  expect(navigateCalls).toEqual([{ to: -1, options: undefined }]);
 });

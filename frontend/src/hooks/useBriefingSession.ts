@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBriefing, streamRecap } from '../services/recapService';
 import { fetchGraph } from '../services/ssabiService';
 import { useSSE } from './useSSE';
 import { nextSeq } from '../utils/seq';
 import { fetchBookInfo } from '../services/bookService';
 import { resolveCoverUrl } from '../utils/coverOverrides';
-import { isMobileDevice } from '../mobile/device';
 import { setPendingJump } from '../utils/pendingJump';
-import { BOOK_ROUTES, bookPath } from '../utils/routes';
+import { BOOK_ROUTES } from '../utils/routes';
+import { cameFromBook, useBackToBook } from './useBackToBook';
 import type { BriefingResponse, ChapterSummary } from '../types';
 
 export interface BriefingSessionState {
@@ -39,6 +39,8 @@ export interface BriefingSessionState {
 // FR-BRF-001 FR-SPL-005 🚦
 export function useBriefingSession(bookId: string): BriefingSessionState {
   const navigate = useNavigate();
+  const fromBook = cameFromBook(useLocation().state);
+  const goBack = useBackToBook(bookId);
 
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[]>([]);
@@ -104,21 +106,23 @@ export function useBriefingSession(bookId: string): BriefingSessionState {
     // 되살아나고, 읽기 화면이 낡은 페이지로 되돌아간다(Reader.tsx 상단 주석).
     // "넘기지 않으면 1페이지로 진도를 보낸다"던 옛 우려는 해당하지 않는다 — 서버가
     // 저장된 위치를 돌려주므로 시작 페이지를 모르는 상태 자체가 없다.
-    navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
-  }, [navigate, bookId]);
+    // FR-BRW-003
+    navigate(
+      BOOK_ROUTES.reader.replace(':bookId', bookId),
+      fromBook ? { replace: true, state: { fromBook: true } } : { replace: true }
+    );
+  }, [navigate, bookId, fromBook]);
 
   // FR-PRG-003 🚦
   const handleSelectChapter = useCallback(
     (startPage: number) => {
       setPendingJump(bookId, startPage);
-      navigate(BOOK_ROUTES.reader.replace(':bookId', bookId), { viewTransition: true });
+      navigate(
+        BOOK_ROUTES.reader.replace(':bookId', bookId),
+        fromBook ? { replace: true, state: { fromBook: true } } : { replace: true }
+      );
     },
-    [navigate, bookId]
-  );
-
-  const goBack = useCallback(
-    () => navigate(bookPath(bookId), isMobileDevice(window.screen) ? undefined : { viewTransition: true }),
-    [navigate, bookId]
+    [navigate, bookId, fromBook]
   );
 
   return {

@@ -67,6 +67,7 @@ test('NFR-USE: 긴 제목이 칸을 넘치지 않고 화면 폭도 넘치지 않
   );
   await page.goto('/shelf');
   await expect(shelfList(page).getByRole('link', { name: LONG_TITLE })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
 
   expect(await noHorizontalScroll(page)).toBe(true);
   expect(await overflowingTexts(page, '[aria-label="서재 책 목록"]')).toEqual([]);

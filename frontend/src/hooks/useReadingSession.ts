@@ -209,10 +209,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     error: recapError,
     consume: consumeRecap,
   } = useSSE(`${bookId}:${currentPage}`);
-  /**
-   * 패널 배지는 로컬 currentPage가 아니라 POST /progress가 확인한 applied_cutoff만 보여준다.
-   * 그래야 배지는 최신인데 실제 챗봇·관계도는 전 페이지를 보는 거짓 상태가 되지 않는다.
-   */
+  // FR-BRF-005
   const [, setPanelAppliedCutoff] = useState<number | null>(null);
   const progressRequestIdRef = useRef(0);
   const progressSyncRef = useRef<{
@@ -228,7 +225,6 @@ export function useReadingSession(bookId: string): ReadingSessionState {
         if (requestId === progressRequestIdRef.current) setPanelAppliedCutoff(appliedCutoff);
       });
       progressSyncRef.current = request;
-      // 느린 이전 요청이 나중에 돌아와 최신 배지를 되감지 못하게 한다.
       return request.promise;
     },
     [bookId]
@@ -258,6 +254,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     deleteConversation: deleteChatConversation,
   } = useChatConversation(bookId, currentPage, ensureHistoryPosition, invalidateHistoryPosition);
   const { graph, failed: graphFailed } = useSsabiData({
+    panelOpen,
     bookId,
     tab,
     currentPage,
@@ -321,7 +318,7 @@ export function useReadingSession(bookId: string): ReadingSessionState {
     // 페이지 열림이 확정된 시점에 진도를 알린다 (FR-PRG-002, NFR-PERF-005)
     setPanelAppliedCutoff(null);
     void syncPageProgress(currentPage).catch(() => {
-      // 자동 진도 실패는 페이지 이동을 막지 않으며, 확인 전 배지는 비워 둔다.
+      // FR-SPL-005
     });
   }, [currentPage, loadPage, syncPageProgress]);
 

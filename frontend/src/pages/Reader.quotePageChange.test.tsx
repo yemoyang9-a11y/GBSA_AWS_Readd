@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Reader from './Reader';
@@ -48,6 +48,7 @@ describe('Reader 선택 문장 페이지 전환', () => {
     renderReader();
 
     await screen.findByRole('article');
+    await act(async () => {});
     selectArticleText();
     await user.click(await screen.findByRole('button', { name: '아모에게 물어보기' }));
 

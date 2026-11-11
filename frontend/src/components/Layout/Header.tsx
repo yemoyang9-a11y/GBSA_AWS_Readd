@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { createSearchParams, NavLink, useNavigate } from 'react-router-dom';
+import { createSearchParams, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../utils/routes';
 
 /**
@@ -8,9 +8,6 @@ import { APP_ROUTES } from '../../utils/routes';
  * 좌측 RE:ADD 워드마크(DM Mono) + 우측 도서 검색.
  * 하단 보더는 화면을 가로지르되 안쪽 내용은 `max-w-page` 컨테이너에 정렬한다 —
  * 대시보드 본문과 좌우 끝을 맞추기 위해서다.
- *
- * "도서 검색"은 대응 엔드포인트가 없어 자리만 두고 비활성으로 둔다 — 시안은 활성으로
- * 그렸지만 없는 API 를 지어내지 않는다 (CLAUDE.md 6장, 스펙 §7 #3). 재설계에서도 유지.
  *
  * 계정 개념이 없으므로 "OOO님의 서재" 같은 인칭 제목은 두지 않는다 (team-sync §4.8).
  *
@@ -38,7 +35,9 @@ export function ReaddMark() {
 
 export default function Header({ nav = true }: { nav?: boolean }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [query, setQuery] = useState('');
+  const onSearchPage = pathname === APP_ROUTES.search;
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,34 +69,39 @@ export default function Header({ nav = true }: { nav?: boolean }) {
               </ul>
             </nav>
 
-            <form role="search" onSubmit={submitSearch} className="ml-auto">
-              <label className="flex h-9 w-56 items-center gap-2 rounded-pill border border-dash-line bg-dash-paper px-3 text-dash-muted focus-within:border-dash-ink">
-                <svg
-                  aria-hidden="true"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  aria-label="작품, 작가 검색"
-                  placeholder="작품, 작가 검색"
-                  className="w-full bg-transparent font-dashSans text-[14px] text-dash-ink outline-none placeholder:text-dash-muted"
-                />
-              </label>
-            </form>
+            {!onSearchPage && (
+              <form role="search" onSubmit={submitSearch} className="ml-auto">
+                <label className="flex h-9 w-56 items-center gap-2 rounded-pill border border-dash-line bg-dash-paper px-3 text-dash-muted focus-within:border-dash-ink">
+                  <svg
+                    aria-hidden="true"
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    aria-label="작품, 작가 검색"
+                    placeholder="작품, 작가 검색"
+                    className="w-full bg-transparent font-dashSans text-[14px] text-dash-ink outline-none placeholder:text-dash-muted"
+                  />
+                </label>
+              </form>
+            )}
 
-            <NavLink to={APP_ROUTES.my} className={headerLinkClass}>
+            <NavLink
+              to={APP_ROUTES.my}
+              className={(state) => `${headerLinkClass(state)}${onSearchPage ? ' ml-auto' : ''}`}
+            >
               MY
             </NavLink>
           </>

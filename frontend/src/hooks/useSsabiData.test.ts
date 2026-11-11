@@ -18,7 +18,7 @@ it('does not query a graph before entry supplies a reading position', async () =
   const fetchGraph = vi.fn().mockResolvedValue(graph([]));
   const { rerender } = renderHook(
     (page: number | null) =>
-      useSsabiData({ bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
+      useSsabiData({ panelOpen: true, bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
     { initialProps: null as number | null }
   );
   await act(async () => {});
@@ -46,7 +46,7 @@ it('hides K90 graph while K40 is loading and ignores late K90 responses', async 
         })
     );
   const { result, rerender } = renderHook(
-    (page) => useSsabiData({ bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
+    (page) => useSsabiData({ panelOpen: true, bookId: 'book', tab: 'relationship', currentPage: page, fetchGraph }),
     { initialProps: 90 }
   );
   await waitFor(() => expect(result.current.graph).not.toBeNull());
@@ -74,7 +74,7 @@ describe('싸비 탭 데이터', () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
 
     const { result } = renderHook(() =>
-      useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: 21, fetchGraph })
+      useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'relationship', currentPage: 21, fetchGraph })
     );
 
     await waitFor(() => expect(result.current.graph).toEqual(graph(['정주사'])));
@@ -86,7 +86,7 @@ describe('싸비 탭 데이터', () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
     const { rerender } = renderHook(
       (page: number) =>
-        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+        useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
       { initialProps: 21 }
     );
 
@@ -101,7 +101,7 @@ describe('싸비 탭 데이터', () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph(['정주사']));
     const { rerender } = renderHook(
       (page: number) =>
-        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+        useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
       { initialProps: 21 }
     );
 
@@ -116,7 +116,7 @@ describe('싸비 탭 데이터', () => {
     const fetchGraph = vi.fn().mockResolvedValue(graph([]));
 
     renderHook(() =>
-      useSsabiData({ bookId: 'takryu', tab: 'chatbot', currentPage: 21, fetchGraph })
+      useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'chatbot', currentPage: 21, fetchGraph })
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -131,7 +131,7 @@ describe('싸비 탭 데이터', () => {
 
     const { rerender, result } = renderHook(
       (page: number) =>
-        useSsabiData({ bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+        useSsabiData({ panelOpen: true, bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
       { initialProps: 21 }
     );
 
@@ -141,5 +141,44 @@ describe('싸비 탭 데이터', () => {
 
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.graph).toBeNull();
+  });
+});
+
+describe('FR-SVB-003: 패널이 열렸을 때만 조회한다', () => {
+  it('패널이 닫혀 있으면 관계도 탭이어도 조회하지 않는다', async () => {
+    const fetchGraph = vi.fn(() => Promise.resolve(graph(['정주사'])));
+    renderHook(() =>
+      useSsabiData({ panelOpen: false, bookId: 'takryu', tab: 'relationship', currentPage: 21, fetchGraph })
+    );
+    await act(async () => {});
+    expect(fetchGraph).not.toHaveBeenCalled();
+  });
+
+  it('패널을 열면 현재 쪽 기준으로 관계도를 한 번 조회한다', async () => {
+    const fetchGraph = vi.fn(() => Promise.resolve(graph(['정주사'])));
+    const { rerender } = renderHook(
+      (open: boolean) =>
+        useSsabiData({ panelOpen: open, bookId: 'takryu', tab: 'relationship', currentPage: 21, fetchGraph }),
+      { initialProps: false }
+    );
+    await act(async () => {});
+    expect(fetchGraph).not.toHaveBeenCalled();
+
+    rerender(true);
+
+    await waitFor(() => expect(fetchGraph).toHaveBeenCalledTimes(1));
+    expect(fetchGraph).toHaveBeenCalledWith('takryu', 21, expect.any(Number));
+  });
+
+  it('패널이 닫힌 채 쪽이 바뀌어도 조회하지 않는다', async () => {
+    const fetchGraph = vi.fn(() => Promise.resolve(graph(['정주사'])));
+    const { rerender } = renderHook(
+      (page: number) =>
+        useSsabiData({ panelOpen: false, bookId: 'takryu', tab: 'relationship', currentPage: page, fetchGraph }),
+      { initialProps: 21 }
+    );
+    rerender(22);
+    await act(async () => {});
+    expect(fetchGraph).not.toHaveBeenCalled();
   });
 });

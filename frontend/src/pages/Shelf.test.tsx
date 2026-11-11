@@ -172,6 +172,23 @@ test('읽기 시작한 책이 없으면 안내와 홈으로 가는 링크를 보
   expect(screen.queryByText('해당하는 책이 없어요')).not.toBeInTheDocument();
 });
 
+test('읽기 시작한 책이 없어도 제목 옆에 0권을 보여 준다', async () => {
+  fetchCatalogMock.mockResolvedValue({ books: [mockCatalog[1], mockCatalog[2]] });
+  renderShelf();
+
+  await screen.findByText('아직 읽기 시작한 책이 없어요');
+  expect(screen.getByText('0권')).toBeInTheDocument();
+});
+
+test('불러오는 중이거나 실패하면 권수를 보여 주지 않는다', async () => {
+  fetchCatalogMock.mockRejectedValueOnce(new Error('E2E_FAIL'));
+  renderShelf();
+
+  expect(screen.queryByText(/^\d+권$/)).not.toBeInTheDocument();
+  await screen.findByText('작품을 불러오지 못했습니다');
+  expect(screen.queryByText(/^\d+권$/)).not.toBeInTheDocument();
+});
+
 test('FR-SPL-005: 목록을 못 불러오면 다시 시도 버튼을 보여 주고 누르면 다시 부른다', async () => {
   const user = userEvent.setup();
   fetchCatalogMock.mockRejectedValueOnce(new Error('E2E_FAIL'));

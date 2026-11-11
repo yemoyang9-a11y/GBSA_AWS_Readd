@@ -74,9 +74,11 @@ export default function TypographicCover({
       data-testid="typographic-cover"
       aria-hidden="true"
     >
-      <span className={`${titleFont} ${titleSize} font-bold leading-snug text-ink`}>{title}</span>
+      <span className={`${titleFont} ${titleSize} max-w-full font-bold leading-snug text-ink [overflow-wrap:anywhere]`}>
+        {title}
+      </span>
       <span className="h-px w-8 bg-line" />
-      <span className={`${authorFont} text-xs text-muted`}>{author}</span>
+      <span className={`${authorFont} break-keep text-xs text-muted`}>{author}</span>
     </div>
   );
 }
