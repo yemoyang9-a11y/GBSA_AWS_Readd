@@ -101,7 +101,7 @@ export default function Shelf() {
                   onClick={() => setFilter(item.value)}
                   className={`min-h-11 rounded-full border px-[14px] text-[13px] ${
                     checked
-                      ? 'border-dash-ink bg-dash-ink text-white'
+                      ? 'border-dash-ink bg-white font-bold text-dash-ink'
                       : 'border-dash-line bg-white text-dash-muted'
                   }`}
                 >
