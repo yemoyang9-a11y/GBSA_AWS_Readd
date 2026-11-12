@@ -24,6 +24,7 @@ export interface MockApiOptions {
   failInfo?: boolean;
   pageDelayMs?: number;
   authMember?: boolean;
+  guest?: boolean;
   positions?: Record<string, PositionResponse>;
 }
 
@@ -138,6 +139,12 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
   const failPages = new Set(opts.failPages ?? []);
   let briefingFailures = 0;
   const log: ApiLog = { progress: [], pageFetches: [], entries: 0, recapStreams: 0, events: [] };
+  let consented = false;
+  if (!opts.guest) {
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('ssabi.auth_token')) localStorage.setItem('ssabi.auth_token', 'e2e-member');
+    });
+  }
   const briefingRecap = opts.briefingRecap ?? 'saved';
   let cutoff = startPage;
   const extraPages: Record<string, number | undefined> = { [DONE_BOOK.book_id]: 20 };
@@ -191,6 +198,24 @@ export async function installMockApi(page: Page, opts: MockApiOptions = {}): Pro
     if (method === 'GET' && path === '/auth/me') {
       if (!opts.authMember) return json(route, { error: 'UNAUTHORIZED' }, 401);
       return json(route, { display_name: '시험 독자', providers: ['google'] });
+    }
+
+    const loginStart = path.match(/^\/auth\/(kakao|google)\/start$/);
+    if (method === 'GET' && loginStart) {
+      log.events.push(`login:${loginStart[1]}`);
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: `<script>location.replace('http://localhost:4173/auth/callback#code=e2e-code')</script>`,
+      });
+    }
+    if (method === 'POST' && path === '/auth/exchange') {
+      return json(route, { token: 'e2e-member', display_name: '시험 독자', consent_required: !consented });
+    }
+    if (method === 'POST' && path === '/auth/consent') {
+      log.events.push('consent');
+      consented = true;
+      return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' } });
     }
 
     const match = path.match(/^\/books\/([^/]+)(\/.*)$/);
