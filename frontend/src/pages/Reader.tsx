@@ -34,6 +34,20 @@ export default function Reader() {
   return <ReadingSession key={bookId} />;
 }
 
+const ARROW_KEY_OWNERS = [
+  '#ssabi-panel',
+  '#toc-panel',
+  'input',
+  'textarea',
+  'select',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[role="dialog"]',
+  '[aria-modal="true"]',
+  ...['tab', 'tablist', 'menu', 'menubar', 'menuitem', 'radio', 'radiogroup', 'slider', 'listbox', 'option', 'combobox', 'spinbutton', 'tree', 'treeitem', 'grid'].map(
+    (role) => `[role="${role}"]`
+  ),
+].join(', ');
+
 function ReadingSession() {
   const { bookId = '' } = useParams();
   const {
@@ -45,8 +59,6 @@ function ReadingSession() {
     currentPage,
     totalPages,
     chapters,
-    bookTitle,
-    currentChapter,
     jumpOrigin,
     returnToOrigin,
     dismissJumpOrigin,
@@ -134,6 +146,26 @@ function ReadingSession() {
     [moveTo]
   );
 
+  const shownPage = page && page.page_no === currentPage ? page : null;
+  const prevPage = shownPage?.prev_page ?? null;
+  const nextPage = shownPage?.next_page ?? null;
+  // FR-PRG-001 FR-PRG-003 🚦
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+      if (prefsOpen || document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.(ARROW_KEY_OWNERS)) return;
+      const to = event.key === 'ArrowLeft' ? prevPage : nextPage;
+      if (to === null) return;
+      event.preventDefault();
+      moveTo(to);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [prefsOpen, prevPage, nextPage, moveTo]);
+
   const appRef = useRef<HTMLDivElement>(null);
   const {
     width: panelWidth,
@@ -206,13 +238,7 @@ function ReadingSession() {
             <path d="M9.5 4.8 6.5 8 9.5 11.2" />
           </svg>
         </button>
-        {bookTitle ? (
-          <p className="min-w-0 flex-1 truncate px-4 text-center font-dashSans text-[14px] text-brief-muted">
-            {currentChapter ? `${bookTitle} · ${currentChapter.chapter_no}장 ${currentChapter.title}` : bookTitle}
-          </p>
-        ) : (
-          <span className="flex-1" />
-        )}
+        <span className="flex-1" />
         <button
           ref={prefsButtonRef}
           type="button"
