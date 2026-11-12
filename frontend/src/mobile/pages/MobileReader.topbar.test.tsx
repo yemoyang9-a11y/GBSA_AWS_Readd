@@ -50,21 +50,27 @@ describe('모바일 읽기 화면 윗줄', () => {
     fetchPageSpy.mockClear();
   });
 
-  test('FR-PRG-004: 윗줄에 책 이름과 장 이름이 보이고 진도 막대는 없다', async () => {
+  test('FR-PRG-004: 윗줄에는 뒤로 가기와 보기 설정만 있고 제목줄과 진도 막대는 없다', async () => {
+    enterBookMock.mockResolvedValue({ route: 'reader', page: 25, is_new_session: false, session_epoch: 1 });
     renderReader();
-    await openedAt(21);
-    expect(await screen.findByText('탁류 · 3장 신판 흥부전')).toBeInTheDocument();
+    await openedAt(25);
+    const topbar = screen.getByRole('button', { name: '뒤로 가기' }).parentElement!;
+    expect(within(topbar).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['뒤로 가기', '보기 설정']);
+    expect(topbar.textContent).toBe('가');
+    expect(screen.queryByText(/탁류 · /)).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
-  test('쪽을 넘기면 장 이름이 그 쪽의 장으로 바뀐다', async () => {
+  test('FR-PRG-004: 장 시작 쪽에서는 본문 위 장 표시가 그대로 보이고 장 중간 쪽에서는 없다', async () => {
     const user = userEvent.setup();
-    enterBookMock.mockResolvedValue({ route: 'reader', page: 20, is_new_session: false, session_epoch: 1 });
     renderReader();
-    await openedAt(20);
-    expect(await screen.findByText('탁류 · 2장 생활 제일과')).toBeInTheDocument();
+    await openedAt(21);
+    const article = screen.getByRole('article');
+    expect(within(article).getByText('제 3장')).toBeInTheDocument();
+    expect(within(article).getByRole('heading', { name: '신판 흥부전' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-    expect(await screen.findByText('탁류 · 3장 신판 흥부전')).toBeInTheDocument();
+    await openedAt(22);
+    expect(within(screen.getByRole('article')).queryByText('제 3장')).toBeNull();
   });
 
   test('목차에서 옮겨 왔으면 돌아가기 줄이 보이고, 누르면 읽던 쪽이 열리고 줄이 사라진다', async () => {

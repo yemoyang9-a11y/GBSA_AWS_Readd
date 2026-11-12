@@ -8,6 +8,16 @@ import { DEFAULT_READER_PREFS, READER_THEMES, type ReaderPrefs } from '../../hoo
 
 const TAP_MAX_MS = 300;
 const TAP_MAX_MOVE = 10;
+const NAV_HEIGHT = '49px';
+export const CHROME_FADE = 'transition-[opacity,visibility] duration-200 motion-reduce:transition-none';
+
+export function chromeProps(hidden: boolean) {
+  return {
+    'data-reader-chrome': '',
+    'aria-hidden': hidden || undefined,
+    ref: (el: HTMLElement | null) => el?.toggleAttribute('inert', hidden),
+  };
+}
 
 // FR-PRG-001 🚦 FR-PRG-003 🚦
 export default function MobileReaderView({
@@ -22,6 +32,10 @@ export default function MobileReaderView({
   swipeDisabled,
   onQuote,
   prefs = DEFAULT_READER_PREFS,
+  insetTop,
+  chromeHidden = false,
+  canToggleChrome = false,
+  onToggleChrome,
 }: {
   content: string;
   currentPage: number;
@@ -34,6 +48,10 @@ export default function MobileReaderView({
   swipeDisabled: boolean;
   onQuote: (text: string) => void;
   prefs?: ReaderPrefs;
+  insetTop: string;
+  chromeHidden?: boolean;
+  canToggleChrome?: boolean;
+  onToggleChrome?: () => void;
 }) {
   const theme = READER_THEMES[prefs.theme];
   const darkInk = prefs.theme === 'dark' ? { color: theme.color } : undefined;
@@ -109,13 +127,40 @@ export default function MobileReaderView({
     return () => document.removeEventListener('selectionchange', track);
   }, [containerRef]);
 
+  // FR-PRG-001
+  const tapRef = useRef<{ x: number; y: number; t: number; hadSelection: boolean } | null>(null);
+  const surfaceBind = {
+    ...bind,
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      tapRef.current = e.isPrimary
+        ? { x: e.clientX, y: e.clientY, t: performance.now(), hadSelection: (document.getSelection()?.toString() ?? '') !== '' }
+        : null;
+      bind.onPointerDown(e);
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+      const start = tapRef.current;
+      tapRef.current = null;
+      bind.onPointerUp(e);
+      if (!start || start.hadSelection || !canToggleChrome) return;
+      const quickTap = performance.now() - start.t < TAP_MAX_MS && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MAX_MOVE;
+      if (!quickTap || (e.target as Element).closest?.('a, button, input, select, textarea, [data-quote-ask]')) return;
+      onToggleChrome?.();
+    },
+    onPointerCancel: (e: React.PointerEvent<HTMLElement>) => {
+      tapRef.current = null;
+      bind.onPointerCancel(e);
+    },
+  };
+
+  const navChrome = chromeProps(chromeHidden);
+
   function setArticleRef(el: HTMLElement | null) {
     (targetRef as { current: HTMLElement | null }).current = el;
     (containerRef as { current: HTMLElement | null }).current = el;
   }
 
   return (
-    <main className="flex h-full min-h-0 flex-col bg-brief-page" style={{ background: theme.background }}>
+    <main className="relative h-full min-h-0 bg-brief-page" style={{ background: theme.background }}>
       {popover ? (
         <QuoteAskButton
           popover={popover}
@@ -130,15 +175,22 @@ export default function MobileReaderView({
       ) : null}
       <div
         data-testid="swipe-surface"
-        className="brief-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        className="brief-scroll absolute inset-0 overflow-y-auto overflow-x-hidden"
         style={{ touchAction: 'pan-y' }}
-        {...bind}
+        {...surfaceBind}
       >
         <article
           ref={setArticleRef}
           role="article"
-          className="mx-auto w-full whitespace-pre-wrap px-6 pb-10 pt-8 font-dashSerif text-brief-ink"
-          style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, background: theme.background, color: theme.color }}
+          className="mx-auto w-full whitespace-pre-wrap px-6 font-dashSerif text-brief-ink"
+          style={{
+            fontSize: prefs.fontSize,
+            lineHeight: prefs.lineHeight,
+            background: theme.background,
+            color: theme.color,
+            paddingTop: `calc(${insetTop} + 2rem)`,
+            paddingBottom: `calc(${NAV_HEIGHT} + max(4px, var(--safe-bottom)) + 2.5rem)`,
+          }}
         >
           {chapterStart ? (
             <header className="mb-8 whitespace-normal">
@@ -153,9 +205,13 @@ export default function MobileReaderView({
       </div>
 
       <nav
-        ref={navRef}
-        className="flex shrink-0 items-center justify-between border-t border-brief-rule px-3 pt-1 font-dashSans text-[14px] text-brief-muted"
-        style={{ paddingBottom: 'max(4px, var(--safe-bottom))', ...darkInk }}
+        {...navChrome}
+        ref={(el) => {
+          (navRef as { current: HTMLElement | null }).current = el;
+          navChrome.ref(el);
+        }}
+        className={`absolute inset-x-0 bottom-0 z-[5] flex items-center justify-between border-t border-brief-rule px-3 pt-1 font-dashSans text-[14px] text-brief-muted ${CHROME_FADE} ${chromeHidden ? 'invisible opacity-0' : ''}`}
+        style={{ paddingBottom: 'max(4px, var(--safe-bottom))', background: theme.background, ...darkInk }}
       >
         <button
           type="button"
