@@ -41,21 +41,11 @@ const ARROW_KEY_OWNERS = [
   'textarea',
   'select',
   '[contenteditable]:not([contenteditable="false"])',
-  'button',
-  'a[href]',
-  'summary',
-  '[role="button"]',
-  '[role="link"]',
-  '[role="tab"]',
-  '[role="tablist"]',
   '[role="dialog"]',
-  '[role="radiogroup"]',
-  '[role="radio"]',
-  '[role="slider"]',
-  '[role="listbox"]',
-  '[role="option"]',
-  '[role="menu"]',
-  '[role="menuitem"]',
+  '[aria-modal="true"]',
+  ...['tab', 'tablist', 'menu', 'menubar', 'menuitem', 'radio', 'radiogroup', 'slider', 'listbox', 'option', 'combobox', 'spinbutton', 'tree', 'treeitem', 'grid'].map(
+    (role) => `[role="${role}"]`
+  ),
 ].join(', ');
 
 function ReadingSession() {

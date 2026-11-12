@@ -190,21 +190,53 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
     expect(progressPages()).toEqual([25]);
   });
 
-  test('버튼·링크에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
+  test('싸비·목차 패널 안 버튼에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
     renderReader();
     const input = await openedAt(25);
-    const prefs = screen.getByRole('button', { name: '보기 설정' });
-    prefs.focus();
-    fireEvent.keyDown(prefs, { key: 'ArrowRight' });
-    const link = document.createElement('a');
-    link.href = '#x';
-    document.body.append(link);
-    link.focus();
-    fireEvent.keyDown(link, { key: 'ArrowRight' });
-    link.remove();
+    fireEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    await screen.findAllByRole('tab');
+    const panelButtons = Array.from(
+      document.querySelectorAll<HTMLElement>('#ssabi-panel button:not([role="tab"])')
+    );
+    expect(panelButtons.length).toBeGreaterThan(0);
+    panelButtons[0].focus();
+    fireEvent.keyDown(panelButtons[0], { key: 'ArrowRight' });
+    fireEvent.click(screen.getByRole('button', { name: '목차 열기' }));
+    const chapter = within(await screen.findByRole('list', { name: '목차' })).getAllByRole(
+      'button'
+    )[1];
+    expect(chapter.closest('#toc-panel')).not.toBeNull();
+    chapter.focus();
+    fireEvent.keyDown(chapter, { key: 'ArrowLeft' });
     await new Promise((r) => setTimeout(r, 50));
     expect(input.value).toBe('25');
     expect(progressPages()).toEqual([25]);
+  });
+
+  test('아래 다음 페이지 버튼을 누른 뒤 포커스가 남아 있어도 → 키로 쪽이 넘어간다', async () => {
+    renderReader();
+    await openedAt(25);
+    const next = screen.getByRole('button', { name: '다음 페이지' });
+    next.focus();
+    fireEvent.click(next);
+    await openedAt(26);
+    const focusedNext = screen.getByRole('button', { name: '다음 페이지' });
+    focusedNext.focus();
+    expect(document.activeElement).toBe(focusedNext);
+    fireEvent.keyDown(focusedNext, { key: 'ArrowRight' });
+    await openedAt(27);
+    await waitFor(() => expect(progressPages()).toEqual([25, 26, 27]));
+  });
+
+  test('상단 보기 설정(가) 버튼에 포커스가 있어도 → 키로 쪽이 넘어간다', async () => {
+    renderReader();
+    await openedAt(25);
+    const prefs = screen.getByRole('button', { name: '보기 설정' });
+    prefs.focus();
+    fireEvent.keyDown(prefs, { key: 'ArrowRight' });
+    await openedAt(26);
+    expect(screen.queryByRole('dialog', { name: '보기 설정' })).toBeNull();
+    await waitFor(() => expect(progressPages()).toEqual([25, 26]));
   });
 
   test('본문 영역에서 누른 방향키는 쪽을 넘긴다', async () => {
