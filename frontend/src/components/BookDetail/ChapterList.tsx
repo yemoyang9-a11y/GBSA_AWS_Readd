@@ -14,29 +14,41 @@ export default function ChapterList({
   onSelect: (chapter: ChapterSummary) => void;
 }) {
   return (
-    <ol role="list" aria-label="목차" className="m-0 list-none p-0">
+    <ol role="list" aria-label="목차" className="m-0 flex list-none flex-col gap-2 p-0 pt-3">
       {chapters.map((chapter) => {
         const current = position !== null && chapter.chapter_no === position.current_chapter_no;
         const read = !current && position !== null && position.read_chapter_nos.includes(chapter.chapter_no);
         return (
-          <li key={chapter.chapter_no} className="border-b border-dash-line">
+          <li key={chapter.chapter_no}>
             <button
               type="button"
               disabled={disabled}
               aria-current={current ? 'true' : undefined}
               onClick={() => onSelect(chapter)}
-              className={`flex min-h-[52px] w-full items-center gap-3 px-2 text-left text-sm text-dash-ink transition-colors hover:bg-dash-ink/[0.04] disabled:opacity-40 disabled:hover:bg-transparent ${
-                current ? 'bg-brief-accent-soft font-bold hover:bg-brief-accent-soft' : ''
+              className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-[background-color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent/40 focus-visible:ring-offset-2 disabled:opacity-40 ${
+                current
+                  ? 'bg-brief-accent-soft'
+                  : 'enabled:hover:bg-brief-accent/10 enabled:hover:shadow-brief-soft-sm motion-safe:enabled:hover:translate-x-0.5'
               }`}
             >
               <span
-                className={`grid shrink-0 place-items-center font-dashMono text-xs ${
-                  current ? 'size-5 rounded-full bg-brief-accent text-[11px] text-white' : 'w-5 text-dash-muted'
+                className={`flex size-[24px] shrink-0 items-center justify-center rounded-full font-dashMono text-[11px] font-semibold ${
+                  current
+                    ? 'bg-brief-accent text-white'
+                    : 'bg-brief-paper text-brief-muted transition-colors group-enabled:group-hover:bg-white group-enabled:group-hover:text-brief-accent'
                 }`}
               >
                 {chapter.chapter_no}
               </span>
-              <span className="min-w-0 break-keep">{chapter.title}</span>
+              <span
+                className={`min-w-0 break-keep font-dashSans text-[13.5px] ${
+                  current
+                    ? 'font-semibold text-brief-accent'
+                    : 'text-brief-ink transition-colors group-enabled:group-hover:text-brief-accent'
+                }`}
+              >
+                {chapter.title}
+              </span>
               {read && (
                 <>
                   <svg
@@ -57,7 +69,7 @@ export default function ChapterList({
                 </>
               )}
               <span
-                className={`ml-auto shrink-0 pl-2 font-dashMono text-[11px] ${current ? 'text-brief-accent' : 'text-dash-muted'}`}
+                className={`ml-auto shrink-0 pl-2 font-dashMono text-[11px] ${current ? 'text-brief-accent' : 'text-brief-muted'}`}
               >
                 {current && (
                   <>
