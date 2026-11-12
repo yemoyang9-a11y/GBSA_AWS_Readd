@@ -128,20 +128,25 @@ export default function MobileReaderView({
   }, [containerRef]);
 
   // FR-PRG-001
-  const tapRef = useRef<{ x: number; y: number; t: number; hadSelection: boolean } | null>(null);
+  const tapRef = useRef<{ x: number; y: number; t: number; hadSelection: boolean; moved: boolean } | null>(null);
   const surfaceBind = {
     ...bind,
     onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
       tapRef.current = e.isPrimary
-        ? { x: e.clientX, y: e.clientY, t: performance.now(), hadSelection: (document.getSelection()?.toString() ?? '') !== '' }
+        ? { x: e.clientX, y: e.clientY, t: performance.now(), hadSelection: (document.getSelection()?.toString() ?? '') !== '', moved: false }
         : null;
       bind.onPointerDown(e);
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      const start = tapRef.current;
+      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) >= TAP_MAX_MOVE) start.moved = true;
+      bind.onPointerMove(e);
     },
     onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
       const start = tapRef.current;
       tapRef.current = null;
       bind.onPointerUp(e);
-      if (!start || start.hadSelection || !canToggleChrome) return;
+      if (!start || start.hadSelection || start.moved || !canToggleChrome) return;
       const quickTap = performance.now() - start.t < TAP_MAX_MS && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MAX_MOVE;
       if (!quickTap || (e.target as Element).closest?.('a, button, input, select, textarea, [data-quote-ask]')) return;
       onToggleChrome?.();

@@ -75,6 +75,17 @@ function MobileReadingSession() {
       data-testid="mobile-reader"
       className="relative h-[100dvh] overflow-hidden bg-brief-page"
     >
+      {/* FR-PRG-001 */}
+      <button
+        type="button"
+        aria-pressed={chromeHidden}
+        onClick={() => {
+          if (!panelOpen && !tocOpen && !prefsOpen) setChromeHidden((hidden) => !hidden);
+        }}
+        className="sr-only"
+      >
+        본문만 보기
+      </button>
       <div className="absolute inset-0">{body}</div>
       <div
         {...chromeProps(chromeHidden)}

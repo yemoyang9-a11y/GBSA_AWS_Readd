@@ -34,6 +34,30 @@ export default function Reader() {
   return <ReadingSession key={bookId} />;
 }
 
+const ARROW_KEY_OWNERS = [
+  '#ssabi-panel',
+  '#toc-panel',
+  'input',
+  'textarea',
+  'select',
+  '[contenteditable]:not([contenteditable="false"])',
+  'button',
+  'a[href]',
+  'summary',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="tab"]',
+  '[role="tablist"]',
+  '[role="dialog"]',
+  '[role="radiogroup"]',
+  '[role="radio"]',
+  '[role="slider"]',
+  '[role="listbox"]',
+  '[role="option"]',
+  '[role="menu"]',
+  '[role="menuitem"]',
+].join(', ');
+
 function ReadingSession() {
   const { bookId = '' } = useParams();
   const {
@@ -142,7 +166,7 @@ function ReadingSession() {
       if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
       if (prefsOpen || document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+      if (target?.closest?.(ARROW_KEY_OWNERS)) return;
       const to = event.key === 'ArrowLeft' ? prevPage : nextPage;
       if (to === null) return;
       event.preventDefault();

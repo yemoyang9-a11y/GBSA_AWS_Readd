@@ -82,6 +82,8 @@ async function swipeLeft() {
   await wait(SETTLE_MS + 80);
 }
 
+const FOCUS_TOGGLE = '본문만 보기';
+
 const CONTROLS = ['뒤로 가기', '보기 설정', '목차 열기', '싸비 열기', '이전 페이지', '다음 페이지'];
 
 function expectControlsShown() {
@@ -94,7 +96,10 @@ function expectControlsShown() {
 }
 
 function expectControlsHidden() {
-  expect(screen.queryAllByRole('button')).toHaveLength(0);
+  expect(
+    screen.queryAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)
+  ).toEqual([FOCUS_TOGGLE]);
+  expect(screen.getByRole('button', { name: FOCUS_TOGGLE })).toHaveClass('sr-only');
   expect(screen.queryAllByRole('textbox')).toHaveLength(0);
   expect(screen.queryAllByRole('status')).toHaveLength(0);
   const chrome = document.querySelectorAll('[data-reader-chrome]');
@@ -236,6 +241,50 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
     first.unmount();
     renderReader();
     await openedAt(25);
+    expectControlsShown();
+  });
+  test('10px 넘게 밀었다가 제자리 근처로 돌아와 떼면 숨김이 바뀌지 않는다', async () => {
+    renderReader();
+    await openedAt(25);
+    const el = surface();
+    pointer(el, 'pointerdown', 200, 400);
+    pointer(el, 'pointermove', 215, 400);
+    pointer(el, 'pointermove', 232, 401);
+    pointer(el, 'pointermove', 210, 400);
+    pointer(el, 'pointermove', 202, 400);
+    pointer(el, 'pointerup', 202, 400);
+    await wait(SETTLE_MS + 80);
+    expectControlsShown();
+    tap();
+    expectControlsHidden();
+  });
+
+  test('보조기술용 본문만 보기 버튼으로 숨기고 다시 보일 수 있다', async () => {
+    renderReader();
+    await openedAt(25);
+    const toggle = screen.getByRole('button', { name: FOCUS_TOGGLE });
+    expect(toggle).toHaveClass('sr-only');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(toggle);
+    expectControlsHidden();
+    expect(screen.getByRole('button', { name: FOCUS_TOGGLE })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    fireEvent.click(screen.getByRole('button', { name: FOCUS_TOGGLE }));
+    expectControlsShown();
+    expect(screen.getByRole('button', { name: FOCUS_TOGGLE })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+  });
+
+  test('본문을 탭해 숨긴 뒤에도 보조기술용 버튼으로 다시 보일 수 있다', async () => {
+    renderReader();
+    await openedAt(25);
+    tap();
+    expectControlsHidden();
+    fireEvent.click(screen.getByRole('button', { name: FOCUS_TOGGLE }));
     expectControlsShown();
   });
 });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Reader from './Reader';
 import { clearPendingJump } from '../utils/pendingJump';
@@ -160,5 +160,58 @@ describe('FR-PRG-001: PC 읽기 화면 방향키 이동', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(last.value).toBe('30');
     expect(progressPages()).toEqual([30]);
+  });
+  test('싸비 패널의 탭에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
+    renderReader();
+    const input = await openedAt(25);
+    fireEvent.click(screen.getByRole('button', { name: '싸비 열기' }));
+    const tab = (await screen.findAllByRole('tab'))[0];
+    tab.focus();
+    fireEvent.keyDown(tab, { key: 'ArrowRight' });
+    fireEvent.keyDown(tab, { key: 'ArrowLeft' });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(input.value).toBe('25');
+    expect(progressPages()).toEqual([25]);
+  });
+
+  test('목차 패널의 장 버튼에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
+    renderReader();
+    const input = await openedAt(25);
+    fireEvent.click(screen.getByRole('button', { name: '목차 열기' }));
+    const chapter = within(await screen.findByRole('list', { name: '목차' })).getAllByRole(
+      'button'
+    )[0];
+    expect(chapter.closest('#toc-panel')).not.toBeNull();
+    chapter.focus();
+    fireEvent.keyDown(chapter, { key: 'ArrowRight' });
+    fireEvent.keyDown(chapter, { key: 'ArrowLeft' });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(input.value).toBe('25');
+    expect(progressPages()).toEqual([25]);
+  });
+
+  test('버튼·링크에 포커스가 있으면 방향키로 쪽이 넘어가지 않는다', async () => {
+    renderReader();
+    const input = await openedAt(25);
+    const prefs = screen.getByRole('button', { name: '보기 설정' });
+    prefs.focus();
+    fireEvent.keyDown(prefs, { key: 'ArrowRight' });
+    const link = document.createElement('a');
+    link.href = '#x';
+    document.body.append(link);
+    link.focus();
+    fireEvent.keyDown(link, { key: 'ArrowRight' });
+    link.remove();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(input.value).toBe('25');
+    expect(progressPages()).toEqual([25]);
+  });
+
+  test('본문 영역에서 누른 방향키는 쪽을 넘긴다', async () => {
+    renderReader();
+    await openedAt(25);
+    fireEvent.keyDown(screen.getByRole('article'), { key: 'ArrowRight' });
+    await openedAt(26);
+    await waitFor(() => expect(progressPages()).toEqual([25, 26]));
   });
 });
