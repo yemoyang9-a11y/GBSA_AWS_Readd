@@ -14,9 +14,9 @@ const ITEMS = [
 type ItemKey = (typeof ITEMS)[number]['key'];
 
 const OUTLINE_BUTTON =
-  'inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-dash-ink bg-white px-4 text-[15px] font-bold text-dash-ink disabled:opacity-40';
+  'inline-flex min-h-12 flex-1 items-center justify-center whitespace-nowrap rounded-full border border-dash-ink bg-white px-4 text-[15px] font-bold text-dash-ink disabled:opacity-40';
 const FILLED_BUTTON =
-  'inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-dash-ink bg-dash-ink px-4 text-[15px] font-bold text-white disabled:opacity-40';
+  'inline-flex min-h-12 flex-[2] items-center justify-center whitespace-nowrap rounded-full border border-dash-ink bg-dash-ink px-4 text-[15px] font-bold text-white disabled:opacity-40';
 
 function LegalDocDialog({ title, body, onClose }: { title: string; body: string; onClose: () => void }) {
   return (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConsentForm from '../components/Auth/ConsentForm';
+import { isMobileDevice } from '../mobile/device';
 import { exchangeLoginCode, submitConsent } from '../services/authService';
 import { enterBook } from '../services/progressService';
 import { takeLoginReturn } from '../utils/loginReturn';
@@ -52,17 +53,19 @@ export default function AuthCallback() {
   if (phase.kind === 'consent') {
     const { returnBookId } = phase;
     return (
-      <div className="min-h-dvh bg-dash-paper px-4 py-10 font-dashSans text-dash-ink mobile:px-0 mobile:py-0">
-        <ConsentForm
-          onAgree={async () => {
-            await submitConsent();
-            proceed(returnBookId);
-          }}
-          onCancel={() => {
-            clearAuthToken();
-            leave(returnBookId);
-          }}
-        />
+      <div data-mobile={isMobileDevice(window.screen) ? 'true' : undefined}>
+        <div className="min-h-dvh bg-dash-paper px-4 py-10 font-dashSans text-dash-ink mobile:bg-white mobile:px-0 mobile:py-0">
+          <ConsentForm
+            onAgree={async () => {
+              await submitConsent();
+              proceed(returnBookId);
+            }}
+            onCancel={() => {
+              clearAuthToken();
+              leave(returnBookId);
+            }}
+          />
+        </div>
       </div>
     );
   }
