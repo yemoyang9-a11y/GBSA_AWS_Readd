@@ -3,6 +3,8 @@ import { signSessionToken } from './session-token';
 
 const LOGIN_CODE_LIFETIME_MS = 60_000;
 
+export const CONSENT_VERSION = '2026-11-12-draft';
+
 export type Provider = 'google' | 'kakao';
 
 export interface OAuthProfile {
@@ -24,6 +26,14 @@ export interface NewAccount {
   providerUserId: string;
 }
 
+export interface ConsentRecord {
+  userId: string;
+  termsVersion: string;
+  privacyVersion: string;
+  age14Confirmed: true;
+  agreedAt: Date;
+}
+
 export interface AccountRepository {
   findByIdentity(provider: Provider, providerUserId: string): Promise<Account | null>;
   findByUserId(userId: string): Promise<Account | null>;
@@ -33,6 +43,8 @@ export interface AccountRepository {
   saveLoginCode(code: string, userId: string, expiresAt: Date): Promise<void>;
   consumeLoginCode(code: string, now: Date): Promise<string | null>;
   deleteAccount(userId: string, readerId: string): Promise<void>;
+  hasConsent(userId: string, termsVersion: string, privacyVersion: string): Promise<boolean>;
+  saveConsent(record: ConsentRecord): Promise<void>;
 }
 
 export class AuthService {
@@ -68,7 +80,7 @@ export class AuthService {
 
   async redeemLoginCode(
     code: string
-  ): Promise<{ token: string; display_name: string | null } | null> {
+  ): Promise<{ token: string; display_name: string | null; consent_required: boolean } | null> {
     const userId = await this.accounts.consumeLoginCode(code, this.now());
     if (!userId) return null;
 
@@ -76,18 +88,50 @@ export class AuthService {
     if (!account) return null;
 
     const token = await signSessionToken({ userId, readerId: account.reader_id });
-    return { token, display_name: account.display_name };
+    return {
+      token,
+      display_name: account.display_name,
+      consent_required: await this.consentRequired(userId),
+    };
   }
 
   async getMe(
     userId: string
-  ): Promise<{ display_name: string | null; providers: Provider[] } | null> {
+  ): Promise<{
+    display_name: string | null;
+    providers: Provider[];
+    consent_required: boolean;
+  } | null> {
     const account = await this.accounts.findByUserId(userId);
     if (!account) return null;
     return {
       display_name: account.display_name,
       providers: await this.accounts.listProviders(userId),
+      consent_required: await this.consentRequired(userId),
     };
+  }
+
+  async recordConsent(userId: string, body: unknown): Promise<boolean> {
+    const agreement = body as Record<string, unknown> | null;
+    if (
+      agreement?.terms_version !== CONSENT_VERSION ||
+      agreement?.privacy_version !== CONSENT_VERSION ||
+      agreement?.age_14_confirmed !== true
+    ) {
+      return false;
+    }
+    await this.accounts.saveConsent({
+      userId,
+      termsVersion: CONSENT_VERSION,
+      privacyVersion: CONSENT_VERSION,
+      age14Confirmed: true,
+      agreedAt: this.now(),
+    });
+    return true;
+  }
+
+  private async consentRequired(userId: string): Promise<boolean> {
+    return !(await this.accounts.hasConsent(userId, CONSENT_VERSION, CONSENT_VERSION));
   }
 
   withdraw(userId: string, readerId: string): Promise<void> {

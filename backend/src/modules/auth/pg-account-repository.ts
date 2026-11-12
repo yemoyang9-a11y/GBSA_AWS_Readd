@@ -1,5 +1,11 @@
 import type { Pool, PoolClient } from 'pg';
-import type { Account, AccountRepository, NewAccount, Provider } from './auth.service';
+import type {
+  Account,
+  AccountRepository,
+  ConsentRecord,
+  NewAccount,
+  Provider,
+} from './auth.service';
 
 const READING_TABLES = [
   'reading_position',
@@ -86,6 +92,30 @@ export class PgAccountRepository implements AccountRepository {
       }
       await client.query(`DELETE FROM users WHERE user_id = $1`, [userId]);
     });
+  }
+
+  async hasConsent(userId: string, termsVersion: string, privacyVersion: string): Promise<boolean> {
+    const { rows } = await this.pool.query(
+      `SELECT 1 FROM user_consents
+        WHERE user_id = $1 AND terms_version = $2 AND privacy_version = $3`,
+      [userId, termsVersion, privacyVersion]
+    );
+    return rows.length > 0;
+  }
+
+  async saveConsent(record: ConsentRecord): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO user_consents (user_id, terms_version, privacy_version, age_14_confirmed, agreed_at)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, terms_version, privacy_version) DO NOTHING`,
+      [
+        record.userId,
+        record.termsVersion,
+        record.privacyVersion,
+        record.age14Confirmed,
+        record.agreedAt,
+      ]
+    );
   }
 
   private async inTransaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

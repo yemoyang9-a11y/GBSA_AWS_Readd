@@ -3,7 +3,7 @@ import type { AddressInfo } from 'net';
 import express from 'express';
 import { FakeAccountRepository } from '../../../tests/unit/auth/fakes';
 import { createAuthRouter } from './auth-router';
-import { AuthService } from './auth.service';
+import { AuthService, CONSENT_VERSION } from './auth.service';
 import { signLoginState, signSessionToken, verifySessionToken } from './session-token';
 
 const DEVICE_ID = '11111111-1111-4111-8111-111111111111';
@@ -233,6 +233,7 @@ describe('auth router', () => {
       await expect(response.json()).resolves.toEqual({
         display_name: '독자',
         providers: ['google'],
+        consent_required: true,
       });
     });
 
@@ -274,6 +275,84 @@ describe('auth router', () => {
       expect(response.status).toBe(401);
       expect(accounts.accounts).toHaveLength(1);
       expect(token).toBeTruthy();
+    });
+  });
+
+  describe('POST /auth/consent', () => {
+    const AGREEMENT = {
+      terms_version: CONSENT_VERSION,
+      privacy_version: CONSENT_VERSION,
+      age_14_confirmed: true,
+    };
+
+    function postConsent(body: unknown, headers: Record<string, string> = {}) {
+      return fetch(`${baseUrl}/auth/consent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify(body),
+      });
+    }
+
+    test('교환 응답은 처음 가입한 계정에 consent_required: true를 준다', async () => {
+      const { state, cookie } = await startLogin();
+      const done = await callback('google', { state, code: 'provider-code' }, cookie);
+      const code = new URLSearchParams(
+        new URL(done.headers.get('location') as string).hash.slice(1)
+      ).get('code');
+      await expect((await exchange(code)).json()).resolves.toMatchObject({
+        consent_required: true,
+      });
+    });
+
+    test('동의를 저장하면 204이고 이후 /auth/me의 consent_required가 false다', async () => {
+      const token = await loginAndGetToken();
+      const response = await postConsent(AGREEMENT, { Authorization: `Bearer ${token}` });
+      expect(response.status).toBe(204);
+
+      const me = await get('/auth/me', { Authorization: `Bearer ${token}` });
+      await expect(me.json()).resolves.toMatchObject({ consent_required: false });
+    });
+
+    test('토큰의 계정에만 저장하고 본문의 user_id는 무시한다', async () => {
+      const token = await loginAndGetToken();
+      const [account] = accounts.accounts;
+      await postConsent(
+        { ...AGREEMENT, user_id: 'someone-else' },
+        { Authorization: `Bearer ${token}` }
+      );
+      expect(accounts.consents.map((c) => c.userId)).toEqual([account.user_id]);
+    });
+
+    test('토큰이 없으면 X-Device-Id가 있어도 401이고 저장하지 않는다', async () => {
+      const response = await postConsent(AGREEMENT, { 'X-Device-Id': DEVICE_ID });
+      expect(response.status).toBe(401);
+      expect(accounts.consents).toHaveLength(0);
+    });
+
+    test('만 14세 이상 확인이 없으면 400이고 저장하지 않는다', async () => {
+      const token = await loginAndGetToken();
+      const response = await postConsent(
+        { ...AGREEMENT, age_14_confirmed: false },
+        { Authorization: `Bearer ${token}` }
+      );
+      expect(response.status).toBe(400);
+      expect(accounts.consents).toHaveLength(0);
+    });
+
+    test('현재 버전이 아니면 400이다', async () => {
+      const token = await loginAndGetToken();
+      const response = await postConsent(
+        { ...AGREEMENT, terms_version: 'old' },
+        { Authorization: `Bearer ${token}` }
+      );
+      expect(response.status).toBe(400);
+    });
+
+    test('계정이 지워진 토큰은 401이다', async () => {
+      const token = await signSessionToken({ userId: 'gone', readerId: DEVICE_ID });
+      const response = await postConsent(AGREEMENT, { Authorization: `Bearer ${token}` });
+      expect(response.status).toBe(401);
+      expect(accounts.consents).toHaveLength(0);
     });
   });
 });

@@ -155,6 +155,23 @@ export function createAuthRouter({
     }
   });
 
+  router.post('/auth/consent', attachReaderIdentity(), async (req: Request, res: Response) => {
+    const session = getSession(req);
+    if (!session) return sendUnauthorized(res);
+
+    try {
+      if (!(await service.getMe(session.userId))) return sendUnauthorized(res);
+      const saved = await service.recordConsent(session.userId, req.body);
+      if (!saved) {
+        return res.status(400).json({ error: 'BAD_REQUEST', message: 'invalid consent' });
+      }
+      return res.status(204).send();
+    } catch (error) {
+      console.error('[API] auth consent error', { error });
+      return sendInternalError(res);
+    }
+  });
+
   router.delete('/auth/me', attachReaderIdentity(), async (req: Request, res: Response) => {
     const session = getSession(req);
     if (!session) return sendUnauthorized(res);

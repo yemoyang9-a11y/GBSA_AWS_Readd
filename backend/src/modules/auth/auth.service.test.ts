@@ -1,5 +1,5 @@
 import { FakeAccountRepository } from '../../../tests/unit/auth/fakes';
-import { AuthService } from './auth.service';
+import { AuthService, CONSENT_VERSION } from './auth.service';
 import { verifySessionToken } from './session-token';
 
 const DEVICE_A = '11111111-1111-4111-8111-111111111111';
@@ -88,6 +88,74 @@ describe('AuthService', () => {
     await expect(service.getMe(account.user_id)).resolves.toEqual({
       display_name: '카카오 독자',
       providers: ['kakao'],
+      consent_required: true,
+    });
+  });
+
+  describe('첫 가입 동의', () => {
+    const AGREEMENT = {
+      terms_version: CONSENT_VERSION,
+      privacy_version: CONSENT_VERSION,
+      age_14_confirmed: true,
+    };
+
+    test('처음 가입한 계정은 consent_required가 true다', async () => {
+      const account = await service.completeLogin('google', GOOGLE_PROFILE, DEVICE_A);
+      const code = await service.issueLoginCode(account.user_id);
+      const session = await service.redeemLoginCode(code);
+      expect(session?.consent_required).toBe(true);
+    });
+
+    test('현재 버전에 동의하면 consent_required가 false다', async () => {
+      const account = await service.completeLogin('google', GOOGLE_PROFILE, DEVICE_A);
+      await expect(service.recordConsent(account.user_id, AGREEMENT)).resolves.toBe(true);
+
+      const code = await service.issueLoginCode(account.user_id);
+      await expect(service.redeemLoginCode(code)).resolves.toMatchObject({
+        consent_required: false,
+      });
+      await expect(service.getMe(account.user_id)).resolves.toMatchObject({
+        consent_required: false,
+      });
+    });
+
+    test('동의 기록에는 계정·두 버전·14세 확인·동의 시각이 남는다', async () => {
+      const account = await service.completeLogin('google', GOOGLE_PROFILE, DEVICE_A);
+      await service.recordConsent(account.user_id, AGREEMENT);
+      expect(accounts.consents).toEqual([
+        {
+          userId: account.user_id,
+          termsVersion: CONSENT_VERSION,
+          privacyVersion: CONSENT_VERSION,
+          age14Confirmed: true,
+          agreedAt: clock,
+        },
+      ]);
+    });
+
+    test('다른 버전에 동의한 기록만 있으면 다시 동의가 필요하다', async () => {
+      const account = await service.completeLogin('google', GOOGLE_PROFILE, DEVICE_A);
+      accounts.consents.push({
+        userId: account.user_id,
+        termsVersion: 'old',
+        privacyVersion: 'old',
+        age14Confirmed: true,
+        agreedAt: clock,
+      });
+      await expect(service.getMe(account.user_id)).resolves.toMatchObject({
+        consent_required: true,
+      });
+    });
+
+    test.each([
+      ['만 14세 이상 확인이 없으면', { ...AGREEMENT, age_14_confirmed: false }],
+      ['이용약관 버전이 현재와 다르면', { ...AGREEMENT, terms_version: 'old' }],
+      ['개인정보 버전이 현재와 다르면', { ...AGREEMENT, privacy_version: 'old' }],
+      ['값이 비어 있으면', {}],
+    ])('%s 저장하지 않는다', async (_label, body) => {
+      const account = await service.completeLogin('google', GOOGLE_PROFILE, DEVICE_A);
+      await expect(service.recordConsent(account.user_id, body)).resolves.toBe(false);
+      expect(accounts.consents).toHaveLength(0);
     });
   });
 
