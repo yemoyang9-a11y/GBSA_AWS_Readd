@@ -16,6 +16,9 @@ import ReaderPrefsSheet from '../../components/Reader/ReaderPrefsSheet';
 import JumpReturnBar from '../../components/Reader/JumpReturnBar';
 import { useBackToBook } from '../../hooks/useBackToBook';
 
+const FOCUS_TOGGLE_CLASS =
+  'sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-1/2 focus-visible:top-[calc(var(--safe-top)+6px)] focus-visible:z-[60] focus-visible:-translate-x-1/2 focus-visible:inline-flex focus-visible:min-h-11 focus-visible:items-center focus-visible:whitespace-nowrap focus-visible:rounded-full focus-visible:border focus-visible:border-brief-ink focus-visible:bg-white focus-visible:px-4 focus-visible:font-dashSans focus-visible:text-[13px] focus-visible:font-bold focus-visible:text-brief-ink focus-visible:shadow-brief-soft-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brief-accent focus-visible:ring-offset-2 focus-visible:aria-pressed:bg-brief-accent-soft focus-visible:aria-pressed:text-brief-accent';
+
 const HEADER_HEIGHT = 56;
 const JUMP_BAR_HEIGHT = 45;
 
@@ -82,7 +85,7 @@ function MobileReadingSession() {
         onClick={() => {
           if (!panelOpen && !tocOpen && !prefsOpen) setChromeHidden((hidden) => !hidden);
         }}
-        className="sr-only"
+        className={FOCUS_TOGGLE_CLASS}
       >
         본문만 보기
       </button>

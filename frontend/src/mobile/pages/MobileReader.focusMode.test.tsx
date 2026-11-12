@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MobileReader from './MobileReader';
 import { clearPendingJump, setPendingJump } from '../../utils/pendingJump';
@@ -285,6 +286,58 @@ describe('FR-PRG-001: 모바일 읽기 화면 한 번 탭 = 본문만', () => {
     tap();
     expectControlsHidden();
     fireEvent.click(screen.getByRole('button', { name: FOCUS_TOGGLE }));
+    expectControlsShown();
+  });
+  test('WCAG 2.4.7: 본문만 보기 버튼은 포커스가 없을 때 화면에서 숨고, 키보드 포커스 때만 화면 위쪽 알약과 초점 링으로 보이는 클래스를 가진다', async () => {
+    renderReader();
+    await openedAt(25);
+    const toggle = screen.getByRole('button', { name: FOCUS_TOGGLE });
+    expect(document.activeElement).not.toBe(toggle);
+    const classes = toggle.className.split(/\s+/);
+    expect(classes).toContain('sr-only');
+    for (const c of [
+      'focus-visible:not-sr-only',
+      'focus-visible:fixed',
+      'focus-visible:min-h-11',
+      'focus-visible:rounded-full',
+      'focus-visible:ring-2',
+    ]) {
+      expect(classes).toContain(c);
+    }
+    expect(classes.filter((c) => !c.startsWith('focus-visible:') && c !== 'sr-only')).toEqual([]);
+  });
+
+  test('WCAG 2.4.7: 숨기기 전 Tab으로 본문만 보기 버튼에 닿고 Enter로 숨기고 Space로 다시 보인다', async () => {
+    const user = userEvent.setup();
+    renderReader();
+    await openedAt(25);
+    await user.tab();
+    const toggle = screen.getByRole('button', { name: FOCUS_TOGGLE });
+    expect(document.activeElement).toBe(toggle);
+    await user.keyboard('{Enter}');
+    expectControlsHidden();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: FOCUS_TOGGLE }));
+    expect(screen.getByRole('button', { name: FOCUS_TOGGLE })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await user.keyboard(' ');
+    expectControlsShown();
+    expect(screen.getByRole('button', { name: FOCUS_TOGGLE })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+  });
+
+  test('WCAG 2.4.7: 본문을 탭해 숨긴 뒤에도 Tab으로 본문만 보기 버튼에 닿고 Enter로 다시 보인다', async () => {
+    const user = userEvent.setup();
+    renderReader();
+    await openedAt(25);
+    tap();
+    expectControlsHidden();
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: FOCUS_TOGGLE }));
+    await user.keyboard('{Enter}');
     expectControlsShown();
   });
 });
