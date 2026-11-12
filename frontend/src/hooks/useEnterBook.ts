@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { enterBook } from '../services/progressService';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import { bookPath, routePathFor } from '../utils/routes';
+import { getAuthToken } from '../utils/storage';
 
 interface EnterState {
   locationKey: string;
@@ -21,10 +22,13 @@ export function useEnterBook(): {
   enter: (bookId: string) => Promise<void>;
   busyId: string | null;
   failed: boolean;
+  loginBookId: string | null;
+  closeLogin: () => void;
 } {
   const navigate = useNavigate();
   const { key: locationKey, pathname } = useLocation();
   const [state, setState] = useState<EnterState | null>(null);
+  const [loginBookId, setLoginBookId] = useState<string | null>(null);
   const latestRequest = useRef(0);
   const navigatedRequest = useRef(0);
   const pendingBookId = useRef<string | null>(null);
@@ -54,6 +58,12 @@ export function useEnterBook(): {
   const enter = useCallback(
     async (bookId: string) => {
       if (pendingBookId.current === bookId) return;
+      if (!getAuthToken()) {
+        // FR-PRG-003
+        clearPendingJump();
+        setLoginBookId(bookId);
+        return;
+      }
       // FR-PRG-003
       if (pendingBookId.current !== null) keepPendingJumpOnlyFor(bookId);
       const request = ++latestRequest.current;
@@ -79,6 +89,13 @@ export function useEnterBook(): {
     [navigate, locationKey, pathname]
   );
 
+  const closeLogin = useCallback(() => setLoginBookId(null), []);
   const current = state?.locationKey === locationKey ? state : null;
-  return { enter, busyId: current?.busyId ?? null, failed: current?.failed ?? false };
+  return {
+    enter,
+    busyId: current?.busyId ?? null,
+    failed: current?.failed ?? false,
+    loginBookId,
+    closeLogin,
+  };
 }

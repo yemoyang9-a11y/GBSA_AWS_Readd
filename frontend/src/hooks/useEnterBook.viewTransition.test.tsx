@@ -10,6 +10,9 @@ import {
 } from 'react-router-dom';
 import { useEnterBook } from './useEnterBook';
 import type { EntryResponse } from '../types';
+import { setAuthToken } from '../utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 const enterBookMock = vi.hoisted(() => vi.fn<(bookId: string) => Promise<EntryResponse>>());
 const navigateCalls: { to: To | number; options?: NavigateOptions }[] = [];

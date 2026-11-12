@@ -12,6 +12,9 @@ import ChapterList from '../components/BookDetail/ChapterList';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import type { PositionResponse } from '../services/positionService';
 import type { BookInfoResponse, BookSummary, CatalogResponse, EntryResponse } from '../types';
+import { setAuthToken } from '../utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 const fetchCatalogMock = vi.fn<() => Promise<CatalogResponse>>();
 const fetchBookInfoMock = vi.fn<(bookId: string) => Promise<BookInfoResponse>>();

@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 /**
  * 브리핑 스트리밍 폴백 (S6) — FR-BRF-003, FR-DAT-010, D13 ①

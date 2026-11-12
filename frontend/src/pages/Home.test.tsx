@@ -4,6 +4,9 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Home from './Home';
 import { mockCatalog } from '../../mocks/fixtures';
 import type { BookSummary, CatalogResponse, EntryResponse } from '../types';
+import { setAuthToken } from '../utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 const fetchCatalogMock = vi.fn<() => Promise<CatalogResponse>>();
 const enterBookMock = vi.fn<(bookId: string) => Promise<EntryResponse>>();

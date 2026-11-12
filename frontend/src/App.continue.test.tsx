@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 /**
  * '이어서 읽기' 회귀 (UC-28, FR-PRG-003 🚦)
