@@ -7,6 +7,9 @@ import { useCatalog } from './hooks/useCatalog';
 import { useEnterBook } from './hooks/useEnterBook';
 import { resumeLabel } from './utils/resumeLabel';
 import { BOOK_ROUTES } from './utils/routes';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 /**
  * 관통 흐름 — CP3 정지선의 R4 책임 (대시보드 → 브리핑 → 읽기 → 싸비).

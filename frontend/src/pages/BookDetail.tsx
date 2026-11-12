@@ -2,6 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ssabiFace from '../assets/images/ssabi-face.png';
 import BookCover from '../components/common/BookCover';
+import LoginGate from '../components/Auth/LoginGate';
 import ChapterList from '../components/BookDetail/ChapterList';
 import ProgressBar from '../components/Reader/ProgressBar';
 import { useBookDetail, type BookDetail as BookDetailState } from '../hooks/useBookDetail';
@@ -137,7 +138,7 @@ export default function BookDetail() {
   const detail = useBookDetail(bookId);
   const { book, status } = detail;
   const position = useBookPosition(bookId, status === 'ready');
-  const { enter, busyId, failed } = useEnterBook();
+  const { enter, busyId, failed, loginBookId, closeLogin } = useEnterBook();
 
   // FR-PRG-003
   useEffect(() => {
@@ -254,6 +255,7 @@ export default function BookDetail() {
           )}
         </section>
       </div>
+      {loginBookId ? <LoginGate bookId={loginBookId} onClose={closeLogin} /> : null}
     </div>
   );
 }

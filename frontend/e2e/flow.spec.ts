@@ -344,7 +344,7 @@ test('서재에서 완독 필터를 고르면 다 읽은 책만 보인다', asyn
 });
 
 test('MY에서 로그인 전 카드가 보이고, 로그인 상태를 켜면 표시 이름이 보인다', async ({ page }) => {
-  await start(page, '/my');
+  await start(page, '/my', { guest: true });
   await expect(page.getByText('로그인하지 않은 상태예요')).toBeVisible();
   await expect(page.getByRole('button', { name: '구글로 로그인' })).toBeVisible();
   await expect(page.getByText('시험 독자님')).toHaveCount(0);

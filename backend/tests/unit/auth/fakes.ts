@@ -1,6 +1,7 @@
 import type {
   Account,
   AccountRepository,
+  ConsentRecord,
   NewAccount,
   Provider,
 } from '../../../src/modules/auth/auth.service';
@@ -10,6 +11,7 @@ export class FakeAccountRepository implements AccountRepository {
   identities: { provider: Provider; providerUserId: string; userId: string }[] = [];
   codes = new Map<string, { userId: string; expiresAt: Date }>();
   deletedReaders: string[] = [];
+  consents: ConsentRecord[] = [];
 
   async findByIdentity(provider: Provider, providerUserId: string): Promise<Account | null> {
     const identity = this.identities.find(
@@ -60,6 +62,20 @@ export class FakeAccountRepository implements AccountRepository {
     this.accounts = this.accounts.filter((a) => a.user_id !== userId);
     this.identities = this.identities.filter((i) => i.userId !== userId);
     this.deletedReaders.push(readerId);
+  }
+
+  async hasConsent(userId: string, termsVersion: string, privacyVersion: string): Promise<boolean> {
+    return this.consents.some(
+      (c) =>
+        c.userId === userId &&
+        c.termsVersion === termsVersion &&
+        c.privacyVersion === privacyVersion
+    );
+  }
+
+  async saveConsent(record: ConsentRecord): Promise<void> {
+    if (await this.hasConsent(record.userId, record.termsVersion, record.privacyVersion)) return;
+    this.consents.push(record);
   }
 
   private requireAccount(userId: string): Account {

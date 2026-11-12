@@ -16,6 +16,7 @@ import { isMobileDevice } from './mobile/device';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import AppShell from './components/Layout/AppShell';
 import RouteFade from './components/Layout/RouteFade';
+import RequireLogin from './components/Auth/RequireLogin';
 import { APP_ROUTES, BOOK_ROUTES } from './utils/routes';
 
 /**
@@ -41,11 +42,19 @@ export function createAppRouter(isMobile = isMobileDevice(window.screen)) {
     },
     {
       path: BOOK_ROUTES.briefing,
-      element: <RouteFade>{isMobile ? <MobileBriefing /> : <Briefing />}</RouteFade>,
+      element: (
+        <RequireLogin>
+          <RouteFade>{isMobile ? <MobileBriefing /> : <Briefing />}</RouteFade>
+        </RequireLogin>
+      ),
     },
     {
       path: BOOK_ROUTES.reader,
-      element: <RouteFade>{isMobile ? <MobileReader /> : <Reader />}</RouteFade>,
+      element: (
+        <RequireLogin>
+          <RouteFade>{isMobile ? <MobileReader /> : <Reader />}</RouteFade>
+        </RequireLogin>
+      ),
     },
     { path: '/auth/callback', element: <AuthCallback /> },
     { path: '*', element: <RouteFade>{isMobile ? <MobileNotFound /> : <NotFound />}</RouteFade> },

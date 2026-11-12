@@ -2,6 +2,9 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from './App';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 function renderAt(path: string, isMobile: boolean) {
   window.history.pushState({}, '', path);

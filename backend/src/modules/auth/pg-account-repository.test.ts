@@ -74,6 +74,32 @@ describe('PgAccountRepository', () => {
     expect(statements[3].text).toBe('COMMIT');
   });
 
+  test('동의 저장은 user_consents에 계정·두 버전·14세 확인·시각을 넣는다', async () => {
+    const { pool, statements } = fakePool();
+    const agreedAt = new Date('2026-11-12T00:00:00.000Z');
+    await new PgAccountRepository(pool).saveConsent({
+      userId: 'user-1',
+      termsVersion: 'v-terms',
+      privacyVersion: 'v-privacy',
+      age14Confirmed: true,
+      agreedAt,
+    });
+    expect(statements).toHaveLength(1);
+    expect(statements[0].text).toContain('INSERT INTO user_consents');
+    expect(statements[0].text).toContain('ON CONFLICT');
+    expect(statements[0].values).toEqual(['user-1', 'v-terms', 'v-privacy', true, agreedAt]);
+  });
+
+  test('동의 확인은 계정과 두 버전이 모두 맞는 기록만 찾는다', async () => {
+    const { pool, statements } = fakePool();
+    await expect(
+      new PgAccountRepository(pool).hasConsent('user-1', 'v-terms', 'v-privacy')
+    ).resolves.toBe(false);
+    expect(statements[0].text).toContain('FROM user_consents');
+    expect(statements[0].text).toMatch(/user_id = \$1 AND terms_version = \$2 AND privacy_version = \$3/);
+    expect(statements[0].values).toEqual(['user-1', 'v-terms', 'v-privacy']);
+  });
+
   test('1회용 코드 사용은 삭제와 만료 조건을 한 문장으로 처리한다', async () => {
     const { pool, statements } = fakePool();
     const now = new Date('2026-11-10T00:00:00.000Z');

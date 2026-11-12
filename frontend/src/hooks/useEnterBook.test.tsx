@@ -13,6 +13,9 @@ import {
 import { useEnterBook } from './useEnterBook';
 import { clearPendingJump, setPendingJump, takePendingJump } from '../utils/pendingJump';
 import type { EntryResponse } from '../types';
+import { setAuthToken } from '../utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 const enterBookMock = vi.fn<(bookId: string) => Promise<EntryResponse>>();
 

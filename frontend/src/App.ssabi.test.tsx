@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 /**
  * 싸비 데이터 연결 — mock 대역 기준.

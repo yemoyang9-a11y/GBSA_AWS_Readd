@@ -21,7 +21,7 @@ import {
   mockRelationships,
 } from './fixtures';
 import { AxiosError, type AxiosResponse } from 'axios';
-import type { AuthMe } from '../src/services/authService';
+import type { AuthMe, AuthSession } from '../src/services/authService';
 import type { PositionResponse } from '../src/services/positionService';
 import type {
   SseFrame,
@@ -184,6 +184,20 @@ let mockMember = false;
 
 export function setMockMember(on: boolean): void {
   mockMember = on;
+}
+
+let mockConsented = false;
+
+export function resetMockConsent(): void {
+  mockConsented = false;
+}
+
+export function mockConsent(): void {
+  mockConsented = true;
+}
+
+export function mockExchangeResponse(): AuthSession {
+  return { token: 'mock-token', display_name: '시험 독자', consent_required: !mockConsented };
 }
 
 export function mockMeResponse(): MockResult<AuthMe> {

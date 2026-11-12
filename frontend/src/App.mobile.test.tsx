@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { RouterProvider } from 'react-router-dom';
 import { createAppRouter } from './App';
+import { setAuthToken } from './utils/storage';
+
+beforeEach(() => setAuthToken('test-member'));
 
 beforeAll(() => {
   vi.stubGlobal(
