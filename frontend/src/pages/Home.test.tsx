@@ -42,11 +42,55 @@ beforeEach(() => {
   fetchCatalogMock.mockResolvedValue({ books: mockCatalog });
 });
 
-test('FR-BRW-001: 신작 줄은 모든 작품을 등록 최신순으로 보여 준다', async () => {
+test('FR-BRW-001: 신작 줄은 검수된 모든 작품을 등록 최신순으로 보여 준다', async () => {
   renderHome();
 
   const row = await screen.findByRole('region', { name: '신작' });
-  expect(linkNames(row)).toEqual(['다 읽은 책', '읽지 않은 책', '검수 전 도서', '탁류']);
+  expect(linkNames(row)).toEqual(['다 읽은 책', '읽지 않은 책', '탁류']);
+});
+
+const UNREADY_LATEST: BookSummary = {
+  book_id: 'unready-latest',
+  title: '미검수 신간',
+  author: '시험 작가',
+  cover_url: '',
+  intro_summary: null,
+  ssabi_ready: false,
+  genre: '시험장르',
+  registered_at: '2026-12-01T00:00:00.000Z',
+  progress: { current_page: 5, percent: 10, is_complete: false, last_read_at: '2026-12-01T00:00:00.000Z' },
+};
+
+test('FR-BRW-002 🚦: 미검수 도서는 이어 읽기·신작·장르 줄 어디에도 0권이고 검수된 도서는 그대로 보인다', async () => {
+  fetchCatalogMock.mockResolvedValue({ books: [...mockCatalog, UNREADY_LATEST] });
+  renderHome();
+
+  const newest = await screen.findByRole('region', { name: '신작' });
+  expect(screen.queryAllByRole('link', { name: /미검수 신간|검수 전 도서/ })).toEqual([]);
+  expect(screen.queryByText('미검수 신간')).not.toBeInTheDocument();
+  expect(linkNames(newest)).toEqual(['다 읽은 책', '읽지 않은 책', '탁류']);
+  expect(within(screen.getByRole('region', { name: '이어 읽기' })).getByRole('link', { name: '탁류' })).toBeInTheDocument();
+  expect(linkNames(screen.getByRole('region', { name: '애정소설' }))).toEqual(['다 읽은 책']);
+});
+
+test('FR-BRW-002 🚦: 미검수 도서만 있던 장르는 줄째로 사라진다', async () => {
+  fetchCatalogMock.mockResolvedValue({ books: [...mockCatalog, UNREADY_LATEST] });
+  renderHome();
+
+  await screen.findByRole('region', { name: '신작' });
+  expect(screen.queryByRole('region', { name: '시험장르' })).not.toBeInTheDocument();
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['신작', '애정소설']);
+});
+
+test('FR-BRW-002 🚦: 같은 장르에 검수된 도서가 있으면 그 장르 줄은 남고 검수된 도서만 보인다', async () => {
+  const readySameGenre: BookSummary = { ...mockCatalog[2], genre: '시험장르' };
+  fetchCatalogMock.mockResolvedValue({
+    books: [mockCatalog[0], mockCatalog[1], readySameGenre, mockCatalog[3], UNREADY_LATEST],
+  });
+  renderHome();
+
+  const row = await screen.findByRole('region', { name: '시험장르' });
+  expect(linkNames(row)).toEqual(['읽지 않은 책']);
 });
 
 test('FR-BRW-001: 장르가 있는 책은 그 장르 줄에도 보인다', async () => {

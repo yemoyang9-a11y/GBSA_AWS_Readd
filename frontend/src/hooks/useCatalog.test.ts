@@ -123,3 +123,12 @@ test('useCatalog: 결과를 모듈에 캐시하지 않는다 — 다시 마운�
   await waitFor(() => expect(second.result.current.status).toBe('ready'));
   expect(fetchCatalogMock).toHaveBeenCalledTimes(2);
 });
+
+test('FR-ADM-005: 목록 훅은 미검수 도서를 거르지 않는다 — 작품 페이지가 준비 중을 알려야 한다', async () => {
+  const notReady: BookSummary = { ...unread, book_id: 'not-ready', ssabi_ready: false };
+  fetchCatalogMock.mockResolvedValue({ books: [reading, notReady] });
+  const { result } = renderHook(() => useCatalog());
+
+  await waitFor(() => expect(result.current.status).toBe('ready'));
+  expect(result.current.books.map((book) => book.book_id)).toEqual([reading.book_id, 'not-ready']);
+});

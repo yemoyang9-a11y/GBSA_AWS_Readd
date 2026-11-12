@@ -45,11 +45,31 @@ beforeEach(() => {
   fetchCatalogMock.mockResolvedValue({ books: mockCatalog });
 });
 
-test('FR-BRW-001: 검색어가 비면 전체 작품을 서버가 준 순서로 보여 준다', async () => {
+test('FR-BRW-001: 검색어가 비면 검수된 전체 작품을 서버가 준 순서로 보여 준다', async () => {
   renderSearch();
 
   await screen.findByRole('list');
-  expect(resultNames()).toEqual(['탁류, 채만식', '검수 전 도서, 미상', '읽지 않은 책, 시험 작가', '다 읽은 책, 시험 작가']);
+  expect(resultNames()).toEqual(['탁류, 채만식', '읽지 않은 책, 시험 작가', '다 읽은 책, 시험 작가']);
+});
+
+test('FR-BRW-002 🚦: 미검수 도서는 제목·저자로 찾아도 결과에 0권이다', async () => {
+  renderSearch('/search?q=검수');
+
+  expect(await screen.findByText('찾는 작품이 없습니다')).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /검수 전 도서/ })).not.toBeInTheDocument();
+});
+
+test('FR-BRW-002 🚦: 미검수 도서의 저자 이름으로 찾아도 결과에 0권이다', async () => {
+  renderSearch('/search?q=미상');
+
+  expect(await screen.findByText('찾는 작품이 없습니다')).toBeInTheDocument();
+});
+
+test('FR-BRW-002 🚦: 검수된 도서는 저자 이름으로 그대로 찾아진다', async () => {
+  renderSearch('/search?q=작가');
+
+  await screen.findByRole('list');
+  expect(resultNames()).toEqual(['읽지 않은 책, 시험 작가', '다 읽은 책, 시험 작가']);
 });
 
 test('FR-BRW-001: 주소의 q로 입력창이 채워지고 결과가 걸러진다', async () => {
